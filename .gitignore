@@ -206,6 +206,9 @@ tempCodeRunnerFile.py
 # Ruff stuff:
 .ruff_cache/
 
+# Claude Code — settings locais/pessoais (não compartilhado; o compartilhado vai em .claude/settings.json)
+.claude/settings.local.json
+
 # PyPI configuration file
 .pypirc
 
@@ -216,3 +219,6 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Descoberta — capturas cruas da API do Pluggy (sandbox/dados pessoais; não versionar)
+scripts/discovery/raw/
