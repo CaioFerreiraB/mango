@@ -1,0 +1,62 @@
+[project]
+name = "mango"
+version = "0.0.0"
+description = "Controle financeiro pessoal — backend (FastAPI)"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    "sqlalchemy>=2.0",
+    "alembic>=1.13",
+    "pydantic>=2.7",
+    "pydantic-settings>=2.3",
+    "cryptography>=42",
+    "psycopg[binary]>=3.2",
+    "bcrypt>=4.1",
+    "pyotp>=2.9",
+    "httpx>=0.27",
+    "apscheduler>=3.10",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8",
+    "ruff>=0.6",
+    "pre-commit>=3.7",
+]
+
+[tool.uv]
+package = false
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+# Script de descoberta (sandbox, descartável após a Fase 0) — fora do lint.
+extend-exclude = ["scripts/discovery", "alembic/versions"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.ruff.lint.isort]
+# A pasta local `alembic/` confunde o isort; fixamos o pacote como third-party.
+known-third-party = ["alembic"]
+
+[tool.ruff.lint.flake8-bugbear]
+# Padrão do FastAPI: dependências como default de argumento (não são mutáveis de fato).
+extend-immutable-calls = [
+    "fastapi.Depends",
+    "fastapi.Query",
+    "fastapi.Path",
+    "fastapi.Body",
+    "fastapi.Header",
+    "fastapi.Cookie",
+]
+
+[tool.pytest.ini_options]
+addopts = "-q"
+testpaths = ["tests"]
+filterwarnings = [
+    # Deprecação do Starlette/TestClient (httpx) — fora do nosso controle.
+    "ignore:Using `httpx` with `starlette.testclient`:DeprecationWarning",
+]

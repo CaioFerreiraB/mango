@@ -1,0 +1,31 @@
+"""Seed idempotente da taxonomia de categorias do Pluggy (read-only, §4.5).
+
+Lê o snapshot versionado `data/categories.json` (capturado na descoberta) e faz upsert por
+`pluggy_id`. Raízes antes dos filhos (FK auto-referente `parent_id`). Idempotente: roda a
+cada boot sem duplicar.
+"""
+
+import json
+from pathlib import Path
+
+from app.db.session import SessionLocal
+from app.repositories.categoria import CategoriaRepository
+
+_DATA = Path(__file__).resolve().parent / "data" / "categories.json"
+
+
+def seed_categorias() -> None:
+    registros = json.loads(_DATA.read_text(encoding="utf-8"))
+    # Raízes (sem parentId) primeiro p/ satisfazer a FK auto-referente.
+    registros.sort(key=lambda c: (c.get("parentId") is not None, c["id"]))
+
+    with SessionLocal() as db:
+        repo = CategoriaRepository(db)
+        for c in registros:
+            repo.upsert(
+                c["id"],
+                description=c["description"],
+                description_translated=c.get("descriptionTranslated"),
+                parent_id=c.get("parentId"),
+            )
+        db.commit()

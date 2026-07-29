@@ -1,0 +1,77 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    # Postgres de teste — habilita o dialeto Postgres na suíte (§5.4). SQLite roda sempre.
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: mango
+          POSTGRES_PASSWORD: mango
+          POSTGRES_DB: mango
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U mango -d mango"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      TEST_DATABASE_URL: postgresql+psycopg://mango:mango@localhost:5432/mango
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup uv + Python
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+
+      - name: Instala dependências
+        run: uv sync
+
+      - name: Lint (ruff)
+        run: uv run ruff check
+
+      - name: Migrations no boot — SQLite
+        run: uv run alembic upgrade head
+
+      - name: Migrations no boot — PostgreSQL
+        env:
+          DATABASE_URL: postgresql+psycopg://mango:mango@localhost:5432/mango
+        run: uv run alembic upgrade head
+
+      - name: Testes (SQLite + PostgreSQL)
+        run: uv run pytest
+
+  # Frontend: só Node. Usa o frontend/openapi.json commitado para gerar o cliente tipado, então
+  # não precisa de Python nem de servidor. `npm run build` faz generate:api → tsc -b → vite build.
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Instala dependências
+        run: npm ci
+
+      - name: Build (cliente tipado + typecheck + Vite)
+        run: npm run build

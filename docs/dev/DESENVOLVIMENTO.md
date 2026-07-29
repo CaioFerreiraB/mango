@@ -1,6 +1,6 @@
 # Desenvolvimento agêntico — setup de ferramentas
 
-Referência para usar **codegraph**, **graphify**, **graphiti**, **ponytail** e **impeccable** num mesmo projeto, com agentes de código (Claude Code, Codex, Cursor etc.). Documento separado da especificação do produto (`Sistema_de_Controle_Financeiro.md`): aqui é **como o ambiente de desenvolvimento é configurado**, não o que o sistema faz.
+Referência para usar **codegraph**, **graphify**, **graphiti**, **ponytail**, **impeccable** e a skill **shadcn** num mesmo projeto, com agentes de código (Claude Code, Codex, Cursor etc.). Documento separado da especificação do produto (`Sistema_de_Controle_Financeiro.md`): aqui é **como o ambiente de desenvolvimento é configurado**, não o que o sistema faz.
 
 O objetivo não é "ligar tudo", e sim ter cada ferramenta **disponível e roteável**, carregando o conteúdo dela no contexto **apenas quando for usada**.
 
@@ -30,6 +30,7 @@ Cada ferramenta ocupa um andar distinto. Só codegraph e graphify se sobrepõem,
 | **graphiti** | Memória de projeto | Grafo temporal de decisões/fatos que evoluem; "por que escolhemos X", o que foi descartado. |
 | **ponytail** | Comportamento de código | Escreve o mínimo (YAGNI), sem cortar validação, erro, segurança, acessibilidade. |
 | **impeccable** | Design de frontend | Qualidade de UI: tipografia, cor, motion, anti-padrões; comandos de polish/craft/audit. |
+| **shadcn** | Componentes de UI | Busca/adiciona/compõe componentes do registro shadcn/ui via CLI; injeta contexto do projeto (`components.json`), docs e exemplos. |
 
 ---
 
@@ -42,6 +43,7 @@ Cada ferramenta ocupa um andar distinto. Só codegraph e graphify se sobrepõem,
 | **graphify** | Skill + MCP (sob demanda) | **Skill instalada, hooks DESLIGADOS, MCP não conectado por padrão** | Só a descrição curta da skill | `/graphify .`; `graphify query "..."` ou conectar o MCP na sessão |
 | **graphiti** | Serviço (Neo4j/FalkorDB + LLM) + MCP | **Desligado** | Nada | Subir o serviço e conectar o MCP só em sessões de memória |
 | **impeccable** | Skill (por comando) | **Instalada, não ambiente** | Só a descrição curta da skill | `/impeccable polish\|craft\|audit`; `npx impeccable detect` em CI |
+| **shadcn** | Skill (auto-ativa) | **Instalada; ativa em projeto com `components.json`** | Só a descrição curta da skill | Automático em `frontend/`; `npx shadcn@latest search\|add\|docs` |
 
 Regra de ouro: **no máximo um grafo de código conectado por padrão (codegraph)**. graphify e graphiti são MCPs conectados por sessão. ponytail é o único ruleset ambiente, e é pequeno.
 
@@ -101,6 +103,8 @@ Bloco mínimo. Não descreve as ferramentas — só roteia.
   episódio; consulte antes de refazer uma escolha já decidida.
 - Trabalho de UI/design: invoque **/impeccable** (craft/polish/audit). Fora de uma passada de
   design, mantenha o padrão minimalista.
+- Componentes de UI: a skill **shadcn** auto-ativa em `frontend/` (tem `components.json`); busque e
+  componha componentes do registro (`npx shadcn@latest search`/`add`) antes de escrever UI do zero.
 - Sempre (ambiente): **ponytail** — escreva só o necessário; nunca corte validação de fronteira,
   tratamento de erro, segurança ou acessibilidade.
 ```
@@ -144,6 +148,16 @@ docker compose up            # Neo4j ou FalkorDB (Kuzu deprecado)
 /impeccable craft        # fluxo de design
 /impeccable audit        # checagem técnica (a11y, performance, responsivo)
 npx impeccable detect src/   # anti-padrões determinísticos, sem LLM, em CI
+```
+
+**shadcn** — skill copiada e versionada em `.claude/skills/shadcn/`; auto-ativa em projeto com
+`frontend/components.json`. A CLI roda pelo package runner do projeto (npm) a partir de `frontend/`,
+com Node 20.
+```
+npx skills add shadcn/ui --copy -y   # (re)instalar/atualizar a skill (de qualquer lugar do repo)
+cd frontend
+npx shadcn@latest search <termo>     # buscar componentes no registro
+npx shadcn@latest add <componente>   # adicionar componente ao projeto
 ```
 
 ---
@@ -197,7 +211,7 @@ Tudo o que um desenvolvedor (humano ou LLM) precisa para montar o ambiente está
 Vivem no repo:
 
 - Toolchain e dependências fixadas: `pyproject.toml` + lock do **uv**; `package.json` + lockfile do frontend; versões pinadas (`.python-version`, `.nvmrc`/`.tool-versions`).
-- Configuração das ferramentas agênticas: `CLAUDE.md` (router), config do **codegraph**, skill do **graphify**, plugin do **ponytail**, skill do **impeccable**, `docker-compose` do **graphiti** (opt-in).
+- Configuração das ferramentas agênticas: `CLAUDE.md` (router), config do **codegraph**, skill do **graphify**, plugin do **ponytail**, skill do **impeccable**, skill do **shadcn** (`.claude/skills/shadcn/`), `docker-compose` do **graphiti** (opt-in).
 - Infra local: `docker-compose` do Postgres de desenvolvimento, migrations Alembic.
 - Automação: `SETUP.md` (runbook), `scripts/` de bootstrap, `Makefile`/atalhos, hooks de `pre-commit`.
 

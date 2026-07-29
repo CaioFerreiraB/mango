@@ -1,0 +1,40 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "CLAUDE_PLUGIN_ROOT=/home/caio/Documents/mango/.claude/skills/ponytail node \"/home/caio/Documents/mango/.claude/skills/ponytail/hooks/ponytail-activate.js\"; exit 0",
+            "timeout": 5,
+            "statusMessage": "Loading ponytail mode..."
+          }
+        ]
+      }
+    ],
+    "SubagentStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "CLAUDE_PLUGIN_ROOT=/home/caio/Documents/mango/.claude/skills/ponytail node \"/home/caio/Documents/mango/.claude/skills/ponytail/hooks/ponytail-subagent.js\"; exit 0",
+            "timeout": 5,
+            "statusMessage": "Loading ponytail mode..."
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "CLAUDE_PLUGIN_ROOT=/home/caio/Documents/mango/.claude/skills/ponytail node \"/home/caio/Documents/mango/.claude/skills/ponytail/hooks/ponytail-mode-tracker.js\"; exit 0",
+            "timeout": 5,
+            "statusMessage": "Tracking ponytail mode..."
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,39 @@
+# Stack self-hosted completa (app + Postgres) para instalar/testar em container.
+#   1) make gen-keys  → cole ENCRYPTION_KEY/SECRET_KEY em deploy/.env (cp deploy/.env.example antes)
+#   2) make docker-up → abre http://localhost:8000 (primeiro acesso cai no /setup)
+# É separado do docker-compose.yml (Postgres de dev) de propósito. O Postgres aqui não expõe porta:
+# só o app o acessa pela rede interna do compose. O `name:` isola projeto/volume do compose de dev
+# (senão ambos seriam o projeto "mango" e disputariam o mesmo container/volume `db`).
+name: mango-selfhosted
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: mango
+      POSTGRES_PASSWORD: mango
+      POSTGRES_DB: mango
+    volumes:
+      - mango_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mango -d mango"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    # `network: host` nos RUN do build → usa o DNS do host. Sem isso o BuildKit herda o stub do
+    # systemd-resolved (127.0.0.53), inalcançável na rede do build → `uv sync` falha com dns error
+    # (comum em hosts Linux). Só afeta os passos do build; a imagem final não usa host network.
+    build:
+      context: .
+      network: host
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file: deploy/.env
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+
+volumes:
+  mango_pgdata:

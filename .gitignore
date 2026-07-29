@@ -14,8 +14,10 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
-lib64/
+# Ancorados à raiz: são artefatos de build Python no topo do repo. Sem a barra inicial, `lib/`
+# pegaria também `frontend/src/lib/` (código-fonte da SPA) e o deixaria fora do versionamento.
+/lib/
+/lib64/
 parts/
 sdist/
 var/
@@ -222,3 +224,8 @@ __marimo__/
 
 # Descoberta — capturas cruas da API do Pluggy (sandbox/dados pessoais; não versionar)
 scripts/discovery/raw/
+
+# Banco SQLite local (dev/desktop) + arquivos WAL
+mango.db
+*.db-wal
+*.db-shm
