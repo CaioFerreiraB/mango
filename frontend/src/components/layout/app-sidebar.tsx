@@ -1,4 +1,4 @@
-import { ChevronRight, Citrus } from "lucide-react"
+import { ChevronRight } from "lucide-react"
 import { Fragment } from "react"
 import { NavLink, useLocation } from "react-router"
 
@@ -163,9 +163,11 @@ export function AppSidebar() {
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild tooltip="mango">
               <NavLink to="/">
-                <span className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-                  <Citrus className="size-5" aria-hidden />
-                </span>
+                <img
+                  src="/illustrations/avatars/logo/mango-logo.png"
+                  alt=""
+                  className="size-8 shrink-0 object-contain"
+                />
                 <span className="text-base font-semibold tracking-tight">
                   mango
                 </span>
