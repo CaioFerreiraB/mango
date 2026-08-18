@@ -22,13 +22,15 @@ TRANSFERENCIA_ORIGEM = ("auto", "manual")
 # §4.7 assinatura — periodicidade (mesma família da recorrência)
 PERIODICIDADE = ("mensal", "trimestral", "semestral", "anual", "irregular")
 
-# §4.11 divisao_despesa
-MODO_DIVISAO = (
-    "pago_mim_dividir",
-    "pago_mim_recebo",
-    "pago_outro_dividir",
-    "pago_outro_recebo",
-)
+# §4.11 divisao_despesa — "quem pagou" é campo próprio (pago_por_usuario_id); aqui só "como
+# divide": entre N participantes (incl. quem pagou) ou o valor cheio p/ 1 único devedor.
+MODO_DIVISAO = ("igualmente", "integral")
+
+# §4.6 orcamento — tipo do orçamento (categoria não carrega tipo, o orçamento sim)
+TIPO_ORCAMENTO = ("despesa", "receita")
+
+# §5.2 usuario — tipo de conta: acesso completo ou só ao módulo de divisão de contas.
+TIPO_USUARIO = ("completo", "divisao")
 
 
 def check_in(column: str, values: tuple[str, ...], name: str) -> CheckConstraint:

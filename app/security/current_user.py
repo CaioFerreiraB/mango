@@ -43,10 +43,32 @@ def _resolve_session_user(db: Session, session_id: str | None) -> Usuario:
         expira_em = expira_em.replace(tzinfo=UTC)
     if expira_em < datetime.now(UTC):
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "sessão expirada")
-    return db.get(Usuario, sessao.usuario_id)
+    usuario = db.get(Usuario, sessao.usuario_id)
+    # Conta desativada (§4.11): mesmo sinal genérico de sessão inválida — não revela o motivo.
+    if usuario is None or not usuario.ativo:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "sessão inválida")
+    return usuario
 
 
 def get_current_user(request: Request, db: Session = Depends(get_db)) -> Usuario:
     if settings.app_mode == "local":
         return _get_or_create_local_user(db)
     return _resolve_session_user(db, request.cookies.get(SESSION_COOKIE))
+
+
+def require_admin(user: Usuario = Depends(get_current_user)) -> Usuario:
+    """Gate da gestão de usuários (§4.11): só o dono da instância, só no self-hosted."""
+    if settings.app_mode != "self_hosted":
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "não disponível")
+    if not user.is_admin:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "acesso restrito ao administrador")
+    return user
+
+
+def exigir_usuario_completo(user: Usuario = Depends(get_current_user)) -> Usuario:
+    """Bloqueia contas `tipo="divisao"` fora do módulo de divisão de contas (§4.11)."""
+    if user.tipo != "completo":
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN, "recurso não disponível para este tipo de conta"
+        )
+    return user

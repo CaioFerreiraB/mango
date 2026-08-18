@@ -216,17 +216,15 @@ def test_resumo_traz_posicoes_agrupadas(db, usuario, conexao, usuario_b, client_
     assert client_factory(usuario_b).get("/api/investimentos/resumo").json()["posicoes"] == []
 
 
-def test_instituicao_da_posicao_usa_vinculo_manual_da_conta(db, usuario, conexao, client_factory):
-    """A instituição vinculada à mão na conta sobrepõe o connector ("meu Pluggy" em dev)."""
-    from app.models.conta import Conta
-    from app.services import conta as conta_service
+def test_instituicao_da_posicao_usa_vinculo_manual_do_item(db, usuario, conexao, client_factory):
+    """A instituição vinculada à mão na conexão sobrepõe o connector ("meu Pluggy" em dev)."""
+    from app.services import item as item_service
 
     sincronizar_usuario(db, usuario.id)
     conexao.connector_nome = "meu Pluggy"
     db.commit()
 
-    conta = db.scalars(select(Conta).where(Conta.item_id == conexao.id)).first()
-    conta_service.vincular_instituicao(db, usuario.id, conta.id, 612, "Nubank", "http://x/nu.png")
+    item_service.vincular_instituicao(db, usuario.id, conexao.id, 612, "Nubank", "http://x/nu.png")
 
     posicoes = client_factory(usuario).get("/api/investimentos/resumo").json()["posicoes"]
     assert {p["instituicao"] for p in posicoes} == {"Nubank"}  # vinculada, não "meu Pluggy"

@@ -63,8 +63,8 @@ def db(session_factory: sessionmaker[Session]) -> Iterator[Session]:
         session.close()
 
 
-def _criar_usuario(db: Session, nome: str, email: str) -> Usuario:
-    user = Usuario(nome=nome, email=email)
+def _criar_usuario(db: Session, nome: str, email: str, **campos) -> Usuario:
+    user = Usuario(nome=nome, email=email, **campos)
     db.add(user)
     db.commit()
     db.refresh(user)
@@ -79,6 +79,12 @@ def usuario_a(db: Session) -> Usuario:
 @pytest.fixture
 def usuario_b(db: Session) -> Usuario:
     return _criar_usuario(db, "Usuário B", "b@mango.test")
+
+
+@pytest.fixture
+def usuario_admin(db: Session) -> Usuario:
+    """Dono da instância (§4.11) — só ele acessa a gestão de usuários (`require_admin`)."""
+    return _criar_usuario(db, "Admin", "admin@mango.test", is_admin=True)
 
 
 @pytest.fixture
@@ -114,18 +120,62 @@ def client_factory(
 
 
 @pytest.fixture
+def client_factory_sh(
+    client_factory: Callable[[Usuario], TestClient], monkeypatch: pytest.MonkeyPatch
+) -> Callable[[Usuario], TestClient]:
+    """`client_factory` em modo self-hosted, com o double-submit de CSRF já satisfeito.
+
+    `client_factory` não faz login de verdade (usuário atual vem do header `x-test-user`, sem
+    sessão) — em self-hosted, o middleware de CSRF (`app.security.csrf`) exige cookie `mango_csrf`
+    == header `X-CSRF-Token` em toda mutação, e não há cookie genuíno pra ecoar. Simula o par só
+    pra destravar os testes que precisam de self-hosted (ex.: `require_admin`, que 404 fora dele).
+    """
+    from app.config import settings
+    from app.security.sessions import CSRF_COOKIE, CSRF_HEADER
+
+    monkeypatch.setattr(settings, "app_mode", "self_hosted")
+
+    def _factory(user: Usuario) -> TestClient:
+        client = client_factory(user)
+        client.cookies.set(CSRF_COOKIE, "teste")
+        client.headers[CSRF_HEADER] = "teste"
+        return client
+
+    return _factory
+
+
+class _PluggyOk:
+    """Duplo do `PluggyClient` para o setup: credencial e itemId sempre válidos, sem rede."""
+
+    def __enter__(self) -> "_PluggyOk":
+        return self
+
+    def __exit__(self, *exc: object) -> None:
+        return None
+
+    def autenticar(self) -> str:
+        return "api-key-de-teste"
+
+    def item(self, item_id: str) -> dict:
+        return {"id": item_id}
+
+
+@pytest.fixture
 def sh_client(
     session_factory: sessionmaker[Session], monkeypatch: pytest.MonkeyPatch
 ) -> Iterator[TestClient]:
     """Client em modo self-hosted numa DB limpa, para os fluxos de setup/auth (sem sessão prévia).
 
     `session_cookie_secure=False` deixa o TestClient (http) guardar os cookies; a auth real roda
-    (não sobrescrevemos `get_current_user`), só o `get_db` aponta para a DB de teste.
+    (não sobrescrevemos `get_current_user`), só o `get_db` aponta para a DB de teste. O Pluggy do
+    setup (validação ao vivo da conexão) vem dublado — quem testa a falha repõe o patch.
     """
     from app.config import settings
+    from app.services import setup as setup_service
 
     monkeypatch.setattr(settings, "app_mode", "self_hosted")
     monkeypatch.setattr(settings, "session_cookie_secure", False)
+    monkeypatch.setattr(setup_service, "PluggyClient", lambda *a, **k: _PluggyOk())
 
     def _get_db() -> Iterator[Session]:
         session = session_factory()

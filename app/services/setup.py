@@ -4,12 +4,15 @@ O wizard de instalação é conceito do **self-hosted** (subir a instância e ab
 o usuário é implícito ([app.security.current_user]) e o setup não se aplica.
 
 Fluxo em 2 passos para **garantir que o 2FA funciona antes de concluir**:
-1. `iniciar_setup` valida os dados, gera o segredo TOTP e devolve um **ticket cifrado** (Fernet, com
-   validade) — nada é gravado no banco ainda. O ticket carrega os dados do setup de ida e volta pelo
-   cliente, opaco para ele (cifrado com a chave do servidor).
-2. `confirmar_setup` exige o código do autenticador; só se ele bater é que grava usuário +
-   credencial + item + sessão, num **único commit** (atômico — não usa os repositórios, que
-   commitam por passo).
+1. `iniciar_setup` valida os dados — inclusive a conexão do Pluggy **ao vivo** (a credencial
+   autentica e o `itemId` existe nela) —, gera o segredo TOTP (se `ativar_totp`) e devolve um
+   **ticket cifrado** (Fernet, com validade); nada é gravado no banco ainda. O ticket carrega os
+   dados do setup de ida e volta pelo cliente, opaco para ele (cifrado com a chave do servidor).
+2. `confirmar_setup` exige o código do autenticador quando há segredo no ticket; só então grava
+   usuário + credencial + item + sessão, num **único commit** (atômico — não usa os repositórios,
+   que commitam por passo). 2FA é opcional (§5.2, #15): se `ativar_totp=False` no passo 1, o
+   ticket carrega `totp_secret=None` e o passo 2 conclui sem código, com `totp_login_habilitado`
+   já nascendo `False` — a conta fica sem a "prova de posse" que a recuperação de senha exige.
 """
 
 import json
@@ -20,9 +23,10 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.exceptions import ConflictError, ValidationError
-from app.models.pluggy import CredencialPluggy, ItemPluggy
+from app.models.pluggy import CredencialPluggy, Instituicao, ItemPluggy
 from app.models.usuario import Sessao, Usuario
-from app.schemas.setup import SetupRequest
+from app.pluggy.client import PluggyClient, PluggyError
+from app.schemas.setup import PluggyCredenciais, SetupRequest
 from app.security import encryption, passwords, totp
 from app.security.sessions import nova_sessao
 
@@ -36,14 +40,33 @@ def precisa_setup(db: Session) -> bool:
     return db.scalar(select(func.count()).select_from(Usuario)) == 0
 
 
-def iniciar_setup(db: Session, payload: SetupRequest) -> tuple[str, str]:
-    """Passo 1: valida, gera o TOTP e sela o ticket. Devolve (totp_secret, setup_ticket)."""
+def _validar_conexao_pluggy(pluggy: PluggyCredenciais) -> None:
+    """Confere a conexão ao vivo, antes de gravar qualquer coisa: a credencial autentica e o
+    `itemId` existe nela. Sem isso o erro só apareceria no primeiro sync, muito depois."""
+    with PluggyClient(pluggy.client_id, pluggy.client_secret) as client:
+        try:
+            client.autenticar()
+        except PluggyError:
+            raise ValidationError(
+                "credenciais do Pluggy inválidas — confira o clientId e o clientSecret"
+            ) from None
+        try:
+            client.item(pluggy.item_id)
+        except PluggyError:
+            raise ValidationError("itemId não encontrado para essas credenciais") from None
+
+
+def iniciar_setup(db: Session, payload: SetupRequest) -> tuple[str | None, str]:
+    """Passo 1: valida, gera o TOTP (se pedido) e sela o ticket. Devolve (totp_secret|None,
+    setup_ticket)."""
     if settings.app_mode != "self_hosted":
         raise ConflictError("setup disponível apenas no modo self-hosted")
     if not precisa_setup(db):
         raise ConflictError("instância já configurada")
 
-    totp_secret = totp.gerar_secret()
+    _validar_conexao_pluggy(payload.pluggy)  # nada é persistido neste passo, nem em caso de sucesso
+
+    totp_secret = totp.gerar_secret() if payload.ativar_totp else None
     ticket = encryption.encrypt(
         json.dumps(
             {
@@ -65,9 +88,10 @@ def iniciar_setup(db: Session, payload: SetupRequest) -> tuple[str, str]:
 
 
 def confirmar_setup(
-    db: Session, ticket: str, codigo_totp: str, request=None
+    db: Session, ticket: str, codigo_totp: str | None, request=None
 ) -> tuple[Usuario, Sessao]:
-    """Passo 2: valida o código e só então persiste tudo. Levanta ValidationError se não bater."""
+    """Passo 2: valida o código (quando há segredo no ticket) e só então persiste tudo. Levanta
+    ValidationError se não bater."""
     if settings.app_mode != "self_hosted":
         raise ConflictError("setup disponível apenas no modo self-hosted")
     if not precisa_setup(db):
@@ -78,20 +102,26 @@ def confirmar_setup(
         raise ValidationError("ticket de setup inválido ou expirado; recomece o cadastro")
     dados = json.loads(bruto)
 
-    if not totp.verificar(dados["totp_secret"], codigo_totp):
-        raise ValidationError("código incorreto")
+    totp_secret = dados["totp_secret"]
+    if totp_secret is not None:
+        if not totp.verificar(totp_secret, codigo_totp or ""):
+            raise ValidationError("código incorreto")
 
     usuario = Usuario(
         nome=dados["nome"],
         email=dados["email"],
         senha_hash=passwords.hash_password(dados["senha"]),
-        totp_secret_cifrado=dados["totp_secret"],  # EncryptedStr cifra em repouso (§5.5)
+        totp_secret_cifrado=totp_secret,  # EncryptedStr cifra em repouso (§5.5); None se pulou
+        totp_login_habilitado=totp_secret is not None,
         data_nascimento=(
             date.fromisoformat(dados["data_nascimento"]) if dados["data_nascimento"] else None
         ),
         salario_mensal_centavos=dados["salario_mensal_centavos"],
         formacao=dados["formacao"],
         ocupacao=dados["ocupacao"],
+        tipo="completo",
+        ativo=True,
+        is_admin=True,  # dono da instância (§4.11/§5.2) — único por instância, gerencia usuários
     )
     db.add(usuario)
     db.flush()  # atribui usuario.id sem commitar
@@ -104,11 +134,27 @@ def confirmar_setup(
     db.add(credencial)
     db.flush()
 
+    # Vínculo manual da instituição (opcional). O usuário acabou de nascer, então não há linha
+    # anterior a reaproveitar — cria direto, no mesmo commit (os repositórios commitam por passo).
+    instituicao_manual_id = None
+    escolhida = dados["pluggy"].get("instituicao")
+    if escolhida:
+        instituicao = Instituicao(
+            usuario_id=usuario.id,
+            nome=escolhida["nome"],
+            pluggy_connector_id=escolhida["pluggy_connector_id"],
+            logo_url=escolhida["logo_url"],
+        )
+        db.add(instituicao)
+        db.flush()
+        instituicao_manual_id = instituicao.id
+
     db.add(
         ItemPluggy(
             usuario_id=usuario.id,
             credencial_id=credencial.id,
             pluggy_item_id=dados["pluggy"]["item_id"],
+            instituicao_manual_id=instituicao_manual_id,
         )
     )
 

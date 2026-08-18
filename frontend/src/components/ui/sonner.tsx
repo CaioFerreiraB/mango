@@ -35,6 +35,11 @@ const Toaster = ({ ...props }: ToasterProps) => {
           toast: "cn-toast",
         },
       }}
+      // No mobile o toast nasceria por baixo da bottom bar (`bottom-nav.tsx`).
+      mobileOffset={{
+        bottom:
+          "calc(var(--bottom-nav-h) + env(safe-area-inset-bottom) + 0.5rem)",
+      }}
       {...props}
     />
   )

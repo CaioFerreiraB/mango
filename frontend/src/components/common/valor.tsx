@@ -10,6 +10,7 @@ export function Valor({
   sinal = false,
   neutro = false,
   oculto = false,
+  absoluto = false,
   className,
 }: {
   centavos: number
@@ -18,6 +19,9 @@ export function Valor({
   neutro?: boolean
   /** Modo privacidade: mascara o número (mantém o layout), sem cor por sinal. */
   oculto?: boolean
+  /** Mostra `Math.abs(centavos)` (sem "-") — a cor continua vindo do sinal real, então um
+   *  valor negativo ainda pode aparecer em vermelho, só sem o sinal de menos no texto. */
+  absoluto?: boolean
   className?: string
 }) {
   const cor =
@@ -28,11 +32,12 @@ export function Valor({
         : centavos > 0
           ? "text-positive"
           : "text-muted-foreground"
+  const exibido = absoluto ? Math.abs(centavos) : centavos
   const texto = oculto
     ? "R$ ••••"
-    : sinal && centavos > 0
-      ? `+${formatBRL(centavos)}`
-      : formatBRL(centavos)
+    : sinal && exibido > 0
+      ? `+${formatBRL(exibido)}`
+      : formatBRL(exibido)
   return (
     <span className={cn("font-medium tabular-nums", cor, className)}>
       {texto}

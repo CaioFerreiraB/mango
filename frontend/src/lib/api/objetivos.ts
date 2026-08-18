@@ -5,6 +5,7 @@ import type { components } from "@/lib/api/schema"
 
 export type Objetivo = components["schemas"]["ObjetivoRead"]
 export type ObjetivoDetalhe = components["schemas"]["ObjetivoDetalheRead"]
+export type ObjetivoVinculo = components["schemas"]["ObjetivoVinculo"]
 export type ObjetivoCreate = components["schemas"]["ObjetivoCreate"]
 export type ObjetivoUpdate = components["schemas"]["ObjetivoUpdate"]
 

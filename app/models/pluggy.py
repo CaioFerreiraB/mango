@@ -48,7 +48,12 @@ class CredencialPluggy(UserOwnedMixin, TimestampMixin, Base):
 
 
 class ItemPluggy(UserOwnedMixin, TimestampMixin, Base):
-    """Uma conexão (Meu Pluggy). Várias contas penduram num item."""
+    """Uma conexão (Meu Pluggy). Várias contas penduram num item.
+
+    `instituicao_manual_id` é o vínculo manual (catálogo do Pluggy) escolhido pelo usuário ao
+    criar a conexão (ou depois, editando-a) — vale para TODAS as contas do item (exibição), e
+    sobrepõe o `connector` que o sync detecta (sempre "meu Pluggy" no sandbox).
+    """
 
     __tablename__ = "item_pluggy"
 
@@ -62,5 +67,8 @@ class ItemPluggy(UserOwnedMixin, TimestampMixin, Base):
     status: Mapped[str | None] = mapped_column(String(64))
     status_detalhe: Mapped[str | None] = mapped_column(String(255))
     ultimo_sync_em: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    instituicao_manual_id: Mapped[int | None] = mapped_column(
+        ForeignKey("instituicao.id", ondelete="SET NULL"), index=True
+    )
 
     credencial: Mapped["CredencialPluggy"] = relationship(back_populates="itens")

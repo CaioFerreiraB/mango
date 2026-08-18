@@ -5,7 +5,7 @@ Mesmo servidor atende self-hosted e local (§5.1). No boot aplica migrations + s
 
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request
+from fastapi import Depends, FastAPI, Request
 from fastapi.responses import JSONResponse
 
 from app.config import settings
@@ -18,8 +18,9 @@ from app.exceptions import (
     UpstreamError,
     ValidationError,
 )
-from app.routers import all_routers
+from app.routers import ROUTERS_ABERTOS_A_TODOS_OS_TIPOS, all_routers
 from app.security.csrf import csrf_middleware
+from app.security.current_user import exigir_usuario_completo
 from app.web import mount_spa
 
 _STATUS_POR_ERRO = {
@@ -54,7 +55,8 @@ async def lifespan(app: FastAPI):
 
     threading.Thread(target=_atualizar_fundamentos_fii_boot, daemon=True).start()
     # Job mensal de materialização de orçamentos + fundamentos só no self-hosted (§4.6); import
-    # tardio p/ o modo local não carregar o apscheduler. No desktop o backstop cobre a materialização.
+    # tardio p/ o modo local não carregar o apscheduler. No desktop o backstop cobre a
+    # materialização.
     if settings.app_mode == "self_hosted":
         from app.services import agendador
 
@@ -88,8 +90,12 @@ def health() -> dict[str, str]:
 # Toda a API de domínio vive sob /api para conviver com a SPA na mesma origem: a SPA é dona da raiz
 # (/transacoes, /contas/:id …) e a API não colide com suas rotas-cliente. /health, /docs e
 # /openapi.json seguem na raiz (infra). Ver app/web.py para o fallback da SPA.
+#
+# Contas `tipo="divisao"` (§4.11) só acessam os routers em `ROUTERS_ABERTOS_A_TODOS_OS_TIPOS` — o
+# gate fica aqui, um único ponto de aplicação, em vez de em cada função de rota.
 for _router in all_routers:
-    app.include_router(_router, prefix="/api")
+    deps = [] if _router in ROUTERS_ABERTOS_A_TODOS_OS_TIPOS else [Depends(exigir_usuario_completo)]
+    app.include_router(_router, prefix="/api", dependencies=deps)
 
 # Fallback da SPA por último, para não ofuscar a API/infra. No-op sem build (frontend/dist).
 mount_spa(app)

@@ -15,7 +15,6 @@ from app.schemas.conta import (
     CartaoRead,
     ContaBancariaRead,
     ContaDetalheRead,
-    ContaInstituicaoUpdate,
     ContaRead,
     ContaSaldoReservadoRead,
     ContaSaldoSerie,
@@ -97,15 +96,3 @@ def vincular_objetivo(
     user: Usuario = Depends(get_current_user),
 ) -> ContaRead:
     return conta_service.vincular_objetivo(db, user.id, conta_id, payload.objetivo_id)
-
-
-@router.put("/{conta_id}/instituicao", response_model=ContaRead)
-def vincular_instituicao(
-    conta_id: int,
-    payload: ContaInstituicaoUpdate,
-    db: Session = Depends(get_db),
-    user: Usuario = Depends(get_current_user),
-) -> ContaRead:
-    return conta_service.vincular_instituicao(
-        db, user.id, conta_id, payload.pluggy_connector_id, payload.nome, payload.logo_url
-    )

@@ -52,9 +52,9 @@ def series(
         try:
             pontos = indicadores.serie(codigo, inicio, fim, tok)
         except IndicadorError as exc:
-            # Um indicador indisponível (IBOV sem plano brapi p/ janela longa, timeout transitório do
-            # BCB, …) não pode derrubar os demais: pula e segue com os que responderam. Só vira 502
-            # quando TODOS falham (aí é indisponibilidade real da fonte, retentável).
+            # Um indicador indisponível (IBOV sem plano brapi p/ janela longa, timeout transitório
+            # do BCB, …) não pode derrubar os demais: pula e segue com os que responderam. Só vira
+            # 502 quando TODOS falham (aí é indisponibilidade real da fonte, retentável).
             logger.warning("indicador %s falhou: %s", codigo, exc)
             falhas += 1
             continue

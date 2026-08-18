@@ -233,8 +233,9 @@ Dois modos, mesma base de código; o comportamento varia **apenas por configura�
 - Cadastro e autenticação obrigatórios.
 - Senhas com hashing seguro (**bcrypt** ou **argon2**), nunca em texto plano.
 - Sessão **no servidor** via **cookie `httpOnly` `Secure` `SameSite`** (ID opaco de sessão, não JWT), com proteção **CSRF**. A tabela de sessões no banco permite revogação imediata (logout, "sair de todos os dispositivos").
-- **Recuperação de senha (sem e-mail):** via **TOTP** (`pyotp`) — segredo gerado no cadastro, exibido como QR code, armazenado criptografado no banco; o "esqueci a senha" valida um código de 6 dígitos do app autenticador antes de permitir nova senha. O mesmo TOTP serve como **2FA**.
-- **Backstop:** **reset administrativo por CLI** (ex.: `app reset-password <email>`), executável pelo dono da instância, cobrindo a perda do dispositivo autenticador.
+- **Recuperação de senha (sem e-mail):** via **TOTP** (`pyotp`) — segredo exibido como QR code, armazenado criptografado no banco; o "esqueci a senha" valida um código de 6 dígitos do app autenticador antes de permitir nova senha. **Sempre exige o código** — quem não tem 2FA configurado não recupera a senha por este fluxo (só pelo backstop de CLI).
+- **2FA opcional:** o TOTP é oferecido no cadastro (setup e convite), mas pode ser pulado — a UI deixa claro que sem ele não há recuperação de senha. Quem tem 2FA configurado escolhe em Configurações → Segurança se o código é exigido **no login** (`usuario.totp_login_habilitado`); sem 2FA configurado, o login pede só e-mail e senha. Cadastrar, trocar o segredo e desligar a exigência no login reconfirmam a **senha atual** (step-up) — proteção contra sessão comprometida; ligar a exigência não precisa.
+- **Backstop:** **reset administrativo por CLI** (ex.: `app reset-password <email>`), executável pelo dono da instância, cobrindo a perda do dispositivo autenticador e as contas sem 2FA.
 - **Códigos de recuperação** de uso único (hash no banco) ficam como melhoria opcional posterior.
 
 **Arquitetura interna**
@@ -269,6 +270,7 @@ Dois modos, mesma base de código; o comportamento varia **apenas por configura�
 
 **Roteamento**
 - **React Router** no cliente; URLs refletem o estado de navegação (`/transacoes`, `/contas/:id`), com links diretos e voltar/avançar.
+- **Navegação:** sidebar no desktop; no mobile (`< md`), **bottom bar** fixa com as abas de uso diário + aba "Mais" (drawer inferior com o resto da navegação, tema e logout). Ver `DESIGN.md` §Layout & Iconography.
 
 **Formulários e validação**
 - **React Hook Form** + **Zod**, integrados ao shadcn/ui.
@@ -338,7 +340,7 @@ Dois modos, mesma base de código; o comportamento varia **apenas por configura�
 | 12 | App **não se atualiza sozinho**: só notifica nova versão + changelog (via GitHub); update feito externamente | Definido |
 | 13 | Sessão **no servidor via cookie `httpOnly`** (não JWT), com CSRF e revogação por tabela de sessões | Definido |
 | 14 | Desktop **standalone via pywebview**, monousuário, sem login | Definido |
-| 15 | Recuperação de senha **sem e-mail**: **TOTP** (`pyotp`, também 2FA) + **reset administrativo por CLI**; códigos de recuperação opcionais depois | Definido |
+| 15 | Recuperação de senha **sem e-mail**: **TOTP** (`pyotp`, também 2FA) + **reset administrativo por CLI**; códigos de recuperação opcionais depois. 2FA é **opcional no cadastro** e sua exigência **no login** é escolha do usuário (Configurações → Segurança); a recuperação de senha sempre exige o código | Definido |
 | 16 | Sequência: **banco completo + backend CRUD testado antes de qualquer tela** (Fase 0) | Definido |
 | 17 | Renda modelada como entidade **`fonte_de_renda`** (nível 2); previsto × realizado fica para depois | Definido |
 | 18 | PWA **apenas instalável**, sem offline | Definido |

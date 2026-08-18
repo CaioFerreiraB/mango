@@ -56,6 +56,8 @@
 }
 
 :root {
+    /* Altura útil da bottom bar do mobile (fora a safe area) — ver `layout/bottom-nav.tsx`. */
+    --bottom-nav-h: 4rem;
     --background: oklch(1 0 0);
     --foreground: oklch(0.148 0.004 228.8);
     --card: oklch(1 0 0);

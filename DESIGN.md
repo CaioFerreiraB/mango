@@ -72,9 +72,10 @@ via `ilustracao(avatar, cena)` de `frontend/src/lib/illustrations.ts` — nunca 
 `AVATARES_DISPONIVEIS` lista os avatares com assets (hoje só o 1; 2–4 aparecem "em breve").
 
 - **Cenas e onde usar:** `default` (perfil/NavUser/geral), `goal` (objetivos), `money`
-  (dashboard/renda), `subscriptions` (assinaturas), `scared`/`super-scared` (alertas, com
-  gradação), `thumbs-up` (celebração/sucesso), `hang-loose`/`surf`/`mango-juice`/`bar-scene`
-  (empty states leves).
+  (dashboard/renda), `money-v2` (telas públicas: first-run e definição de senha por convite),
+  `subscriptions` (assinaturas), `scared`/`super-scared` (alertas, com gradação; `scared` também na
+  recuperação de senha), `thumbs-up` (celebração/sucesso), `hang-loose`/`surf`/`mango-juice`/
+  `bar-scene` (empty states leves e login).
 - **Composição em camadas** — um card ou página compõe livremente **dados + ilustração +
   decorativos**, nesta ordem de empilhamento (z), de trás para frente: decorativos (blobs,
   ícones marca-d'água, gradientes) → ilustração → **dados**. Ilustração pode sobrepor
@@ -88,6 +89,12 @@ via `ilustracao(avatar, cena)` de `frontend/src/lib/illustrations.ts` — nunca 
   (`size-9 rounded-lg bg-primary/10 text-primary`), badges pílula `positive`/`negative` para
   deltas, progress com trilha tintada (`bg-primary/10`).
 - **Sidebar: nunca** — ilustração não entra na sidebar; é território de navegação.
+- **Telas públicas** (setup, aceite de convite, login, recuperação) usam o `AuthShell`
+  (`frontend/src/components/auth/auth-shell.tsx`): painel de marca tintado (`bg-primary/5`, grade de
+  pontos decorativa) com logo + wordmark, `h1` e mascote em sangria na base, ao lado do painel de
+  formulário — empilhado no mobile (logo → mascote → texto), duas colunas a partir de `md`. Sem
+  sessão não há avatar escolhido: a cena resolve no `AVATAR_PADRAO`. A marca nessas telas é o logo
+  PNG + wordmark (o badge `Citrus` segue valendo no resto do produto).
 - Ilustração é decoração progressiva: `alt=""` quando não carrega informação, e a tela precisa
   funcionar sem ela.
 
@@ -100,8 +107,52 @@ via `ilustracao(avatar, cena)` de `frontend/src/lib/illustrations.ts` — nunca 
 
 ## Layout & Iconography
 
-- **App shell:** sidebar à esquerda (offcanvas no mobile via `sheet`) + header fixo com
-  `SidebarTrigger`, breadcrumb (derivado do `handle` das rotas) e troca de tema. Conteúdo no
-  `Outlet` do React Router. Responsividade **estrutural** (colapsar/empilhar), não tipografia fluida.
+- **App shell (desktop, ≥ `md`):** sidebar à esquerda (colapsável em ícones) + header com
+  `SidebarTrigger`, breadcrumb (derivado do `handle` das rotas) e troca de tema no rodapé da
+  sidebar. Conteúdo no `Outlet` do React Router. Responsividade **estrutural**
+  (colapsar/empilhar), não tipografia fluida.
+- **App shell (mobile, `< md`):** a navegação é a **bottom bar**
+  (`frontend/src/components/layout/bottom-nav.tsx`) — barra fixa no rodapé com as abas de uso
+  diário (ícone `size-6` + rótulo curto) e uma aba **"Mais"**, que abre um `drawer` inferior com o
+  resto da IA, Configurações, tema e Sair. O hambúrguer some do header (sobra o breadcrumb); a
+  sidebar não é alcançável no mobile.
+  - Abas e rótulos curtos vivem em `frontend/src/config/nav.ts` (`bottomNavItems`).
+  - **Drawer "Mais":** cabeçalho (título + `X`) e **lista de linhas**, não grade. Cada menu
+    principal é uma linha **recolhida** — ícone `size-5`, título, descrição e chevron que gira para
+    cima ao abrir — e **expande** (`collapsible`, como na sidebar) revelando os subitens recuados.
+    As seções vêm inteiras de `navSections` + `investimentosSection`, na mesma ordem da sidebar:
+    item novo numa seção aparece lá sozinho. Seção de **um item só** é achatada em linha direta.
+    A descrição de uma seção é **derivada** dos filhos ("Visão Geral e Carteira") — só folha
+    precisa de `descricao` própria em `nav.ts`. No fim, separados da navegação: **Tema** (também
+    recolhido, descrição = tema atual, expande em Claro/Escuro com check) e **Sair** em
+    `text-destructive`.
+  - **Altura fixa** (`h-[80svh]`): expandir uma seção **rola** a lista, nunca cresce ou encolhe o
+    drawer — o cabeçalho fica `shrink-0` e a lista `flex-1 min-h-0 overflow-y-auto`.
+  - A expansão anima em altura pelos keyframes `collapsible-*` do `tw-animate-css`, com
+    `overflow-hidden` no conteúdo. Usar **`motion-safe:`**, não `motion-reduce:animate-none`: o
+    seletor `[data-state]` tem especificidade maior e venceria o desligamento, deixando a animação
+    de pé justamente para quem pediu movimento reduzido.
+  - **Sem token de cor novo:** aba ativa é `text-primary`, inativa `text-muted-foreground` — a
+    barra acompanha os presets de `data-accent` de graça. Rota ativa é **só cor** (sem pílula); o
+    chip `rounded-full bg-primary/10` é exclusivo da aba "Mais" **aberta**, porque ela alterna um
+    painel em vez de navegar. Todos os ícones ficam numa caixa `size-8` para alinhar a linha de base.
+  - **Safe area obrigatória:** `padding-bottom: env(safe-area-inset-bottom)` na barra, e o
+    conteúdo reserva `--bottom-nav-h` + safe area no `pb` do `<main>`, senão a barra `fixed` cobre
+    o fim da página. Toasts usam o mesmo `mobileOffset`.
+  - Escondida por CSS (`md:hidden`), **nunca** por `useIsMobile()` — o hook começa `false` e
+    piscaria a barra no primeiro paint do desktop.
+  - **Portal para o `body`**, como todo `fixed` do shadcn (sheet, dialog, drawer): dentro do
+    `SidebarInset` bastaria um ancestral ganhar `transform`/`filter`/`backdrop-filter` para virar
+    o containing block e a barra rolar junto com o conteúdo em vez de ficar presa à viewport.
+  - **Ilustração: nunca** — mesma razão da sidebar; é território de navegação.
+- **Painéis de detalhe** (transação em `transacao-detalhe.tsx`, ativo em `ativo-drawer.tsx`): um
+  único `Drawer` do vaul que troca de eixo — `direction="right"` no desktop (painel flutuante com
+  `inset-y-2`) e `direction="bottom"` no mobile (bottom sheet com alça e arraste-para-fechar).
+  - Aqui `useIsMobile()` **é permitido**, ao contrário da bottom bar: `direction` é comportamento
+    do vaul (eixo da animação e do arraste), não dá para resolver com `md:`, e o painel nasce
+    fechado — o `false` do primeiro paint não pisca nada.
+  - Overrides de estilo sempre **prefixados por direção** (`data-[vaul-drawer-direction=…]:`), para
+    o modo que não está em uso desligar sozinho. Altura fixa no bottom (`h-` **e** `max-h-`, senão
+    o `max-h-[80vh]` da base vence) e `paddingBottom: env(safe-area-inset-bottom)` só no mobile.
 - **Ícones:** **lucide** apenas (um set). Marca: ícone `Citrus` em badge da cor primária + wordmark
   "mango".

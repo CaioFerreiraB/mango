@@ -137,7 +137,8 @@ def resumo_faturas(
     ids = [f.id for f in faturas]
     # Grandeza do gasto = |valor| das compras (DEBIT). `abs` porque o cartão traz `amount` com sinal
     # invertido em relação à conta bancária (compra positiva) — sem isso a barra fica negativa e o
-    # top-N por categoria escolhe as menores. Estornos (CREDIT) já ficam de fora pelo filtro de tipo.
+    # top-N por categoria escolhe as menores. Estornos (CREDIT) já ficam de fora pelo filtro
+    # de tipo.
     linhas = db.execute(
         select(Transacao.bill_id, _CAT_EFETIVA, func.sum(func.abs(_VALOR_EFETIVO)))
         .where(

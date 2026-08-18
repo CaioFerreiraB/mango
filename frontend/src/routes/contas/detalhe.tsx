@@ -1,35 +1,17 @@
-import {
-  ArrowLeft,
-  ArrowRightLeft,
-  CreditCard,
-  Landmark,
-  RefreshCw,
-} from "lucide-react"
+import { ArrowLeft, ArrowRightLeft, CreditCard, RefreshCw } from "lucide-react"
 import { useState } from "react"
 import { Link, useParams } from "react-router"
 
 import { AvatarBanco } from "@/components/contas/avatar-banco"
 import { CartaoFlip } from "@/components/contas/cartao-flip"
 import { GraficoFaturas } from "@/components/contas/grafico-faturas"
-import { InstituicaoSelect } from "@/components/contas/instituicao-select"
 import { EmptyState } from "@/components/common/empty-state"
 import { Valor } from "@/components/common/valor"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import {
-  Drawer,
-  DrawerContent,
-  DrawerDescription,
-  DrawerHeader,
-  DrawerTitle,
-} from "@/components/ui/drawer"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useConta, type ContaDetalhe } from "@/lib/api/contas"
-import {
-  instituicaoEfetiva,
-  useInstituicoes,
-  useVincularInstituicao,
-} from "@/lib/api/instituicoes"
+import { instituicaoEfetiva, useInstituicoes } from "@/lib/api/instituicoes"
 import { formatBRL, formatDate, mascarar } from "@/lib/format"
 
 export function ContaDetalhePage() {
@@ -37,18 +19,12 @@ export function ContaDetalhePage() {
   const id = Number(contaId)
   const { data, isLoading, isError } = useConta(id)
   const instituicoes = useInstituicoes()
-  const vincular = useVincularInstituicao()
-  const [aberto, setAberto] = useState(false)
 
   if (isError) return <EmptyState title="Conta não encontrada" />
   if (isLoading || !data) return <Skeleton className="h-64 w-full" />
 
   const porId = new Map((instituicoes.data ?? []).map((i) => [i.id, i]))
   const efetiva = instituicaoEfetiva(data, porId)
-  const manual =
-    data.instituicao_manual_id != null
-      ? porId.get(data.instituicao_manual_id)
-      : undefined
   const nome = data.marketing_name ?? data.nome ?? "Conta"
 
   return (
@@ -85,34 +61,7 @@ export function ContaDetalhePage() {
           <p className="text-xs text-muted-foreground">Instituição</p>
           <p className="truncate font-medium">{efetiva?.nome ?? "—"}</p>
         </div>
-        <Button variant="outline" size="sm" onClick={() => setAberto(true)}>
-          <Landmark className="size-4" aria-hidden /> Vincular
-        </Button>
       </div>
-
-      <Drawer direction="right" open={aberto} onOpenChange={setAberto}>
-        <DrawerContent className="gap-0 overflow-x-hidden overflow-y-auto shadow-xl data-[vaul-drawer-direction=right]:inset-y-2 data-[vaul-drawer-direction=right]:right-2 data-[vaul-drawer-direction=right]:rounded-l-2xl data-[vaul-drawer-direction=right]:rounded-r-2xl data-[vaul-drawer-direction=right]:border data-[vaul-drawer-direction=right]:sm:max-w-md">
-          <DrawerHeader>
-            <DrawerTitle>Vincular instituição</DrawerTitle>
-            <DrawerDescription>
-              Escolha a instituição financeira desta conta. O nome e o logo
-              passam a aparecer nas contas e faturas.
-            </DrawerDescription>
-          </DrawerHeader>
-          <div className="px-4 pb-6">
-            <InstituicaoSelect
-              value={manual?.pluggy_connector_id ?? null}
-              enabled={aberto}
-              onChange={(c) =>
-                vincular.mutate(
-                  { contaId: id, connector: c },
-                  { onSuccess: () => setAberto(false) }
-                )
-              }
-            />
-          </div>
-        </DrawerContent>
-      </Drawer>
 
       {data.conta_bancaria ? <DetalheBanco conta={data} /> : null}
       {data.cartao ? (

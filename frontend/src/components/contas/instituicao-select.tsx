@@ -8,22 +8,31 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command"
-import { useConnectoresPluggy, type Connector } from "@/lib/api/instituicoes"
+import {
+  useConnectoresPluggy,
+  useConnectoresSetup,
+  type Connector,
+} from "@/lib/api/instituicoes"
 import { cn } from "@/lib/utils"
 
 /** Seletor de instituição a partir do catálogo do Pluggy (`/connectors`). Filtro client-side pelo
  * nome (o cmdk filtra pelo `value`). ponytail: catálogo carregado inteiro — se ficar grande demais,
- * migrar para busca server-side (`?nome=`). `value` é o `pluggy_connector_id` atual (ou null). */
+ * migrar para busca server-side (`?nome=`). `value` é o `pluggy_connector_id` atual (ou null).
+ * `fonte="setup"` troca o endpoint protegido pelo gêmeo público do wizard (sem sessão ainda). */
 export function InstituicaoSelect({
   value,
   onChange,
   enabled = true,
+  fonte = "app",
 }: {
   value: number | null
   onChange: (c: Connector | null) => void
   enabled?: boolean
+  fonte?: "app" | "setup"
 }) {
-  const { data, isLoading, isError } = useConnectoresPluggy(enabled)
+  const doApp = useConnectoresPluggy(enabled && fonte === "app")
+  const doSetup = useConnectoresSetup(enabled && fonte === "setup")
+  const { data, isLoading, isError } = fonte === "setup" ? doSetup : doApp
   const connectores = data ?? []
 
   return (

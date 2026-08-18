@@ -1,4 +1,9 @@
-"""Schemas de `conta` (Pluggy-owned): leitura + update estreito (só `objetivo_id`)."""
+"""Schemas de `conta` (Pluggy-owned): leitura + update estreito (só `objetivo_id`).
+
+O vínculo manual de instituição é por conexão — ver `ItemInstituicaoUpdate` em
+`app/schemas/pluggy.py`. `ContaRead.instituicao_manual_id` continua existindo aqui só como
+leitura: reflete o vínculo do item dono da conta (`Conta.instituicao_manual_id` é uma property).
+"""
 
 from datetime import date, datetime
 
@@ -64,15 +69,3 @@ class ContaUpdate(BaseModel):
     """
 
     objetivo_id: int | None = None
-
-
-class ContaInstituicaoUpdate(BaseModel):
-    """Vínculo manual da conta a uma instituição escolhida no catálogo do Pluggy.
-
-    `pluggy_connector_id=None` remove o vínculo. Com connector, `nome` é obrigatório e
-    `logo_url` é o `imageUrl` do connector (opcional).
-    """
-
-    pluggy_connector_id: int | None = None
-    nome: str | None = None
-    logo_url: str | None = None

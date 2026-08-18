@@ -2,16 +2,18 @@
 
 from datetime import date, datetime
 
-from sqlalchemy import BigInteger, Date, DateTime, ForeignKey, String
+from sqlalchemy import BigInteger, Boolean, Date, DateTime, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
+from app.enums import TIPO_USUARIO, check_in
 from app.models.mixins import TimestampMixin
 from app.models.types import EncryptedStr
 
 
 class Usuario(TimestampMixin, Base):
     __tablename__ = "usuario"
+    __table_args__ = (check_in("tipo", TIPO_USUARIO, "tipo"),)
 
     id: Mapped[int] = mapped_column(primary_key=True)
     nome: Mapped[str] = mapped_column(String(255), nullable=False)
@@ -20,6 +22,18 @@ class Usuario(TimestampMixin, Base):
     # Auth self-hosted (null no modo local).
     senha_hash: Mapped[str | None] = mapped_column(String(255))
     totp_secret_cifrado: Mapped[str | None] = mapped_column(EncryptedStr)  # cifrado §5.5
+    # 2FA é opcional (§5.2): esta flag é o "quero código no login" do usuário — só tem efeito
+    # junto de `totp_secret_cifrado` configurado (ver `totp_exigido_no_login`). Recuperação de
+    # senha sempre exige o código, independente desta flag (é a prova de posse, não um extra).
+    totp_login_habilitado: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+
+    # Tipo de conta (só faz sentido no self-hosted, §4.11): "completo" enxerga o app inteiro,
+    # "divisao" só o módulo de divisão de contas (+ perfil/preferências). `ativo` bloqueia
+    # login/sessão sem apagar histórico; `is_admin` é o dono da instância — quem gerencia os
+    # outros usuários (criar/ativar/desativar/apagar), único por instância (criado no /setup).
+    tipo: Mapped[str] = mapped_column(String(20), nullable=False, default="completo")
+    ativo: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    is_admin: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
     # Campos pessoais — todos opcionais (#6).
     data_nascimento: Mapped[date | None] = mapped_column(Date)
@@ -42,6 +56,17 @@ class Usuario(TimestampMixin, Base):
     def brapi_token_configurado(self) -> bool:
         """Booleano p/ a API (o segredo nunca sai). Já decifrado no load, como `totp_secret`."""
         return bool(self.brapi_token_cifrado)
+
+    @property
+    def totp_configurado(self) -> bool:
+        """Booleano p/ a API — mesmo padrão de `brapi_token_configurado`, segredo nunca sai."""
+        return bool(self.totp_secret_cifrado)
+
+    @property
+    def totp_exigido_no_login(self) -> bool:
+        """Fonte única de verdade sobre "o login pede código" — nunca confiar isoladamente na
+        flag crua (defesa em profundidade caso o secret seja zerado sem resetar a flag)."""
+        return self.totp_configurado and self.totp_login_habilitado
 
 
 class Sessao(Base):

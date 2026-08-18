@@ -1,9 +1,10 @@
 import { createBrowserRouter, Navigate } from "react-router"
 
-import { RequireAuth } from "@/components/auth/require-auth"
+import { RequireAuth, RequireSetup } from "@/components/auth/require-auth"
 import { AppLayout } from "@/components/layout/app-layout"
 import { AssinaturasPage } from "@/routes/assinaturas/page"
 import { ConfiguracoesPage } from "@/routes/configuracoes/page"
+import { AceitarConvitePage } from "@/routes/convite/aceitar"
 import { ContaDetalhePage } from "@/routes/contas/detalhe"
 import { ContasPage } from "@/routes/contas/page"
 import { DashboardPage } from "@/routes/dashboard/page"
@@ -18,15 +19,25 @@ import { LoginPage } from "@/routes/login/page"
 import { NotFoundPage } from "@/routes/not-found"
 import { ObjetivosPage } from "@/routes/objetivos/page"
 import { OrcamentosPage } from "@/routes/orcamentos/page"
+import { RecuperarSenhaPage } from "@/routes/recuperar-senha/page"
 import { SetupPage } from "@/routes/setup/page"
 import { TransacoesPage } from "@/routes/transacoes/page"
 
-// `/setup` e `/login` ficam FORA do app shell (sem sidebar). O `RequireAuth` guarda o restante:
-// sem instância configurada → /setup; sem sessão (self-hosted) → /login. Ver require-auth.tsx.
+// `/setup`, `/login` e `/recuperar-senha` ficam FORA do app shell (sem sidebar). Dois portões
+// (ver require-auth.tsx): o `RequireSetup` manda as rotas de autenticação pro /setup enquanto a
+// instância não está configurada, e o `RequireAuth` guarda o app (sem setup → /setup; sem sessão
+// no self-hosted → /login).
 // O `handle.title` de cada rota alimenta o breadcrumb do header (ver app-header.tsx).
 export const router = createBrowserRouter([
   { path: "/setup", element: <SetupPage /> },
-  { path: "/login", element: <LoginPage /> },
+  {
+    element: <RequireSetup />,
+    children: [
+      { path: "/login", element: <LoginPage /> },
+      { path: "/recuperar-senha", element: <RecuperarSenhaPage /> },
+      { path: "/convite/:token", element: <AceitarConvitePage /> },
+    ],
+  },
   {
     element: <RequireAuth />,
     children: [

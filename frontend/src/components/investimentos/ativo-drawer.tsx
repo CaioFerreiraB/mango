@@ -92,6 +92,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+import { useIsMobile } from "@/hooks/use-mobile"
 import { useIndicadores, useIndicadoresSerie } from "@/lib/api/indicadores"
 import {
   useCarteiraResumo,
@@ -168,8 +169,12 @@ const COR_INDICADOR: Record<string, string> = {
 const fmtDiaMes = new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit" })
 const tickDia = (iso: string) => fmtDiaMes.format(new Date(`${iso}T12:00:00`))
 
-/** Painel lateral do ativo (posição agrupada): resumo, performance, movimentações, dividendos e as
- *  abas ainda sem dado (indicadores/insights) marcadas como "em breve". Drawer flutuante à direita. */
+/** Sem isto o fim do bottom sheet fica sob a barra de gestos. */
+const SAFE_AREA_BOTTOM = "env(safe-area-inset-bottom)"
+
+/** Painel do ativo (posição agrupada): resumo, performance, movimentações, dividendos e as abas
+ *  ainda sem dado (indicadores/insights) marcadas como "em breve". Drawer flutuante à direita no
+ *  desktop, bottom sheet no mobile. */
 export function AtivoDrawer({
   posicao,
   onOpenChange,
@@ -177,18 +182,38 @@ export function AtivoDrawer({
   posicao: CarteiraPosicao | null
   onOpenChange: (aberto: boolean) => void
 }) {
+  // `direction` é comportamento do vaul (eixo da animação e do arraste), não dá para resolver por
+  // CSS. Ao contrário da bottom nav, aqui o hook pode ser usado: o drawer nasce fechado, então o
+  // `false` do primeiro paint não pisca nada.
+  const isMobile = useIsMobile()
   return (
-    <Drawer direction="right" open={posicao !== null} onOpenChange={onOpenChange}>
-      <DrawerContent className="flex flex-col gap-0 overflow-hidden shadow-xl data-[vaul-drawer-direction=right]:inset-y-2 data-[vaul-drawer-direction=right]:right-2 data-[vaul-drawer-direction=right]:rounded-l-2xl data-[vaul-drawer-direction=right]:rounded-r-2xl data-[vaul-drawer-direction=right]:border data-[vaul-drawer-direction=right]:sm:max-w-xl data-[vaul-drawer-direction=right]:lg:max-w-2xl">
-        {posicao ? <CorpoAtivo posicao={posicao} /> : null}
+    <Drawer
+      direction={isMobile ? "bottom" : "right"}
+      open={posicao !== null}
+      onOpenChange={onOpenChange}
+    >
+      {/* No lateral o painel é uma coluna travada (header fixo + abas rolando por dentro); no
+          bottom sheet a rolagem é única — o header sobe junto, senão sobra pouca altura útil. */}
+      <DrawerContent
+        className="flex flex-col gap-0 overflow-hidden shadow-xl data-[vaul-drawer-direction=bottom]:h-[90svh] data-[vaul-drawer-direction=bottom]:max-h-[90svh] data-[vaul-drawer-direction=right]:inset-y-2 data-[vaul-drawer-direction=right]:right-2 data-[vaul-drawer-direction=right]:rounded-l-2xl data-[vaul-drawer-direction=right]:rounded-r-2xl data-[vaul-drawer-direction=right]:border data-[vaul-drawer-direction=right]:sm:max-w-xl data-[vaul-drawer-direction=right]:lg:max-w-2xl"
+        style={{ paddingBottom: isMobile ? SAFE_AREA_BOTTOM : undefined }}
+      >
+        {posicao ? <CorpoAtivo posicao={posicao} rolagemUnica={isMobile} /> : null}
       </DrawerContent>
     </Drawer>
   )
 }
 
 /** Corpo do drawer (só monta com uma posição): cabeçalho + abas. Para FII, o cabeçalho vira a
- *  identidade do fundo (ticker + indicadores base) e o Resumo ganha performance/dados/participação. */
-function CorpoAtivo({ posicao: p }: { posicao: CarteiraPosicao }) {
+ *  identidade do fundo (ticker + indicadores base) e o Resumo ganha performance/dados/participação.
+ *  `rolagemUnica` (bottom sheet): tudo rola junto, em vez do header fixo + área de abas rolando. */
+function CorpoAtivo({
+  posicao: p,
+  rolagemUnica,
+}: {
+  posicao: CarteiraPosicao
+  rolagemUnica: boolean
+}) {
   const ehFII = (p.subtype ?? "") === "REAL_ESTATE_FUND"
   // Todo ativo de renda fixa (Tesouro, CDB, LCI/LCA, CRI/CRA, debênture…) usa o mesmo painel do
   // Tesouro: os helpers de projeção/rentabilidade só dependem de taxa/indexador/vencimento.
@@ -203,8 +228,18 @@ function CorpoAtivo({ posicao: p }: { posicao: CarteiraPosicao }) {
     ? rotuloIndexador(invsPosicao[0]?.rate_type, invsPosicao[0]?.rate)
     : null
   return (
-    <>
-      <DrawerHeader className="shrink-0 gap-4 border-b pb-4 text-left">
+    // `rolagemUnica`: este wrapper é o único elemento rolável — header e abas sobem juntos. A
+    // rolagem nunca pode ficar no DrawerContent: o vaul põe nele um ::after de `height: 200%`
+    // abaixo do painel, que viraria 2× de vazio rolável.
+    <div
+      className={cn(
+        "flex min-h-0 flex-1 flex-col",
+        rolagemUnica ? "overflow-y-auto" : "overflow-hidden"
+      )}
+    >
+      {/* text-left explícito também no bottom: a base centraliza o header nessa direção, o que
+          desalinharia o bloco identidade + indicadores. */}
+      <DrawerHeader className="shrink-0 gap-4 border-b pb-4 text-left group-data-[vaul-drawer-direction=bottom]/drawer-content:text-left">
         <div className="flex items-start gap-3">
           {ehFII ? (
             <TickerSquare code={p.code ?? p.nome ?? "?"} />
@@ -266,7 +301,10 @@ function CorpoAtivo({ posicao: p }: { posicao: CarteiraPosicao }) {
         )}
       </DrawerHeader>
 
-      <Tabs defaultValue="resumo" className="flex min-h-0 flex-1 flex-col">
+      <Tabs
+        defaultValue="resumo"
+        className={cn("flex flex-col", !rolagemUnica && "min-h-0 flex-1")}
+      >
         {/* overflow-x-auto promove overflow-y a auto (quirk CSS); o sublinhado ativo (after:-5px)
             vazaria e criaria scroll vertical. pb-1.5 acomoda o sublinhado; overflow-y-hidden trava. */}
         <div className="overflow-x-auto overflow-y-hidden border-b px-4 pb-1.5">
@@ -281,7 +319,12 @@ function CorpoAtivo({ posicao: p }: { posicao: CarteiraPosicao }) {
           </TabsList>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
+        <div
+          className={cn(
+            "px-4 py-4",
+            !rolagemUnica && "min-h-0 flex-1 overflow-y-auto"
+          )}
+        >
           <TabsContent value="resumo" className="mt-0">
             {ehRendaFixa ? (
               <ResumoTesouro posicao={p} invs={invsPosicao} />
@@ -334,7 +377,7 @@ function CorpoAtivo({ posicao: p }: { posicao: CarteiraPosicao }) {
           </TabsContent>
         </div>
       </Tabs>
-    </>
+    </div>
   )
 }
 

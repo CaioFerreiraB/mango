@@ -27,8 +27,8 @@ def materializar_mes(db: Session, usuario_id: int, ano: int, mes: int) -> int:
         return 0
 
     ja_materializadas = set(
-        db.scalars(
-            select(OrcamentoMensal.categoria_id).where(
+        db.execute(
+            select(OrcamentoMensal.categoria_id, OrcamentoMensal.tipo).where(
                 OrcamentoMensal.usuario_id == usuario_id,
                 OrcamentoMensal.ano == ano,
                 OrcamentoMensal.mes == mes,
@@ -38,13 +38,14 @@ def materializar_mes(db: Session, usuario_id: int, ano: int, mes: int) -> int:
 
     criados = 0
     for orc in orcamentos:
-        if orc.categoria_id in ja_materializadas:
+        if (orc.categoria_id, orc.tipo) in ja_materializadas:
             continue
         db.add(
             OrcamentoMensal(
                 usuario_id=usuario_id,
                 orcamento_id=orc.id,
                 categoria_id=orc.categoria_id,
+                tipo=orc.tipo,
                 ano=ano,
                 mes=mes,
                 limite_centavos=orc.limite_padrao_centavos,

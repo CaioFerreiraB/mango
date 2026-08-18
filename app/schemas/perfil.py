@@ -24,6 +24,9 @@ class PerfilRead(ORMModel):
     avatar: int | None
     # Booleano derivado (o token brapi nunca é devolvido — §5.5).
     brapi_token_configurado: bool
+    # 2FA opcional (§5.2, #15): booleanos derivados, o segredo nunca é devolvido.
+    totp_configurado: bool
+    totp_login_habilitado: bool
 
 
 class PerfilUpdate(BaseModel):
@@ -50,3 +53,27 @@ class BrapiTokenSet(BaseModel):
 
 class BrapiTokenTeste(BaseModel):
     valida: bool
+
+
+# --- 2FA (§5.2, #15): cadastrar/trocar exige reconfirmar a senha atual (step-up) ---------------
+
+
+class TotpIniciarRequest(BaseModel):
+    senha_atual: str = Field(min_length=1)
+
+
+class TotpIniciado(BaseModel):
+    """Passo 1 de cadastrar/trocar o 2FA — mesmo shape do setup/convite, ticket cifrado."""
+
+    totp_secret: str
+    totp_provisioning_uri: str
+    ticket: str
+
+
+class TotpConfirmarRequest(BaseModel):
+    ticket: str = Field(min_length=1)
+    codigo_totp: str = Field(min_length=6, max_length=8)
+
+
+class TotpDesabilitarRequest(BaseModel):
+    senha_atual: str = Field(min_length=1)

@@ -60,6 +60,8 @@ lançamento: é **revisar e confiar** nos números. Feito para **pessoa física 
 > **Pré-requisitos:** [Docker](https://docs.docker.com/get-docker/) (com Docker Compose) e uma conta no
 > [Pluggy](https://pluggy.ai). O mango nasce conectado ao Open Finance, então você precisa das suas
 > credenciais (`clientId`, `clientSecret` e um `itemId` já conectado) para concluir o cadastro inicial.
+> O cadastro valida a conexão na hora e vincula **uma** instituição financeira; outras conexões você
+> adiciona depois em Configurações → Conexões.
 
 ```bash
 # 1. Clone

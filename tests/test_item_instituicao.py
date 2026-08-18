@@ -1,7 +1,8 @@
-"""Vínculo manual da conta a uma instituição (catálogo do Pluggy) + logo.
+"""Vínculo manual de instituição na CONEXÃO (item_pluggy) + logo.
 
-Cobre: criar o vínculo (sem tocar a instituição original), preservação no re-sync,
-desvínculo, e a listagem do catálogo de connectors (com PluggyClient mockado).
+Cobre: criar o vínculo no item (sem tocar a instituição original das contas), o vínculo valer
+para TODAS as contas do mesmo item, preservação no re-sync, desvínculo, e a listagem do
+catálogo de connectors (com PluggyClient mockado).
 """
 
 from sqlalchemy.orm import Session
@@ -9,11 +10,11 @@ from sqlalchemy.orm import Session
 from app.models.pluggy import Instituicao
 from app.models.usuario import Usuario
 from app.repositories.conta import ContaRepository
-from app.services import conta as conta_service
-from tests.helpers import criar_conta
+from app.services import item as item_service
+from tests.helpers import criar_conta, criar_conta_no_item, criar_prereqs_conta
 
 
-def test_vincular_instituicao_manual_nao_toca_a_original(
+def test_vincular_instituicao_manual_do_item_nao_toca_a_original(
     client_factory, db: Session, usuario_a: Usuario
 ) -> None:
     conta = criar_conta(db, usuario_a.id, "acc-inst")
@@ -21,13 +22,11 @@ def test_vincular_instituicao_manual_nao_toca_a_original(
     client = client_factory(usuario_a)
 
     resp = client.put(
-        f"/api/contas/{conta.id}/instituicao",
+        f"/api/itens-pluggy/{conta.item_id}/instituicao",
         json={"pluggy_connector_id": 612, "nome": "Nubank", "logo_url": "http://x/nu.png"},
     )
     assert resp.status_code == 200, resp.text
-    body = resp.json()
-    assert body["instituicao_id"] == original_id  # original intacta
-    manual_id = body["instituicao_manual_id"]
+    manual_id = resp.json()["instituicao_manual_id"]
     assert manual_id is not None and manual_id != original_id
 
     manual = db.get(Instituicao, manual_id)
@@ -35,14 +34,40 @@ def test_vincular_instituicao_manual_nao_toca_a_original(
     assert manual.logo_url == "http://x/nu.png"
     assert manual.pluggy_connector_id == 612
 
+    conta_resp = client.get(f"/api/contas/{conta.id}")
+    assert conta_resp.json()["instituicao_id"] == original_id  # original intacta
+    assert conta_resp.json()["instituicao_manual_id"] == manual_id
 
-def test_resync_preserva_vinculo_manual(db: Session, usuario_a: Usuario) -> None:
+
+def test_vinculo_do_item_propaga_para_todas_as_contas(
+    client_factory, db: Session, usuario_a: Usuario
+) -> None:
+    inst, item = criar_prereqs_conta(db, usuario_a.id)
+    conta1 = criar_conta_no_item(db, usuario_a.id, item, inst, "acc-1")
+    conta2 = criar_conta_no_item(db, usuario_a.id, item, inst, "acc-2")
+    client = client_factory(usuario_a)
+
+    resp = client.put(
+        f"/api/itens-pluggy/{item.id}/instituicao",
+        json={"pluggy_connector_id": 612, "nome": "Nubank", "logo_url": "http://x/nu.png"},
+    )
+    assert resp.status_code == 200, resp.text
+    manual_id = resp.json()["instituicao_manual_id"]
+
+    contas = {c["id"]: c for c in client.get("/api/contas").json()}
+    assert contas[conta1.id]["instituicao_manual_id"] == manual_id
+    assert contas[conta2.id]["instituicao_manual_id"] == manual_id
+
+
+def test_resync_preserva_vinculo_manual_do_item(db: Session, usuario_a: Usuario) -> None:
     conta = criar_conta(db, usuario_a.id, "acc-resync")
-    conta_service.vincular_instituicao(db, usuario_a.id, conta.id, 612, "Nubank", "http://x/nu.png")
+    item_service.vincular_instituicao(
+        db, usuario_a.id, conta.item_id, 612, "Nubank", "http://x/nu.png"
+    )
     manual_id = conta.instituicao_manual_id
     assert manual_id is not None
 
-    # Re-sync (novo saldo, mesma pluggy_account_id) não escreve o campo manual → preservado.
+    # Re-sync (novo saldo, mesma pluggy_account_id) não mexe no item → vínculo preservado.
     conta2 = ContaRepository(db, usuario_a.id).upsert_by_pluggy_id(
         "acc-resync",
         item_id=conta.item_id,
@@ -57,12 +82,16 @@ def test_resync_preserva_vinculo_manual(db: Session, usuario_a: Usuario) -> None
     assert conta2.instituicao_manual_id == manual_id
 
 
-def test_desvincular_instituicao(client_factory, db: Session, usuario_a: Usuario) -> None:
+def test_desvincular_instituicao_do_item(client_factory, db: Session, usuario_a: Usuario) -> None:
     conta = criar_conta(db, usuario_a.id, "acc-unlink")
-    conta_service.vincular_instituicao(db, usuario_a.id, conta.id, 612, "Nubank", "http://x/nu.png")
+    item_service.vincular_instituicao(
+        db, usuario_a.id, conta.item_id, 612, "Nubank", "http://x/nu.png"
+    )
     client = client_factory(usuario_a)
 
-    resp = client.put(f"/api/contas/{conta.id}/instituicao", json={"pluggy_connector_id": None})
+    resp = client.put(
+        f"/api/itens-pluggy/{conta.item_id}/instituicao", json={"pluggy_connector_id": None}
+    )
     assert resp.status_code == 200, resp.text
     assert resp.json()["instituicao_manual_id"] is None
 

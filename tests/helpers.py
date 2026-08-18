@@ -29,6 +29,19 @@ def criar_prereqs_conta(db: Session, usuario_id: int) -> tuple[Instituicao, Item
 
 def criar_conta(db: Session, usuario_id: int, pluggy_account_id: str, **overrides) -> Conta:
     inst, item = criar_prereqs_conta(db, usuario_id)
+    return criar_conta_no_item(db, usuario_id, item, inst, pluggy_account_id, **overrides)
+
+
+def criar_conta_no_item(
+    db: Session,
+    usuario_id: int,
+    item: ItemPluggy,
+    inst: Instituicao,
+    pluggy_account_id: str,
+    **overrides,
+) -> Conta:
+    """Cria uma conta apontando para um item/instituição já existentes — útil para testar
+    múltiplas contas na MESMA conexão (o vínculo manual de instituição é por item)."""
     campos = {
         "item_id": item.id,
         "instituicao_id": inst.id,

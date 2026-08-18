@@ -455,195 +455,6 @@
         }
       }
     },
-    "/api/divisoes-despesa": {
-      "get": {
-        "tags": [
-          "divisao_despesa"
-        ],
-        "summary": "Listar",
-        "operationId": "listar_api_divisoes_despesa_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/DivisaoDespesaRead"
-                  },
-                  "type": "array",
-                  "title": "Response Listar Api Divisoes Despesa Get"
-                }
-              }
-            }
-          }
-        }
-      },
-      "post": {
-        "tags": [
-          "divisao_despesa"
-        ],
-        "summary": "Criar",
-        "operationId": "criar_api_divisoes_despesa_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/DivisaoDespesaCreate"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "201": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/DivisaoDespesaRead"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/divisoes-despesa/{item_id}": {
-      "get": {
-        "tags": [
-          "divisao_despesa"
-        ],
-        "summary": "Obter",
-        "operationId": "obter_api_divisoes_despesa__item_id__get",
-        "parameters": [
-          {
-            "name": "item_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "title": "Item Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/DivisaoDespesaRead"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
-      "patch": {
-        "tags": [
-          "divisao_despesa"
-        ],
-        "summary": "Atualizar",
-        "operationId": "atualizar_api_divisoes_despesa__item_id__patch",
-        "parameters": [
-          {
-            "name": "item_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "title": "Item Id"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/DivisaoDespesaUpdate"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/DivisaoDespesaRead"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
-      "delete": {
-        "tags": [
-          "divisao_despesa"
-        ],
-        "summary": "Remover",
-        "operationId": "remover_api_divisoes_despesa__item_id__delete",
-        "parameters": [
-          {
-            "name": "item_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "title": "Item Id"
-            }
-          }
-        ],
-        "responses": {
-          "204": {
-            "description": "Successful Response"
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/config-telegram": {
       "get": {
         "tags": [
@@ -1177,6 +988,60 @@
         }
       }
     },
+    "/api/setup/connectores": {
+      "get": {
+        "tags": [
+          "setup"
+        ],
+        "summary": "Connectores",
+        "description": "Catálogo de instituições para o seletor do wizard. `GET /pluggy/connectores` exige sessão e\naqui ainda não existe usuário — este gêmeo público some (409) assim que a instância é criada.",
+        "operationId": "connectores_api_setup_connectores_get",
+        "parameters": [
+          {
+            "name": "nome",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Nome"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ConnectorRead"
+                  },
+                  "title": "Response Connectores Api Setup Connectores Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/setup": {
       "post": {
         "tags": [
@@ -1282,7 +1147,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/MeRead"
+                  "$ref": "#/components/schemas/LoginResponse"
                 }
               }
             }
@@ -1355,6 +1220,139 @@
         "responses": {
           "204": {
             "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/convites/confirmar": {
+      "post": {
+        "tags": [
+          "convite"
+        ],
+        "summary": "Confirmar",
+        "operationId": "confirmar_api_convites_confirmar_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmarConviteRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/convites/{token}": {
+      "get": {
+        "tags": [
+          "convite"
+        ],
+        "summary": "Status Convite",
+        "operationId": "status_convite_api_convites__token__get",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConviteStatus"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "convite"
+        ],
+        "summary": "Iniciar",
+        "operationId": "iniciar_api_convites__token__post",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IniciarConviteRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IniciarConviteResponse"
+                }
+              }
+            }
           },
           "422": {
             "description": "Validation Error",
@@ -1490,6 +1488,140 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/BrapiTokenTeste"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/perfil/totp/iniciar": {
+      "post": {
+        "tags": [
+          "perfil"
+        ],
+        "summary": "Iniciar Totp",
+        "description": "Passo 1 de cadastrar/trocar o 2FA (mesmo secret novo serve para os dois casos).",
+        "operationId": "iniciar_totp_api_perfil_totp_iniciar_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TotpIniciarRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TotpIniciado"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/perfil/totp/confirmar": {
+      "post": {
+        "tags": [
+          "perfil"
+        ],
+        "summary": "Confirmar Totp",
+        "description": "Passo 2: valida o código do novo segredo e só então grava (troca substitui o anterior).",
+        "operationId": "confirmar_totp_api_perfil_totp_confirmar_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TotpConfirmarRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PerfilRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/perfil/totp/habilitar": {
+      "post": {
+        "tags": [
+          "perfil"
+        ],
+        "summary": "Habilitar Totp Login",
+        "description": "Liga a exigência de código no login — sem step-up, só aumenta segurança.",
+        "operationId": "habilitar_totp_login_api_perfil_totp_habilitar_post",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          }
+        }
+      }
+    },
+    "/api/perfil/totp/desabilitar": {
+      "post": {
+        "tags": [
+          "perfil"
+        ],
+        "summary": "Desabilitar Totp Login",
+        "description": "Desliga a exigência de código no login (o 2FA continua configurado p/ recuperar senha).",
+        "operationId": "desabilitar_totp_login_api_perfil_totp_desabilitar_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TotpDesabilitarRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
             }
@@ -1889,58 +2021,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/FaturasResumo"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/contas/{conta_id}/instituicao": {
-      "put": {
-        "tags": [
-          "conta"
-        ],
-        "summary": "Vincular Instituicao",
-        "operationId": "vincular_instituicao_api_contas__conta_id__instituicao_put",
-        "parameters": [
-          {
-            "name": "conta_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "title": "Conta Id"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ContaInstituicaoUpdate"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ContaRead"
                 }
               }
             }
@@ -2411,6 +2491,58 @@
         }
       }
     },
+    "/api/itens-pluggy/{item_id}/instituicao": {
+      "put": {
+        "tags": [
+          "item_pluggy"
+        ],
+        "summary": "Vincular Instituicao",
+        "operationId": "vincular_instituicao_api_itens_pluggy__item_id__instituicao_put",
+        "parameters": [
+          {
+            "name": "item_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Item Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ItemInstituicaoUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ItemPluggyRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/sync": {
       "post": {
         "tags": [
@@ -2695,6 +2827,62 @@
         "summary": "Consumo",
         "description": "Consumo e alertas (50/75/90/100%) dos orçamentos do mês (§4.6).",
         "operationId": "consumo_api_orcamentos_consumo_get",
+        "parameters": [
+          {
+            "name": "ano",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "maximum": 2100,
+              "minimum": 2000,
+              "title": "Ano"
+            }
+          },
+          {
+            "name": "mes",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "maximum": 12,
+              "minimum": 1,
+              "title": "Mes"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrcamentoConsumoRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/orcamentos/materializar": {
+      "post": {
+        "tags": [
+          "orcamento"
+        ],
+        "summary": "Materializar",
+        "description": "Aplica o orçamento padrão a um mês específico, sob pedido do usuário — normalmente pra\num mês passado sem nada configurado (a materialização automática só cobre o mês corrente,\n§4.6). Idempotente: não sobrescreve linhas que já existem.",
+        "operationId": "materializar_api_orcamentos_materializar_post",
         "parameters": [
           {
             "name": "ano",
@@ -4400,6 +4588,738 @@
                 }
               }
             }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/divisoes-despesa": {
+      "get": {
+        "tags": [
+          "divisao_despesa"
+        ],
+        "summary": "Listar",
+        "operationId": "listar_api_divisoes_despesa_get",
+        "parameters": [
+          {
+            "name": "escopo",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "todas",
+                "minhas",
+                "comigo",
+                "arquivadas"
+              ],
+              "type": "string",
+              "default": "todas",
+              "title": "Escopo"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DivisaoDespesaRead"
+                  },
+                  "title": "Response Listar Api Divisoes Despesa Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "divisao_despesa"
+        ],
+        "summary": "Criar",
+        "operationId": "criar_api_divisoes_despesa_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DivisaoDespesaCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DivisaoDespesaRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/divisoes-despesa/resumo": {
+      "get": {
+        "tags": [
+          "divisao_despesa"
+        ],
+        "summary": "Resumo",
+        "operationId": "resumo_api_divisoes_despesa_resumo_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResumoDivisoes"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/divisoes-despesa/pessoas": {
+      "get": {
+        "tags": [
+          "divisao_despesa"
+        ],
+        "summary": "Pessoas",
+        "operationId": "pessoas_api_divisoes_despesa_pessoas_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PessoaDivisao"
+                  },
+                  "type": "array",
+                  "title": "Response Pessoas Api Divisoes Despesa Pessoas Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/divisoes-despesa/{despesa_id}": {
+      "get": {
+        "tags": [
+          "divisao_despesa"
+        ],
+        "summary": "Obter",
+        "operationId": "obter_api_divisoes_despesa__despesa_id__get",
+        "parameters": [
+          {
+            "name": "despesa_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Despesa Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DivisaoDespesaRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "divisao_despesa"
+        ],
+        "summary": "Atualizar",
+        "operationId": "atualizar_api_divisoes_despesa__despesa_id__patch",
+        "parameters": [
+          {
+            "name": "despesa_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Despesa Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DivisaoDespesaUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DivisaoDespesaRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "divisao_despesa"
+        ],
+        "summary": "Remover",
+        "operationId": "remover_api_divisoes_despesa__despesa_id__delete",
+        "parameters": [
+          {
+            "name": "despesa_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Despesa Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/divisoes-despesa/{despesa_id}/quitar": {
+      "post": {
+        "tags": [
+          "divisao_despesa"
+        ],
+        "summary": "Quitar",
+        "operationId": "quitar_api_divisoes_despesa__despesa_id__quitar_post",
+        "parameters": [
+          {
+            "name": "despesa_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Despesa Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DivisaoDespesaRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/divisoes-despesa/{despesa_id}/reabrir": {
+      "post": {
+        "tags": [
+          "divisao_despesa"
+        ],
+        "summary": "Reabrir",
+        "operationId": "reabrir_api_divisoes_despesa__despesa_id__reabrir_post",
+        "parameters": [
+          {
+            "name": "despesa_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Despesa Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DivisaoDespesaRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/configuracao-sistema": {
+      "get": {
+        "tags": [
+          "configuracao_sistema"
+        ],
+        "summary": "Obter",
+        "operationId": "obter_api_configuracao_sistema_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfiguracaoSistemaRead"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "configuracao_sistema"
+        ],
+        "summary": "Atualizar",
+        "operationId": "atualizar_api_configuracao_sistema_patch",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfiguracaoSistemaUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfiguracaoSistemaRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/usuarios/buscar": {
+      "get": {
+        "tags": [
+          "usuario"
+        ],
+        "summary": "Buscar",
+        "operationId": "buscar_api_usuarios_buscar_get",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 255,
+              "default": "",
+              "title": "Q"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/UsuarioBusca"
+                  },
+                  "title": "Response Buscar Api Usuarios Buscar Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/usuarios": {
+      "get": {
+        "tags": [
+          "admin_usuarios"
+        ],
+        "summary": "Listar",
+        "operationId": "listar_api_admin_usuarios_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/UsuarioAdminRead"
+                  },
+                  "type": "array",
+                  "title": "Response Listar Api Admin Usuarios Get"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "admin_usuarios"
+        ],
+        "summary": "Criar",
+        "operationId": "criar_api_admin_usuarios_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConvidarPessoaRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConvidarPessoaRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/usuarios/{usuario_id}/reenviar-convite": {
+      "post": {
+        "tags": [
+          "admin_usuarios"
+        ],
+        "summary": "Reenviar Convite",
+        "operationId": "reenviar_convite_api_admin_usuarios__usuario_id__reenviar_convite_post",
+        "parameters": [
+          {
+            "name": "usuario_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Usuario Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConvidarPessoaRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/usuarios/{usuario_id}/tipo": {
+      "post": {
+        "tags": [
+          "admin_usuarios"
+        ],
+        "summary": "Mudar Tipo",
+        "operationId": "mudar_tipo_api_admin_usuarios__usuario_id__tipo_post",
+        "parameters": [
+          {
+            "name": "usuario_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Usuario Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MudarTipoRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsuarioAdminRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/usuarios/{usuario_id}/ativar": {
+      "post": {
+        "tags": [
+          "admin_usuarios"
+        ],
+        "summary": "Ativar",
+        "operationId": "ativar_api_admin_usuarios__usuario_id__ativar_post",
+        "parameters": [
+          {
+            "name": "usuario_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Usuario Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsuarioAdminRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/usuarios/{usuario_id}/desativar": {
+      "post": {
+        "tags": [
+          "admin_usuarios"
+        ],
+        "summary": "Desativar",
+        "operationId": "desativar_api_admin_usuarios__usuario_id__desativar_post",
+        "parameters": [
+          {
+            "name": "usuario_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Usuario Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsuarioAdminRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/usuarios/{usuario_id}": {
+      "delete": {
+        "tags": [
+          "admin_usuarios"
+        ],
+        "summary": "Remover",
+        "operationId": "remover_api_admin_usuarios__usuario_id__delete",
+        "parameters": [
+          {
+            "name": "usuario_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Usuario Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
           },
           "422": {
             "description": "Validation Error",
@@ -6280,6 +7200,59 @@
         "type": "object",
         "title": "ConfigTelegramUpdate"
       },
+      "ConfiguracaoSistemaRead": {
+        "properties": {
+          "otimizar_transacoes_divisao": {
+            "type": "boolean",
+            "title": "Otimizar Transacoes Divisao"
+          }
+        },
+        "type": "object",
+        "required": [
+          "otimizar_transacoes_divisao"
+        ],
+        "title": "ConfiguracaoSistemaRead"
+      },
+      "ConfiguracaoSistemaUpdate": {
+        "properties": {
+          "otimizar_transacoes_divisao": {
+            "type": "boolean",
+            "title": "Otimizar Transacoes Divisao"
+          }
+        },
+        "type": "object",
+        "required": [
+          "otimizar_transacoes_divisao"
+        ],
+        "title": "ConfiguracaoSistemaUpdate"
+      },
+      "ConfirmarConviteRequest": {
+        "properties": {
+          "ticket": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Ticket"
+          },
+          "codigo_totp": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 8,
+                "minLength": 6
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Codigo Totp"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ticket"
+        ],
+        "title": "ConfirmarConviteRequest"
+      },
       "ConfirmarSetupRequest": {
         "properties": {
           "setup_ticket": {
@@ -6288,16 +7261,22 @@
             "title": "Setup Ticket"
           },
           "codigo_totp": {
-            "type": "string",
-            "maxLength": 8,
-            "minLength": 6,
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 8,
+                "minLength": 6
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Codigo Totp"
           }
         },
         "type": "object",
         "required": [
-          "setup_ticket",
-          "codigo_totp"
+          "setup_ticket"
         ],
         "title": "ConfirmarSetupRequest"
       },
@@ -6642,46 +7621,6 @@
         "title": "ContaDetalheRead",
         "description": "Detalhe da conta com as tabelas 1:1 embutidas (§4.2). Montado no router."
       },
-      "ContaInstituicaoUpdate": {
-        "properties": {
-          "pluggy_connector_id": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Pluggy Connector Id"
-          },
-          "nome": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Nome"
-          },
-          "logo_url": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Logo Url"
-          }
-        },
-        "type": "object",
-        "title": "ContaInstituicaoUpdate",
-        "description": "Vínculo manual da conta a uma instituição escolhida no catálogo do Pluggy.\n\n`pluggy_connector_id=None` remove o vínculo. Com connector, `nome` é obrigatório e\n`logo_url` é o `imageUrl` do connector (opcional)."
-      },
       "ContaRead": {
         "properties": {
           "id": {
@@ -7010,6 +7949,77 @@
         "title": "ContaUpdate",
         "description": "Update estreito (§4 crud.md): o usuário só altera o vínculo com objetivo.\n\n`objetivo_id=None` desvincula. Campos importados do Pluggy não são editáveis aqui."
       },
+      "ConvidarPessoaRead": {
+        "properties": {
+          "usuario_id": {
+            "type": "integer",
+            "title": "Usuario Id"
+          },
+          "link_convite": {
+            "type": "string",
+            "title": "Link Convite"
+          }
+        },
+        "type": "object",
+        "required": [
+          "usuario_id",
+          "link_convite"
+        ],
+        "title": "ConvidarPessoaRead"
+      },
+      "ConvidarPessoaRequest": {
+        "properties": {
+          "nome": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Nome"
+          },
+          "email": {
+            "type": "string",
+            "maxLength": 320,
+            "title": "Email"
+          },
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "completo",
+              "divisao"
+            ],
+            "title": "Tipo",
+            "default": "completo"
+          }
+        },
+        "type": "object",
+        "required": [
+          "nome",
+          "email"
+        ],
+        "title": "ConvidarPessoaRequest"
+      },
+      "ConviteStatus": {
+        "properties": {
+          "nome": {
+            "type": "string",
+            "title": "Nome"
+          },
+          "expirado": {
+            "type": "boolean",
+            "title": "Expirado"
+          },
+          "usado": {
+            "type": "boolean",
+            "title": "Usado"
+          }
+        },
+        "type": "object",
+        "required": [
+          "nome",
+          "expirado",
+          "usado"
+        ],
+        "title": "ConviteStatus"
+      },
       "CotaSeriePonto": {
         "properties": {
           "data": {
@@ -7198,15 +8208,6 @@
       },
       "DivisaoDespesaCreate": {
         "properties": {
-          "outro_usuario_id": {
-            "type": "integer",
-            "title": "Outro Usuario Id"
-          },
-          "valor_centavos": {
-            "type": "integer",
-            "minimum": 0.0,
-            "title": "Valor Centavos"
-          },
           "descricao": {
             "anyOf": [
               {
@@ -7222,7 +8223,7 @@
             "anyOf": [
               {
                 "type": "string",
-                "maxLength": 8
+                "maxLength": 16
               },
               {
                 "type": "null"
@@ -7230,27 +8231,38 @@
             ],
             "title": "Categoria Id"
           },
+          "valor_total_centavos": {
+            "type": "integer",
+            "exclusiveMinimum": 0.0,
+            "title": "Valor Total Centavos"
+          },
+          "pago_por_usuario_id": {
+            "type": "integer",
+            "title": "Pago Por Usuario Id"
+          },
           "modo_divisao": {
             "type": "string",
             "enum": [
-              "pago_mim_dividir",
-              "pago_mim_recebo",
-              "pago_outro_dividir",
-              "pago_outro_recebo"
+              "igualmente",
+              "integral"
             ],
             "title": "Modo Divisao"
           },
-          "quitada": {
-            "type": "boolean",
-            "title": "Quitada",
-            "default": false
+          "participantes": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Participantes"
           }
         },
         "type": "object",
         "required": [
-          "outro_usuario_id",
-          "valor_centavos",
-          "modo_divisao"
+          "valor_total_centavos",
+          "pago_por_usuario_id",
+          "modo_divisao",
+          "participantes"
         ],
         "title": "DivisaoDespesaCreate"
       },
@@ -7264,13 +8276,9 @@
             "type": "integer",
             "title": "Criado Por Usuario Id"
           },
-          "outro_usuario_id": {
+          "pago_por_usuario_id": {
             "type": "integer",
-            "title": "Outro Usuario Id"
-          },
-          "valor_centavos": {
-            "type": "integer",
-            "title": "Valor Centavos"
+            "title": "Pago Por Usuario Id"
           },
           "descricao": {
             "anyOf": [
@@ -7294,6 +8302,10 @@
             ],
             "title": "Categoria Id"
           },
+          "valor_total_centavos": {
+            "type": "integer",
+            "title": "Valor Total Centavos"
+          },
           "modo_divisao": {
             "type": "string",
             "title": "Modo Divisao"
@@ -7301,6 +8313,10 @@
           "quitada": {
             "type": "boolean",
             "title": "Quitada"
+          },
+          "arquivada": {
+            "type": "boolean",
+            "title": "Arquivada"
           },
           "criado_em": {
             "type": "string",
@@ -7311,16 +8327,32 @@
             "type": "string",
             "format": "date-time",
             "title": "Atualizado Em"
+          },
+          "participantes": {
+            "items": {
+              "$ref": "#/components/schemas/DivisaoParticipanteRead"
+            },
+            "type": "array",
+            "title": "Participantes",
+            "default": []
+          },
+          "meu_saldo_centavos": {
+            "type": "integer",
+            "title": "Meu Saldo Centavos",
+            "default": 0
           }
         },
         "type": "object",
         "required": [
           "id",
           "criado_por_usuario_id",
-          "outro_usuario_id",
-          "valor_centavos",
+          "pago_por_usuario_id",
+          "descricao",
+          "categoria_id",
+          "valor_total_centavos",
           "modo_divisao",
           "quitada",
+          "arquivada",
           "criado_em",
           "atualizado_em"
         ],
@@ -7328,18 +8360,6 @@
       },
       "DivisaoDespesaUpdate": {
         "properties": {
-          "valor_centavos": {
-            "anyOf": [
-              {
-                "type": "integer",
-                "minimum": 0.0
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Valor Centavos"
-          },
           "descricao": {
             "anyOf": [
               {
@@ -7355,7 +8375,7 @@
             "anyOf": [
               {
                 "type": "string",
-                "maxLength": 8
+                "maxLength": 16
               },
               {
                 "type": "null"
@@ -7363,15 +8383,36 @@
             ],
             "title": "Categoria Id"
           },
+          "valor_total_centavos": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valor Total Centavos"
+          },
+          "pago_por_usuario_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pago Por Usuario Id"
+          },
           "modo_divisao": {
             "anyOf": [
               {
                 "type": "string",
                 "enum": [
-                  "pago_mim_dividir",
-                  "pago_mim_recebo",
-                  "pago_outro_dividir",
-                  "pago_outro_recebo"
+                  "igualmente",
+                  "integral"
                 ]
               },
               {
@@ -7380,20 +8421,59 @@
             ],
             "title": "Modo Divisao"
           },
-          "quitada": {
+          "participantes": {
             "anyOf": [
               {
-                "type": "boolean"
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array",
+                "minItems": 1
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Quitada"
+            "title": "Participantes"
           }
         },
         "type": "object",
         "title": "DivisaoDespesaUpdate"
+      },
+      "DivisaoParticipanteRead": {
+        "properties": {
+          "usuario_id": {
+            "type": "integer",
+            "title": "Usuario Id"
+          },
+          "nome": {
+            "type": "string",
+            "title": "Nome"
+          },
+          "avatar": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avatar"
+          },
+          "valor_centavos": {
+            "type": "integer",
+            "title": "Valor Centavos"
+          }
+        },
+        "type": "object",
+        "required": [
+          "usuario_id",
+          "nome",
+          "avatar",
+          "valor_centavos"
+        ],
+        "title": "DivisaoParticipanteRead"
       },
       "FaturaRead": {
         "properties": {
@@ -8096,6 +9176,64 @@
         ],
         "title": "IndicadorSeriePonto"
       },
+      "IniciarConviteRequest": {
+        "properties": {
+          "senha": {
+            "type": "string",
+            "maxLength": 1024,
+            "minLength": 8,
+            "title": "Senha"
+          },
+          "ativar_totp": {
+            "type": "boolean",
+            "title": "Ativar Totp",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "senha"
+        ],
+        "title": "IniciarConviteRequest"
+      },
+      "IniciarConviteResponse": {
+        "properties": {
+          "totp_secret": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Totp Secret"
+          },
+          "totp_provisioning_uri": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Totp Provisioning Uri"
+          },
+          "ticket": {
+            "type": "string",
+            "title": "Ticket"
+          }
+        },
+        "type": "object",
+        "required": [
+          "totp_secret",
+          "totp_provisioning_uri",
+          "ticket"
+        ],
+        "title": "IniciarConviteResponse",
+        "description": "Passo 1: material do TOTP p/ o QR + ticket cifrado (senha + segredo, nada persistido).\n\nCampos de TOTP vêm `None` quando `ativar_totp=False` — o passo 2 conclui sem pedir código."
+      },
       "InstituicaoRead": {
         "properties": {
           "id": {
@@ -8782,6 +9920,46 @@
         "type": "object",
         "title": "InvestimentoUpdate"
       },
+      "ItemInstituicaoUpdate": {
+        "properties": {
+          "pluggy_connector_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pluggy Connector Id"
+          },
+          "nome": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nome"
+          },
+          "logo_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Logo Url"
+          }
+        },
+        "type": "object",
+        "title": "ItemInstituicaoUpdate",
+        "description": "Vínculo manual da conexão a uma instituição escolhida no catálogo do Pluggy. Vale para\ntodas as contas do item.\n\n`pluggy_connector_id=None` remove o vínculo. Com connector, `nome` é obrigatório e\n`logo_url` é o `imageUrl` do connector (opcional)."
+      },
       "ItemPluggyCreate": {
         "properties": {
           "credencial_id": {
@@ -8900,6 +10078,17 @@
             ],
             "title": "Ultimo Sync Em"
           },
+          "instituicao_manual_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Instituicao Manual Id"
+          },
           "usuario_id": {
             "type": "integer",
             "title": "Usuario Id"
@@ -8987,19 +10176,47 @@
             "title": "Senha"
           },
           "codigo_totp": {
-            "type": "string",
-            "maxLength": 8,
-            "minLength": 6,
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 8,
+                "minLength": 6
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Codigo Totp"
           }
         },
         "type": "object",
         "required": [
           "email",
-          "senha",
-          "codigo_totp"
+          "senha"
         ],
         "title": "LoginRequest"
+      },
+      "LoginResponse": {
+        "properties": {
+          "totp_necessario": {
+            "type": "boolean",
+            "title": "Totp Necessario",
+            "default": false
+          },
+          "usuario": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MeRead"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "title": "LoginResponse",
+        "description": "`usuario` vem preenchido quando o login conclui (sessão criada). `totp_necessario=True`\ne `usuario=None` quando a senha bateu mas falta o código — SEM sessão/cookie criados; o\ncliente deve reenviar o mesmo request com `codigo_totp` preenchido."
       },
       "MeRead": {
         "properties": {
@@ -9036,15 +10253,56 @@
               }
             ],
             "title": "Avatar"
+          },
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "completo",
+              "divisao"
+            ],
+            "title": "Tipo"
+          },
+          "is_admin": {
+            "type": "boolean",
+            "title": "Is Admin"
+          },
+          "totp_configurado": {
+            "type": "boolean",
+            "title": "Totp Configurado"
+          },
+          "totp_login_habilitado": {
+            "type": "boolean",
+            "title": "Totp Login Habilitado"
           }
         },
         "type": "object",
         "required": [
           "id",
           "nome",
-          "email"
+          "email",
+          "tipo",
+          "is_admin",
+          "totp_configurado",
+          "totp_login_habilitado"
         ],
         "title": "MeRead"
+      },
+      "MudarTipoRequest": {
+        "properties": {
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "completo",
+              "divisao"
+            ],
+            "title": "Tipo"
+          }
+        },
+        "type": "object",
+        "required": [
+          "tipo"
+        ],
+        "title": "MudarTipoRequest"
       },
       "ObjetivoCreate": {
         "properties": {
@@ -9352,13 +10610,29 @@
             "type": "string",
             "title": "Categoria Id"
           },
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "despesa",
+              "receita"
+            ],
+            "title": "Tipo"
+          },
+          "recorrente": {
+            "type": "boolean",
+            "title": "Recorrente"
+          },
+          "suprimido": {
+            "type": "boolean",
+            "title": "Suprimido"
+          },
           "limite_centavos": {
             "type": "integer",
             "title": "Limite Centavos"
           },
-          "gasto_centavos": {
+          "realizado_centavos": {
             "type": "integer",
-            "title": "Gasto Centavos"
+            "title": "Realizado Centavos"
           },
           "percentual": {
             "type": "integer",
@@ -9381,13 +10655,16 @@
           "orcamento_id",
           "orcamento_mensal_id",
           "categoria_id",
+          "tipo",
+          "recorrente",
+          "suprimido",
           "limite_centavos",
-          "gasto_centavos",
+          "realizado_centavos",
           "percentual",
           "alerta_atingido"
         ],
         "title": "OrcamentoConsumoItem",
-        "description": "Consumo de um orçamento no mês. `alerta_atingido` é o maior limiar cruzado (§4.6)."
+        "description": "Consumo de um orçamento no mês. `alerta_atingido` é o maior limiar cruzado (§4.6) —\nsó faz sentido pra despesa (estouro de gasto); pra receita vem sempre `None`, já que\nbater/passar da meta é notícia boa, não um alerta.\n\nInclui linhas `suprimido=True` (removidas só deste mês) — a Visão Geral as esconde, mas\n\"Editar mês\" precisa vê-las pra oferecer \"restaurar\" em vez de recriar do zero."
       },
       "OrcamentoConsumoRead": {
         "properties": {
@@ -9423,6 +10700,14 @@
             "minLength": 1,
             "title": "Categoria Id"
           },
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "despesa",
+              "receita"
+            ],
+            "title": "Tipo"
+          },
           "limite_padrao_centavos": {
             "type": "integer",
             "minimum": 0.0,
@@ -9442,6 +10727,7 @@
         "type": "object",
         "required": [
           "categoria_id",
+          "tipo",
           "limite_padrao_centavos"
         ],
         "title": "OrcamentoCreate"
@@ -9457,6 +10743,14 @@
             "maxLength": 16,
             "minLength": 1,
             "title": "Categoria Id"
+          },
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "despesa",
+              "receita"
+            ],
+            "title": "Tipo"
           },
           "ano": {
             "type": "integer",
@@ -9485,6 +10779,7 @@
         "required": [
           "orcamento_id",
           "categoria_id",
+          "tipo",
           "ano",
           "mes",
           "limite_centavos"
@@ -9505,6 +10800,10 @@
             "type": "string",
             "title": "Categoria Id"
           },
+          "tipo": {
+            "type": "string",
+            "title": "Tipo"
+          },
           "ano": {
             "type": "integer",
             "title": "Ano"
@@ -9520,6 +10819,10 @@
           "editado_manualmente": {
             "type": "boolean",
             "title": "Editado Manualmente"
+          },
+          "suprimido": {
+            "type": "boolean",
+            "title": "Suprimido"
           },
           "usuario_id": {
             "type": "integer",
@@ -9541,10 +10844,12 @@
           "id",
           "orcamento_id",
           "categoria_id",
+          "tipo",
           "ano",
           "mes",
           "limite_centavos",
           "editado_manualmente",
+          "suprimido",
           "usuario_id",
           "criado_em",
           "atualizado_em"
@@ -9575,6 +10880,17 @@
               }
             ],
             "title": "Editado Manualmente"
+          },
+          "suprimido": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Suprimido"
           }
         },
         "type": "object",
@@ -9590,6 +10906,10 @@
             "type": "string",
             "title": "Categoria Id"
           },
+          "tipo": {
+            "type": "string",
+            "title": "Tipo"
+          },
           "limite_padrao_centavos": {
             "type": "integer",
             "title": "Limite Padrao Centavos"
@@ -9601,6 +10921,10 @@
           "ativo": {
             "type": "boolean",
             "title": "Ativo"
+          },
+          "ordem": {
+            "type": "integer",
+            "title": "Ordem"
           },
           "usuario_id": {
             "type": "integer",
@@ -9621,9 +10945,11 @@
         "required": [
           "id",
           "categoria_id",
+          "tipo",
           "limite_padrao_centavos",
           "recorrente",
           "ativo",
+          "ordem",
           "usuario_id",
           "criado_em",
           "atualizado_em"
@@ -9665,6 +10991,17 @@
               }
             ],
             "title": "Ativo"
+          },
+          "ordem": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ordem"
           }
         },
         "type": "object",
@@ -9762,6 +11099,14 @@
           "brapi_token_configurado": {
             "type": "boolean",
             "title": "Brapi Token Configurado"
+          },
+          "totp_configurado": {
+            "type": "boolean",
+            "title": "Totp Configurado"
+          },
+          "totp_login_habilitado": {
+            "type": "boolean",
+            "title": "Totp Login Habilitado"
           }
         },
         "type": "object",
@@ -9775,7 +11120,9 @@
           "ocupacao",
           "accent",
           "avatar",
-          "brapi_token_configurado"
+          "brapi_token_configurado",
+          "totp_configurado",
+          "totp_login_habilitado"
         ],
         "title": "PerfilRead"
       },
@@ -9889,6 +11236,63 @@
         "type": "object",
         "title": "PerfilUpdate"
       },
+      "PessoaDivisao": {
+        "properties": {
+          "usuario_id": {
+            "type": "integer",
+            "title": "Usuario Id"
+          },
+          "nome": {
+            "type": "string",
+            "title": "Nome"
+          },
+          "avatar": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avatar"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "usuario",
+              "so_divisao"
+            ],
+            "title": "Status"
+          },
+          "saldo_centavos": {
+            "type": "integer",
+            "title": "Saldo Centavos"
+          },
+          "ultima_atividade": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ultima Atividade"
+          }
+        },
+        "type": "object",
+        "required": [
+          "usuario_id",
+          "nome",
+          "avatar",
+          "status",
+          "saldo_centavos",
+          "ultima_atividade"
+        ],
+        "title": "PessoaDivisao"
+      },
       "PluggyCredenciais": {
         "properties": {
           "client_id": {
@@ -9905,6 +11309,16 @@
             "type": "string",
             "minLength": 1,
             "title": "Item Id"
+          },
+          "instituicao": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ConnectorRead"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
@@ -9996,6 +11410,39 @@
           "nova_senha"
         ],
         "title": "RecuperarSenhaRequest"
+      },
+      "ResumoDivisoes": {
+        "properties": {
+          "saldo_a_receber_centavos": {
+            "type": "integer",
+            "title": "Saldo A Receber Centavos"
+          },
+          "pessoas_a_receber": {
+            "type": "integer",
+            "title": "Pessoas A Receber"
+          },
+          "saldo_a_pagar_centavos": {
+            "type": "integer",
+            "title": "Saldo A Pagar Centavos"
+          },
+          "pessoas_a_pagar": {
+            "type": "integer",
+            "title": "Pessoas A Pagar"
+          },
+          "saldo_total_centavos": {
+            "type": "integer",
+            "title": "Saldo Total Centavos"
+          }
+        },
+        "type": "object",
+        "required": [
+          "saldo_a_receber_centavos",
+          "pessoas_a_receber",
+          "saldo_a_pagar_centavos",
+          "pessoas_a_pagar",
+          "saldo_total_centavos"
+        ],
+        "title": "ResumoDivisoes"
       },
       "ResumoSyncRead": {
         "properties": {
@@ -10090,11 +11537,25 @@
       "SetupIniciado": {
         "properties": {
           "totp_secret": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Totp Secret"
           },
           "totp_provisioning_uri": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Totp Provisioning Uri"
           },
           "setup_ticket": {
@@ -10109,7 +11570,7 @@
           "setup_ticket"
         ],
         "title": "SetupIniciado",
-        "description": "Passo 1: material do TOTP p/ o QR + ticket cifrado (nada foi persistido ainda)."
+        "description": "Passo 1: material do TOTP p/ o QR + ticket cifrado (nada foi persistido ainda).\n\nCampos de TOTP vêm `None` quando `ativar_totp=False` — o passo 2 conclui sem pedir código."
       },
       "SetupRequest": {
         "properties": {
@@ -10132,6 +11593,11 @@
           },
           "pluggy": {
             "$ref": "#/components/schemas/PluggyCredenciais"
+          },
+          "ativar_totp": {
+            "type": "boolean",
+            "title": "Ativar Totp",
+            "default": true
           },
           "data_nascimento": {
             "anyOf": [
@@ -10212,6 +11678,79 @@
           "app_mode"
         ],
         "title": "SetupStatus"
+      },
+      "TotpConfirmarRequest": {
+        "properties": {
+          "ticket": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Ticket"
+          },
+          "codigo_totp": {
+            "type": "string",
+            "maxLength": 8,
+            "minLength": 6,
+            "title": "Codigo Totp"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ticket",
+          "codigo_totp"
+        ],
+        "title": "TotpConfirmarRequest"
+      },
+      "TotpDesabilitarRequest": {
+        "properties": {
+          "senha_atual": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Senha Atual"
+          }
+        },
+        "type": "object",
+        "required": [
+          "senha_atual"
+        ],
+        "title": "TotpDesabilitarRequest"
+      },
+      "TotpIniciado": {
+        "properties": {
+          "totp_secret": {
+            "type": "string",
+            "title": "Totp Secret"
+          },
+          "totp_provisioning_uri": {
+            "type": "string",
+            "title": "Totp Provisioning Uri"
+          },
+          "ticket": {
+            "type": "string",
+            "title": "Ticket"
+          }
+        },
+        "type": "object",
+        "required": [
+          "totp_secret",
+          "totp_provisioning_uri",
+          "ticket"
+        ],
+        "title": "TotpIniciado",
+        "description": "Passo 1 de cadastrar/trocar o 2FA — mesmo shape do setup/convite, ticket cifrado."
+      },
+      "TotpIniciarRequest": {
+        "properties": {
+          "senha_atual": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Senha Atual"
+          }
+        },
+        "type": "object",
+        "required": [
+          "senha_atual"
+        ],
+        "title": "TotpIniciarRequest"
       },
       "TransacaoListagem": {
         "properties": {
@@ -10682,6 +12221,102 @@
         "type": "object",
         "title": "TransacaoUpdate",
         "description": "Só os campos do usuário (§4 crud.md). `exclude_unset` no router → patch parcial."
+      },
+      "UsuarioAdminRead": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "nome": {
+            "type": "string",
+            "title": "Nome"
+          },
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "completo",
+              "divisao"
+            ],
+            "title": "Tipo"
+          },
+          "ativo": {
+            "type": "boolean",
+            "title": "Ativo"
+          },
+          "is_admin": {
+            "type": "boolean",
+            "title": "Is Admin"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "usuario",
+              "so_divisao"
+            ],
+            "title": "Status"
+          },
+          "criado_em": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Criado Em"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "nome",
+          "email",
+          "tipo",
+          "ativo",
+          "is_admin",
+          "status",
+          "criado_em"
+        ],
+        "title": "UsuarioAdminRead"
+      },
+      "UsuarioBusca": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "nome": {
+            "type": "string",
+            "title": "Nome"
+          },
+          "avatar": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avatar"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "usuario",
+              "so_divisao"
+            ],
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "nome",
+          "avatar",
+          "status"
+        ],
+        "title": "UsuarioBusca"
       },
       "ValidationError": {
         "properties": {

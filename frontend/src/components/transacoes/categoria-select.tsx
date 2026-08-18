@@ -19,23 +19,26 @@ import { iconeCategoria } from "@/lib/api/categoria-icones"
 import { nomeCategoria, useCategorias } from "@/lib/api/categorias"
 import { cn } from "@/lib/utils"
 
-/** Seletor da taxonomia do Pluggy. `incluirTodas` adiciona a opção "Todas" (para filtro). */
+/** Seletor da taxonomia do Pluggy. `incluirTodas` adiciona a opção "Todas" (para filtro).
+ * `excluir` esconde ids da lista (ex.: categorias já adicionadas em outro lugar). */
 export function CategoriaSelect({
   value,
   onChange,
   incluirTodas = false,
   placeholder = "Categoria",
   className,
+  excluir,
 }: {
   value: string | null
   onChange: (v: string | null) => void
   incluirTodas?: boolean
   placeholder?: string
   className?: string
+  excluir?: string[]
 }) {
   const { data } = useCategorias()
   const [aberto, setAberto] = useState(false)
-  const categorias = data ?? []
+  const categorias = (data ?? []).filter((c) => !excluir?.includes(c.pluggy_id))
 
   const selecionada = value ? categorias.find((c) => c.pluggy_id === value) : null
   const rotulo = selecionada

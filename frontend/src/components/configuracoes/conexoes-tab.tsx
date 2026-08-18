@@ -1,7 +1,8 @@
-import { Plus, RefreshCw, Trash2 } from "lucide-react"
+import { Landmark, Plus, RefreshCw, Trash2 } from "lucide-react"
 import { useState } from "react"
 import { toast } from "sonner"
 
+import { InstituicaoSelect } from "@/components/contas/instituicao-select"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -23,6 +24,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
+  type Item,
   useCredenciais,
   useCriarCredencial,
   useCriarItem,
@@ -30,7 +32,9 @@ import {
   useRemoverItem,
   useSincronizarItem,
   useTestarCredencial,
+  useVincularInstituicaoItem,
 } from "@/lib/api/conexoes"
+import { type Connector, useInstituicoes } from "@/lib/api/instituicoes"
 import {
   useDefinirBrapiToken,
   usePerfil,
@@ -242,8 +246,12 @@ function CredencialConfigurada() {
 
 function ListaItens({ credencialId }: { credencialId: number }) {
   const itens = useItens()
+  const instituicoes = useInstituicoes()
   const sincronizar = useSincronizarItem()
   const remover = useRemoverItem()
+  const [itemEditando, setItemEditando] = useState<Item | null>(null)
+
+  const porId = new Map((instituicoes.data ?? []).map((i) => [i.id, i]))
 
   return (
     <Card>
@@ -271,7 +279,9 @@ function ListaItens({ credencialId }: { credencialId: number }) {
             >
               <div className="min-w-0">
                 <p className="truncate font-medium">
-                  {it.connector_nome ?? "Conexão"}
+                  {it.instituicao_manual_id != null
+                    ? (porId.get(it.instituicao_manual_id)?.nome ?? it.connector_nome)
+                    : (it.connector_nome ?? "Conexão")}
                 </p>
                 <p className="text-xs text-muted-foreground">
                   {it.status ?? "—"}
@@ -281,6 +291,14 @@ function ListaItens({ credencialId }: { credencialId: number }) {
                 </p>
               </div>
               <div className="flex shrink-0 gap-1">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  aria-label="Instituição da conexão"
+                  onClick={() => setItemEditando(it)}
+                >
+                  <Landmark className="size-4" aria-hidden />
+                </Button>
                 <Button
                   variant="ghost"
                   size="icon"
@@ -308,15 +326,72 @@ function ListaItens({ credencialId }: { credencialId: number }) {
           ))
         )}
       </CardContent>
+      <DialogInstituicaoItem
+        item={itemEditando}
+        connectorAtualId={
+          itemEditando?.instituicao_manual_id != null
+            ? (porId.get(itemEditando.instituicao_manual_id)?.pluggy_connector_id ?? null)
+            : null
+        }
+        onOpenChange={(aberto) => !aberto && setItemEditando(null)}
+      />
     </Card>
+  )
+}
+
+/** Dialog de vínculo manual de instituição de uma conexão — reaberto pela lista para editar
+ * depois de criada (o vínculo em si é feito no `DialogAdicionar` na criação, ou aqui depois). */
+function DialogInstituicaoItem({
+  item,
+  connectorAtualId,
+  onOpenChange,
+}: {
+  item: Item | null
+  connectorAtualId: number | null
+  onOpenChange: (aberto: boolean) => void
+}) {
+  const vincular = useVincularInstituicaoItem()
+  const aberto = item != null
+
+  return (
+    <Dialog open={aberto} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Instituição da conexão</DialogTitle>
+          <DialogDescription>
+            Vale para todas as contas desta conexão.
+          </DialogDescription>
+        </DialogHeader>
+        {item ? (
+          <InstituicaoSelect
+            value={connectorAtualId}
+            enabled={aberto}
+            onChange={(c) =>
+              vincular.mutate(
+                { itemId: item.id, connector: c },
+                { onSuccess: () => onOpenChange(false) }
+              )
+            }
+          />
+        ) : null}
+      </DialogContent>
+    </Dialog>
   )
 }
 
 function DialogAdicionar({ credencialId }: { credencialId: number }) {
   const criarItem = useCriarItem()
+  const vincularInstituicao = useVincularInstituicaoItem()
   const sincronizar = useSincronizarItem()
   const [itemId, setItemId] = useState("")
+  const [connector, setConnector] = useState<Connector | null>(null)
   const [aberto, setAberto] = useState(false)
+
+  const reset = () => {
+    setItemId("")
+    setConnector(null)
+    setAberto(false)
+  }
 
   return (
     <Dialog open={aberto} onOpenChange={setAberto}>
@@ -341,6 +416,18 @@ function DialogAdicionar({ credencialId }: { credencialId: number }) {
             onChange={(e) => setItemId(e.target.value)}
           />
         </div>
+        <div className="flex flex-col gap-1.5">
+          <Label>Instituição (opcional)</Label>
+          <p className="text-xs text-muted-foreground">
+            Vale para todas as contas desta conexão. Sem escolha, usamos o nome
+            detectado pelo Pluggy.
+          </p>
+          <InstituicaoSelect
+            value={connector?.pluggy_connector_id ?? null}
+            enabled={aberto}
+            onChange={setConnector}
+          />
+        </div>
         <DialogFooter>
           <Button
             disabled={!itemId || criarItem.isPending}
@@ -349,9 +436,15 @@ function DialogAdicionar({ credencialId }: { credencialId: number }) {
                 { credencial_id: credencialId, pluggy_item_id: itemId },
                 {
                   onSuccess: (item) => {
-                    setItemId("")
-                    setAberto(false)
-                    sincronizar.mutate(item.id) // valida o itemId + puxa os dados
+                    reset()
+                    if (connector) {
+                      vincularInstituicao.mutate(
+                        { itemId: item.id, connector },
+                        { onSuccess: () => sincronizar.mutate(item.id) }
+                      )
+                    } else {
+                      sincronizar.mutate(item.id) // valida o itemId + puxa os dados
+                    }
                   },
                   onError: (err) => toast.error(err.message),
                 }

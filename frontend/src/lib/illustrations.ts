@@ -5,6 +5,7 @@ export const CENAS = [
   "default",
   "goal",
   "money",
+  "money-v2",
   "subscriptions",
   "scared",
   "super-scared",

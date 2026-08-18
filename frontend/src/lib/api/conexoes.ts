@@ -2,7 +2,9 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 
 import { api } from "@/lib/api/client"
+import { contasKeys } from "@/lib/api/contas"
 import { mensagemErro } from "@/lib/api/erros"
+import type { Connector } from "@/lib/api/instituicoes"
 import type { components } from "@/lib/api/schema"
 
 export type Credencial = components["schemas"]["CredencialPluggyRead"]
@@ -93,6 +95,34 @@ export function useCriarItem() {
       return data
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: conexoesKeys.itens }),
+  })
+}
+
+/** Vincula (ou remove, com `connector=null`) a instituição manual de uma conexão — vale para
+ * todas as contas do item. */
+export function useVincularInstituicaoItem() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (args: { itemId: number; connector: Connector | null }): Promise<Item> => {
+      const { data, error } = await api.PUT("/api/itens-pluggy/{item_id}/instituicao", {
+        params: { path: { item_id: args.itemId } },
+        body: args.connector
+          ? {
+              pluggy_connector_id: args.connector.pluggy_connector_id,
+              nome: args.connector.nome,
+              logo_url: args.connector.logo_url,
+            }
+          : { pluggy_connector_id: null },
+      })
+      if (error || !data)
+        throw new Error(mensagemErro(error, "falha ao vincular a instituição"))
+      return data
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: conexoesKeys.itens })
+      qc.invalidateQueries({ queryKey: contasKeys.all })
+    },
+    onError: (e) => toast.error(e.message),
   })
 }
 

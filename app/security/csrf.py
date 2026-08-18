@@ -25,6 +25,12 @@ _ISENTOS = {
     "/api/auth/login",
     "/api/auth/recuperar-senha",
 }
+# `app/routers/convite.py` roda inteiro antes de existir sessão (mesmo espírito do bootstrap
+# acima), mas o token vai na própria URL (`/api/convites/{token}`) — não dá pra listar como
+# caminho exato, então isenta o prefixo inteiro (só tem essas rotas, todas pré-sessão). Seguro
+# pelo mesmo motivo do login/setup: não há autoridade ambiente (cookie) a proteger aqui — quem
+# não conhece o token/credenciais não consegue nada, então CSRF não se aplica.
+_PREFIXOS_ISENTOS = ("/api/convites/",)
 
 
 def _csrf_valido(request: Request) -> bool:
@@ -43,6 +49,7 @@ async def csrf_middleware(
         and request.method in _METODOS_MUTANTES
         and request.url.path.startswith("/api/")
         and request.url.path not in _ISENTOS
+        and not request.url.path.startswith(_PREFIXOS_ISENTOS)
         and not _csrf_valido(request)
     ):
         return JSONResponse(status_code=403, content={"detail": "CSRF token inválido ou ausente"})

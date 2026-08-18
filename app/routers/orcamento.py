@@ -15,6 +15,7 @@ from app.schemas.orcamento import (
 from app.security.current_user import get_current_user
 from app.services import orcamento as orcamento_service
 from app.services import orcamento_consumo
+from app.services.orcamento_mensal import materializar_mes
 
 router = APIRouter(prefix="/orcamentos", tags=["orcamento"])
 
@@ -48,6 +49,21 @@ def consumo(
     user: Usuario = Depends(get_current_user),
 ):
     """Consumo e alertas (50/75/90/100%) dos orçamentos do mês (§4.6)."""
+    return orcamento_consumo.consumo_do_mes(db, user.id, ano, mes)
+
+
+# Declarado antes de `/{orcamento_id}` pelo mesmo motivo de `/consumo`.
+@router.post("/materializar", response_model=OrcamentoConsumoRead)
+def materializar(
+    ano: int = Query(ge=2000, le=2100),
+    mes: int = Query(ge=1, le=12),
+    db: Session = Depends(get_db),
+    user: Usuario = Depends(get_current_user),
+):
+    """Aplica o orçamento padrão a um mês específico, sob pedido do usuário — normalmente pra
+    um mês passado sem nada configurado (a materialização automática só cobre o mês corrente,
+    §4.6). Idempotente: não sobrescreve linhas que já existem."""
+    materializar_mes(db, user.id, ano, mes)
     return orcamento_consumo.consumo_do_mes(db, user.id, ano, mes)
 
 

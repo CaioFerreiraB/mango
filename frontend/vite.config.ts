@@ -15,7 +15,7 @@ export default defineConfig({
     // Em dev a SPA roda no Vite e a API no FastAPI (:8000). O backend já serve a API sob /api,
     // então é só encaminhar — sem reescrever o caminho. Em produção tudo vem da mesma origem.
     proxy: {
-      "/api": { target: "http://localhost:8000", changeOrigin: true },
+      "/api": { target: "http://localhost:8010", changeOrigin: true },
     },
   },
 })

@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/drawer"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
+import { useIsMobile } from "@/hooks/use-mobile"
 import { useAssinaturas } from "@/lib/api/assinaturas"
 import { useContas } from "@/lib/api/contas"
 import {
@@ -29,7 +30,11 @@ import {
 import { sugerir } from "@/lib/assinatura-sugestao"
 import { formatDateTime, formatMoeda } from "@/lib/format"
 
-/** Painel de detalhe + edição estreita de uma transação (§4.5). Drawer flutuante à direita. */
+/** Sem isto o último campo do bottom sheet fica sob a barra de gestos. */
+const SAFE_AREA_BOTTOM = "env(safe-area-inset-bottom)"
+
+/** Painel de detalhe + edição estreita de uma transação (§4.5). Drawer flutuante à direita no
+ *  desktop, bottom sheet no mobile. */
 export function TransacaoDetalhe({
   transacao,
   onOpenChange,
@@ -42,17 +47,33 @@ export function TransacaoDetalhe({
 }) {
   const atualizar = useAtualizarTransacao()
   const contas = useContas()
+  // `direction` é comportamento do vaul (eixo da animação e do arraste), não dá para resolver por
+  // CSS. Ao contrário da bottom nav, aqui o hook pode ser usado: o drawer nasce fechado, então o
+  // `false` do primeiro paint não pisca nada.
+  const isMobile = useIsMobile()
   const t = transacao
   const conta = contas.data?.find((c) => c.id === t?.conta_id)
   const contaNome = conta
     ? (conta.marketing_name ?? conta.nome ?? conta.pluggy_account_id)
     : null
   return (
-    <Drawer direction="right" open={t !== null} onOpenChange={onOpenChange}>
-      <DrawerContent className="gap-0 overflow-x-hidden overflow-y-auto shadow-xl data-[vaul-drawer-direction=right]:inset-y-2 data-[vaul-drawer-direction=right]:right-2 data-[vaul-drawer-direction=right]:rounded-l-2xl data-[vaul-drawer-direction=right]:rounded-r-2xl data-[vaul-drawer-direction=right]:border data-[vaul-drawer-direction=right]:sm:max-w-md">
+    <Drawer
+      direction={isMobile ? "bottom" : "right"}
+      open={t !== null}
+      onOpenChange={onOpenChange}
+    >
+      <DrawerContent
+        className="gap-0 overflow-hidden shadow-xl data-[vaul-drawer-direction=bottom]:max-h-[85svh] data-[vaul-drawer-direction=right]:inset-y-2 data-[vaul-drawer-direction=right]:right-2 data-[vaul-drawer-direction=right]:rounded-l-2xl data-[vaul-drawer-direction=right]:rounded-r-2xl data-[vaul-drawer-direction=right]:border data-[vaul-drawer-direction=right]:sm:max-w-md"
+        style={{ paddingBottom: isMobile ? SAFE_AREA_BOTTOM : undefined }}
+      >
         {t ? (
-          <>
-            <DrawerHeader className="items-center gap-1.5 pt-20 pb-12 text-center md:text-center">
+          // A rolagem é deste wrapper, nunca do DrawerContent: o vaul põe nele um ::after de
+          // `height: 200%` logo abaixo do painel (cobre o fundo enquanto se arrasta) e, com o
+          // eixo vertical rolável, esse pseudo-elemento vira 2× de vazio rolável no bottom sheet.
+          <div className="flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto">
+            {/* O respiro generoso do valor é do painel lateral; no bottom sheet ele empurraria os
+                campos para fora da dobra. */}
+            <DrawerHeader className="items-center gap-1.5 pt-6 pb-8 text-center group-data-[vaul-drawer-direction=right]/drawer-content:pt-20 group-data-[vaul-drawer-direction=right]/drawer-content:pb-12 md:text-center">
               <span className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
                 {t.type === "CREDIT" ? "Entrada" : "Saída"}
               </span>
@@ -167,7 +188,7 @@ export function TransacaoDetalhe({
                 </Button>
               </DrawerFooter>
             ) : null}
-          </>
+          </div>
         ) : null}
       </DrawerContent>
     </Drawer>

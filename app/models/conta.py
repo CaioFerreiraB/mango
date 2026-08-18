@@ -1,8 +1,10 @@
 """Contas (§4.2) — origem `accounts.json`. Dado do Pluggy (sync escreve, usuário lê).
 
-Campos graváveis pelo usuário: `objetivo_id` (vínculo 1:1-max #4) e `instituicao_manual_id`
-(instituição escolhida à mão, sobrepõe a original só na exibição). Upsert por
-`pluggy_account_id` (idempotência do sync da Fase 1) — o sync nunca toca esses dois campos.
+Campo gravável pelo usuário: `objetivo_id` (vínculo 1:1-max #4). Upsert por `pluggy_account_id`
+(idempotência do sync da Fase 1) — o sync nunca toca esse campo.
+
+`instituicao_manual_id` NÃO é uma coluna aqui — é computada a partir de `item.instituicao_manual_id`
+(a instituição manual vale por CONEXÃO, escolhida ao criar/editar o `ItemPluggy`, não por conta).
 """
 
 from datetime import datetime
@@ -17,6 +19,7 @@ from app.models.mixins import TimestampMixin, UserOwnedMixin
 
 if TYPE_CHECKING:
     from app.models.cartao_fatura import Cartao
+    from app.models.pluggy import ItemPluggy
 
 
 class Conta(UserOwnedMixin, TimestampMixin, Base):
@@ -44,14 +47,9 @@ class Conta(UserOwnedMixin, TimestampMixin, Base):
     saldo_centavos: Mapped[int] = mapped_column(BigInteger, nullable=False)
     currency_code: Mapped[str] = mapped_column(String(3), nullable=False, default="BRL")
 
-    # Campos do usuário (§4 crud.md): vínculo a objetivo (0..1, #4) e instituição manual.
+    # Campo do usuário (§4 crud.md): vínculo a objetivo (0..1, #4).
     objetivo_id: Mapped[int | None] = mapped_column(
         ForeignKey("objetivo.id", ondelete="SET NULL"), index=True
-    )
-    # Instituição escolhida à mão (o connector do Pluggy é sempre "meu Pluggy"). Quando setada,
-    # é a instituição efetiva (exibição/filtro); senão cai na `instituicao_id` do sync.
-    instituicao_manual_id: Mapped[int | None] = mapped_column(
-        ForeignKey("instituicao.id", ondelete="SET NULL"), index=True
     )
 
     pluggy_criado_em: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
@@ -60,6 +58,9 @@ class Conta(UserOwnedMixin, TimestampMixin, Base):
     # Detalhe 1:1 do cartão (só CREDIT). viewonly/selectin: a listagem expõe brand/level (arte do
     # cartão) sem N+1 e sem migration. O sync escreve `cartao` pela tabela, não por aqui.
     cartao: Mapped["Cartao | None"] = relationship(viewonly=True, lazy="selectin", uselist=False)
+    # A conexão dona da conta — só para ler a instituição manual (mesmo padrão de `cartao`: viewonly
+    # + selectin, sem N+1 na listagem).
+    item: Mapped["ItemPluggy"] = relationship(viewonly=True, lazy="selectin")
 
     @property
     def brand(self) -> str | None:
@@ -68,3 +69,9 @@ class Conta(UserOwnedMixin, TimestampMixin, Base):
     @property
     def level(self) -> str | None:
         return self.cartao.level if self.cartao else None
+
+    @property
+    def instituicao_manual_id(self) -> int | None:
+        """Instituição escolhida à mão para a CONEXÃO (não por conta) — sobrepõe `instituicao_id`
+        (a original do sync) na exibição de todas as contas do mesmo item."""
+        return self.item.instituicao_manual_id if self.item else None

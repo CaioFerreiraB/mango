@@ -34,16 +34,12 @@ import {
 import {
   dashboardItem,
   investimentosSection,
+  isActivePath,
   navSections,
+  navSectionsDivisaoOnly,
   settingsItem,
 } from "@/config/nav"
-
-function isActivePath(pathname: string, url: string): boolean {
-  if (url === "/") {
-    return pathname === "/"
-  }
-  return pathname === url || pathname.startsWith(`${url}/`)
-}
+import { useMe } from "@/lib/api/auth"
 
 /** Item de nível superior sem filhos (Dashboard, Configurações). */
 function NavItemButton({
@@ -155,6 +151,11 @@ function NavSectionItem({
 
 export function AppSidebar() {
   const { pathname } = useLocation()
+  const me = useMe()
+  // Conta "divisao" (§4.11) só enxerga o módulo de divisão de contas — Dashboard e Investimentos
+  // somem, e a única seção vira "Compartilhado" (Configurações continua pros dois tipos).
+  const somenteDivisao = me.data?.tipo === "divisao"
+  const secoes = somenteDivisao ? navSectionsDivisaoOnly : navSections
 
   return (
     <Sidebar variant="inset" collapsible="icon">
@@ -181,13 +182,15 @@ export function AppSidebar() {
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
-              <NavItemButton item={dashboardItem} pathname={pathname} />
+              {!somenteDivisao && (
+                <NavItemButton item={dashboardItem} pathname={pathname} />
+              )}
 
               {/* Investimentos (seção) fica logo após Planejamento, antes de Compartilhado. */}
-              {navSections.map((section) => (
+              {secoes.map((section) => (
                 <Fragment key={section.label}>
                   <NavSectionItem section={section} pathname={pathname} />
-                  {section.label === "Planejamento" ? (
+                  {!somenteDivisao && section.label === "Planejamento" ? (
                     <NavSectionItem
                       section={investimentosSection}
                       pathname={pathname}

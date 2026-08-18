@@ -129,7 +129,8 @@ def _sgs_serie(sgs_codigo: int, inicio: date, fim: date) -> list[tuple[date, Dec
             )
         except IndicadorError as e:
             if e.status == 404:
-                return []  # SGS responde 404 p/ intervalo sem observação (ex.: IPCA mensal em janela curta)
+                # SGS responde 404 p/ intervalo sem observação (ex.: IPCA mensal em janela curta).
+                return []
             raise
         out: list[tuple[date, Decimal]] = []
         for row in body if isinstance(body, list) else []:

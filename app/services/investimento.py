@@ -17,7 +17,6 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.exceptions import NotFoundError
-from app.models.conta import Conta
 from app.models.fii_fundamento import FiiFundamento
 from app.models.investimento import Investimento, InvestimentoTransacao
 from app.models.investimento_saldo_diario import InvestimentoSaldoDiario
@@ -189,20 +188,16 @@ def _cotacao_centavos(inv: Investimento) -> int | None:
 
 
 def _instituicao_por_item(db: Session, usuario_id: int) -> dict[int, tuple[str | None, str | None]]:
-    """item_id → (nome, logo_url) da instituição efetiva: vínculo manual da conta do item
-    (nome+logo, sobrepõe o connector), senão o `connector_nome` (sem logo). Espelha o
-    `instituicaoEfetiva` das contas para a Carteira."""
+    """item_id → (nome, logo_url) da instituição efetiva: vínculo manual do item (nome+logo,
+    sobrepõe o connector), senão o `connector_nome` (sem logo). Espelha o `instituicaoEfetiva`
+    das contas para a Carteira."""
     insts = {
         i.id: i
         for i in db.scalars(select(Instituicao).where(Instituicao.usuario_id == usuario_id)).all()
     }
-    manual: dict[int, Instituicao] = {}
-    for c in db.scalars(select(Conta).where(Conta.usuario_id == usuario_id)).all():
-        if c.instituicao_manual_id is not None and (inst := insts.get(c.instituicao_manual_id)):
-            manual.setdefault(c.item_id, inst)
     mapa: dict[int, tuple[str | None, str | None]] = {}
     for item in db.scalars(select(ItemPluggy).where(ItemPluggy.usuario_id == usuario_id)).all():
-        inst = manual.get(item.id)
+        inst = insts.get(item.instituicao_manual_id) if item.instituicao_manual_id else None
         mapa[item.id] = (inst.nome, inst.logo_url) if inst else (item.connector_nome, None)
     return mapa
 

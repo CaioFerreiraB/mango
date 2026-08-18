@@ -54,3 +54,16 @@ class ItemPluggyUpdate(BaseModel):
     status: str | None = None
     status_detalhe: str | None = None
     ultimo_sync_em: datetime | None = None
+
+
+class ItemInstituicaoUpdate(BaseModel):
+    """Vínculo manual da conexão a uma instituição escolhida no catálogo do Pluggy. Vale para
+    todas as contas do item.
+
+    `pluggy_connector_id=None` remove o vínculo. Com connector, `nome` é obrigatório e
+    `logo_url` é o `imageUrl` do connector (opcional).
+    """
+
+    pluggy_connector_id: int | None = None
+    nome: str | None = None
+    logo_url: str | None = None
