@@ -10,6 +10,8 @@ ainda está se assentando. Cada versão publicada tem uma imagem correspondente 
 
 ## [Não publicado]
 
+## [0.1.1] — 2026-08-21
+
 ### Corrigido
 
 - **Divisão de contas quebrava no PostgreSQL** — a aba Pessoas (`GET /api/divisao/pessoas`)
@@ -77,5 +79,6 @@ Primeira versão publicada. Imagem única servindo API e interface, instalável 
 - Os endpoints de autenticação ainda não têm rate-limiting nem lockout. Ver **Problemas conhecidos**
   em [ROADMAP.md](ROADMAP.md) antes de expor a instância à internet aberta.
 
-[Não publicado]: https://github.com/CaioFerreiraB/mango/compare/v0.1.0...HEAD
+[Não publicado]: https://github.com/CaioFerreiraB/mango/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/CaioFerreiraB/mango/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/CaioFerreiraB/mango/releases/tag/v0.1.0
