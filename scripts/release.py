@@ -33,6 +33,7 @@ ARQUIVOS_DE_VERSAO = (
     "app/__init__.py",
     "frontend/package.json",
     "frontend/package-lock.json",
+    "uv.lock",
     "CHANGELOG.md",
 )
 
@@ -145,6 +146,11 @@ def main() -> None:
             substituir("pyproject.toml", r'^version = "[^"]+"', f'version = "{versao}"'),
             substituir("app/__init__.py", r'__version__ = "[^"]+"', f'__version__ = "{versao}"'),
             substituir("frontend/package.json", r'"version": "[^"]+"', f'"version": "{versao}"'),
+            # O uv.lock guarda a versão do próprio projeto. Sem bumpar aqui, o primeiro `uv run`
+            # depois da release reescreve o arquivo e suja a árvore — o que faz a release seguinte
+            # abortar por "mudanças não commitadas". Ancorado no pacote `mango` para não pegar a
+            # versão de uma dependência.
+            substituir("uv.lock", r'(name = "mango"\nversion = )"[^"]+"', rf'\g<1>"{versao}"'),
             substituir_no_lock(antiga, versao),
         ]
     )
