@@ -22,6 +22,9 @@ ainda está se assentando. Cada versão publicada tem uma imagem correspondente 
 
 - O CI passa a resolver a versão do Node por `frontend/.nvmrc`, que não existia — o job de frontend
   falhava em toda execução desde que o workflow foi criado.
+- Um teste de rota removida deixa de depender de haver build da SPA em `frontend/dist`. Com o build
+  presente, o catch-all do `mount_spa` casa o caminho e um POST inválido vira 405 em vez de 404 — o
+  teste passava na máquina do desenvolvedor e falhava no CI, que não builda o frontend.
 
 ## [0.1.0] — 2026-08-21
 

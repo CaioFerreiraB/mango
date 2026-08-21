@@ -306,13 +306,19 @@ def test_resumo_saldo_total_invariante_entre_bruto_e_otimizado(
 
 
 def test_pessoas_convidar_route_removida(client_factory, usuario_a):
-    """A rota antiga (convite via módulo de divisão) não existe mais."""
+    """A rota antiga (convite via módulo de divisão) não existe mais.
+
+    O status exato depende do ambiente, não da aplicação: sem build da SPA em `frontend/dist`
+    (o caso do CI do backend) nenhuma rota casa o caminho e vem 404; com o build, o catch-all
+    `GET /{caminho:path}` do `mount_spa` casa o caminho e o POST vira 405 por método inválido.
+    O que se garante aqui é que não há handler — não o número.
+    """
     a = client_factory(usuario_a)
     resp = a.post(
         "/api/divisoes-despesa/pessoas/convidar",
         json={"nome": "Convidado", "email": "convidado@mango.test"},
     )
-    assert resp.status_code == 405
+    assert resp.status_code in (404, 405)
 
 
 def test_pessoa_convidada_aparece_em_pessoas_sem_despesa(client_factory_sh, usuario_admin):
