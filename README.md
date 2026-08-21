@@ -63,22 +63,30 @@ lançamento: é **revisar e confiar** nos números. Feito para **pessoa física 
 > O cadastro valida a conexão na hora e vincula **uma** instituição financeira; outras conexões você
 > adiciona depois em Configurações → Conexões.
 
-```bash
-# 1. Clone
-git clone https://github.com/CaioFerreiraB/mango.git
-cd mango
+A imagem já vem pronta do GHCR: nada é compilado na sua máquina. O clone abaixo serve só para
+pegar o compose e gerar as chaves — no Portainer nem isso é necessário.
 
-# 2. Configure o ambiente
+```bash
+git clone https://github.com/CaioFerreiraB/mango.git && cd mango
 cp deploy/.env.example deploy/.env
 make gen-keys          # gera ENCRYPTION_KEY e SECRET_KEY — cole as duas linhas em deploy/.env
-
-# 3. Suba a stack (app + PostgreSQL)
-make docker-up         # docker compose -f docker-compose.selfhosted.yml up --build
+#  … e em deploy/.env: defina POSTGRES_PASSWORD e, para este teste em http://, SESSION_COOKIE_SECURE=false
+docker compose --env-file deploy/.env -f deploy/docker-compose.yml up -d
 ```
 
 Abra **http://localhost:8000** — o primeiro acesso cai no assistente **/setup**, que cria o usuário
 dono, ativa o **2FA** e conecta o Pluggy. Migrations e a carga inicial de categorias rodam sozinhas no
-boot. Para derrubar mantendo os dados: `make docker-down`.
+boot.
+
+A stack só escuta em `127.0.0.1` por padrão: para acessar de outra máquina, coloque um reverse proxy
+com TLS na frente (o caminho recomendado) — ou mude `BIND_ADDR` conscientemente. Os porquês estão em
+[`deploy/README.md`](deploy/README.md).
+
+**No Portainer:** Stacks → Add stack, apontando para `deploy/docker-compose.yml` deste repositório, e
+os segredos no painel *Environment variables*. O passo a passo completo — geração das chaves, onde os
+segredos ficam, upgrade e backup — está em **[`deploy/README.md`](deploy/README.md)**.
+
+Para rodar a partir do código-fonte (build local em vez da imagem publicada): `make docker-up`.
 
 ## Como funciona
 
@@ -89,17 +97,26 @@ tarefas periódicas (materialização de orçamento, snapshot de saldo, fundamen
 **Stack:** Python 3.12 · FastAPI · SQLAlchemy 2 · Alembic · PostgreSQL 16 · React · TypeScript · Vite ·
 shadcn/ui · Tailwind.
 
-## Roadmap
+## Versões e roadmap
 
-- Fontes de renda
-- Divisão de contas (estilo Splitwise)
-- Notificações via Telegram
-- App desktop empacotado (modo local, monousuário, via pywebview)
+Cada versão publicada vira uma imagem no GHCR. O que mudou em cada uma está no
+[`CHANGELOG.md`](CHANGELOG.md); o que vem pela frente — e os **problemas conhecidos**, que valem uma
+lida antes de expor a instância à internet — está no [`ROADMAP.md`](ROADMAP.md).
 
 ## Desenvolvimento
 
-Rodar sem Docker, arquitetura e specs em [`docs/dev/`](docs/dev/) (`SETUP.md`, `DESENVOLVIMENTO.md`,
-`requisitos.md`). Atalhos no [`Makefile`](Makefile): `make setup`, `make run`, `make test`, `make lint`.
+Requer [uv](https://docs.astral.sh/uv/) e Node 20.
+
+```bash
+make setup    # dependências, .env, migrations e hooks de pre-commit
+make run      # API em modo dev, com reload
+make test     # suíte (SQLite; também PostgreSQL quando TEST_DATABASE_URL está definida)
+make doctor   # checklist "pronto para desenvolver"
+```
+
+Os demais atalhos — build do frontend, geração do cliente tipado, migrations — estão no
+[`Makefile`](Makefile). Para publicar uma versão: `make release v=X.Y.Z`, e o push da tag dispara a
+imagem no GHCR.
 
 ## Licença
 

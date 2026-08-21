@@ -1,24 +1,28 @@
-# Stack self-hosted completa (app + Postgres) para instalar/testar em container.
-#   1) make gen-keys  → cole ENCRYPTION_KEY/SECRET_KEY em deploy/.env (cp deploy/.env.example antes)
-#   2) make docker-up → abre http://localhost:8000 (primeiro acesso cai no /setup)
-# É separado do docker-compose.yml (Postgres de dev) de propósito. O Postgres aqui não expõe porta:
-# só o app o acessa pela rede interna do compose. O `name:` isola projeto/volume do compose de dev
-# (senão ambos seriam o projeto "mango" e disputariam o mesmo container/volume `db`).
+# Mesma stack de deploy/docker-compose.yml, mas **buildando a imagem do código-fonte** em vez de
+# puxar do GHCR. Use para testar localmente uma mudança antes de publicá-la; para instalar de
+# verdade, prefira deploy/docker-compose.yml (imagem pronta, atualizável pelo Portainer).
+#
+#   cp deploy/.env.example deploy/.env && make gen-keys   # cole as chaves no arquivo
+#   make docker-up
+#
+# O `name:` isola projeto e volume da stack de produção e do compose de dev — senão os três
+# disputariam o mesmo container/volume `db`.
 name: mango-selfhosted
 services:
   db:
     image: postgres:16-alpine
     environment:
       POSTGRES_USER: mango
-      POSTGRES_PASSWORD: mango
       POSTGRES_DB: mango
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD em deploy/.env}
     volumes:
       - mango_pgdata:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U mango -d mango"]
-      interval: 5s
+      interval: 10s
       timeout: 5s
       retries: 10
+    restart: unless-stopped
 
   app:
     # `network: host` nos RUN do build → usa o DNS do host. Sem isso o BuildKit herda o stub do
@@ -30,9 +34,15 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    env_file: deploy/.env
+    environment:
+      APP_MODE: self_hosted
+      DATABASE_URL: postgresql+psycopg://mango:${POSTGRES_PASSWORD:?}@db:5432/mango
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:?gere com `make gen-keys`}
+      SECRET_KEY: ${SECRET_KEY:?gere com `make gen-keys`}
+      SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-true}
+      FORWARDED_ALLOW_IPS: ${FORWARDED_ALLOW_IPS:-127.0.0.1}
     ports:
-      - "8000:8000"
+      - "${BIND_ADDR:-127.0.0.1}:${APP_PORT:-8000}:8000"
     restart: unless-stopped
 
 volumes:

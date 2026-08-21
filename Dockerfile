@@ -11,6 +11,18 @@ RUN npm run build   # → /app/frontend/dist
 
 # ---- Stage 2: runtime Python ----
 FROM python:3.12-slim AS runtime
+
+# Metadados OCI. `image.source` é o que faz o GHCR ligar o pacote a este repositório (herda
+# visibilidade e README na página do pacote). Preenchidos pelo workflow de release a partir da tag.
+ARG VERSION=0.0.0-dev
+ARG REVISION=unknown
+LABEL org.opencontainers.image.title="mango" \
+      org.opencontainers.image.description="Controle financeiro pessoal com importação via Open Finance" \
+      org.opencontainers.image.source="https://github.com/CaioFerreiraB/mango" \
+      org.opencontainers.image.documentation="https://github.com/CaioFerreiraB/mango/blob/main/deploy/README.md" \
+      org.opencontainers.image.licenses="MIT" \
+      org.opencontainers.image.version="${VERSION}" \
+      org.opencontainers.image.revision="${REVISION}"
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
 
 WORKDIR /app

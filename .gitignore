@@ -230,3 +230,11 @@ mango.db
 mango.db.bak-*
 *.db-wal
 *.db-shm
+
+# Documentação interna — fica só na máquina, fora do repositório público.
+#   docs/dev/      specs, setup e notas de descoberta do desenvolvimento
+#   docs/security/ relatórios de auditoria (descrevem achados ainda em aberto)
+#   docs/deploy/   relatos de deploy com detalhes da infraestrutura pessoal
+docs/dev/
+docs/security/
+docs/deploy/

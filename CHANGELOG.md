@@ -1,0 +1,65 @@
+# Changelog
+
+Todas as mudanças relevantes deste projeto são registradas aqui.
+
+O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e o versionamento segue
+[SemVer](https://semver.org/lang/pt-BR/). Enquanto a versão for **0.x**, mudanças incompatíveis podem
+sair numa versão *minor* — a superfície pública (API HTTP, variáveis de ambiente, schema do banco)
+ainda está se assentando. Cada versão publicada tem uma imagem correspondente em
+`ghcr.io/caioferreirab/mango`; instruções de upgrade em [deploy/README.md](deploy/README.md).
+
+## [Não publicado]
+
+## [0.1.0] — 2026-08-21
+
+Primeira versão publicada. Imagem única servindo API e interface, instalável por Docker/Portainer.
+
+### Adicionado
+
+- **Importação por Open Finance (Pluggy):** conexão de instituições, sincronização incremental de
+  contas, cartões, transações e investimentos, com throttle por item.
+- **Transações:** categorização automática com override manual, detecção de transferências entre
+  contas próprias (pareamento de duas pernas por valor e data) e marcação de "revisada".
+- **Cartões e faturas:** modelo explícito de competência × caixa, para o gasto no cartão não ser
+  contado duas vezes no fluxo de caixa.
+- **Orçamentos:** limites mensais por categoria, materialização mensal automática e acompanhamento
+  de consumo.
+- **Objetivos:** metas com contas e investimentos vinculados, e progresso calculado.
+- **Assinaturas:** detecção automática de recorrências a partir do histórico, cadastro manual e
+  total mensal.
+- **Investimentos:** renda fixa, ações e FIIs com proventos e dividend yield; snapshot diário de
+  saldo; comparação com IBOV, CDI, SELIC e IPCA; fundamentos de FII a partir dos dados abertos da
+  CVM.
+- **Fontes de renda:** cadastro e acompanhamento das entradas recorrentes.
+- **Divisão de contas:** despesas compartilhadas entre usuários da mesma instância, com otimização
+  de acertos.
+- **Dashboard:** visão consolidada do mês.
+- **Multiusuário (self-hosted):** convites, administração de usuários, contas do tipo "somente
+  divisão" com escopo restrito e isolamento de dados por usuário em todos os repositórios.
+- **Interface:** SPA em React/TypeScript, tema claro/escuro, cor de destaque configurável e o
+  mascote mango.
+- **Assistente `/setup`:** primeiro acesso cria o usuário dono, ativa o 2FA e conecta o Pluggy.
+- **Distribuição:** imagem multi-arquitetura (`linux/amd64`, `linux/arm64`) publicada no GHCR a cada
+  tag, e stack pronta para o Portainer em [`deploy/docker-compose.yml`](deploy/docker-compose.yml).
+  Migrations e carga inicial de categorias rodam no boot do container.
+
+### Segurança
+
+- Autenticação por senha (bcrypt) com **2FA (TOTP)** obrigatório, sessões no servidor e proteção
+  CSRF nas mutações.
+- Credenciais do Pluggy e token da brapi **cifrados em repouso** (Fernet).
+- Guarda de boot que recusa subir em `self_hosted` com as chaves de desenvolvimento do repositório
+  ou com chaves vazias.
+- Suporte a segredos por arquivo em `/run/secrets/` (Docker secrets), além de variáveis de ambiente.
+- Padrões de deploy endurecidos a partir de um deploy real em VM com Portainer e reverse proxy: a
+  porta do app é publicada só em `127.0.0.1` (porta publicada pelo Docker não passa pelo `INPUT` do
+  firewall do host), `POSTGRES_PASSWORD` é obrigatória — sem mais `mango/mango` —, o cookie de
+  sessão nasce `Secure` e `FORWARDED_ALLOW_IPS` fica explícito para quem roda o proxy em container.
+
+### Problemas conhecidos
+
+- Os endpoints de autenticação ainda não têm rate-limiting nem lockout. Ver **Problemas conhecidos**
+  em [ROADMAP.md](ROADMAP.md) antes de expor a instância à internet aberta.
+
+[Não publicado]: https://github.com/CaioFerreiraB/mango/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/CaioFerreiraB/mango/releases/tag/v0.1.0

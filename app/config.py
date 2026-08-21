@@ -1,5 +1,6 @@
 """Configuração da aplicação (mesma base p/ self-hosted e local — varia só por env)."""
 
+from pathlib import Path
 from typing import Literal
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -12,9 +13,20 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 _DEV_ENCRYPTION_KEY = "3CPNFKQBk0AU10njLXpJ2sj9ZB_-MeviTY3tixSptxE="
 _DEV_SECRET_KEY = "dev-insecure-secret-change-me"
 
+# Docker/Swarm secrets: cada segredo é um arquivo cujo nome é o campo em minúsculas
+# (`/run/secrets/encryption_key`). Só declaramos o diretório quando ele existe — apontar para um
+# caminho ausente faz o pydantic-settings emitir warning em todo boot fora de container.
+# Precedência: variável de ambiente vence o arquivo, então use um ou outro, nunca os dois.
+_SECRETS_DIR = "/run/secrets" if Path("/run/secrets").is_dir() else None
+
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+        secrets_dir=_SECRETS_DIR,
+    )
 
     # `local` = desktop monousuário (usuário implícito); `self_hosted` = multiusuário.
     app_mode: Literal["local", "self_hosted"] = "local"
@@ -70,11 +82,16 @@ class Settings(BaseSettings):
         return self.database_url.startswith("sqlite")
 
     def chaves_inseguras(self) -> list[str]:
-        """Nomes das chaves ainda nos defaults versionados (guarda de boot S2)."""
+        """Nomes das chaves inservíveis para produção (guarda de boot S2).
+
+        Cobre dois casos: o default versionado no repo e o valor **vazio** — num container, uma
+        variável de ambiente não definida vira string vazia na substituição do compose, e sem esta
+        checagem o boot passaria para só quebrar depois, na primeira cifragem.
+        """
         inseguras = []
-        if self.encryption_key == _DEV_ENCRYPTION_KEY:
+        if not self.encryption_key.strip() or self.encryption_key == _DEV_ENCRYPTION_KEY:
             inseguras.append("ENCRYPTION_KEY")
-        if self.secret_key == _DEV_SECRET_KEY:
+        if not self.secret_key.strip() or self.secret_key == _DEV_SECRET_KEY:
             inseguras.append("SECRET_KEY")
         return inseguras
 

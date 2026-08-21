@@ -12,7 +12,13 @@ frontend/dist
 *.db
 *.db-*
 .env
-deploy/.env
 scripts/discovery/raw
 tests
 .claude
+# Documentação e arquivos de deploy não entram na imagem — só engordam o contexto de build.
+docs
+deploy
+CHANGELOG.md
+ROADMAP.md
+Makefile
+scripts/release.py

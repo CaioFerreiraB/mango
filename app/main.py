@@ -8,6 +8,7 @@ from contextlib import asynccontextmanager
 from fastapi import Depends, FastAPI, Request
 from fastapi.responses import JSONResponse
 
+from app import __version__
 from app.config import settings
 from app.db.bootstrap import bootstrap
 from app.exceptions import (
@@ -70,7 +71,7 @@ async def lifespan(app: FastAPI):
             agendador.parar()
 
 
-app = FastAPI(title="mango", version="0.0.0", lifespan=lifespan)
+app = FastAPI(title="mango", version=__version__, lifespan=lifespan)
 
 # CSRF nas mutações da API (só self-hosted; ver app.security.csrf).
 app.middleware("http")(csrf_middleware)

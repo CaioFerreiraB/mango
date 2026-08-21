@@ -1,0 +1,66 @@
+# Stack de produção do mango — imagem publicada no GHCR, sem build.
+#
+# Portainer: Stacks → Add stack → Repository (URL deste repo, Compose path `deploy/docker-compose.yml`)
+# ou Web editor (cole este conteúdo). Preencha as variáveis no painel *Environment variables*.
+# Passo a passo, geração das chaves, upgrade e backup: deploy/README.md
+#
+# Para rodar por CLI em vez de Portainer:
+#   cp deploy/.env.example deploy/.env && make gen-keys   # cole as chaves no arquivo
+#   docker compose --env-file deploy/.env -f deploy/docker-compose.yml up -d
+#
+# Sem `env_file:` de propósito: o arquivo não existe num clone limpo e o Compose trata isso como
+# erro fatal, o que quebraria o deploy a partir de repositório no Portainer. Tudo vem de
+# `environment:` com substituição, que é o que a UI do Portainer alimenta.
+#
+# `${VAR:?...}` faz o deploy falhar com a mensagem em vez de subir com valor vazio — um segredo em
+# branco não tem default seguro possível. Alternativa por Docker secrets (arquivos em
+# /run/secrets/) em deploy/README.md §Docker secrets.
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: mango
+      POSTGRES_DB: mango
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD (use apenas letras e números — o valor entra numa URL)}
+    volumes:
+      # Volume nomeado: é aqui que vivem os seus dados. Sobrevive a `down` e a upgrades de imagem.
+      - mango_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mango -d mango"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    # Sem `ports`: o Postgres só é alcançável pelo app, na rede interna da stack.
+    # Sem esta política o banco não volta depois de um reboot da máquina e o app reinicia em loop.
+    restart: unless-stopped
+
+  app:
+    # Fixe uma versão (ex.: 0.1.0) para que um upgrade seja sempre uma decisão sua — ver CHANGELOG.md.
+    image: ghcr.io/caioferreirab/mango:${MANGO_TAG:-latest}
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      APP_MODE: self_hosted
+      DATABASE_URL: postgresql+psycopg://mango:${POSTGRES_PASSWORD:?}@db:5432/mango
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:?gere com `make gen-keys` — ver deploy/README.md}
+      SECRET_KEY: ${SECRET_KEY:?gere com `make gen-keys` — ver deploy/README.md}
+      # O cookie de sessão `Secure` só trafega em HTTPS. `true` é o padrão porque o destino normal
+      # é atrás de um reverse proxy com TLS; passe `false` só para testar direto em http://.
+      SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-true}
+      # O uvicorn só honra X-Forwarded-* vindo de IPs confiáveis. Com o reverse proxy noutro
+      # container a requisição chega de um IP da rede Docker (172.x), os cabeçalhos são
+      # descartados e a app se enxerga em http:// mesmo servida por HTTPS — o que quebra redirects
+      # e URLs absolutas. Amplie para a sub-rede do proxy (ou `*`) nesse caso; ver deploy/README.md.
+      FORWARDED_ALLOW_IPS: ${FORWARDED_ALLOW_IPS:-127.0.0.1}
+    ports:
+      # Bind em loopback por padrão. Porta publicada pelo Docker é DNAT em nat/PREROUTING: ela
+      # **não passa pelo chain INPUT**, então um firewall de host baseado em regras de INPUT não a
+      # protege. Publicar em 0.0.0.0 por default exporia a app sem TLS. Atrás de um reverse proxy
+      # em container, o ideal é remover este bloco: o proxy alcança o app pela rede do Compose.
+      - "${BIND_ADDR:-127.0.0.1}:${APP_PORT:-8000}:8000"
+    # Migrations e carga inicial de categorias rodam no boot; o healthcheck já vem na imagem.
+    restart: unless-stopped
+
+volumes:
+  mango_pgdata:

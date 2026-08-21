@@ -1,0 +1,129 @@
+# Publica a imagem no GHCR a cada tag `vX.Y.Z` (ver CHANGELOG.md e `make release`).
+#
+# Não há segredo a configurar: o `GITHUB_TOKEN` automático, com `packages: write`, já autentica no
+# ghcr.io. Os segredos de runtime (ENCRYPTION_KEY/SECRET_KEY) são de cada instalação e nunca passam
+# por aqui — ver deploy/README.md.
+#
+# PASSO MANUAL, UMA ÚNICA VEZ: pacote no GHCR nasce **privado**, mesmo em repositório público. Após
+# a primeira tag, vá em github.com/CaioFerreiraB?tab=packages → mango → Package settings → Change
+# visibility → Public. Sem isso o `docker pull` do Portainer pede login e a instalação não é
+# "apontar e clicar".
+#
+# Multi-arch por runner nativo: cada plataforma builda na sua própria máquina e publica só o
+# digest; o job `merge` costura os digests num manifest list. Sai muito mais rápido que emular
+# arm64 com QEMU (`npm ci` + `uv sync` emulados levam dezenas de minutos). Os runners
+# `ubuntu-24.04-arm` são gratuitos em repositório público — num repo privado seria preciso voltar
+# ao QEMU (docker/setup-qemu-action) ou a um runner próprio.
+name: Release
+
+on:
+  push:
+    tags: ["v*.*.*"]
+
+jobs:
+  meta:
+    runs-on: ubuntu-latest
+    outputs:
+      image: ${{ steps.image.outputs.image }}
+    steps:
+      # O GHCR exige o nome do repositório em minúsculas; `github.repository` preserva o caixa alto
+      # do dono ("CaioFerreiraB"), então normalizamos aqui em vez de fixar o nome no arquivo.
+      - id: image
+        run: echo "image=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: meta
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux/amd64
+            runner: ubuntu-latest
+          - platform: linux/arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Nome da plataforma para o artefato
+        run: |
+          platform=${{ matrix.platform }}
+          echo "PLATFORM_PAIR=${platform//\//-}" >> "$GITHUB_ENV"
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build e push por digest
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: ${{ matrix.platform }}
+          build-args: |
+            VERSION=${{ github.ref_name }}
+            REVISION=${{ github.sha }}
+          # push-by-digest: publica o blob sem nomear tag — quem nomeia é o job `merge`.
+          outputs: type=image,name=${{ needs.meta.outputs.image }},push-by-digest=true,name-canonical=true,push=true
+          cache-from: type=gha,scope=${{ env.PLATFORM_PAIR }}
+          cache-to: type=gha,mode=max,scope=${{ env.PLATFORM_PAIR }}
+
+      - name: Exporta o digest
+        run: |
+          mkdir -p /tmp/digests
+          digest="${{ steps.build.outputs.digest }}"
+          touch "/tmp/digests/${digest#sha256:}"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: digests-${{ env.PLATFORM_PAIR }}
+          path: /tmp/digests/*
+          if-no-files-found: error
+          retention-days: 1
+
+  merge:
+    needs: [meta, build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: /tmp/digests
+          pattern: digests-*
+          merge-multiple: true
+
+      # `latest` sai só em release estável: com `latest=auto` (padrão), uma tag de pré-lançamento
+      # (v0.2.0-rc1) publica apenas a versão, sem mexer no que os usuários puxam por padrão.
+      - name: Calcula as tags da imagem
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ needs.meta.outputs.image }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Costura o manifest list e publica
+        working-directory: /tmp/digests
+        run: |
+          docker buildx imagetools create \
+            $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
+            $(printf '${{ needs.meta.outputs.image }}@sha256:%s ' *)
+
+      - name: Confere o manifest publicado
+        run: docker buildx imagetools inspect ${{ needs.meta.outputs.image }}:${{ steps.meta.outputs.version }}

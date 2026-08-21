@@ -1,8 +1,7 @@
-# Bootstrap e verificação do ambiente (ver docs/dev/SETUP.md).
-# Requer `uv` no PATH (SETUP.md §4.1).
+# Bootstrap e verificação do ambiente. Requer `uv` no PATH e Node 20 para o frontend.
 
 .PHONY: setup doctor test lint fmt migrate run revision openapi front-setup front-build \
-        gen-keys docker-up docker-down
+        gen-keys docker-up docker-down release
 
 setup:  ## Instala deps, prepara .env, aplica migrations e instala hooks
 	uv sync
@@ -11,7 +10,7 @@ setup:  ## Instala deps, prepara .env, aplica migrations e instala hooks
 	uv run pre-commit install
 	@if [ -d frontend ]; then ( cd frontend && npm ci ); else echo "frontend ausente — pulando npm ci"; fi
 
-doctor:  ## Checklist "pronto para desenvolver" (SETUP.md §5)
+doctor:  ## Checklist "pronto para desenvolver"
 	uv run ruff check
 	uv run pytest -q
 	uv run alembic current
@@ -53,8 +52,12 @@ gen-keys:  ## Gera ENCRYPTION_KEY e SECRET_KEY para colar no deploy/.env (§5.1/
 	@python3 -c "import os,base64; print('ENCRYPTION_KEY='+base64.urlsafe_b64encode(os.urandom(32)).decode())"
 	@python3 -c "import secrets; print('SECRET_KEY='+secrets.token_urlsafe(48))"
 
-docker-up:  ## Sobe a stack self-hosted (app + Postgres) em container
-	docker compose -f docker-compose.selfhosted.yml up --build
+docker-up:  ## Builda do fonte e sobe a stack self-hosted (app + Postgres) em container
+	docker compose --env-file deploy/.env -f docker-compose.selfhosted.yml up --build
 
 docker-down:  ## Derruba a stack self-hosted (mantém o volume de dados)
-	docker compose -f docker-compose.selfhosted.yml down
+	docker compose --env-file deploy/.env -f docker-compose.selfhosted.yml down
+
+release:  ## Prepara a versão X.Y.Z: sincroniza versões, fecha o CHANGELOG, commita e cria a tag
+	@test -n "$(v)" || { echo "uso: make release v=X.Y.Z"; exit 1; }
+	uv run python scripts/release.py "$(v)"
