@@ -4,10 +4,10 @@
 # ghcr.io. Os segredos de runtime (ENCRYPTION_KEY/SECRET_KEY) são de cada instalação e nunca passam
 # por aqui — ver deploy/README.md.
 #
-# PASSO MANUAL, UMA ÚNICA VEZ: pacote no GHCR nasce **privado**, mesmo em repositório público. Após
-# a primeira tag, vá em github.com/CaioFerreiraB?tab=packages → mango → Package settings → Change
-# visibility → Public. Sem isso o `docker pull` do Portainer pede login e a instalação não é
-# "apontar e clicar".
+# O pacote no GHCR herdou a visibilidade pública do repositório na v0.1.0 — o `docker pull` anônimo
+# funciona, que é o que torna a instalação pelo Portainer "apontar e clicar". Se um dia o pull
+# passar a pedir login, é a visibilidade do pacote: github.com/CaioFerreiraB?tab=packages → mango →
+# Package settings → Change visibility → Public.
 #
 # Multi-arch por runner nativo: cada plataforma builda na sua própria máquina e publica só o
 # digest; o job `merge` costura os digests num manifest list. Sai muito mais rápido que emular
