@@ -10,6 +10,19 @@ ainda está se assentando. Cada versão publicada tem uma imagem correspondente 
 
 ## [Não publicado]
 
+### Corrigido
+
+- **Divisão de contas quebrava no PostgreSQL** — a aba Pessoas (`GET /api/divisao/pessoas`)
+  devolvia HTTP 500 sempre que a lista misturava quem tem atividade recente com quem não tem, o que
+  acontece quando a simplificação de dívidas traz uma contraparte sem despesa em comum. A ordenação
+  comparava um `datetime` com fuso (o PostgreSQL devolve `TIMESTAMPTZ`) com um `datetime.min` sem
+  fuso. Só afetava o PostgreSQL — ou seja, exatamente o self-hosted; no SQLite passava despercebido.
+
+### Modificado
+
+- O CI passa a resolver a versão do Node por `frontend/.nvmrc`, que não existia — o job de frontend
+  falhava em toda execução desde que o workflow foi criado.
+
 ## [0.1.0] — 2026-08-21
 
 Primeira versão publicada. Imagem única servindo API e interface, instalável por Docker/Portainer.

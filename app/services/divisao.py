@@ -7,7 +7,7 @@ Nada de `HTTPException`: erros de domínio (`app/exceptions.py`), traduzidos a H
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -270,6 +270,20 @@ def resumo(db: Session, usuario_id: int) -> ResumoDivisoes:
     )
 
 
+def _recencia(pessoa: PessoaDivisao) -> datetime:
+    """Chave de ordenação por atividade — sempre *aware*, para os dois dialetos.
+
+    O Postgres devolve `TIMESTAMPTZ` com fuso e o SQLite devolve naive (mesmo ajuste de
+    `current_user`/`sync`). Como quem não tem atividade cai no `datetime.min`, sem normalizar os
+    dois lados a ordenação mistura naive e aware e levanta `TypeError` — só no Postgres, que é
+    justamente onde o self-hosted roda.
+    """
+    quando = pessoa.ultima_atividade
+    if quando is None:
+        return datetime.min.replace(tzinfo=UTC)
+    return quando if quando.tzinfo is not None else quando.replace(tzinfo=UTC)
+
+
 def pessoas(db: Session, usuario_id: int) -> list[PessoaDivisao]:
     """Toda contraparte relevante: quem já dividiu uma despesa comigo (mesmo já quitada/
     arquivada) OU quem eu convidei, mesmo que ainda não exista nenhuma despesa em comum —
@@ -335,5 +349,5 @@ def pessoas(db: Session, usuario_id: int) -> list[PessoaDivisao]:
         for contraparte_id, quando in ultima_atividade.items()
         if contraparte_id in usuarios
     ]
-    resultado.sort(key=lambda p: p.ultima_atividade or datetime.min, reverse=True)
+    resultado.sort(key=_recencia, reverse=True)
     return resultado
