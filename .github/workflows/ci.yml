@@ -93,12 +93,15 @@ jobs:
       - name: Testes (SQLite + PostgreSQL)
         run: uv run pytest --cov=app --cov-report=xml --cov-report=term-missing
 
-      # O envio só acontece onde o secret existe — PR vindo de fork não recebe secrets, e o job
-      # não pode falhar por isso. O token vem do `env:` do job (ver acima): posto no `env:` deste
-      # passo, o `if:` não o enxergaria e o passo seria pulado sempre, inclusive com o secret
-      # configurado.
+      # Só roda onde o secret existe: PR vindo de fork não recebe secrets. O token é lido do `env:`
+      # do job (ver acima) porque é o escopo que a documentação garante para o `if:` de um passo.
+      #
+      # `continue-on-error` porque isto é publicação de métrica, não um portão: o Codacy é um
+      # serviço externo, e uma indisponibilidade dele não pode reprovar a suíte e travar o merge.
+      # A análise estática do Codacy continua reportando no seu próprio check, à parte deste job.
       - name: Envia a cobertura ao Codacy
         if: env.CODACY_PROJECT_TOKEN != ''
+        continue-on-error: true
         uses: codacy/codacy-coverage-reporter-action@v1
         with:
           project-token: ${{ env.CODACY_PROJECT_TOKEN }}
