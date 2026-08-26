@@ -22,6 +22,19 @@ export type TransacaoUpdate = components["schemas"]["TransacaoUpdate"]
 export const valorEfetivoCentavos = (t: Transacao): number =>
   t.amount_in_account_currency_centavos ?? t.amount_centavos
 
+/** Texto do banco: o normalizado do Pluggy e, se o conector não mandar, o cru do extrato. */
+export const descricaoBanco = (t: Transacao): string | null =>
+  t.description ?? t.description_raw ?? null
+
+/** Texto principal da transação: a descrição escrita pelo usuário, senão a que veio do banco. */
+export const descricaoExibida = (t: Transacao): string | null =>
+  t.descricao_usuario ?? descricaoBanco(t)
+
+/** Linha secundária: com descrição própria, a do banco vira o subtítulo; senão, o estabelecimento. */
+export const subtituloTransacao = (t: Transacao): string | null =>
+  (t.descricao_usuario ? (descricaoBanco(t) ?? t.merchant_nome) : t.merchant_nome) ??
+  null
+
 export type TransacaoFiltro = {
   inicio?: string
   fim?: string

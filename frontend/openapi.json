@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "mango",
-    "version": "0.0.0"
+    "version": "0.1.1"
   },
   "paths": {
     "/health": {
@@ -12030,6 +12030,28 @@
             "type": "boolean",
             "title": "Revisada"
           },
+          "descricao_usuario": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Descricao Usuario"
+          },
+          "observacoes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Observacoes"
+          },
           "contraparte_id": {
             "anyOf": [
               {
@@ -12216,6 +12238,30 @@
               }
             ],
             "title": "Investimento Transacao Id"
+          },
+          "descricao_usuario": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 255
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Descricao Usuario"
+          },
+          "observacoes": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Observacoes"
           }
         },
         "type": "object",

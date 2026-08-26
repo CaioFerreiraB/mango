@@ -13,6 +13,8 @@ CAMPOS_USUARIO = (
     "revisada",
     "categoria_override_id",
     "categoria_ajustada_usuario",
+    "descricao_usuario",
+    "observacoes",
     "contraparte_id",
     "transferencia_origem",
     "assinatura_id",
@@ -94,6 +96,8 @@ class TransacaoRepository(UserScopedRepository[Transacao]):
                 or_(
                     Transacao.description.ilike(termo, escape="\\"),
                     Transacao.merchant_nome.ilike(termo, escape="\\"),
+                    Transacao.descricao_usuario.ilike(termo, escape="\\"),
+                    Transacao.observacoes.ilike(termo, escape="\\"),
                 )
             )
 

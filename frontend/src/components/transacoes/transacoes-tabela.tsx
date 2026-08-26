@@ -1,4 +1,4 @@
-import { ArrowRightLeft, CreditCard, Repeat } from "lucide-react"
+import { ArrowRightLeft, CreditCard, Repeat, StickyNote } from "lucide-react"
 import { useState, type PointerEvent as ReactPointerEvent } from "react"
 
 import { Valor } from "@/components/common/valor"
@@ -17,7 +17,12 @@ import {
 import { useMapaCategorias } from "@/lib/api/categorias"
 import { iconeCategoria } from "@/lib/api/categoria-icones"
 import { useContas } from "@/lib/api/contas"
-import { valorEfetivoCentavos, type Transacao } from "@/lib/api/transacoes"
+import {
+  descricaoExibida,
+  subtituloTransacao,
+  valorEfetivoCentavos,
+  type Transacao,
+} from "@/lib/api/transacoes"
 import { formatDate } from "@/lib/format"
 import { cn } from "@/lib/utils"
 
@@ -131,6 +136,8 @@ export function TransacoesTabela({
               const catId = t.categoria_override_id ?? t.categoria_pluggy_id
               const catNome = catId ? mapaCategorias.get(catId) : undefined
               const IconeCat = iconeCategoria(catId)
+              const titulo = descricaoExibida(t)
+              const subtitulo = subtituloTransacao(t)
               return (
                 <TableRow
                   key={t.id}
@@ -151,10 +158,16 @@ export function TransacoesTabela({
                         >
                           <span
                             className="min-w-0 truncate font-medium"
-                            title={t.description ?? undefined}
+                            title={titulo ?? undefined}
                           >
-                            {t.description ?? "—"}
+                            {titulo ?? "—"}
                           </span>
+                          {t.observacoes ? (
+                            <StickyNote
+                              className="size-3.5 shrink-0 text-muted-foreground"
+                              aria-label="tem observações"
+                            />
+                          ) : null}
                           {t.assinatura_id != null ? (
                             <Repeat
                               className="size-3.5 shrink-0 text-muted-foreground"
@@ -182,12 +195,12 @@ export function TransacoesTabela({
                             </Badge>
                           ) : null}
                         </button>
-                        {t.merchant_nome ? (
+                        {subtitulo ? (
                           <p
                             className="truncate text-xs text-muted-foreground"
-                            title={t.merchant_nome}
+                            title={subtitulo}
                           >
-                            {t.merchant_nome}
+                            {subtitulo}
                           </p>
                         ) : null}
                       </div>
@@ -236,6 +249,8 @@ export function TransacoesTabela({
         {items.map((t) => {
           const catId = t.categoria_override_id ?? t.categoria_pluggy_id
           const IconeCat = iconeCategoria(catId)
+          const titulo = descricaoExibida(t)
+          const subtitulo = subtituloTransacao(t)
           return (
             <li key={t.id}>
               <button
@@ -251,12 +266,18 @@ export function TransacoesTabela({
                   <IconeCat className="size-5" aria-hidden />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-xs font-semibold">
-                    {t.description ?? "—"}
+                  <p className="flex min-w-0 items-center gap-1.5 text-xs font-semibold">
+                    <span className="min-w-0 truncate">{titulo ?? "—"}</span>
+                    {t.observacoes ? (
+                      <StickyNote
+                        className="size-3 shrink-0 text-muted-foreground"
+                        aria-label="tem observações"
+                      />
+                    ) : null}
                   </p>
-                  {t.merchant_nome ? (
+                  {subtitulo ? (
                     <p className="truncate text-[11px] text-muted-foreground">
-                      {t.merchant_nome}
+                      {subtitulo}
                     </p>
                   ) : null}
                 </div>
