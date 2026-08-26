@@ -92,6 +92,9 @@ function IconeInvestimento({ investimento }: { investimento: Investimento }) {
           {investimento.code ?? investimento.nome ?? "?"}
         </span>
       ) : (
+        // `iconeTipo` consulta o mapa estático de ícones do lucide, não fabrica componente: a
+        // referência é a mesma a cada render, então não há estado a perder. A regra não vê isso.
+        // eslint-disable-next-line react-hooks/static-components
         <Icone className="size-4" />
       )}
     </span>
