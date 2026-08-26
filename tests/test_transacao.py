@@ -79,8 +79,13 @@ def test_vincular_provento_sugestao_e_isolamento(
     conta = criar_conta(db, usuario_a.id, "acc-prov")
     repo = TransacaoRepository(db, usuario_a.id)
     tx = _criar_tx(
-        repo, conta.id, "t-div", type="CREDIT", amount_centavos=1234,
-        date=datetime(2026, 7, 10, tzinfo=UTC), merchant_nome="Rendimento FII",
+        repo,
+        conta.id,
+        "t-div",
+        type="CREDIT",
+        amount_centavos=1234,
+        date=datetime(2026, 7, 10, tzinfo=UTC),
+        merchant_nome="Rendimento FII",
     )
     mov = _criar_provento(db, conta.item_id, usuario_a.id)
 
@@ -96,7 +101,11 @@ def test_vincular_provento_sugestao_e_isolamento(
 
     # já vinculado → não é mais sugerido p/ outra transação de mesmo valor/data
     tx2 = _criar_tx(
-        repo, conta.id, "t-div2", type="CREDIT", amount_centavos=1234,
+        repo,
+        conta.id,
+        "t-div2",
+        type="CREDIT",
+        amount_centavos=1234,
         date=datetime(2026, 7, 10, tzinfo=UTC),
     )
     assert client.get(f"/api/transacoes/{tx2.id}/proventos-sugeridos").json() == []
@@ -104,8 +113,11 @@ def test_vincular_provento_sugestao_e_isolamento(
     # isolamento (S3): B não pode vincular sua transação ao provento de A → 400
     conta_b = criar_conta(db, usuario_b.id, "acc-b")
     tx_b = _criar_tx(
-        TransacaoRepository(db, usuario_b.id), conta_b.id, "t-b",
-        type="CREDIT", amount_centavos=1234,
+        TransacaoRepository(db, usuario_b.id),
+        conta_b.id,
+        "t-b",
+        type="CREDIT",
+        amount_centavos=1234,
     )
     neg = client_factory(usuario_b).patch(
         f"/api/transacoes/{tx_b.id}", json={"investimento_transacao_id": mov.id}
@@ -122,8 +134,54 @@ def test_resync_preserva_vinculo_provento(db: Session, usuario_a: Usuario) -> No
 
     # re-sync manda campos do Pluggy; NÃO pode zerar o vínculo do usuário (CAMPOS_USUARIO).
     repo.upsert_by_pluggy_id(
-        "t-up", conta_id=conta.id, date=tx.date, amount_centavos=1234,
-        currency_code="BRL", type="CREDIT", status="POSTED", investimento_transacao_id=None,
+        "t-up",
+        conta_id=conta.id,
+        date=tx.date,
+        amount_centavos=1234,
+        currency_code="BRL",
+        type="CREDIT",
+        status="POSTED",
+        investimento_transacao_id=None,
     )
     db.refresh(tx)
     assert tx.investimento_transacao_id == mov.id
+
+
+def test_descricao_usuario_e_observacoes(db: Session, usuario_a: Usuario, client_factory) -> None:
+    conta = criar_conta(db, usuario_a.id, "acc-texto")
+    tx = _criar_tx(
+        TransacaoRepository(db, usuario_a.id), conta.id, "t-texto", description="PAG*REST XYZ"
+    )
+    client = client_factory(usuario_a)
+
+    resp = client.patch(
+        f"/api/transacoes/{tx.id}",
+        json={"descricao_usuario": "Almoço com o time", "observacoes": "Reembolsar o João"},
+    )
+    assert resp.status_code == 200, resp.text
+    lido = client.get(f"/api/transacoes/{tx.id}").json()
+    assert lido["descricao_usuario"] == "Almoço com o time"
+    assert lido["observacoes"] == "Reembolsar o João"
+    assert lido["description"] == "PAG*REST XYZ"  # a do banco fica intacta
+
+    # Campo apagado na UI chega como "" (ou só espaços) → vira NULL, não string vazia.
+    client.patch(f"/api/transacoes/{tx.id}", json={"descricao_usuario": "   "})
+    assert client.get(f"/api/transacoes/{tx.id}").json()["descricao_usuario"] is None
+
+
+def test_busca_cobre_textos_do_usuario(db: Session, usuario_a: Usuario, client_factory) -> None:
+    conta = criar_conta(db, usuario_a.id, "acc-busca")
+    repo = TransacaoRepository(db, usuario_a.id)
+    com_descricao = _criar_tx(repo, conta.id, "t-desc", descricao_usuario="Almoço com o time")
+    com_observacao = _criar_tx(repo, conta.id, "t-obs", observacoes="Reembolsar o João")
+    _criar_tx(repo, conta.id, "t-outra", description="PAG*OUTRA COISA")
+
+    client = client_factory(usuario_a)
+
+    def ids(busca: str) -> set[int]:
+        resp = client.get(f"/api/transacoes?busca={busca}")
+        assert resp.status_code == 200, resp.text
+        return {t["id"] for t in resp.json()["items"]}
+
+    assert ids("almoço") == {com_descricao.id}
+    assert ids("joão") == {com_observacao.id}

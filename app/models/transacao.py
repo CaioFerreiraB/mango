@@ -1,8 +1,9 @@
 """Transações (§4.3–4.5) — `GET /v2/transactions`. Dado do Pluggy + flags do usuário.
 
 Campos graváveis pelo usuário (§4 crud.md): `eh_transferencia`, `revisada`,
-`categoria_override_id`, `categoria_ajustada_usuario`. Re-sync NÃO sobrescreve o override
-nem os flags. `contraparte_id` (auto-FK) liga as duas pernas de uma transferência (§4.4).
+`categoria_override_id`, `categoria_ajustada_usuario`, `descricao_usuario`, `observacoes`.
+Re-sync NÃO sobrescreve o override nem os flags. `contraparte_id` (auto-FK) liga as duas pernas
+de uma transferência (§4.4).
 """
 
 from datetime import datetime
@@ -77,6 +78,10 @@ class Transacao(UserOwnedMixin, TimestampMixin, Base):
     # Flags do usuário (§4.3/§4.4).
     eh_transferencia: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     revisada: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    # Texto do usuário (§4.5): `description` é do Pluggy e reescrito a cada sync, então a descrição
+    # própria e as observações moram em colunas separadas (protegidas por CAMPOS_USUARIO).
+    descricao_usuario: Mapped[str | None] = mapped_column(String(255))
+    observacoes: Mapped[str | None] = mapped_column(Text)
     contraparte_id: Mapped[int | None] = mapped_column(
         ForeignKey("transacao.id", ondelete="SET NULL"), index=True
     )

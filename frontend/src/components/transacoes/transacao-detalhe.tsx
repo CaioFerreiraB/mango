@@ -8,6 +8,8 @@ import { CategoriaSelect } from "@/components/transacoes/categoria-select"
 import { StatusBadge } from "@/components/transacoes/status-badge"
 import { Valor } from "@/components/common/valor"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 import {
   Drawer,
   DrawerContent,
@@ -22,6 +24,8 @@ import { useIsMobile } from "@/hooks/use-mobile"
 import { useAssinaturas } from "@/lib/api/assinaturas"
 import { useContas } from "@/lib/api/contas"
 import {
+  descricaoBanco,
+  descricaoExibida,
   useAtualizarTransacao,
   useProventosSugeridos,
   valorEfetivoCentavos,
@@ -86,7 +90,7 @@ export function TransacaoDetalhe({
                 />
               </DrawerTitle>
               <DrawerDescription className="sr-only">
-                {`${t.description ?? "Transação"} · ${formatDateTime(t.date)}`}
+                {`${descricaoExibida(t) ?? "Transação"} · ${formatDateTime(t.date)}`}
               </DrawerDescription>
               <StatusBadge revisada={t.revisada} />
             </DrawerHeader>
@@ -99,8 +103,9 @@ export function TransacaoDetalhe({
                     {formatMoeda(t.amount_centavos, t.currency_code)}
                   </Linha>
                 ) : null}
-                {t.description_raw ? (
-                  <Linha rotulo="Descrição original">{t.description_raw}</Linha>
+                {/* Com descrição própria, o texto do banco deixa de ser o título — vale mostrá-lo. */}
+                {t.descricao_usuario && descricaoBanco(t) ? (
+                  <Linha rotulo="Descrição do banco">{descricaoBanco(t)}</Linha>
                 ) : null}
                 <Linha rotulo="Data">{formatDateTime(t.date)}</Linha>
                 {contaNome ? <Linha rotulo="Conta">{contaNome}</Linha> : null}
@@ -141,6 +146,8 @@ export function TransacaoDetalhe({
                   </p>
                 ) : null}
               </div>
+
+              <TextosUsuario key={`texto-${t.id}`} transacao={t} />
 
               <div className="space-y-3 rounded-lg border p-3">
                 <label className="flex items-center justify-between gap-2 text-sm">
@@ -192,6 +199,56 @@ export function TransacaoDetalhe({
         ) : null}
       </DrawerContent>
     </Drawer>
+  )
+}
+
+/** Descrição própria + observações do usuário (§4.5). A do banco é reescrita a cada sync, então
+ *  estes textos são campos à parte. Rascunho local com commit em blur (e Enter, na descrição): o
+ *  resto do drawer salva na hora, um botão "Salvar" só para estes dois destoaria. `key` por
+ *  transação reseta o rascunho ao trocar de linha. */
+function TextosUsuario({ transacao }: { transacao: Transacao }) {
+  const atualizar = useAtualizarTransacao()
+  const [descricao, setDescricao] = useState(transacao.descricao_usuario ?? "")
+  const [observacoes, setObservacoes] = useState(transacao.observacoes ?? "")
+
+  /** Só faz PATCH se o texto realmente mudou — senão abrir e fechar o drawer já salvaria. */
+  const salvar = (campo: "descricao_usuario" | "observacoes", valor: string) => {
+    const limpo = valor.trim()
+    if (limpo === (transacao[campo] ?? "")) return
+    atualizar.mutate(
+      { id: transacao.id, patch: { [campo]: limpo || null } },
+      { onError: (err) => toast.error(err.message) }
+    )
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="space-y-1.5">
+        <Label htmlFor="descricao-usuario">Minha descrição</Label>
+        <Input
+          id="descricao-usuario"
+          value={descricao}
+          maxLength={255}
+          placeholder="O que foi essa transação?"
+          onChange={(e) => setDescricao(e.target.value)}
+          onBlur={() => salvar("descricao_usuario", descricao)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") e.currentTarget.blur()
+          }}
+        />
+      </div>
+      <div className="space-y-1.5">
+        <Label htmlFor="observacoes">Observações</Label>
+        <Textarea
+          id="observacoes"
+          value={observacoes}
+          maxLength={2000}
+          placeholder="Opcional"
+          onChange={(e) => setObservacoes(e.target.value)}
+          onBlur={() => salvar("observacoes", observacoes)}
+        />
+      </div>
+    </div>
   )
 }
 

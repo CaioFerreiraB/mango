@@ -361,7 +361,14 @@ def test_resync_preserva_campos_do_usuario(db, usuario, conexao):
     sincronizar_usuario(db, usuario.id)
     repo = TransacaoRepository(db, usuario.id)
     salario = repo.get_by_pluggy_id("tx-salario")
-    repo.update(salario, revisada=True, categoria_override_id="05010000", eh_transferencia=True)
+    repo.update(
+        salario,
+        revisada=True,
+        categoria_override_id="05010000",
+        eh_transferencia=True,
+        descricao_usuario="Salário de março",
+        observacoes="Já descontado o adiantamento.",
+    )
 
     # Re-sync (forcar ignora o throttle): NÃO pode sobrescrever os campos do usuário.
     sincronizar_usuario(db, usuario.id, forcar=True)
@@ -369,6 +376,9 @@ def test_resync_preserva_campos_do_usuario(db, usuario, conexao):
     assert salario.revisada is True
     assert salario.categoria_override_id == "05010000"
     assert salario.eh_transferencia is True
+    assert salario.descricao_usuario == "Salário de março"
+    assert salario.observacoes == "Já descontado o adiantamento."
+    assert salario.description == "SALARIO EMPRESA XYZ LTDA"  # a do Pluggy segue atualizando
     assert salario.categoria_pluggy_id == "01010000"  # sugestão do Pluggy segue atualizando
 
 
@@ -461,15 +471,22 @@ def test_subtype_fii_normalizado_por_isin():
     assert sync_mod._subtype_investimento(acao) == "STOCK"
 
     # Sandbox já manda certo; direito de subscrição (ISIN …D..M..) fica como veio.
-    assert sync_mod._subtype_investimento(
-        {"type": "EQUITY", "subtype": "REAL_ESTATE_FUND", "isin": "BRGGRCCTF002"}
-    ) == "REAL_ESTATE_FUND"
-    assert sync_mod._subtype_investimento(
-        {"type": "EQUITY", "subtype": "STOCK", "isin": "BRBTLGD11M11"}  # BTLG12 (direito)
-    ) == "STOCK"
+    assert (
+        sync_mod._subtype_investimento(
+            {"type": "EQUITY", "subtype": "REAL_ESTATE_FUND", "isin": "BRGGRCCTF002"}
+        )
+        == "REAL_ESTATE_FUND"
+    )
+    assert (
+        sync_mod._subtype_investimento(
+            {"type": "EQUITY", "subtype": "STOCK", "isin": "BRBTLGD11M11"}  # BTLG12 (direito)
+        )
+        == "STOCK"
+    )
 
     # Sem ISIN e outros tipos: passa direto.
     assert sync_mod._subtype_investimento({"type": "EQUITY", "subtype": "STOCK"}) == "STOCK"
-    assert sync_mod._subtype_investimento(
-        {"type": "FIXED_INCOME", "subtype": "CDB", "isin": ""}
-    ) == "CDB"
+    assert (
+        sync_mod._subtype_investimento({"type": "FIXED_INCOME", "subtype": "CDB", "isin": ""})
+        == "CDB"
+    )

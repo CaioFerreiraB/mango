@@ -10,6 +10,16 @@ ainda está se assentando. Cada versão publicada tem uma imagem correspondente 
 
 ## [Não publicado]
 
+### Adicionado
+
+- **Descrição própria e observações na transação** — dá para escrever o que a transação realmente
+  foi ("almoço com o time") em vez de conviver com o texto do banco, e anotar uma observação livre.
+  Quando há descrição própria, ela vira o título na listagem e a do banco desce para o subtítulo;
+  transações com observação ganham um ícone de nota. A busca passa a procurar também nesses dois
+  campos. Ambos são editados no painel de detalhe e ficam protegidos do re-sync do Pluggy, que
+  segue reescrevendo só a descrição de origem. A migration é aditiva (duas colunas anuláveis, sem
+  backfill) e roda sozinha na subida do container.
+
 ## [0.1.1] — 2026-08-21
 
 ### Corrigido

@@ -1,6 +1,6 @@
 """Schemas de `transacao` (Pluggy-owned): leitura + update estreito (flags/override §4.5)."""
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from app.models.transacao import Transacao
 from app.schemas.auto import read_model
@@ -23,6 +23,17 @@ class TransacaoUpdate(BaseModel):
     # Vínculo com um provento de investimento (§4.9): id do movimento (posse validada no router,
     # pelo investimento pai) ou None p/ desvincular.
     investimento_transacao_id: int | None = None
+    # Texto do usuário (§4.5): descrição própria (substitui a do banco na listagem) e observação
+    # livre. `None` limpa o campo.
+    descricao_usuario: str | None = Field(default=None, max_length=255)
+    observacoes: str | None = Field(default=None, max_length=2000)
+
+    @field_validator("descricao_usuario", "observacoes")
+    @classmethod
+    def _vazio_vira_nulo(cls, v: str | None) -> str | None:
+        """Campo apagado na UI chega como "" — guardar isso quebraria o fallback para o texto
+        do banco (string vazia não é null)."""
+        return v.strip() or None if v is not None else None
 
 
 class TransacaoListagem(BaseModel):
