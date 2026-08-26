@@ -7,10 +7,15 @@ from app.models.usuario import Usuario
 # (prefixo, payload de criação válido)
 CASOS = [
     ("/api/objetivos", {"titulo": "Meta", "valor_alvo_centavos": 100000}),
-    ("/api/fontes-de-renda", {
-        "nome": "Salário", "tipo": "fixa", "valor_estimado_centavos": 1000,
-        "recorrencia": "mensal",
-    }),
+    (
+        "/api/fontes-de-renda",
+        {
+            "nome": "Salário",
+            "tipo": "fixa",
+            "valor_estimado_centavos": 1000,
+            "recorrencia": "mensal",
+        },
+    ),
     ("/api/assinaturas", {"nome": "Streaming", "valor_centavos": 2990, "periodicidade": "mensal"}),
     ("/api/credenciais-pluggy", {"client_id": "cid", "client_secret": "sec"}),
 ]

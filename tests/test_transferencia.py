@@ -54,9 +54,7 @@ def cenario(db: Session, usuario: Usuario) -> SimpleNamespace:
     }
     a = conta_repo.upsert_by_pluggy_id("accA", **base)
     b = conta_repo.upsert_by_pluggy_id("accB", **base)
-    return SimpleNamespace(
-        usuario=usuario, a=a, b=b, repo=TransacaoRepository(db, usuario.id)
-    )
+    return SimpleNamespace(usuario=usuario, a=a, b=b, repo=TransacaoRepository(db, usuario.id))
 
 
 def _tx(repo, conta, pid, amount, *, cat=None, dia=15, **extra):
@@ -111,8 +109,13 @@ def test_perna_unica_nao_pareia(db, cenario):
 def test_flag_manual_nao_e_sobrescrito(db, cenario):
     # Usuário disse explicitamente que NÃO é transferência (manual).
     manual = _tx(
-        cenario.repo, cenario.a, "man", -50_000, cat="04020000",
-        transferencia_origem="manual", eh_transferencia=False,
+        cenario.repo,
+        cenario.a,
+        "man",
+        -50_000,
+        cat="04020000",
+        transferencia_origem="manual",
+        eh_transferencia=False,
     )
     _tx(cenario.repo, cenario.b, "in", 50_000, cat="04020000")
 
