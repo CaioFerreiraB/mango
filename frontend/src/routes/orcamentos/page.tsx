@@ -1,4 +1,10 @@
-import { ChevronLeft, ChevronRight, PiggyBank, Settings2, Wand2 } from "lucide-react"
+import {
+  ChevronLeft,
+  ChevronRight,
+  PiggyBank,
+  Settings2,
+  Wand2,
+} from "lucide-react"
 import { createElement, useState } from "react"
 import { toast } from "sonner"
 
@@ -74,10 +80,17 @@ export function OrcamentosPage() {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex items-center gap-1 rounded-md border p-0.5">
-            <Button variant="ghost" size="icon" onClick={() => mudarMes(-1)} aria-label="Mês anterior">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => mudarMes(-1)}
+              aria-label="Mês anterior"
+            >
               <ChevronLeft className="size-4" />
             </Button>
-            <span className="min-w-36 text-center text-sm font-medium capitalize">{rotuloMes}</span>
+            <span className="min-w-36 text-center text-sm font-medium capitalize">
+              {rotuloMes}
+            </span>
             <Button
               variant="ghost"
               size="icon"
@@ -88,7 +101,12 @@ export function OrcamentosPage() {
               <ChevronRight className="size-4" />
             </Button>
           </div>
-          <EditarMesDialog itens={itens} ano={ano} mes={mes} disabled={itens.length === 0} />
+          <EditarMesDialog
+            itens={itens}
+            ano={ano}
+            mes={mes}
+            disabled={itens.length === 0}
+          />
           {/* No mobile o botão reaparece embaixo da lista de categorias — aqui não cabe junto
               do seletor de mês sem quebrar a linha de forma feia. */}
           <div className="hidden sm:block">
@@ -162,7 +180,8 @@ function AplicarPadraoBotao({ ano, mes }: { ano: number; mes: number }) {
         materializar.mutate(
           { ano, mes },
           {
-            onSuccess: () => toast.success("Orçamento padrão aplicado a este mês."),
+            onSuccess: () =>
+              toast.success("Orçamento padrão aplicado a este mês."),
             onError: (err) => toast.error(err.message),
           }
         )
@@ -192,7 +211,11 @@ function SecaoOrcamento({
   const totalRealizado = itens.reduce((acc, i) => acc + i.realizado_centavos, 0)
   const restanteTotal = totalOrcado - totalRealizado
   const percentualTotal =
-    totalOrcado > 0 ? Math.round((totalRealizado / totalOrcado) * 100) : totalRealizado > 0 ? 100 : 0
+    totalOrcado > 0
+      ? Math.round((totalRealizado / totalOrcado) * 100)
+      : totalRealizado > 0
+        ? 100
+        : 0
 
   return (
     <section className="space-y-3">
@@ -202,7 +225,9 @@ function SecaoOrcamento({
         <CardContent className="flex flex-wrap items-center justify-between gap-6 py-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:gap-8">
             <div>
-              <p className="text-sm text-muted-foreground">{despesa ? "Total orçado" : "Meta total"}</p>
+              <p className="text-sm text-muted-foreground">
+                {despesa ? "Total orçado" : "Meta total"}
+              </p>
               <p className="text-lg font-semibold">
                 <Valor centavos={totalOrcado} neutro />
               </p>
@@ -216,16 +241,25 @@ function SecaoOrcamento({
               </p>
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">{despesa ? "Restante" : "Restante pra meta"}</p>
+              <p className="text-sm text-muted-foreground">
+                {despesa ? "Restante" : "Restante pra meta"}
+              </p>
               <p className="text-lg font-semibold">
                 {/* Nunca mostra "-": despesa mantém a cor do sinal real (vermelho se estourou),
                     só sem o sinal de menos no texto; receita usa o valor já em módulo — bater
                     ou passar da meta é notícia boa, nunca um alerta. */}
-                <Valor centavos={despesa ? restanteTotal : Math.abs(restanteTotal)} absoluto={despesa} />
+                <Valor
+                  centavos={despesa ? restanteTotal : Math.abs(restanteTotal)}
+                  absoluto={despesa}
+                />
               </p>
             </div>
           </div>
-          <AnelProgresso pct={percentualTotal} tamanho={96} rotulo={despesa ? "utilizado" : "recebido"} />
+          <AnelProgresso
+            pct={percentualTotal}
+            tamanho={96}
+            rotulo={despesa ? "utilizado" : "recebido"}
+          />
         </CardContent>
       </Card>
 
@@ -234,7 +268,10 @@ function SecaoOrcamento({
           {itens.map((item) => {
             const nome = nomes.get(item.categoria_id) ?? item.categoria_id
             return (
-              <div key={item.orcamento_mensal_id} className="flex items-center gap-3 p-3">
+              <div
+                key={item.orcamento_mensal_id}
+                className="flex items-center gap-3 p-3"
+              >
                 {createElement(iconeCategoria(item.categoria_id), {
                   className: "size-4 shrink-0 text-muted-foreground",
                   "aria-hidden": true,
@@ -247,12 +284,23 @@ function SecaoOrcamento({
                     </span>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    <Valor centavos={item.realizado_centavos} neutro className="text-xs font-normal" /> de{" "}
-                    <Valor centavos={item.limite_centavos} neutro className="text-xs font-normal" />
+                    <Valor
+                      centavos={item.realizado_centavos}
+                      neutro
+                      className="text-xs font-normal"
+                    />{" "}
+                    de{" "}
+                    <Valor
+                      centavos={item.limite_centavos}
+                      neutro
+                      className="text-xs font-normal"
+                    />
                   </p>
                   <Progress
                     value={Math.min(item.percentual, 100)}
-                    indicatorClassName={despesa ? corAlerta(item.alerta_atingido) : "bg-primary"}
+                    indicatorClassName={
+                      despesa ? corAlerta(item.alerta_atingido) : "bg-primary"
+                    }
                   />
                 </div>
               </div>
@@ -265,8 +313,12 @@ function SecaoOrcamento({
             <TableHeader>
               <TableRow>
                 <TableHead>Categoria</TableHead>
-                <TableHead className="text-right">{despesa ? "Orçado" : "Meta"}</TableHead>
-                <TableHead className="text-right">{despesa ? "Gasto" : "Recebido"}</TableHead>
+                <TableHead className="text-right">
+                  {despesa ? "Orçado" : "Meta"}
+                </TableHead>
+                <TableHead className="text-right">
+                  {despesa ? "Gasto" : "Recebido"}
+                </TableHead>
                 <TableHead className="text-right">Restante</TableHead>
                 <TableHead className="w-36">%</TableHead>
               </TableRow>
@@ -293,13 +345,20 @@ function SecaoOrcamento({
                       <Valor centavos={item.realizado_centavos} neutro />
                     </TableCell>
                     <TableCell className="text-right">
-                      <Valor centavos={despesa ? restante : Math.abs(restante)} absoluto={despesa} />
+                      <Valor
+                        centavos={despesa ? restante : Math.abs(restante)}
+                        absoluto={despesa}
+                      />
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <Progress
                           value={Math.min(item.percentual, 100)}
-                          indicatorClassName={despesa ? corAlerta(item.alerta_atingido) : "bg-primary"}
+                          indicatorClassName={
+                            despesa
+                              ? corAlerta(item.alerta_atingido)
+                              : "bg-primary"
+                          }
                           className="w-16"
                         />
                         <span className="text-xs text-muted-foreground tabular-nums">

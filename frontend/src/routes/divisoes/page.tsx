@@ -19,7 +19,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { useMe } from "@/lib/api/auth"
 import { nomeCategoria, useCategorias } from "@/lib/api/categorias"
@@ -45,8 +49,8 @@ function BadgeOtimizado() {
         </Badge>
       </TooltipTrigger>
       <TooltipContent>
-        Dívidas em cadeia foram combinadas em transferências diretas — não altera nenhum
-        lançamento, só como o saldo é exibido.
+        Dívidas em cadeia foram combinadas em transferências diretas — não
+        altera nenhum lançamento, só como o saldo é exibido.
       </TooltipContent>
     </Tooltip>
   )
@@ -177,7 +181,9 @@ function AbaResumo({
           <CardContent className="space-y-1 py-4">
             <div className="flex items-center justify-between">
               <p className="text-sm font-medium">Saldos com pessoas</p>
-              {config.data?.otimizar_transacoes_divisao ? <BadgeOtimizado /> : null}
+              {config.data?.otimizar_transacoes_divisao ? (
+                <BadgeOtimizado />
+              ) : null}
             </div>
             {pessoasTop.length === 0 ? (
               <p className="py-6 text-center text-sm text-muted-foreground">

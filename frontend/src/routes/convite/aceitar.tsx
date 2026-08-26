@@ -62,7 +62,10 @@ export function AceitarConvitePage() {
   async function onSubmit(v: Form) {
     setErroServidor(null)
     try {
-      const dados = await iniciar.mutateAsync({ senha: v.senha, ativar_totp: ativarTotp })
+      const dados = await iniciar.mutateAsync({
+        senha: v.senha,
+        ativar_totp: ativarTotp,
+      })
       if (!dados.totp_secret) {
         // Pulou o 2FA — conclui direto, sem passar pelo QR nem pedir código.
         await confirmar.mutateAsync({ ticket: dados.ticket })

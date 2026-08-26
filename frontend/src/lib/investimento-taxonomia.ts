@@ -59,8 +59,10 @@ export const rotuloSubtype = (s: string | null | undefined) =>
 export const iconeTipo = (t: string) => ICONE_TIPO[t] ?? Coins
 
 /** Rótulo curto do ativo: subtype quando houver (FII, CDB…), senão o tipo. */
-export const rotuloClasse = (type: string, subtype: string | null | undefined) =>
-  rotuloSubtype(subtype) ?? rotuloTipo(type)
+export const rotuloClasse = (
+  type: string,
+  subtype: string | null | undefined
+) => rotuloSubtype(subtype) ?? rotuloTipo(type)
 
 /** Indexador legível a partir do par (rate_type, rate) do Pluggy — ex.: "IPCA + 6,82% a.a.",
  *  "6,82% a.a." (prefixado), "SELIC + 0,10% a.a.", "110% do CDI". `null` quando não há dado. */
@@ -70,7 +72,8 @@ export function rotuloIndexador(
 ): string | null {
   const tipo = (rateType ?? "").trim().toUpperCase()
   const num = rate == null || rate === "" ? null : Number(rate)
-  const taxa = num != null && Number.isFinite(num) ? `${fmtPct.format(num)}%` : null
+  const taxa =
+    num != null && Number.isFinite(num) ? `${fmtPct.format(num)}%` : null
   if (tipo === "IPCA" || tipo === "IGPM" || tipo === "IGP-M")
     return taxa ? `${tipo} + ${taxa} a.a.` : tipo
   if (tipo === "SELIC") return taxa ? `SELIC + ${taxa} a.a.` : "SELIC"
@@ -78,7 +81,10 @@ export function rotuloIndexador(
   if (tipo === "" || tipo === "PRE" || tipo === "PREFIXADO" || tipo === "FIXED")
     return taxa ? `${taxa} a.a.` : null
   // Indexador desconhecido: mostra o que houver.
-  return [tipo || null, taxa ? `+ ${taxa} a.a.` : null].filter(Boolean).join(" ") || null
+  return (
+    [tipo || null, taxa ? `+ ${taxa} a.a.` : null].filter(Boolean).join(" ") ||
+    null
+  )
 }
 
 /** Rótulo de uma chave que pode ser subtype OU type (ex.: opção de filtro "Tipo"). */
@@ -86,8 +92,12 @@ export const rotuloChave = (s: string) => SUBTYPE_LABEL[s] ?? TIPO_LABEL[s] ?? s
 
 // --- formatação numérica compartilhada (Carteira + drawer) --------------------------------------
 
-export const fmtQtd = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 8 })
-export const fmtPct = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 2 })
+export const fmtQtd = new Intl.NumberFormat("pt-BR", {
+  maximumFractionDigits: 8,
+})
+export const fmtPct = new Intl.NumberFormat("pt-BR", {
+  maximumFractionDigits: 2,
+})
 /** Percentual com sinal explícito — cor nunca é o único portador de sentido (a11y). */
 export const pctTexto = (v: number) => `${v > 0 ? "+" : ""}${fmtPct.format(v)}%`
 

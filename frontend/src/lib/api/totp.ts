@@ -16,7 +16,8 @@ export function useIniciarTotp() {
       const { data, error } = await api.POST("/api/perfil/totp/iniciar", {
         body: { senha_atual },
       })
-      if (error || !data) throw new Error(mensagemErro(error, "senha atual incorreta"))
+      if (error || !data)
+        throw new Error(mensagemErro(error, "senha atual incorreta"))
       return data
     },
   })
@@ -26,8 +27,13 @@ export function useIniciarTotp() {
 export function useConfirmarTotp() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async (args: { ticket: string; codigo_totp: string }): Promise<void> => {
-      const { error } = await api.POST("/api/perfil/totp/confirmar", { body: args })
+    mutationFn: async (args: {
+      ticket: string
+      codigo_totp: string
+    }): Promise<void> => {
+      const { error } = await api.POST("/api/perfil/totp/confirmar", {
+        body: args,
+      })
       if (error) throw new Error(mensagemErro(error, "código incorreto"))
     },
     onSuccess: () => {
@@ -43,7 +49,8 @@ export function useHabilitarTotpLogin() {
   return useMutation({
     mutationFn: async (): Promise<void> => {
       const { error } = await api.POST("/api/perfil/totp/habilitar")
-      if (error) throw new Error(mensagemErro(error, "não foi possível habilitar"))
+      if (error)
+        throw new Error(mensagemErro(error, "não foi possível habilitar"))
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["perfil"] })

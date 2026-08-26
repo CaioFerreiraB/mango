@@ -10,7 +10,9 @@ import {
 import type { SaldoDiarioPonto } from "@/lib/api/contas"
 import { formatBRL, formatDate } from "@/lib/format"
 
-const config: ChartConfig = { saldo: { label: "Saldo", color: "var(--primary)" } }
+const config: ChartConfig = {
+  saldo: { label: "Saldo", color: "var(--primary)" },
+}
 
 /**
  * Saldo em conta dos últimos dias como área compacta (sparkline). Mesma receita da `AreaTendencia`
@@ -25,20 +27,35 @@ export function SaldoSparkline({ pontos }: { pontos: SaldoDiarioPonto[] }) {
 
   return (
     <ChartContainer config={config} className="aspect-auto h-16 w-full">
-      <AreaChart data={pontos} margin={{ top: 4, right: 0, bottom: 0, left: 0 }}>
+      <AreaChart
+        data={pontos}
+        margin={{ top: 4, right: 0, bottom: 0, left: 0 }}
+      >
         <defs>
           <linearGradient id={grad} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="var(--color-saldo)" stopOpacity={0.3} />
-            <stop offset="100%" stopColor="var(--color-saldo)" stopOpacity={0} />
+            <stop
+              offset="0%"
+              stopColor="var(--color-saldo)"
+              stopOpacity={0.3}
+            />
+            <stop
+              offset="100%"
+              stopColor="var(--color-saldo)"
+              stopOpacity={0}
+            />
           </linearGradient>
         </defs>
         <XAxis dataKey="data" hide />
         <ChartTooltip
           content={
             <ChartTooltipContent
-              labelFormatter={(_, [item]) => formatDate(String(item?.payload?.data))}
+              labelFormatter={(_, [item]) =>
+                formatDate(String(item?.payload?.data))
+              }
               formatter={(value) => (
-                <span className="font-medium tabular-nums">{formatBRL(Number(value))}</span>
+                <span className="font-medium tabular-nums">
+                  {formatBRL(Number(value))}
+                </span>
               )}
             />
           }

@@ -132,7 +132,9 @@ export function mesmoPeriodoMesAnterior(
 /** `n` meses antes (civil, fuso-neutro), com o dia limitado ao último dia do mês destino. */
 export function subMeses(iso: string, n: number): string {
   const d = parseISO(iso)
-  const alvo = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() - n, 1, 12))
+  const alvo = new Date(
+    Date.UTC(d.getUTCFullYear(), d.getUTCMonth() - n, 1, 12)
+  )
   const ultimoDia = new Date(
     Date.UTC(alvo.getUTCFullYear(), alvo.getUTCMonth() + 1, 0, 12)
   ).getUTCDate()
@@ -145,8 +147,14 @@ function mesAntes(iso: string): string {
   return subMeses(iso, 1)
 }
 
-const mesCurto = new Intl.DateTimeFormat("pt-BR", { timeZone: TZ, month: "short" })
-const diaFmt = new Intl.DateTimeFormat("pt-BR", { timeZone: TZ, day: "2-digit" })
+const mesCurto = new Intl.DateTimeFormat("pt-BR", {
+  timeZone: TZ,
+  month: "short",
+})
+const diaFmt = new Intl.DateTimeFormat("pt-BR", {
+  timeZone: TZ,
+  day: "2-digit",
+})
 
 /** Data-only `yyyy-mm-dd` → `5 de ago. de 2026` (sem o off-by-one de fuso do `new Date`). */
 export function formatDataISO(iso: string): string {
@@ -156,7 +164,10 @@ export function formatDataISO(iso: string): string {
 /** Data-only `yyyy-mm-dd` → badge de evento `{ dia: "05", mes: "AGO" }`. */
 export function badgeData(iso: string): { dia: string; mes: string } {
   const d = parseISO(iso)
-  return { dia: diaFmt.format(d), mes: mesCurto.format(d).replace(".", "").toUpperCase() }
+  return {
+    dia: diaFmt.format(d),
+    mes: mesCurto.format(d).replace(".", "").toUpperCase(),
+  }
 }
 
 /** Rótulo curto de um bucket da série para eixo: diária/semanal → `01/06`, mensal → `jun/26`. */

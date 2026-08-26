@@ -11,7 +11,8 @@
     "build": "npm run generate:api && tsc -b && vite build",
     "generate:api": "openapi-typescript ./openapi.json -o src/lib/api/schema.d.ts",
     "lint": "eslint .",
-    "format": "prettier --write \"**/*.{ts,tsx}\"",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "typecheck": "npm run generate:api && tsc --noEmit",
     "preview": "vite preview"
   },

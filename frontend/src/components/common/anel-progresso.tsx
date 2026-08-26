@@ -24,7 +24,11 @@ export function AnelProgresso({
   const raioInterno = raioExterno * 0.765
   return (
     <div className="relative mx-auto shrink-0">
-      <ChartContainer config={{}} className="aspect-square" style={{ height: tamanho }}>
+      <ChartContainer
+        config={{}}
+        className="aspect-square"
+        style={{ height: tamanho }}
+      >
         <PieChart>
           <Pie
             data={dados}

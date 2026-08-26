@@ -1,0 +1,46 @@
+# Atualização de dependências.
+#
+# `target-branch: dev` em todos: a dev é a branch de integração, e um PR do Dependabot mirando a
+# main seria barrado pelo job `guard-origem-do-pr` (ver CONTRIBUTING.md).
+#
+# Os `groups` juntam minor+patch num PR só por ecossistema — sem isso, um repo com ~50 deps de npm
+# abre dezenas de PRs por semana. Major fica de fora do grupo, em PR próprio, porque é o que exige
+# leitura de changelog.
+version: 2
+updates:
+  - package-ecosystem: "uv"
+    directory: "/"
+    target-branch: "dev"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      python-minor-e-patch:
+        update-types: ["minor", "patch"]
+
+  - package-ecosystem: "npm"
+    directory: "/frontend"
+    target-branch: "dev"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      npm-minor-e-patch:
+        update-types: ["minor", "patch"]
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    target-branch: "dev"
+    schedule:
+      interval: "monthly"
+    commit-message:
+      prefix: "chore(ci)"
+    groups:
+      actions:
+        update-types: ["minor", "patch"]

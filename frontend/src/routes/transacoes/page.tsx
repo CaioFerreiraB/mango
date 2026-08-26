@@ -216,7 +216,9 @@ export function TransacoesPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value={TODAS}>Todas</SelectItem>
-                    <SelectItem value={QUALQUER}>Qualquer assinatura</SelectItem>
+                    <SelectItem value={QUALQUER}>
+                      Qualquer assinatura
+                    </SelectItem>
                     <SelectItem value={SEM}>Sem assinatura</SelectItem>
                     {(assinaturas.data ?? []).map((a) => (
                       <SelectItem key={a.id} value={String(a.id)}>

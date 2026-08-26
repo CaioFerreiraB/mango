@@ -50,7 +50,8 @@ export function retornoJanela(
   const ini = pontos.find((p) => p.data >= inicioISO) ?? pontos[0]!
   const fim = pontos[pontos.length - 1]!
   if (ini.data >= fim.data) return null
-  const pct = ((1 + fim.acumulado_pct / 100) / (1 + ini.acumulado_pct / 100) - 1) * 100
+  const pct =
+    ((1 + fim.acumulado_pct / 100) / (1 + ini.acumulado_pct / 100) - 1) * 100
   return { pct, ganho_centavos: fim.valor_centavos - ini.valor_centavos }
 }
 
@@ -76,7 +77,8 @@ export function retornoMensal(
   const ordenados = [...pontos].sort((a, b) => a.data.localeCompare(b.data))
   // mês (yyyy-mm) → acc do último ponto do mês; ordem de inserção = ordem de calendário (série contínua).
   const fimDoMes = new Map<string, number>()
-  for (const pt of ordenados) fimDoMes.set(pt.data.slice(0, 7), pt.acumulado_pct)
+  for (const pt of ordenados)
+    fimDoMes.set(pt.data.slice(0, 7), pt.acumulado_pct)
 
   const primeiro = ordenados[0]!.data
   const ultimo = ordenados[ordenados.length - 1]!.data
@@ -85,7 +87,8 @@ export function retornoMensal(
   for (const [mes, acc] of fimDoMes) {
     const pct = ((1 + acc / 100) / (1 + base / 100) - 1) * 100
     base = acc // encadeia sempre, mesmo nos meses descartados, p/ a base ficar correta
-    if (`${mes}-01` >= primeiro && ultimoDiaDoMes(mes) <= ultimo) out.push({ mes, pct })
+    if (`${mes}-01` >= primeiro && ultimoDiaDoMes(mes) <= ultimo)
+      out.push({ mes, pct })
   }
   return out
 }
@@ -99,7 +102,9 @@ export interface DadosProjecao {
 
 /** Código do indicador (BCB) que rege o título, p/ buscar o nível anual atual do indexador.
  *  Prefixado/desconhecido → null (a taxa foi travada na contratação, não depende do mercado). */
-export function indicadorDoTitulo(rateType: string | null | undefined): string | null {
+export function indicadorDoTitulo(
+  rateType: string | null | undefined
+): string | null {
   const t = (rateType ?? "").trim().toUpperCase()
   if (t === "IPCA" || t === "IGPM" || t === "IGP-M") return "ipca"
   if (t === "SELIC") return "selic"
@@ -110,7 +115,10 @@ export function indicadorDoTitulo(rateType: string | null | undefined): string |
 /** Taxa anual efetiva (fração, ex.: 0.11). Pós-fixados/indexados usam o **nível atual** do indexador
  *  (`nivelIndexadorAnual`, fração dos últimos 12m) composto com o spread contratado (`rate`);
  *  prefixado usa a taxa travada (`annualRate` senão `rate`). */
-function taxaAnualEfetiva(d: DadosProjecao, nivelIndexadorAnual: number | null): number | null {
+function taxaAnualEfetiva(
+  d: DadosProjecao,
+  nivelIndexadorAnual: number | null
+): number | null {
   const tipo = (d.rateType ?? "").trim().toUpperCase()
   const rate = num(d.rate)
   const annual = num(d.annualRate)
@@ -122,12 +130,14 @@ function taxaAnualEfetiva(d: DadosProjecao, nivelIndexadorAnual: number | null):
   }
   if (tipo === "SELIC") {
     // Tesouro Selic: SELIC atual × (1 + spread), spread costuma ser pequeno.
-    if (nivelIndexadorAnual != null) return (1 + nivelIndexadorAnual) * (1 + (rate ?? 0) / 100) - 1
+    if (nivelIndexadorAnual != null)
+      return (1 + nivelIndexadorAnual) * (1 + (rate ?? 0) / 100) - 1
     return annual != null ? annual / 100 : null
   }
   if (tipo === "CDI" || tipo === "DI") {
     // % do CDI (raro em Tesouro): CDI atual × (rate% ou 100%).
-    if (nivelIndexadorAnual != null) return nivelIndexadorAnual * (rate != null ? rate / 100 : 1)
+    if (nivelIndexadorAnual != null)
+      return nivelIndexadorAnual * (rate != null ? rate / 100 : 1)
     return annual != null ? annual / 100 : null
   }
   // Prefixado / desconhecido: taxa anual travada na contratação.
@@ -148,7 +158,12 @@ export function projetarVencimento(
   dados: DadosProjecao,
   nivelIndexadorAnual: number | null,
   hoje = hojeISO()
-): { valorEsperado: number; valorLiquidoEsperado: number; anos: number; taxaAnual: number } | null {
+): {
+  valorEsperado: number
+  valorLiquidoEsperado: number
+  anos: number
+  taxaAnual: number
+} | null {
   const anos = anosEntre(hoje, dueDate)
   if (anos == null || anos <= 0 || brutoCentavos <= 0) return null
   const taxa = taxaAnualEfetiva(dados, nivelIndexadorAnual)
@@ -156,14 +171,22 @@ export function projetarVencimento(
   const valorEsperado = Math.round(brutoCentavos * Math.pow(1 + taxa, anos))
   const lucro = Math.max(0, valorEsperado - aplicadoCentavos)
   const ir = dados.taxExempt ? 0 : Math.round(lucro * 0.15)
-  return { valorEsperado, valorLiquidoEsperado: valorEsperado - ir, anos, taxaAnual: taxa }
+  return {
+    valorEsperado,
+    valorLiquidoEsperado: valorEsperado - ir,
+    anos,
+    taxaAnual: taxa,
+  }
 }
 
 /** Valor de um benchmark (CDI/SELIC/IPCA/IBOV) que recebe os **mesmos aportes** da posição: cada
  *  aporte (Δ do aplicado acumulado no dia) rende pelo índice a partir da sua data. Entradas alinhadas
  *  por dia — `aplicadoAcum` (centavos, acumulado) e `accIndice` (fração acumulada do índice desde o
  *  início da janela). `B(d) = (1+acc[d])·Σ_{a≤d} Δaplicado(a)/(1+acc[a])`. */
-export function serieBenchmark(aplicadoAcum: number[], accIndice: number[]): number[] {
+export function serieBenchmark(
+  aplicadoAcum: number[],
+  accIndice: number[]
+): number[] {
   const out: number[] = []
   let soma = 0
   let anterior = 0
@@ -178,7 +201,10 @@ export function serieBenchmark(aplicadoAcum: number[], accIndice: number[]): num
 
 /** "9 anos e 298 dias" restantes até o vencimento; `null` se já venceu ou a data é inválida.
  *  ponytail: ano = 365 dias na quebra (exibição), não conta bissextos. */
-export function tempoRestante(dueDate: string, hoje = hojeISO()): string | null {
+export function tempoRestante(
+  dueDate: string,
+  hoje = hojeISO()
+): string | null {
   const a = Date.parse(`${hoje.slice(0, 10)}T12:00:00Z`)
   const b = Date.parse(`${dueDate.slice(0, 10)}T12:00:00Z`)
   if (!Number.isFinite(a) || !Number.isFinite(b) || b <= a) return null

@@ -72,8 +72,9 @@ function BrapiTokenCard() {
       <CardHeader>
         <CardTitle className="text-base">Token da brapi.dev</CardTitle>
         <CardDescription>
-          Opcional. Habilita a evolução do valor da cota, o comparativo com o IBOV e a reconstrução
-          do histórico de preço. O token é guardado cifrado e nunca é exibido de volta.
+          Opcional. Habilita a evolução do valor da cota, o comparativo com o
+          IBOV e a reconstrução do histórico de preço. O token é guardado
+          cifrado e nunca é exibido de volta.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -136,7 +137,11 @@ function BrapiTokenCard() {
                 required
               />
             </div>
-            <Button type="submit" disabled={!token || definir.isPending} className="self-start">
+            <Button
+              type="submit"
+              disabled={!token || definir.isPending}
+              className="self-start"
+            >
               Salvar token
             </Button>
           </form>
@@ -280,7 +285,8 @@ function ListaItens({ credencialId }: { credencialId: number }) {
               <div className="min-w-0">
                 <p className="truncate font-medium">
                   {it.instituicao_manual_id != null
-                    ? (porId.get(it.instituicao_manual_id)?.nome ?? it.connector_nome)
+                    ? (porId.get(it.instituicao_manual_id)?.nome ??
+                      it.connector_nome)
                     : (it.connector_nome ?? "Conexão")}
                 </p>
                 <p className="text-xs text-muted-foreground">
@@ -330,7 +336,8 @@ function ListaItens({ credencialId }: { credencialId: number }) {
         item={itemEditando}
         connectorAtualId={
           itemEditando?.instituicao_manual_id != null
-            ? (porId.get(itemEditando.instituicao_manual_id)?.pluggy_connector_id ?? null)
+            ? (porId.get(itemEditando.instituicao_manual_id)
+                ?.pluggy_connector_id ?? null)
             : null
         }
         onOpenChange={(aberto) => !aberto && setItemEditando(null)}

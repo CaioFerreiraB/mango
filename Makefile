@@ -1,6 +1,6 @@
 # Bootstrap e verificação do ambiente. Requer `uv` no PATH e Node 20 para o frontend.
 
-.PHONY: setup doctor test lint fmt migrate run revision openapi front-setup front-build \
+.PHONY: setup doctor test cov lint fmt migrate run revision openapi front-setup front-build \
         gen-keys docker-up docker-down release
 
 setup:  ## Instala deps, prepara .env, aplica migrations e instala hooks
@@ -22,6 +22,9 @@ print('health OK')"
 
 test:  ## Roda a suíte (SQLite por padrão)
 	uv run pytest
+
+cov:  ## Roda a suíte com cobertura, igual ao CI (gera coverage.xml para o Codacy)
+	uv run pytest --cov=app --cov-report=xml --cov-report=term-missing
 
 lint:  ## Lint (ruff)
 	uv run ruff check

@@ -1,0 +1,63 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+#
+# Revisão automática de PR. O repositório é escrito em português — sem `language`, a revisão volta
+# em inglês e destoa do resto (comentários, docs, CHANGELOG).
+language: "pt-BR"
+early_access: false
+
+reviews:
+  profile: "chill" # "assertive" comenta demais para um mantenedor solo
+  request_changes_workflow: false
+  high_level_summary: true
+  poem: false
+  review_status: true
+  collapse_walkthrough: true
+
+  auto_review:
+    enabled: true
+    drafts: false
+    base_branches:
+      - "main"
+      - "dev"
+
+  # Mesmas exclusões do .codacy.yml: gerados, lockfiles e primitivos vendados.
+  path_filters:
+    - "!frontend/dist/**"
+    - "!frontend/node_modules/**"
+    - "!frontend/src/lib/api/schema.d.ts"
+    - "!frontend/openapi.json"
+    - "!frontend/package-lock.json"
+    - "!uv.lock"
+    - "!alembic/versions/**"
+    - "!scripts/discovery/**"
+    - "!frontend/src/components/ui/**"
+
+  path_instructions:
+    - path: "app/**/*.py"
+      instructions: |
+        Toda query precisa ser isolada por usuário. Endpoint ou repositório novo que leia dados
+        de uma tabela com `usuario_id` sem filtrar por ele é um vazamento entre contas — é o que
+        tests/test_endpoints_isolation.py e tests/test_isolation_repo.py guardam; um endpoint novo
+        deve aparecer nesses testes.
+        Valores monetários são inteiros em centavos (`*_centavos`), nunca float.
+        Segredos (credenciais Pluggy, TOTP) passam pela camada de criptografia — nunca em texto
+        puro no banco nem em log.
+        Comentários e mensagens de erro em português.
+
+    - path: "frontend/src/**/*.{ts,tsx}"
+      instructions: |
+        Ver DESIGN.md. A cor de destaque vem do `data-accent` no <html>: um preset novo adiciona
+        só o par `--primary` (light/dark) em src/index.css e nunca duplica tokens derivados.
+        Caminho de ilustração sempre via `ilustracao(avatar, cena)` de src/lib/illustrations.ts —
+        nunca `avatar_1` hardcodado — e nenhuma ilustração na sidebar.
+        Antes de escrever componente novo, verificar se há um do shadcn/ui a compor.
+        Texto de interface em português.
+
+    - path: "alembic/versions/*.py"
+      instructions: |
+        Migration precisa de `downgrade` funcional e tem de rodar em SQLite e PostgreSQL — a suíte
+        testa os dois dialetos. Cuidado com ALTER TABLE que o SQLite não suporta (usar
+        `batch_alter_table`).
+
+chat:
+  auto_reply: true

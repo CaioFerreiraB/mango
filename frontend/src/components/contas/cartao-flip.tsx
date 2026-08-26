@@ -127,7 +127,11 @@ export function CartaoFlip({
                     {iniciais(nome)}
                   </span>
                 )}
-                <Bandeira brand={conta.brand} prata={ultravioleta} className="h-7 w-auto shrink-0" />
+                <Bandeira
+                  brand={conta.brand}
+                  prata={ultravioleta}
+                  className="h-7 w-auto shrink-0"
+                />
               </div>
 
               <div className="space-y-3">

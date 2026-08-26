@@ -9,7 +9,12 @@ import { useId } from "react"
 export function LogoNubank({ className }: { className?: string }) {
   const g = useId()
   return (
-    <svg viewBox="0 0 24 24" className={className} role="img" aria-label="Nubank">
+    <svg
+      viewBox="0 0 24 24"
+      className={className}
+      role="img"
+      aria-label="Nubank"
+    >
       <defs>
         <linearGradient id={g} x1="0" y1="0" x2="0.35" y2="1">
           <stop offset="0" stopColor="#fbfbfe" />

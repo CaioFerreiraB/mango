@@ -18,7 +18,8 @@ export type Accent = keyof typeof ACCENTS
 const STORAGE_KEY = "accent"
 
 export function aplicarAccent(accent: string | null | undefined) {
-  const valido = accent && accent in ACCENTS ? (accent as Accent) : ACCENT_PADRAO
+  const valido =
+    accent && accent in ACCENTS ? (accent as Accent) : ACCENT_PADRAO
   if (valido === ACCENT_PADRAO) {
     delete document.documentElement.dataset.accent // default = sem atributo (index.css)
   } else {

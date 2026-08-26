@@ -133,7 +133,9 @@ export function SetupPage() {
         body: { setup_ticket: data.setup_ticket },
       })
       if (erroConfirmar) {
-        setErroServidor("Não foi possível concluir o cadastro. Tente novamente.")
+        setErroServidor(
+          "Não foi possível concluir o cadastro. Tente novamente."
+        )
         return
       }
       await finalizar()
@@ -291,11 +293,7 @@ export function SetupPage() {
               />
             </Field>
             <Field id="item_id" label="itemId" error={errors.item_id?.message}>
-              <Input
-                id="item_id"
-                autoComplete="off"
-                {...register("item_id")}
-              />
+              <Input id="item_id" autoComplete="off" {...register("item_id")} />
             </Field>
             <div className="flex flex-col gap-1.5">
               <Label>Instituição (opcional)</Label>

@@ -115,8 +115,11 @@ make doctor   # checklist "pronto para desenvolver"
 ```
 
 Os demais atalhos — build do frontend, geração do cliente tipado, migrations — estão no
-[`Makefile`](Makefile). Para publicar uma versão: `make release v=X.Y.Z`, e o push da tag dispara a
-imagem no GHCR.
+[`Makefile`](Makefile).
+
+O projeto segue git flow: toda branch de trabalho sai da `dev` e volta para ela por PR, e a `main`
+só recebe merge da `dev`. O fluxo de branches, os portões de qualidade do CI e o processo de release
+estão em [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 ## Licença
 

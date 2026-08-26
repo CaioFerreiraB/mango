@@ -46,7 +46,8 @@ export function useLogin() {
       codigo_totp?: string
     }): Promise<LoginResponse> => {
       const { data, error } = await api.POST("/api/auth/login", { body })
-      if (error || !data) throw new Error(mensagemErro(error, "credenciais inválidas"))
+      if (error || !data)
+        throw new Error(mensagemErro(error, "credenciais inválidas"))
       return data
     },
   })
@@ -62,7 +63,10 @@ export function useRecuperarSenha() {
       nova_senha: string
     }): Promise<void> => {
       const { error } = await api.POST("/api/auth/recuperar-senha", { body })
-      if (error) throw new Error(mensagemErro(error, "não foi possível recuperar a senha"))
+      if (error)
+        throw new Error(
+          mensagemErro(error, "não foi possível recuperar a senha")
+        )
     },
   })
 }

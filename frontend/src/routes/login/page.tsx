@@ -44,7 +44,11 @@ export function LoginPage() {
   // Já autenticado → volta para a página inicial em vez de mostrar o login.
   if (me.data) return <Navigate to="/" replace />
 
-  async function concluir(v: { email: string; senha: string; codigo_totp?: string }) {
+  async function concluir(v: {
+    email: string
+    senha: string
+    codigo_totp?: string
+  }) {
     setErro(null)
     try {
       const resp = await login.mutateAsync(v)

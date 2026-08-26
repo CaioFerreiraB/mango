@@ -4,7 +4,8 @@ import { api } from "@/lib/api/client"
 import { mensagemErro } from "@/lib/api/erros"
 import type { components } from "@/lib/api/schema"
 
-export type ConfiguracaoSistema = components["schemas"]["ConfiguracaoSistemaRead"]
+export type ConfiguracaoSistema =
+  components["schemas"]["ConfiguracaoSistemaRead"]
 
 export const configuracaoSistemaKeys = {
   detalhe: ["configuracao-sistema"] as const,
@@ -16,7 +17,8 @@ export function useConfiguracaoSistema() {
     queryKey: configuracaoSistemaKeys.detalhe,
     queryFn: async (): Promise<ConfiguracaoSistema> => {
       const { data, error } = await api.GET("/api/configuracao-sistema")
-      if (error || !data) throw new Error(mensagemErro(error, "falha ao carregar a configuração"))
+      if (error || !data)
+        throw new Error(mensagemErro(error, "falha ao carregar a configuração"))
       return data
     },
   })
@@ -26,14 +28,19 @@ export function useConfiguracaoSistema() {
 export function useAtualizarConfiguracaoSistema() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async (otimizarTransacoesDivisao: boolean): Promise<ConfiguracaoSistema> => {
+    mutationFn: async (
+      otimizarTransacoesDivisao: boolean
+    ): Promise<ConfiguracaoSistema> => {
       const { data, error } = await api.PATCH("/api/configuracao-sistema", {
         body: { otimizar_transacoes_divisao: otimizarTransacoesDivisao },
       })
       if (error || !data)
-        throw new Error(mensagemErro(error, "falha ao atualizar a configuração"))
+        throw new Error(
+          mensagemErro(error, "falha ao atualizar a configuração")
+        )
       return data
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: configuracaoSistemaKeys.detalhe }),
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: configuracaoSistemaKeys.detalhe }),
   })
 }

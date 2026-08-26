@@ -28,7 +28,8 @@ import {
  *  esta aba nesse modo (ver `routes/configuracoes/page.tsx`). */
 export function SegurancaTab() {
   const perfil = usePerfil()
-  if (perfil.isLoading || !perfil.data) return <Skeleton className="h-48 w-full" />
+  if (perfil.isLoading || !perfil.data)
+    return <Skeleton className="h-48 w-full" />
   // Chaveado pelo id: os diálogos reiniciam o próprio estado ao fechar (sem effect).
   return <SegurancaContent key={perfil.data.id} perfil={perfil.data} />
 }
@@ -49,7 +50,9 @@ function SegurancaContent({ perfil }: { perfil: Perfil }) {
     <div className="space-y-4">
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Verificação em duas etapas (2FA)</CardTitle>
+          <CardTitle className="text-base">
+            Verificação em duas etapas (2FA)
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           {!perfil.totp_configurado ? (
@@ -65,13 +68,15 @@ function SegurancaContent({ perfil }: { perfil: Perfil }) {
                 <div>
                   <p className="text-sm font-medium">Exigir código no login</p>
                   <p className="text-xs text-muted-foreground">
-                    Desligado, o login pede só usuário e senha — a recuperação de senha
-                    continua exigindo o código.
+                    Desligado, o login pede só usuário e senha — a recuperação
+                    de senha continua exigindo o código.
                   </p>
                 </div>
                 <Switch
                   checked={perfil.totp_login_habilitado}
-                  onCheckedChange={(v) => (v ? ligar() : setDesabilitarAberto(true))}
+                  onCheckedChange={(v) =>
+                    v ? ligar() : setDesabilitarAberto(true)
+                  }
                   disabled={habilitar.isPending}
                 />
               </div>
@@ -88,7 +93,10 @@ function SegurancaContent({ perfil }: { perfil: Perfil }) {
         onOpenChange={setTrocarAberto}
         jaConfigurado={perfil.totp_configurado}
       />
-      <DesabilitarTotpDialog aberto={desabilitarAberto} onOpenChange={setDesabilitarAberto} />
+      <DesabilitarTotpDialog
+        aberto={desabilitarAberto}
+        onOpenChange={setDesabilitarAberto}
+      />
     </div>
   )
 }
@@ -107,7 +115,11 @@ function TrocarTotpDialog({
   const [senhaAtual, setSenhaAtual] = useState("")
   const [codigo, setCodigo] = useState("")
   const [erro, setErro] = useState<string | null>(null)
-  const [dados, setDados] = useState<{ ticket: string; totp_secret: string; totp_provisioning_uri: string } | null>(null)
+  const [dados, setDados] = useState<{
+    ticket: string
+    totp_secret: string
+    totp_provisioning_uri: string
+  } | null>(null)
   const iniciar = useIniciarTotp()
   const confirmar = useConfirmarTotp()
 
@@ -154,13 +166,16 @@ function TrocarTotpDialog({
     <Dialog open={aberto} onOpenChange={fechar}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{jaConfigurado ? "Trocar 2FA" : "Ativar 2FA"}</DialogTitle>
+          <DialogTitle>
+            {jaConfigurado ? "Trocar 2FA" : "Ativar 2FA"}
+          </DialogTitle>
         </DialogHeader>
 
         {etapa === "senha" ? (
           <form onSubmit={enviarSenha} className="flex flex-col gap-4">
             <p className="text-sm text-muted-foreground">
-              Confirme sua senha atual para {jaConfigurado ? "trocar" : "cadastrar"} o 2FA.
+              Confirme sua senha atual para{" "}
+              {jaConfigurado ? "trocar" : "cadastrar"} o 2FA.
             </p>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="senha_atual">Senha atual</Label>
@@ -187,7 +202,8 @@ function TrocarTotpDialog({
         ) : etapa === "qr" && dados ? (
           <div className="flex flex-col items-center gap-4">
             <p className="text-sm text-muted-foreground">
-              Escaneie o QR code no seu app autenticador (Google Authenticator, Aegis, etc.).
+              Escaneie o QR code no seu app autenticador (Google Authenticator,
+              Aegis, etc.).
             </p>
             <div className="rounded-lg bg-white p-3">
               <QRCodeSVG value={dados.totp_provisioning_uri} size={180} />
@@ -225,7 +241,11 @@ function TrocarTotpDialog({
               </p>
             ) : null}
             <DialogFooter>
-              <Button variant="outline" onClick={() => setEtapa("qr")} disabled={confirmar.isPending}>
+              <Button
+                variant="outline"
+                onClick={() => setEtapa("qr")}
+                disabled={confirmar.isPending}
+              >
                 Voltar
               </Button>
               <Button
@@ -282,8 +302,8 @@ function DesabilitarTotpDialog({
         </DialogHeader>
         <form onSubmit={enviar} className="flex flex-col gap-4">
           <p className="text-sm text-muted-foreground">
-            Confirme sua senha atual. O 2FA continua configurado — só deixa de ser pedido no
-            login.
+            Confirme sua senha atual. O 2FA continua configurado — só deixa de
+            ser pedido no login.
           </p>
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="senha_atual_desabilitar">Senha atual</Label>
@@ -302,7 +322,10 @@ function DesabilitarTotpDialog({
             </p>
           ) : null}
           <DialogFooter>
-            <Button type="submit" disabled={desabilitar.isPending || !senhaAtual}>
+            <Button
+              type="submit"
+              disabled={desabilitar.isPending || !senhaAtual}
+            >
               {desabilitar.isPending ? "Confirmando…" : "Desligar"}
             </Button>
           </DialogFooter>

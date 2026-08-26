@@ -40,7 +40,9 @@ export function CategoriaSelect({
   const [aberto, setAberto] = useState(false)
   const categorias = (data ?? []).filter((c) => !excluir?.includes(c.pluggy_id))
 
-  const selecionada = value ? categorias.find((c) => c.pluggy_id === value) : null
+  const selecionada = value
+    ? categorias.find((c) => c.pluggy_id === value)
+    : null
   const rotulo = selecionada
     ? nomeCategoria(selecionada)
     : incluirTodas && value === null
@@ -69,22 +71,40 @@ export function CategoriaSelect({
                   return <Icone className="size-4 shrink-0" aria-hidden />
                 })()
               : null}
-            <span className={cn("truncate", !selecionada && !(incluirTodas && value === null) && "text-muted-foreground")}>
+            <span
+              className={cn(
+                "truncate",
+                !selecionada &&
+                  !(incluirTodas && value === null) &&
+                  "text-muted-foreground"
+              )}
+            >
               {rotulo}
             </span>
           </span>
           <ChevronsUpDown className="size-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+      <PopoverContent
+        className="w-[var(--radix-popover-trigger-width)] p-0"
+        align="start"
+      >
         <Command>
           <CommandInput placeholder="Buscar categoria…" />
           <CommandList className="max-h-56">
             <CommandEmpty>Nenhuma categoria.</CommandEmpty>
             <CommandGroup>
               {incluirTodas ? (
-                <CommandItem value="Todas as categorias" onSelect={() => selecionar(null)}>
-                  <Check className={cn("size-4", value === null ? "opacity-100" : "opacity-0")} />
+                <CommandItem
+                  value="Todas as categorias"
+                  onSelect={() => selecionar(null)}
+                >
+                  <Check
+                    className={cn(
+                      "size-4",
+                      value === null ? "opacity-100" : "opacity-0"
+                    )}
+                  />
                   Todas as categorias
                 </CommandItem>
               ) : null}
@@ -102,7 +122,10 @@ export function CategoriaSelect({
                         value === c.pluggy_id ? "opacity-100" : "opacity-0"
                       )}
                     />
-                    <Icone className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+                    <Icone
+                      className="size-4 shrink-0 text-muted-foreground"
+                      aria-hidden
+                    />
                     {nomeCategoria(c)}
                   </CommandItem>
                 )

@@ -23,7 +23,10 @@ export const AVATARES_DISPONIVEIS = [1]
 
 export const AVATAR_PADRAO = 1
 
-export function ilustracao(avatar: number | null | undefined, cena: Cena): string {
+export function ilustracao(
+  avatar: number | null | undefined,
+  cena: Cena
+): string {
   const n = avatar ?? AVATAR_PADRAO
   return `/illustrations/avatars/avatar_${n}/avatar-${n}-${cena}.png`
 }
