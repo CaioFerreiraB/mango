@@ -89,13 +89,18 @@ jobs:
       - name: Testes (SQLite + PostgreSQL)
         run: uv run pytest --cov=app --cov-report=xml --cov-report=term-missing
 
-      # O envio da cobertura só acontece onde o secret existe — PR vindo de fork não recebe
-      # secrets, e o job não pode falhar por isso. `secrets` não pode ser usado no `if:` de um job,
-      # daí a checagem em nível de passo via env.
+      # O token existe só no `with:` deste passo — nunca no `env:` do job, senão ficaria legível
+      # para `uv sync`, para a suíte e para qualquer action de terceiro rodando aqui.
+      #
+      # O `if:` pula PR vindo de fork, que não recebe secrets. A condição olha só o contexto
+      # `github` de propósito: assim não é preciso pôr o secret em lugar nenhum para decidir.
+      #
+      # `continue-on-error` porque isto é publicação de métrica, não portão: o Codacy é serviço
+      # externo, e uma indisponibilidade dele não pode reprovar a suíte e travar o merge. A análise
+      # estática do Codacy continua reportando no check próprio dela, à parte deste job.
       - name: Envia a cobertura ao Codacy
-        if: env.CODACY_PROJECT_TOKEN != ''
-        env:
-          CODACY_PROJECT_TOKEN: ${{ secrets.CODACY_PROJECT_TOKEN }}
+        if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
+        continue-on-error: true
         uses: codacy/codacy-coverage-reporter-action@v1
         with:
           project-token: ${{ secrets.CODACY_PROJECT_TOKEN }}
