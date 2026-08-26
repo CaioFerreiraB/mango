@@ -63,6 +63,10 @@ jobs:
 
     env:
       TEST_DATABASE_URL: postgresql+psycopg://mango:mango@localhost:5432/mango
+      # Promovido a env do job de propósito: o `if:` de um passo não enxerga o `env:` daquele
+      # mesmo passo (a condição é avaliada antes), mas enxerga o env do job. Ver o passo de
+      # cobertura no fim da lista.
+      CODACY_PROJECT_TOKEN: ${{ secrets.CODACY_PROJECT_TOKEN }}
 
     steps:
       - uses: actions/checkout@v4
@@ -89,16 +93,15 @@ jobs:
       - name: Testes (SQLite + PostgreSQL)
         run: uv run pytest --cov=app --cov-report=xml --cov-report=term-missing
 
-      # O envio da cobertura só acontece onde o secret existe — PR vindo de fork não recebe
-      # secrets, e o job não pode falhar por isso. `secrets` não pode ser usado no `if:` de um job,
-      # daí a checagem em nível de passo via env.
+      # O envio só acontece onde o secret existe — PR vindo de fork não recebe secrets, e o job
+      # não pode falhar por isso. O token vem do `env:` do job (ver acima): posto no `env:` deste
+      # passo, o `if:` não o enxergaria e o passo seria pulado sempre, inclusive com o secret
+      # configurado.
       - name: Envia a cobertura ao Codacy
         if: env.CODACY_PROJECT_TOKEN != ''
-        env:
-          CODACY_PROJECT_TOKEN: ${{ secrets.CODACY_PROJECT_TOKEN }}
         uses: codacy/codacy-coverage-reporter-action@v1
         with:
-          project-token: ${{ secrets.CODACY_PROJECT_TOKEN }}
+          project-token: ${{ env.CODACY_PROJECT_TOKEN }}
           coverage-reports: coverage.xml
 
   # Frontend: só Node. Usa o frontend/openapi.json commitado para gerar o cliente tipado, então
