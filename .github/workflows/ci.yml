@@ -2,10 +2,46 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, dev]
   pull_request:
+    branches: [main, dev]
+
+permissions:
+  contents: read
+
+# Um push novo na mesma branch cancela o run anterior — só em PR, onde o resultado intermediário
+# não interessa. Em `push` na main/dev cada commit continua com o seu run próprio, que é o que dá
+# o histórico verde/vermelho por commit.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  # Git flow: a main só recebe merge da dev (ou de um release/hotfix). O GitHub não tem regra
+  # nativa de "restringir a branch de origem", então a imposição é este job marcado como status
+  # check obrigatório da main — ver CONTRIBUTING.md.
+  #
+  # Ele roda em TODO PR, inclusive nos que miram a dev (onde sai por `exit 0` na primeira linha).
+  # Isso é deliberado: um job pulado por `if:` reporta "skipped", e um check obrigatório que nunca
+  # reporta deixa o PR travado para sempre.
+  guard-origem-do-pr:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Só dev, release/* ou hotfix/* podem entrar na main
+        env:
+          BASE: ${{ github.base_ref }}
+          HEAD: ${{ github.head_ref }}
+        run: |
+          [ "$BASE" = "main" ] || { echo "PR para '$BASE' — regra não se aplica."; exit 0; }
+          case "$HEAD" in
+            dev|release/*|hotfix/*)
+              echo "Origem '$HEAD' permitida na main." ;;
+            *)
+              echo "::error::PR na main só a partir de dev, release/* ou hotfix/* (veio de '$HEAD'). Mire a dev."
+              exit 1 ;;
+          esac
+
   test:
     runs-on: ubuntu-latest
 
@@ -51,7 +87,19 @@ jobs:
         run: uv run alembic upgrade head
 
       - name: Testes (SQLite + PostgreSQL)
-        run: uv run pytest
+        run: uv run pytest --cov=app --cov-report=xml --cov-report=term-missing
+
+      # O envio da cobertura só acontece onde o secret existe — PR vindo de fork não recebe
+      # secrets, e o job não pode falhar por isso. `secrets` não pode ser usado no `if:` de um job,
+      # daí a checagem em nível de passo via env.
+      - name: Envia a cobertura ao Codacy
+        if: env.CODACY_PROJECT_TOKEN != ''
+        env:
+          CODACY_PROJECT_TOKEN: ${{ secrets.CODACY_PROJECT_TOKEN }}
+        uses: codacy/codacy-coverage-reporter-action@v1
+        with:
+          project-token: ${{ secrets.CODACY_PROJECT_TOKEN }}
+          coverage-reports: coverage.xml
 
   # Frontend: só Node. Usa o frontend/openapi.json commitado para gerar o cliente tipado, então
   # não precisa de Python nem de servidor. `npm run build` faz generate:api → tsc -b → vite build.
@@ -75,6 +123,12 @@ jobs:
 
       - name: Instala dependências
         run: npm ci
+
+      - name: Lint (eslint)
+        run: npm run lint
+
+      - name: Formatação (prettier)
+        run: npm run format:check
 
       - name: Build (cliente tipado + typecheck + Vite)
         run: npm run build

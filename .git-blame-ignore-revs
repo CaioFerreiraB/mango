@@ -1,0 +1,9 @@
+# Commits puramente mecânicos (reformatação) que poluem o `git blame`.
+#
+# Ligar localmente:
+#     git config blame.ignoreRevsFile .git-blame-ignore-revs
+#
+# O GitHub honra este arquivo automaticamente na visão de blame.
+
+# style(frontend): aplica o prettier em toda a base
+6043a208b8e428e43f34a521a4f453aba1d945ef
