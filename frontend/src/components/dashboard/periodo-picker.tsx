@@ -72,11 +72,15 @@ export function PeriodoPicker({
           onSelect={(r) => setRascunho(r)}
         />
         <div className="flex items-center justify-between gap-3 border-t p-3">
-          <span className="text-xs tabular-nums text-muted-foreground">
-            {rascunho?.from ? formatDate(dataParaIso(rascunho.from)) : "Início"} –{" "}
-            {rascunho?.to ? formatDate(dataParaIso(rascunho.to)) : "Fim"}
+          <span className="text-xs text-muted-foreground tabular-nums">
+            {rascunho?.from ? formatDate(dataParaIso(rascunho.from)) : "Início"}{" "}
+            – {rascunho?.to ? formatDate(dataParaIso(rascunho.to)) : "Fim"}
           </span>
-          <Button size="sm" disabled={!rascunho?.from || !rascunho.to} onClick={aplicar}>
+          <Button
+            size="sm"
+            disabled={!rascunho?.from || !rascunho.to}
+            onClick={aplicar}
+          >
             Aplicar
           </Button>
         </div>

@@ -1,7 +1,11 @@
 node_modules/
+dist/
 coverage/
 .pnpm-store/
-pnpm-lock.yaml
 package-lock.json
 pnpm-lock.yaml
 yarn.lock
+
+# Gerados — reformatá-los só criaria diferença contra a próxima geração.
+openapi.json
+src/lib/api/schema.d.ts

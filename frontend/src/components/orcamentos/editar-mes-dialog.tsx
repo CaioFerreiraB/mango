@@ -56,7 +56,10 @@ export function EditarMesDialog({
 }) {
   const [aberto, setAberto] = useState(false)
   const [edits, setEdits] = useState<Record<number, number>>({}) // orcamento_mensal_id -> centavos
-  const [novas, setNovas] = useState<Record<Tipo, Nova[]>>({ despesa: [], receita: [] })
+  const [novas, setNovas] = useState<Record<Tipo, Nova[]>>({
+    despesa: [],
+    receita: [],
+  })
   const [erros, setErros] = useState<Record<string, string>>({})
   const [salvando, setSalvando] = useState(false)
   const nomes = useMapaCategorias()
@@ -77,18 +80,26 @@ export function EditarMesDialog({
   }
 
   function adicionarCategoria(tipo: Tipo, categoriaId: string) {
-    setNovas((prev) => ({ ...prev, [tipo]: [...prev[tipo], { categoriaId, tipo, valor: 0 }] }))
+    setNovas((prev) => ({
+      ...prev,
+      [tipo]: [...prev[tipo], { categoriaId, tipo, valor: 0 }],
+    }))
   }
 
   function mudarValorNova(tipo: Tipo, categoriaId: string, valor: number) {
     setNovas((prev) => ({
       ...prev,
-      [tipo]: prev[tipo].map((n) => (n.categoriaId === categoriaId ? { ...n, valor } : n)),
+      [tipo]: prev[tipo].map((n) =>
+        n.categoriaId === categoriaId ? { ...n, valor } : n
+      ),
     }))
   }
 
   function removerNova(tipo: Tipo, categoriaId: string) {
-    setNovas((prev) => ({ ...prev, [tipo]: prev[tipo].filter((n) => n.categoriaId !== categoriaId) }))
+    setNovas((prev) => ({
+      ...prev,
+      [tipo]: prev[tipo].filter((n) => n.categoriaId !== categoriaId),
+    }))
   }
 
   /** Remoção é imediata (não fica pendurada até "Salvar"), como o resto do app já faz. Uma
@@ -133,7 +144,8 @@ export function EditarMesDialog({
         await atualizarMensal.mutateAsync({ id, limite_centavos: valor })
         sucessos++
       } catch (err) {
-        novosErros[idStr] = err instanceof Error ? err.message : "falha ao salvar"
+        novosErros[idStr] =
+          err instanceof Error ? err.message : "falha ao salvar"
       }
     }
 
@@ -159,7 +171,8 @@ export function EditarMesDialog({
           })
           sucessos++
         } catch (err) {
-          novosErros[chave] = err instanceof Error ? err.message : "falha ao salvar"
+          novosErros[chave] =
+            err instanceof Error ? err.message : "falha ao salvar"
         }
       }
     }
@@ -179,7 +192,10 @@ export function EditarMesDialog({
     }
   }
 
-  const houveMudancas = Object.keys(edits).length > 0 || novas.despesa.length > 0 || novas.receita.length > 0
+  const houveMudancas =
+    Object.keys(edits).length > 0 ||
+    novas.despesa.length > 0 ||
+    novas.receita.length > 0
 
   return (
     <Dialog open={aberto} onOpenChange={abrir}>
@@ -194,19 +210,27 @@ export function EditarMesDialog({
         <DialogHeader>
           <DialogTitle>Orçamento do mês</DialogTitle>
           <DialogDescription>
-            Vale só pra este mês — o orçamento padrão não muda (edite-o em "Configurar
-            orçamento padrão").
+            Vale só pra este mês — o orçamento padrão não muda (edite-o em
+            "Configurar orçamento padrão").
           </DialogDescription>
         </DialogHeader>
         <div className="max-h-[60vh] space-y-6 overflow-y-auto pr-1">
           {SECOES.map(({ tipo, titulo }) => {
             const ativos = itens.filter((i) => i.tipo === tipo && !i.suprimido)
-            const suprimidos = itens.filter((i) => i.tipo === tipo && i.suprimido)
+            const suprimidos = itens.filter(
+              (i) => i.tipo === tipo && i.suprimido
+            )
             const excluir = [
-              ...itens.filter((i) => i.tipo === tipo).map((i) => i.categoria_id),
+              ...itens
+                .filter((i) => i.tipo === tipo)
+                .map((i) => i.categoria_id),
               ...novas[tipo].map((n) => n.categoriaId),
             ]
-            if (ativos.length === 0 && suprimidos.length === 0 && novas[tipo].length === 0) {
+            if (
+              ativos.length === 0 &&
+              suprimidos.length === 0 &&
+              novas[tipo].length === 0
+            ) {
               return (
                 <section key={tipo} className="space-y-2">
                   <h3 className="text-sm font-semibold">{titulo}</h3>
@@ -224,8 +248,10 @@ export function EditarMesDialog({
                 <h3 className="text-sm font-semibold">{titulo}</h3>
                 <div className="space-y-1">
                   {ativos.map((item) => {
-                    const nome = nomes.get(item.categoria_id) ?? item.categoria_id
-                    const valor = edits[item.orcamento_mensal_id] ?? item.limite_centavos
+                    const nome =
+                      nomes.get(item.categoria_id) ?? item.categoria_id
+                    const valor =
+                      edits[item.orcamento_mensal_id] ?? item.limite_centavos
                     return (
                       <div key={item.orcamento_mensal_id}>
                         <div className="flex items-center gap-2 py-1">
@@ -237,16 +263,26 @@ export function EditarMesDialog({
                             <div className="min-w-0 flex-1">
                               <p className="truncate text-sm">{nome}</p>
                               <p className="truncate text-xs text-muted-foreground">
-                                Gasto: <Valor centavos={item.realizado_centavos} neutro className="text-xs font-normal" />
+                                Gasto:{" "}
+                                <Valor
+                                  centavos={item.realizado_centavos}
+                                  neutro
+                                  className="text-xs font-normal"
+                                />
                               </p>
                             </div>
                           ) : (
-                            <span className="min-w-0 flex-1 truncate text-sm">{nome}</span>
+                            <span className="min-w-0 flex-1 truncate text-sm">
+                              {nome}
+                            </span>
                           )}
                           <CurrencyInput
                             value={valor}
                             onChange={(v) =>
-                              setEdits((prev) => ({ ...prev, [item.orcamento_mensal_id]: v }))
+                              setEdits((prev) => ({
+                                ...prev,
+                                [item.orcamento_mensal_id]: v,
+                              }))
                             }
                             className="w-28 shrink-0 sm:w-32"
                             aria-label={`Limite de ${nome}`}
@@ -278,10 +314,14 @@ export function EditarMesDialog({
                             className: "size-4 shrink-0 text-muted-foreground",
                             "aria-hidden": true,
                           })}
-                          <span className="min-w-0 flex-1 truncate text-sm">{nome}</span>
+                          <span className="min-w-0 flex-1 truncate text-sm">
+                            {nome}
+                          </span>
                           <CurrencyInput
                             value={nova.valor}
-                            onChange={(v) => mudarValorNova(tipo, nova.categoriaId, v)}
+                            onChange={(v) =>
+                              mudarValorNova(tipo, nova.categoriaId, v)
+                            }
                             className="w-28 shrink-0 sm:w-32"
                             aria-label={`Valor de ${nome}`}
                           />
@@ -295,13 +335,16 @@ export function EditarMesDialog({
                           </Button>
                         </div>
                         {erros[chave] ? (
-                          <p className="pb-1 pl-6 text-xs text-destructive">{erros[chave]}</p>
+                          <p className="pb-1 pl-6 text-xs text-destructive">
+                            {erros[chave]}
+                          </p>
                         ) : null}
                       </div>
                     )
                   })}
                   {suprimidos.map((item) => {
-                    const nome = nomes.get(item.categoria_id) ?? item.categoria_id
+                    const nome =
+                      nomes.get(item.categoria_id) ?? item.categoria_id
                     return (
                       <div
                         key={item.orcamento_mensal_id}
@@ -311,7 +354,9 @@ export function EditarMesDialog({
                           className: "size-4 shrink-0",
                           "aria-hidden": true,
                         })}
-                        <span className="min-w-0 flex-1 truncate text-sm line-through">{nome}</span>
+                        <span className="min-w-0 flex-1 truncate text-sm line-through">
+                          {nome}
+                        </span>
                         <span className="text-xs">Removida este mês</span>
                         <Button
                           variant="ghost"
@@ -341,7 +386,11 @@ export function EditarMesDialog({
               Cancelar
             </Button>
           </DialogClose>
-          <Button type="button" onClick={salvar} disabled={salvando || !houveMudancas}>
+          <Button
+            type="button"
+            onClick={salvar}
+            disabled={salvando || !houveMudancas}
+          >
             Salvar
           </Button>
         </DialogFooter>

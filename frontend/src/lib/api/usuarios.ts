@@ -37,7 +37,8 @@ export function useUsuariosAdmin() {
     queryKey: usuariosAdminKeys.lista,
     queryFn: async (): Promise<UsuarioAdmin[]> => {
       const { data, error } = await api.GET("/api/admin/usuarios")
-      if (error || !data) throw new Error(mensagemErro(error, "falha ao listar usuários"))
+      if (error || !data)
+        throw new Error(mensagemErro(error, "falha ao listar usuários"))
       return data
     },
   })
@@ -46,9 +47,16 @@ export function useUsuariosAdmin() {
 export function useCriarUsuarioAdmin() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async (args: { nome: string; email: string; tipo: TipoUsuario }) => {
-      const { data, error } = await api.POST("/api/admin/usuarios", { body: args })
-      if (error || !data) throw new Error(mensagemErro(error, "falha ao criar o usuário"))
+    mutationFn: async (args: {
+      nome: string
+      email: string
+      tipo: TipoUsuario
+    }) => {
+      const { data, error } = await api.POST("/api/admin/usuarios", {
+        body: args,
+      })
+      if (error || !data)
+        throw new Error(mensagemErro(error, "falha ao criar o usuário"))
       return data
     },
     onSuccess: () => invalidarAdmin(qc),
@@ -90,7 +98,8 @@ export function useReenviarConviteAdmin() {
         "/api/admin/usuarios/{usuario_id}/reenviar-convite",
         { params: { path: { usuario_id: usuarioId } } }
       )
-      if (error || !data) throw new Error(mensagemErro(error, "falha ao gerar novo link"))
+      if (error || !data)
+        throw new Error(mensagemErro(error, "falha ao gerar novo link"))
       return data
     },
     onSuccess: () => invalidarAdmin(qc),
@@ -100,13 +109,21 @@ export function useReenviarConviteAdmin() {
 export function useMudarTipoUsuarioAdmin() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async (args: { usuarioId: number; tipo: TipoUsuario }): Promise<UsuarioAdmin> => {
-      const { data, error } = await api.POST("/api/admin/usuarios/{usuario_id}/tipo", {
-        params: { path: { usuario_id: args.usuarioId } },
-        body: { tipo: args.tipo },
-      })
+    mutationFn: async (args: {
+      usuarioId: number
+      tipo: TipoUsuario
+    }): Promise<UsuarioAdmin> => {
+      const { data, error } = await api.POST(
+        "/api/admin/usuarios/{usuario_id}/tipo",
+        {
+          params: { path: { usuario_id: args.usuarioId } },
+          body: { tipo: args.tipo },
+        }
+      )
       if (error || !data)
-        throw new Error(mensagemErro(error, "falha ao alterar o tipo de acesso"))
+        throw new Error(
+          mensagemErro(error, "falha ao alterar o tipo de acesso")
+        )
       return data
     },
     onSuccess: () => invalidarAdmin(qc),
@@ -120,7 +137,8 @@ export function useRemoverUsuarioAdmin() {
       const { error } = await api.DELETE("/api/admin/usuarios/{usuario_id}", {
         params: { path: { usuario_id: usuarioId } },
       })
-      if (error) throw new Error(mensagemErro(error, "falha ao excluir o usuário"))
+      if (error)
+        throw new Error(mensagemErro(error, "falha ao excluir o usuário"))
     },
     onSuccess: () => invalidarAdmin(qc),
   })

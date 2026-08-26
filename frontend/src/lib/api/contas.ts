@@ -45,9 +45,12 @@ export function useFaturasResumo(contaId: number, limite = 6) {
   return useQuery({
     queryKey: [...contasKeys.faturasResumo(contaId), limite],
     queryFn: async (): Promise<FaturaResumoBucket[]> => {
-      const { data, error } = await api.GET("/api/contas/{conta_id}/faturas-resumo", {
-        params: { path: { conta_id: contaId }, query: { limite } },
-      })
+      const { data, error } = await api.GET(
+        "/api/contas/{conta_id}/faturas-resumo",
+        {
+          params: { path: { conta_id: contaId }, query: { limite } },
+        }
+      )
       if (error || !data) throw new Error("falha ao carregar faturas do cartão")
       return data.buckets
     },

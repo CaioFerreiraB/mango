@@ -49,7 +49,9 @@ export function RecuperarSenhaPage() {
       })
       setConcluido(true)
     } catch {
-      setErro("Não foi possível recuperar a senha. Confira o e-mail e o código.")
+      setErro(
+        "Não foi possível recuperar a senha. Confira o e-mail e o código."
+      )
     }
   }
 

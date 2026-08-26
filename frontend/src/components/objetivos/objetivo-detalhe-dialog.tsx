@@ -1,4 +1,12 @@
-import { Info, Pencil, PiggyBank, Target, TrendingUp, X, type LucideIcon } from "lucide-react"
+import {
+  Info,
+  Pencil,
+  PiggyBank,
+  Target,
+  TrendingUp,
+  X,
+  type LucideIcon,
+} from "lucide-react"
 import { toast } from "sonner"
 
 import { AnelProgresso } from "@/components/common/anel-progresso"
@@ -122,12 +130,19 @@ function LinhaVinculo({
 }) {
   const instituicoes = useInstituicoes()
   const logoUrl = conta
-    ? instituicaoEfetiva(conta, new Map((instituicoes.data ?? []).map((i) => [i.id, i])))
-        ?.logo_url
+    ? instituicaoEfetiva(
+        conta,
+        new Map((instituicoes.data ?? []).map((i) => [i.id, i]))
+      )?.logo_url
     : undefined
-  const nome = vinculo.nome ?? (vinculo.tipo === "conta" ? "Conta" : "Investimento")
+  const nome =
+    vinculo.nome ?? (vinculo.tipo === "conta" ? "Conta" : "Investimento")
   const legenda =
-    vinculo.tipo === "conta" ? (conta?.type === "CREDIT" ? "cartão" : "conta") : "investimento"
+    vinculo.tipo === "conta"
+      ? conta?.type === "CREDIT"
+        ? "cartão"
+        : "conta"
+      : "investimento"
   const icone =
     vinculo.tipo === "conta" ? (
       <AvatarBanco nome={nome} logoUrl={logoUrl} />
@@ -147,8 +162,17 @@ function LinhaVinculo({
         </div>
         <div className="flex shrink-0 flex-col items-end gap-1">
           <div className="flex items-center gap-1">
-            <Valor centavos={vinculo.saldo_centavos} neutro className="text-sm" />
-            <Button variant="ghost" size="icon-sm" aria-label="Desvincular" onClick={onRemover}>
+            <Valor
+              centavos={vinculo.saldo_centavos}
+              neutro
+              className="text-sm"
+            />
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label="Desvincular"
+              onClick={onRemover}
+            >
               <X className="size-3.5" />
             </Button>
           </div>
@@ -181,14 +205,25 @@ function LinhaVinculo({
         </span>
         <Progress value={pctDoTotal} className="h-1.5" />
       </div>
-      <Button variant="ghost" size="icon" aria-label="Desvincular" onClick={onRemover}>
+      <Button
+        variant="ghost"
+        size="icon"
+        aria-label="Desvincular"
+        onClick={onRemover}
+      >
         <X className="size-4" />
       </Button>
     </li>
   )
 }
 
-export function ObjetivoDetalheDialog({ id, onClose }: { id: number; onClose: () => void }) {
+export function ObjetivoDetalheDialog({
+  id,
+  onClose,
+}: {
+  id: number
+  onClose: () => void
+}) {
   const isMobile = useIsMobile()
   const { data, isLoading } = useObjetivo(id)
   const contas = useContas()
@@ -198,21 +233,30 @@ export function ObjetivoDetalheDialog({ id, onClose }: { id: number; onClose: ()
   const remover = useRemoverObjetivo()
 
   const contasPorId = new Map((contas.data ?? []).map((c) => [c.id, c]))
-  const investimentosPorId = new Map((investimentos.data ?? []).map((i) => [i.id, i]))
+  const investimentosPorId = new Map(
+    (investimentos.data ?? []).map((i) => [i.id, i])
+  )
 
   // Disponíveis para vincular = sem objetivo (a regra 1:1-máx impede roubar de outro objetivo).
   // Cartões (type CREDIT) ficam de fora — objetivo só faz sentido pra saldo guardado, não fatura.
   const contasLivres = (contas.data ?? []).filter(
     (c) => c.objetivo_id == null && c.type !== "CREDIT"
   )
-  const invsLivres = (investimentos.data ?? []).filter((i) => i.objetivo_id == null)
+  const invsLivres = (investimentos.data ?? []).filter(
+    (i) => i.objetivo_id == null
+  )
 
   function adicionar(valor: string) {
     const [tipo, idStr] = valor.split(":")
     const alvoId = Number(idStr)
     const onError = (err: Error) => toast.error(err.message)
-    if (tipo === "conta") vincularConta.mutate({ contaId: alvoId, objetivoId: id }, { onError })
-    else vincularInv.mutate({ investimentoId: alvoId, objetivoId: id }, { onError })
+    if (tipo === "conta")
+      vincularConta.mutate({ contaId: alvoId, objetivoId: id }, { onError })
+    else
+      vincularInv.mutate(
+        { investimentoId: alvoId, objetivoId: id },
+        { onError }
+      )
   }
 
   return (
@@ -289,7 +333,11 @@ function ObjetivoDetalheConteudo({
           <ObjetivoFormDialog
             objetivo={data}
             trigger={
-              <Button variant="ghost" size="icon-sm" aria-label="Editar objetivo">
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                aria-label="Editar objetivo"
+              >
                 <Pencil className="size-3.5" />
               </Button>
             }
@@ -329,7 +377,9 @@ function ObjetivoDetalheConteudo({
                     <span>% de atingimento</span>
                   </div>
                   <div className="text-right">
-                    <p className="text-base font-semibold text-primary tabular-nums">{pct}%</p>
+                    <p className="text-base font-semibold text-primary tabular-nums">
+                      {pct}%
+                    </p>
                     <DeltaMeta
                       guardado={data.valor_guardado_centavos}
                       alvo={data.valor_alvo_centavos}
@@ -341,19 +391,38 @@ function ObjetivoDetalheConteudo({
           ) : (
             <div className="flex min-w-0 flex-col items-center gap-4 sm:flex-row">
               <AnelProgresso pct={pct} />
-              <Separator orientation="vertical" className="hidden self-stretch sm:block" />
+              <Separator
+                orientation="vertical"
+                className="hidden self-stretch sm:block"
+              />
               <div className="grid min-w-0 flex-1 grid-cols-3 gap-3">
                 <div className="min-w-0">
-                  <p className="text-xs text-muted-foreground">Valor do objetivo</p>
-                  <Valor centavos={data.valor_alvo_centavos} neutro className="text-base" />
+                  <p className="text-xs text-muted-foreground">
+                    Valor do objetivo
+                  </p>
+                  <Valor
+                    centavos={data.valor_alvo_centavos}
+                    neutro
+                    className="text-base"
+                  />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-xs text-muted-foreground">Guardado até o momento</p>
-                  <Valor centavos={data.valor_guardado_centavos} neutro className="text-base" />
+                  <p className="text-xs text-muted-foreground">
+                    Guardado até o momento
+                  </p>
+                  <Valor
+                    centavos={data.valor_guardado_centavos}
+                    neutro
+                    className="text-base"
+                  />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-xs text-muted-foreground">% de atingimento</p>
-                  <p className="text-base font-semibold text-primary tabular-nums">{pct}%</p>
+                  <p className="text-xs text-muted-foreground">
+                    % de atingimento
+                  </p>
+                  <p className="text-base font-semibold text-primary tabular-nums">
+                    {pct}%
+                  </p>
                   <DeltaMeta
                     guardado={data.valor_guardado_centavos}
                     alvo={data.valor_alvo_centavos}
@@ -367,12 +436,16 @@ function ObjetivoDetalheConteudo({
 
         <div className="space-y-2">
           <div className="flex items-center justify-between gap-2">
-            <Label className="text-xs text-muted-foreground">Contas e investimentos vinculados</Label>
+            <Label className="text-xs text-muted-foreground">
+              Contas e investimentos vinculados
+            </Label>
             {contasLivres.length + invsLivres.length > 0 ? (
               <Select onValueChange={onAdicionar} value="">
                 <SelectTrigger className="w-auto">
                   <SelectValue
-                    placeholder={isMobile ? "Vincular" : "Vincular conta ou investimento"}
+                    placeholder={
+                      isMobile ? "Vincular" : "Vincular conta ou investimento"
+                    }
                   />
                 </SelectTrigger>
                 <SelectContent>
@@ -392,7 +465,9 @@ function ObjetivoDetalheConteudo({
           </div>
 
           {data.vinculos.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Nenhum vínculo ainda.</p>
+            <p className="text-sm text-muted-foreground">
+              Nenhum vínculo ainda.
+            </p>
           ) : (
             <div className="overflow-x-auto">
               <ul className={cn("divide-y", !isMobile && "min-w-fit")}>
@@ -400,9 +475,17 @@ function ObjetivoDetalheConteudo({
                   <LinhaVinculo
                     key={`${v.tipo}-${v.id}`}
                     vinculo={v}
-                    conta={v.tipo === "conta" ? contasPorId.get(v.id) : undefined}
-                    investimento={v.tipo === "investimento" ? investimentosPorId.get(v.id) : undefined}
-                    pctDoTotal={total > 0 ? (v.saldo_centavos / total) * 100 : 0}
+                    conta={
+                      v.tipo === "conta" ? contasPorId.get(v.id) : undefined
+                    }
+                    investimento={
+                      v.tipo === "investimento"
+                        ? investimentosPorId.get(v.id)
+                        : undefined
+                    }
+                    pctDoTotal={
+                      total > 0 ? (v.saldo_centavos / total) * 100 : 0
+                    }
                     onRemover={() => onDesvincular(v)}
                     isMobile={isMobile}
                   />
@@ -423,7 +506,9 @@ function ObjetivoDetalheConteudo({
                     <Valor centavos={total} neutro />
                   </div>
                   <div className="flex w-24 shrink-0 items-center">
-                    <span className="w-10 shrink-0 text-right text-xs tabular-nums">100%</span>
+                    <span className="w-10 shrink-0 text-right text-xs tabular-nums">
+                      100%
+                    </span>
                   </div>
                   <span className="size-8" />
                 </div>
@@ -435,8 +520,8 @@ function ObjetivoDetalheConteudo({
             <div className="flex gap-2 rounded-lg bg-muted/50 p-3 text-sm">
               <Info className="size-4 shrink-0 text-primary" aria-hidden />
               <p className="text-muted-foreground">
-                O total vinculado pode ser maior que o objetivo. Você pode manter ou ajustar os
-                valores vinculados quando quiser.
+                O total vinculado pode ser maior que o objetivo. Você pode
+                manter ou ajustar os valores vinculados quando quiser.
               </p>
             </div>
           ) : null}
@@ -461,7 +546,11 @@ function ObjetivoDetalheConteudo({
       </div>
 
       <DialogFooter
-        className={isMobile ? "flex-col sm:flex-col" : "justify-between sm:justify-between"}
+        className={
+          isMobile
+            ? "flex-col sm:flex-col"
+            : "justify-between sm:justify-between"
+        }
       >
         <Button
           variant={isMobile ? "outline" : "ghost"}
@@ -473,13 +562,20 @@ function ObjetivoDetalheConteudo({
         </Button>
         <div className="flex gap-2">
           <DialogClose asChild>
-            <Button variant="outline" className={isMobile ? "flex-1" : undefined}>
+            <Button
+              variant="outline"
+              className={isMobile ? "flex-1" : undefined}
+            >
               Cancelar
             </Button>
           </DialogClose>
           <ObjetivoFormDialog
             objetivo={data}
-            trigger={<Button className={isMobile ? "flex-1" : undefined}>Editar objetivo</Button>}
+            trigger={
+              <Button className={isMobile ? "flex-1" : undefined}>
+                Editar objetivo
+              </Button>
+            }
           />
         </div>
       </DialogFooter>

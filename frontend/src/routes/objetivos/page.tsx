@@ -23,7 +23,8 @@ export function ObjetivosPage() {
         <div>
           <h1 className="text-xl font-semibold">Objetivos</h1>
           <p className="text-sm text-muted-foreground">
-            Metas financeiras alimentadas pelo saldo das contas e investimentos vinculados.
+            Metas financeiras alimentadas pelo saldo das contas e investimentos
+            vinculados.
           </p>
         </div>
         <ObjetivoFormDialog
@@ -60,7 +61,11 @@ export function ObjetivosPage() {
       ) : (
         <div className={GRID}>
           {(data ?? []).map((o) => (
-            <ObjetivoCard key={o.id} objetivo={o} onAbrir={() => setDetalhe(o.id)} />
+            <ObjetivoCard
+              key={o.id}
+              objetivo={o}
+              onAbrir={() => setDetalhe(o.id)}
+            />
           ))}
         </div>
       )}
@@ -72,20 +77,37 @@ export function ObjetivosPage() {
   )
 }
 
-function ObjetivoCard({ objetivo, onAbrir }: { objetivo: Objetivo; onAbrir: () => void }) {
+function ObjetivoCard({
+  objetivo,
+  onAbrir,
+}: {
+  objetivo: Objetivo
+  onAbrir: () => void
+}) {
   const pct = Math.round(objetivo.progresso * 100)
   return (
-    <Card className="cursor-pointer transition-colors hover:border-primary/50" onClick={onAbrir}>
+    <Card
+      className="cursor-pointer transition-colors hover:border-primary/50"
+      onClick={onAbrir}
+    >
       <CardHeader className="pb-2">
-        <p className="font-medium break-words [overflow-wrap:anywhere]">{objetivo.titulo}</p>
+        <p className="font-medium [overflow-wrap:anywhere] break-words">
+          {objetivo.titulo}
+        </p>
         {objetivo.descricao ? (
-          <p className="line-clamp-2 text-xs text-muted-foreground">{objetivo.descricao}</p>
+          <p className="line-clamp-2 text-xs text-muted-foreground">
+            {objetivo.descricao}
+          </p>
         ) : null}
       </CardHeader>
       <CardContent className="space-y-2">
         <Progress value={pct} />
         <div className="flex items-baseline justify-between text-sm">
-          <Valor centavos={objetivo.valor_guardado_centavos} neutro className="text-base" />
+          <Valor
+            centavos={objetivo.valor_guardado_centavos}
+            neutro
+            className="text-base"
+          />
           <span className="text-muted-foreground">
             de <Valor centavos={objetivo.valor_alvo_centavos} neutro /> ({pct}%)
           </span>

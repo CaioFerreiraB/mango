@@ -91,7 +91,11 @@ import {
 } from "@/components/ui/table"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { useIndicadores, useIndicadoresSerie } from "@/lib/api/indicadores"
 import {
@@ -153,10 +157,26 @@ import {
 } from "@/lib/investimento-taxonomia"
 
 const PRESETS_PERIODO = [
-  { id: "3m", label: "3M", range: () => [subMeses(hojeISO(), 3), hojeISO()] as const },
-  { id: "6m", label: "6M", range: () => [subMeses(hojeISO(), 6), hojeISO()] as const },
-  { id: "12m", label: "1A", range: () => [subMeses(hojeISO(), 12), hojeISO()] as const },
-  { id: "30d", label: "30d", range: () => [addDias(hojeISO(), -29), hojeISO()] as const },
+  {
+    id: "3m",
+    label: "3M",
+    range: () => [subMeses(hojeISO(), 3), hojeISO()] as const,
+  },
+  {
+    id: "6m",
+    label: "6M",
+    range: () => [subMeses(hojeISO(), 6), hojeISO()] as const,
+  },
+  {
+    id: "12m",
+    label: "1A",
+    range: () => [subMeses(hojeISO(), 12), hojeISO()] as const,
+  },
+  {
+    id: "30d",
+    label: "30d",
+    range: () => [addDias(hojeISO(), -29), hojeISO()] as const,
+  },
 ]
 
 const COR_INDICADOR: Record<string, string> = {
@@ -166,7 +186,10 @@ const COR_INDICADOR: Record<string, string> = {
   ibov: "var(--chart-5)",
 }
 
-const fmtDiaMes = new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit" })
+const fmtDiaMes = new Intl.DateTimeFormat("pt-BR", {
+  day: "2-digit",
+  month: "2-digit",
+})
 const tickDia = (iso: string) => fmtDiaMes.format(new Date(`${iso}T12:00:00`))
 
 /** Sem isto o fim do bottom sheet fica sob a barra de gestos. */
@@ -198,7 +221,9 @@ export function AtivoDrawer({
         className="flex flex-col gap-0 overflow-hidden shadow-xl data-[vaul-drawer-direction=bottom]:h-[90svh] data-[vaul-drawer-direction=bottom]:max-h-[90svh] data-[vaul-drawer-direction=right]:inset-y-2 data-[vaul-drawer-direction=right]:right-2 data-[vaul-drawer-direction=right]:rounded-l-2xl data-[vaul-drawer-direction=right]:rounded-r-2xl data-[vaul-drawer-direction=right]:border data-[vaul-drawer-direction=right]:sm:max-w-xl data-[vaul-drawer-direction=right]:lg:max-w-2xl"
         style={{ paddingBottom: isMobile ? SAFE_AREA_BOTTOM : undefined }}
       >
-        {posicao ? <CorpoAtivo posicao={posicao} rolagemUnica={isMobile} /> : null}
+        {posicao ? (
+          <CorpoAtivo posicao={posicao} rolagemUnica={isMobile} />
+        ) : null}
       </DrawerContent>
     </Drawer>
   )
@@ -223,7 +248,8 @@ function CorpoAtivo({
   // Extras do título (taxa/indexador/vencimento/IR) não vêm na linha agregada — leem dos
   // investimentos da posição (compras do mesmo papel). Cacheado; só a renda fixa consome.
   const invsPosicao =
-    useInvestimentos().data?.filter((i) => p.investimento_ids.includes(i.id)) ?? []
+    useInvestimentos().data?.filter((i) => p.investimento_ids.includes(i.id)) ??
+    []
   const indexadorTexto = ehRendaFixa
     ? rotuloIndexador(invsPosicao[0]?.rate_type, invsPosicao[0]?.rate)
     : null
@@ -250,19 +276,25 @@ function CorpoAtivo({
           )}
           <div className="min-w-0 flex-1">
             <DrawerTitle className="flex flex-wrap items-center gap-2 text-lg">
-              {ehRendaFixa ? (p.nome ?? p.code ?? "Título") : (p.code ?? p.nome ?? "Ativo")}
+              {ehRendaFixa
+                ? (p.nome ?? p.code ?? "Título")
+                : (p.code ?? p.nome ?? "Ativo")}
               {ehFII || ehRendaFixa ? null : (
                 <Badge variant="secondary">{classeRF}</Badge>
               )}
             </DrawerTitle>
-            <DrawerDescription className={cn("truncate", (ehFII || ehRendaFixa) && "sr-only")}>
+            <DrawerDescription
+              className={cn("truncate", (ehFII || ehRendaFixa) && "sr-only")}
+            >
               {ehFII
                 ? (p.nome ?? "Fundo imobiliário")
                 : ehRendaFixa
                   ? indexadorTexto
                     ? `Indexador: ${indexadorTexto}`
                     : classeRF
-                  : [p.nome ?? rotuloTipo(p.type), p.instituicao].filter(Boolean).join(" · ")}
+                  : [p.nome ?? rotuloTipo(p.type), p.instituicao]
+                      .filter(Boolean)
+                      .join(" · ")}
             </DrawerDescription>
             {ehFII ? (
               <Badge variant="secondary" className="mt-1.5 gap-1 font-normal">
@@ -277,7 +309,12 @@ function CorpoAtivo({
             ) : null}
           </div>
           <DrawerClose asChild>
-            <Button variant="ghost" size="icon" className="shrink-0" aria-label="Fechar">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="shrink-0"
+              aria-label="Fechar"
+            >
               <X className="size-4" />
             </Button>
           </DrawerClose>
@@ -295,7 +332,9 @@ function CorpoAtivo({
               {p.quantidade != null ? fmtQtd.format(p.quantidade) : "—"}
             </Stat>
             <Stat rotulo="Carteira">
-              {p.participacao_pct != null ? `${fmtPct.format(p.participacao_pct)}%` : "—"}
+              {p.participacao_pct != null
+                ? `${fmtPct.format(p.participacao_pct)}%`
+                : "—"}
             </Stat>
           </div>
         )}
@@ -310,11 +349,17 @@ function CorpoAtivo({
         <div className="overflow-x-auto overflow-y-hidden border-b px-4 pb-1.5">
           <TabsList variant="line" className="justify-start">
             <TabsTrigger value="resumo">Resumo</TabsTrigger>
-            {!ehFII ? <TabsTrigger value="performance">Performance</TabsTrigger> : null}
+            {!ehFII ? (
+              <TabsTrigger value="performance">Performance</TabsTrigger>
+            ) : null}
             <TabsTrigger value="movimentacoes">Movimentações</TabsTrigger>
             {/* Renda fixa não paga dividendos e não tem fundamentos de mercado — sem essas abas. */}
-            {!ehRendaFixa ? <TabsTrigger value="dividendos">Dividendos</TabsTrigger> : null}
-            {!ehRendaFixa ? <TabsTrigger value="indicadores">Indicadores</TabsTrigger> : null}
+            {!ehRendaFixa ? (
+              <TabsTrigger value="dividendos">Dividendos</TabsTrigger>
+            ) : null}
+            {!ehRendaFixa ? (
+              <TabsTrigger value="indicadores">Indicadores</TabsTrigger>
+            ) : null}
             <TabsTrigger value="insights">Insights</TabsTrigger>
           </TabsList>
         </div>
@@ -393,7 +438,12 @@ function Stat({
   return (
     <div className="rounded-lg border bg-background/60 px-2.5 py-1.5">
       <p className="text-xs text-muted-foreground">{rotulo}</p>
-      <p className={cn("truncate font-medium tabular-nums", destaque && "text-accent-ink")}>
+      <p
+        className={cn(
+          "truncate font-medium tabular-nums",
+          destaque && "text-accent-ink"
+        )}
+      >
         {children}
       </p>
     </div>
@@ -404,7 +454,7 @@ function Stat({
 function TickerSquare({ code }: { code: string }) {
   return (
     <div className="grid size-14 shrink-0 place-items-center rounded-xl bg-primary/10 px-1">
-      <span className="font-mono text-xs leading-none font-semibold tracking-tight text-accent-ink text-balance break-all">
+      <span className="font-mono text-xs leading-none font-semibold tracking-tight text-balance break-all text-accent-ink">
         {code}
       </span>
     </div>
@@ -436,10 +486,17 @@ function Indicador({
   return (
     <div className="min-w-0">
       <p className="truncate text-xs text-muted-foreground">{rotulo}</p>
-      <div className={cn("text-base font-semibold tabular-nums", destaque && "text-accent-ink")}>
+      <div
+        className={cn(
+          "text-base font-semibold tabular-nums",
+          destaque && "text-accent-ink"
+        )}
+      >
         {children}
       </div>
-      {sub ? <p className="truncate text-[0.7rem] text-muted-foreground">{sub}</p> : null}
+      {sub ? (
+        <p className="truncate text-[0.7rem] text-muted-foreground">{sub}</p>
+      ) : null}
     </div>
   )
 }
@@ -500,7 +557,9 @@ function IndicadoresFII({
         {p.investido_centavos != null ? formatBRL(p.investido_centavos) : "—"}
       </Indicador>
       <Indicador rotulo="Valor médio da cota">
-        {p.preco_medio_centavos != null ? formatBRL(p.preco_medio_centavos) : "—"}
+        {p.preco_medio_centavos != null
+          ? formatBRL(p.preco_medio_centavos)
+          : "—"}
       </Indicador>
       <Indicador rotulo="Dividend Yield (12M)" destaque>
         {fund?.dividend_yield_12m_pct != null
@@ -512,7 +571,9 @@ function IndicadoresFII({
           <span className="flex flex-wrap items-baseline gap-x-1.5">
             <Valor centavos={p.resultado_centavos} sinal />
             {p.resultado_pct != null ? (
-              <span className="text-xs text-muted-foreground">{pctTexto(p.resultado_pct)}</span>
+              <span className="text-xs text-muted-foreground">
+                {pctTexto(p.resultado_pct)}
+              </span>
             ) : null}
           </span>
         ) : (
@@ -545,28 +606,46 @@ function IndicadoresTesouro({
       </Indicador>
       <Indicador rotulo="Valor atual">{formatBRL(p.valor_centavos)}</Indicador>
       <Indicador rotulo="Lucro">
-        {p.resultado_centavos != null ? <Valor centavos={p.resultado_centavos} sinal /> : "—"}
+        {p.resultado_centavos != null ? (
+          <Valor centavos={p.resultado_centavos} sinal />
+        ) : (
+          "—"
+        )}
       </Indicador>
       <Indicador rotulo="Rentabilidade">
         {p.resultado_pct != null ? (
-          <span className={cn(p.resultado_pct >= 0 ? "text-positive" : "text-negative")}>
+          <span
+            className={cn(
+              p.resultado_pct >= 0 ? "text-positive" : "text-negative"
+            )}
+          >
             {pctTexto(p.resultado_pct)}
           </span>
         ) : (
           "—"
         )}
       </Indicador>
-      <Indicador rotulo="Valor líquido">{liquido != null ? formatBRL(liquido) : "—"}</Indicador>
+      <Indicador rotulo="Valor líquido">
+        {liquido != null ? formatBRL(liquido) : "—"}
+      </Indicador>
     </div>
   )
 }
 
-function Linha({ rotulo, children }: { rotulo: string; children: React.ReactNode }) {
+function Linha({
+  rotulo,
+  children,
+}: {
+  rotulo: string
+  children: React.ReactNode
+}) {
   if (children == null) return null
   return (
     <div className="flex items-start justify-between gap-4 py-2">
       <dt className="shrink-0 text-muted-foreground">{rotulo}</dt>
-      <dd className="min-w-0 text-right font-medium tabular-nums break-words">{children}</dd>
+      <dd className="min-w-0 text-right font-medium break-words tabular-nums">
+        {children}
+      </dd>
     </div>
   )
 }
@@ -591,22 +670,29 @@ function ResumoTab({
             aria-hidden
           />
           <p className="text-xs text-foreground">
-            Preço médio e valor investido estão calculados só com as compras que o banco informou
-            (últimos 12 meses). Adicione seus aportes anteriores na aba{" "}
-            <span className="font-medium">Movimentações</span> para o cálculo ficar completo.
+            Preço médio e valor investido estão calculados só com as compras que
+            o banco informou (últimos 12 meses). Adicione seus aportes
+            anteriores na aba <span className="font-medium">Movimentações</span>{" "}
+            para o cálculo ficar completo.
           </p>
         </div>
       ) : null}
       {ehFII ? (
         <div className="space-y-6">
           <PerformanceFII ids={p.investimento_ids} />
-          {fundamentos?.disponivel ? <DadosFII f={fundamentos} ticker={p.code} /> : null}
+          {fundamentos?.disponivel ? (
+            <DadosFII f={fundamentos} ticker={p.code} />
+          ) : null}
           <ParticipacaoFII posicao={p} />
         </div>
       ) : (
         <dl className="text-sm">
           <Linha rotulo="Valor investido">
-            {p.investido_centavos != null ? <Valor centavos={p.investido_centavos} neutro /> : "—"}
+            {p.investido_centavos != null ? (
+              <Valor centavos={p.investido_centavos} neutro />
+            ) : (
+              "—"
+            )}
           </Linha>
           <Linha rotulo="Valor atual">
             <Valor centavos={p.valor_centavos} neutro />
@@ -626,7 +712,9 @@ function ResumoTab({
             )}
           </Linha>
           <Linha rotulo="Preço médio">
-            {p.preco_medio_centavos != null ? formatBRL(p.preco_medio_centavos) : "—"}
+            {p.preco_medio_centavos != null
+              ? formatBRL(p.preco_medio_centavos)
+              : "—"}
           </Linha>
           <Linha rotulo="Cotação">
             {p.cotacao_centavos != null ? formatBRL(p.cotacao_centavos) : "—"}
@@ -635,9 +723,13 @@ function ResumoTab({
             {p.quantidade != null ? fmtQtd.format(p.quantidade) : "—"}
           </Linha>
           <Linha rotulo="Participação na carteira">
-            {p.participacao_pct != null ? `${fmtPct.format(p.participacao_pct)}%` : "—"}
+            {p.participacao_pct != null
+              ? `${fmtPct.format(p.participacao_pct)}%`
+              : "—"}
           </Linha>
-          {p.instituicao ? <Linha rotulo="Instituição">{p.instituicao}</Linha> : null}
+          {p.instituicao ? (
+            <Linha rotulo="Instituição">{p.instituicao}</Linha>
+          ) : null}
         </dl>
       )}
     </>
@@ -669,19 +761,37 @@ function DadosFII({ f, ticker }: { f: FundamentosFII; ticker: string | null }) {
   const linhas = (
     [
       { chave: "segmento", rotulo: "Segmento", valor: f.segmento ?? null },
-      { chave: "tipo", rotulo: "Tipo", valor: f.tipo ? (TIPO_FUNDO[f.tipo] ?? f.tipo) : null },
+      {
+        chave: "tipo",
+        rotulo: "Tipo",
+        valor: f.tipo ? (TIPO_FUNDO[f.tipo] ?? f.tipo) : null,
+      },
       { chave: "gestao", rotulo: "Gestão", valor: f.tipo_gestao ?? null },
-      { chave: "administrador", rotulo: "Administrador", valor: f.administrador_nome ?? null },
+      {
+        chave: "administrador",
+        rotulo: "Administrador",
+        valor: f.administrador_nome ?? null,
+      },
       {
         chave: "inicio",
         rotulo: "Início do fundo",
-        valor: f.data_funcionamento ? formatDataISO(f.data_funcionamento) : null,
+        valor: f.data_funcionamento
+          ? formatDataISO(f.data_funcionamento)
+          : null,
       },
       { chave: "cnpj", rotulo: "CNPJ", valor: f.cnpj ?? null },
       { chave: "ticker", rotulo: "Ticker", valor: ticker },
       { chave: "isin", rotulo: "ISIN", valor: f.isin ?? null },
-      { chave: "tributacao", rotulo: "Tributação", valor: "Isento de IR (rendimentos)" },
-    ] satisfies { chave: keyof typeof DADOS_ICONE; rotulo: string; valor: string | null }[]
+      {
+        chave: "tributacao",
+        rotulo: "Tributação",
+        valor: "Isento de IR (rendimentos)",
+      },
+    ] satisfies {
+      chave: keyof typeof DADOS_ICONE
+      rotulo: string
+      valor: string | null
+    }[]
   ).filter((l) => l.valor)
   return (
     <section>
@@ -690,12 +800,20 @@ function DadosFII({ f, ticker }: { f: FundamentosFII; ticker: string | null }) {
         {linhas.map((l) => {
           const Icone = DADOS_ICONE[l.chave]
           return (
-            <div key={l.chave} className="flex items-center justify-between gap-4 py-2.5">
+            <div
+              key={l.chave}
+              className="flex items-center justify-between gap-4 py-2.5"
+            >
               <dt className="flex items-center gap-2 text-muted-foreground">
-                <Icone className="size-4 shrink-0 text-muted-foreground/70" aria-hidden />
+                <Icone
+                  className="size-4 shrink-0 text-muted-foreground/70"
+                  aria-hidden
+                />
                 {l.rotulo}
               </dt>
-              <dd className="min-w-0 truncate text-right font-medium tabular-nums">{l.valor}</dd>
+              <dd className="min-w-0 truncate text-right font-medium tabular-nums">
+                {l.valor}
+              </dd>
             </div>
           )
         })}
@@ -708,15 +826,29 @@ function DadosFII({ f, ticker }: { f: FundamentosFII; ticker: string | null }) {
 // HTTP 400). Presets ≤ 88 dias → `_range_brapi` os mapeia p/ 1mo/3mo (permitidos). Horizonte maior
 // exige plano pago. `1d` ficou de fora: renderiza 1 ponto só (sem linha).
 const PRESETS_FII = [
-  { id: "5d", label: "5D", range: () => [addDias(hojeISO(), -5), hojeISO()] as const },
-  { id: "1m", label: "1M", range: () => [addDias(hojeISO(), -30), hojeISO()] as const },
-  { id: "3m", label: "3M", range: () => [addDias(hojeISO(), -88), hojeISO()] as const },
+  {
+    id: "5d",
+    label: "5D",
+    range: () => [addDias(hojeISO(), -5), hojeISO()] as const,
+  },
+  {
+    id: "1m",
+    label: "1M",
+    range: () => [addDias(hojeISO(), -30), hojeISO()] as const,
+  },
+  {
+    id: "3m",
+    label: "3M",
+    range: () => [addDias(hojeISO(), -88), hojeISO()] as const,
+  },
 ]
 
 /** Performance do próprio FII (preço da cota normalizado em %) vs. CDI e IBOV no período.
  *  Distinto da aba Performance, que é a rentabilidade (TWR) das MINHAS cotas. */
 function PerformanceFII({ ids }: { ids: number[] }) {
-  const [[inicio, fim], setPeriodo] = useState<readonly [string, string]>(PRESETS_FII[2].range())
+  const [[inicio, fim], setPeriodo] = useState<readonly [string, string]>(
+    PRESETS_FII[2].range()
+  )
   const serie = usePosicaoCotaSerie(ids, { inicio, fim }, true)
   const pontos = serie.data ?? []
   const base = pontos[0]?.valor_centavos ?? 0
@@ -730,10 +862,15 @@ function PerformanceFII({ ids }: { ids: number[] }) {
     fim,
   })
 
-  const config: ChartConfig = { fii: { label: "Este FII", color: "var(--primary)" } }
+  const config: ChartConfig = {
+    fii: { label: "Este FII", color: "var(--primary)" },
+  }
   for (const i of indicadores.data ?? [])
     if (bench.includes(i.codigo))
-      config[i.codigo] = { label: i.nome, color: COR_INDICADOR[i.codigo] ?? "var(--chart-5)" }
+      config[i.codigo] = {
+        label: i.nome,
+        color: COR_INDICADOR[i.codigo] ?? "var(--chart-5)",
+      }
 
   const porData = new Map<string, Record<string, number | string>>()
   for (const pt of pontos)
@@ -746,7 +883,9 @@ function PerformanceFII({ ids }: { ids: number[] }) {
       const linha = porData.get(pt.data)
       if (linha) linha[s.codigo] = pt.acumulado_pct
     }
-  const dados = [...porData.values()].sort((a, b) => String(a.data).localeCompare(String(b.data)))
+  const dados = [...porData.values()].sort((a, b) =>
+    String(a.data).localeCompare(String(b.data))
+  )
   const ultimo = dados.at(-1)
 
   const presetAtivo =
@@ -791,12 +930,16 @@ function PerformanceFII({ ids }: { ids: number[] }) {
           <ChartLine className="size-6 text-muted-foreground" aria-hidden />
           <p className="text-sm font-medium">Sem histórico de preço</p>
           <p className="max-w-xs text-xs text-balance text-muted-foreground">
-            A evolução da cota vem do mercado (brapi) e precisa do token configurado em Conexões.
+            A evolução da cota vem do mercado (brapi) e precisa do token
+            configurado em Conexões.
           </p>
         </div>
       ) : (
         <>
-          <ChartContainer config={config} className="aspect-auto h-[200px] w-full">
+          <ChartContainer
+            config={config}
+            className="aspect-auto h-[200px] w-full"
+          >
             <LineChart data={dados}>
               <CartesianGrid vertical={false} strokeDasharray="3 3" />
               <XAxis
@@ -830,7 +973,7 @@ function PerformanceFII({ ids }: { ids: number[] }) {
                           <span className="text-muted-foreground">
                             {config[String(name)]?.label ?? name}
                           </span>
-                          <span className="font-mono font-medium tabular-nums text-foreground">
+                          <span className="font-mono font-medium text-foreground tabular-nums">
                             {pctTexto(Number(value))}
                           </span>
                         </div>
@@ -863,7 +1006,10 @@ function PerformanceFII({ ids }: { ids: number[] }) {
             {legenda.map((l) => {
               const val = ultimo?.[l.codigo]
               return (
-                <span key={l.codigo} className="inline-flex items-center gap-1.5 text-xs">
+                <span
+                  key={l.codigo}
+                  className="inline-flex items-center gap-1.5 text-xs"
+                >
                   <span
                     className="size-2 rounded-full"
                     style={{ background: l.color }}
@@ -871,7 +1017,7 @@ function PerformanceFII({ ids }: { ids: number[] }) {
                   />
                   <span className="text-muted-foreground">{l.label}</span>
                   {typeof val === "number" ? (
-                    <span className="font-medium tabular-nums text-foreground">
+                    <span className="font-medium text-foreground tabular-nums">
                       {pctTexto(val)}
                     </span>
                   ) : null}
@@ -896,8 +1042,12 @@ function RentabilidadeFII({
   ids: number[]
   inicioSelecionado: string
 }) {
-  const serie = usePosicaoCotaSerie(ids, { inicio: addDias(hojeISO(), -88), fim: hojeISO() }, true)
-    .data ?? []
+  const serie =
+    usePosicaoCotaSerie(
+      ids,
+      { inicio: addDias(hojeISO(), -88), fim: hojeISO() },
+      true
+    ).data ?? []
   if (serie.length < 2) return null
   const ultimo = serie[serie.length - 1].valor_centavos
   // Retorno do preço desde o 1º ponto cuja data ≥ iso (datas ISO comparam como string).
@@ -954,7 +1104,8 @@ function ParticipacaoFII({ posicao: p }: { posicao: CarteiraPosicao }) {
     .filter((g) => g.type === "EQUITY" || g.type === "ETF")
     .reduce((s, g) => s + g.valor_centavos, 0)
   const fiiTotal =
-    resumo.alocacao.find((a) => a.tipo === "REAL_ESTATE_FUND")?.valor_centavos ?? 0
+    resumo.alocacao.find((a) => a.tipo === "REAL_ESTATE_FUND")
+      ?.valor_centavos ?? 0
   const pctCarteira =
     p.participacao_pct ??
     (resumo.totais.valor_centavos > 0
@@ -962,8 +1113,14 @@ function ParticipacaoFII({ posicao: p }: { posicao: CarteiraPosicao }) {
       : null)
   const itens = [
     { rotulo: "Da carteira", pct: pctCarteira },
-    { rotulo: "Da renda variável", pct: rv > 0 ? (p.valor_centavos / rv) * 100 : null },
-    { rotulo: "Dos FIIs", pct: fiiTotal > 0 ? (p.valor_centavos / fiiTotal) * 100 : null },
+    {
+      rotulo: "Da renda variável",
+      pct: rv > 0 ? (p.valor_centavos / rv) * 100 : null,
+    },
+    {
+      rotulo: "Dos FIIs",
+      pct: fiiTotal > 0 ? (p.valor_centavos / fiiTotal) * 100 : null,
+    },
   ]
   return (
     <section>
@@ -978,7 +1135,13 @@ function ParticipacaoFII({ posicao: p }: { posicao: CarteiraPosicao }) {
 }
 
 /** Um anel de participação: fatia em accent, resto neutro, % no centro. */
-function DonutParticipacao({ rotulo, pct }: { rotulo: string; pct: number | null }) {
+function DonutParticipacao({
+  rotulo,
+  pct,
+}: {
+  rotulo: string
+  pct: number | null
+}) {
   const valor = pct == null ? 0 : Math.max(0, Math.min(100, pct))
   const dados = [
     { nome: "fatia", v: valor },
@@ -1006,12 +1169,14 @@ function DonutParticipacao({ rotulo, pct }: { rotulo: string; pct: number | null
           </PieChart>
         </ChartContainer>
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-          <span className="text-sm font-semibold tabular-nums text-accent-ink">
+          <span className="text-sm font-semibold text-accent-ink tabular-nums">
             {pct == null ? "—" : `${fmtPct.format(pct)}%`}
           </span>
         </div>
       </div>
-      <span className="text-center text-xs text-muted-foreground">{rotulo}</span>
+      <span className="text-center text-xs text-muted-foreground">
+        {rotulo}
+      </span>
     </div>
   )
 }
@@ -1032,13 +1197,19 @@ function PerformanceTab({ ids }: { ids: number[] }) {
     { inicio: inicioComum, fim }
   )
 
-  const config: ChartConfig = { ativo: { label: "Este ativo", color: "var(--primary)" } }
+  const config: ChartConfig = {
+    ativo: { label: "Este ativo", color: "var(--primary)" },
+  }
   for (const i of indicadores.data ?? []) {
-    config[i.codigo] = { label: i.nome, color: COR_INDICADOR[i.codigo] ?? "var(--chart-5)" }
+    config[i.codigo] = {
+      label: i.nome,
+      color: COR_INDICADOR[i.codigo] ?? "var(--chart-5)",
+    }
   }
 
   const porData = new Map<string, Record<string, number | string>>()
-  for (const pt of pontos) porData.set(pt.data, { data: pt.data, ativo: pt.acumulado_pct })
+  for (const pt of pontos)
+    porData.set(pt.data, { data: pt.data, ativo: pt.acumulado_pct })
   for (const s of indicadoresSerie.data ?? [])
     for (const pt of s.pontos) {
       const linha = porData.get(pt.data)
@@ -1075,7 +1246,11 @@ function PerformanceTab({ ids }: { ids: number[] }) {
             </ToggleGroupItem>
           ))}
         </ToggleGroup>
-        <PeriodoPicker inicio={inicio} fim={fim} onChange={(i, f) => setPeriodo([i, f])} />
+        <PeriodoPicker
+          inicio={inicio}
+          fim={fim}
+          onChange={(i, f) => setPeriodo([i, f])}
+        />
       </div>
 
       {indicadores.data && indicadores.data.length > 0 ? (
@@ -1101,14 +1276,20 @@ function PerformanceTab({ ids }: { ids: number[] }) {
       ) : pontos.length < 2 ? (
         <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed px-6 py-10 text-center">
           <ChartLine className="size-6 text-muted-foreground" aria-hidden />
-          <p className="text-sm font-medium">O histórico acumula a partir de agora</p>
+          <p className="text-sm font-medium">
+            O histórico acumula a partir de agora
+          </p>
           <p className="max-w-xs text-xs text-balance text-muted-foreground">
-            Cada sincronização grava um ponto diário; a curva aparece conforme os dias passam.
-            Ativos de bolsa com ticker ganham o passado pelo preço de mercado.
+            Cada sincronização grava um ponto diário; a curva aparece conforme
+            os dias passam. Ativos de bolsa com ticker ganham o passado pelo
+            preço de mercado.
           </p>
         </div>
       ) : (
-        <ChartContainer config={config} className="aspect-auto h-[240px] w-full">
+        <ChartContainer
+          config={config}
+          className="aspect-auto h-[240px] w-full"
+        >
           <LineChart data={dadosChart}>
             <CartesianGrid vertical={false} strokeDasharray="3 3" />
             <XAxis
@@ -1142,7 +1323,7 @@ function PerformanceTab({ ids }: { ids: number[] }) {
                         <span className="text-muted-foreground">
                           {config[String(name)]?.label ?? name}
                         </span>
-                        <span className="font-mono font-medium tabular-nums text-foreground">
+                        <span className="font-mono font-medium text-foreground tabular-nums">
                           {pctTexto(Number(value))}
                         </span>
                       </div>
@@ -1184,14 +1365,23 @@ function PerformanceTab({ ids }: { ids: number[] }) {
 
 /** Resumo da renda fixa: rentabilidade, dados do título, projeção de vencimento e a evolução do
  *  investimento em R$. Espelha o padrão visual do Resumo de FII. */
-function ResumoTesouro({ posicao: p, invs }: { posicao: CarteiraPosicao; invs: Investimento[] }) {
+function ResumoTesouro({
+  posicao: p,
+  invs,
+}: {
+  posicao: CarteiraPosicao
+  invs: Investimento[]
+}) {
   const rf = invs[0]
   return (
     <div className="space-y-6">
       <RentabilidadeTesouro posicao={p} rf={rf} />
       <InfoTitulo rf={rf} />
       <EsperadoVencimento posicao={p} rf={rf} />
-      <EvolucaoInvestimento ids={p.investimento_ids} compra={rf?.purchase_date ?? undefined} />
+      <EvolucaoInvestimento
+        ids={p.investimento_ids}
+        compra={rf?.purchase_date ?? undefined}
+      />
     </div>
   )
 }
@@ -1214,18 +1404,37 @@ function RentabilidadeTesouro({
   const noAno = retornoJanela(pontos, anoISO)
   const doze = retornoJanela(pontos, pontos[0]?.data ?? anoISO)
   const pct12 =
-    rf?.last_twelve_months_rate != null ? Number(rf.last_twelve_months_rate) : (doze?.pct ?? null)
+    rf?.last_twelve_months_rate != null
+      ? Number(rf.last_twelve_months_rate)
+      : (doze?.pct ?? null)
   const itens = [
-    { rotulo: "Desde a compra", pct: p.resultado_pct ?? null, ganho: p.resultado_centavos ?? null },
-    { rotulo: "No ano", pct: noAno?.pct ?? null, ganho: noAno?.ganho_centavos ?? null },
-    { rotulo: "Últimos 12 meses", pct: pct12, ganho: doze?.ganho_centavos ?? null },
+    {
+      rotulo: "Desde a compra",
+      pct: p.resultado_pct ?? null,
+      ganho: p.resultado_centavos ?? null,
+    },
+    {
+      rotulo: "No ano",
+      pct: noAno?.pct ?? null,
+      ganho: noAno?.ganho_centavos ?? null,
+    },
+    {
+      rotulo: "Últimos 12 meses",
+      pct: pct12,
+      ganho: doze?.ganho_centavos ?? null,
+    },
   ]
   return (
     <section>
       <h3 className="mb-3 text-sm font-medium">Rentabilidade</h3>
       <div className="grid grid-cols-3 gap-2">
         {itens.map((it) => (
-          <RetornoTesouro key={it.rotulo} rotulo={it.rotulo} pct={it.pct} ganho={it.ganho} />
+          <RetornoTesouro
+            key={it.rotulo}
+            rotulo={it.rotulo}
+            pct={it.pct}
+            ganho={it.ganho}
+          />
         ))}
       </div>
     </section>
@@ -1257,7 +1466,9 @@ function RetornoTesouro({
           {pctTexto(pct)}
         </p>
       )}
-      <div className="text-xs">{ganho != null ? <Valor centavos={ganho} sinal /> : null}</div>
+      <div className="text-xs">
+        {ganho != null ? <Valor centavos={ganho} sinal /> : null}
+      </div>
     </div>
   )
 }
@@ -1293,7 +1504,8 @@ function InfoTitulo({ rf }: { rf: Investimento | undefined }) {
       {
         chave: "taxa",
         rotulo: "Taxa contratada",
-        valor: rf?.rate != null ? `${fmtPct.format(Number(rf.rate))}% a.a.` : null,
+        valor:
+          rf?.rate != null ? `${fmtPct.format(Number(rf.rate))}% a.a.` : null,
         sub: null,
       },
       {
@@ -1302,8 +1514,18 @@ function InfoTitulo({ rf }: { rf: Investimento | undefined }) {
         valor: rf?.purchase_date ? formatDate(rf.purchase_date) : null,
         sub: null,
       },
-      { chave: "liquidacao", rotulo: "Liquidação", valor: ehTesouro ? "D+1" : null, sub: null },
-      { chave: "custodia", rotulo: "Custódia", valor: ehTesouro ? "B3" : null, sub: null },
+      {
+        chave: "liquidacao",
+        rotulo: "Liquidação",
+        valor: ehTesouro ? "D+1" : null,
+        sub: null,
+      },
+      {
+        chave: "custodia",
+        rotulo: "Custódia",
+        valor: ehTesouro ? "B3" : null,
+        sub: null,
+      },
     ] satisfies {
       chave: keyof typeof INFO_TITULO_ICONE
       rotulo: string
@@ -1318,15 +1540,23 @@ function InfoTitulo({ rf }: { rf: Investimento | undefined }) {
         {linhas.map((l) => {
           const Icone = INFO_TITULO_ICONE[l.chave]
           return (
-            <div key={l.chave} className="flex items-center justify-between gap-4 py-2.5">
+            <div
+              key={l.chave}
+              className="flex items-center justify-between gap-4 py-2.5"
+            >
               <dt className="flex items-center gap-2 text-muted-foreground">
-                <Icone className="size-4 shrink-0 text-muted-foreground/70" aria-hidden />
+                <Icone
+                  className="size-4 shrink-0 text-muted-foreground/70"
+                  aria-hidden
+                />
                 {l.rotulo}
               </dt>
               <dd className="min-w-0 text-right font-medium tabular-nums">
                 {l.valor}
                 {l.sub ? (
-                  <span className="block text-xs font-normal text-muted-foreground">{l.sub}</span>
+                  <span className="block text-xs font-normal text-muted-foreground">
+                    {l.sub}
+                  </span>
                 ) : null}
               </dd>
             </div>
@@ -1354,14 +1584,21 @@ function EsperadoVencimento({
     fim: hojeISO(),
   })
   const pontosNivel = nivelSerie.data?.[0]?.pontos ?? []
-  const nivelAnual = pontosNivel.length ? pontosNivel[pontosNivel.length - 1]!.acumulado_pct / 100 : null
+  const nivelAnual = pontosNivel.length
+    ? pontosNivel[pontosNivel.length - 1]!.acumulado_pct / 100
+    : null
 
   if (!rf?.due_date) return null
   const proj = projetarVencimento(
     p.valor_centavos,
     p.investido_centavos ?? p.valor_centavos,
     rf.due_date,
-    { rateType: rf.rate_type, rate: rf.rate, annualRate: rf.annual_rate, taxExempt: rf.tax_exempt },
+    {
+      rateType: rf.rate_type,
+      rate: rf.rate,
+      annualRate: rf.annual_rate,
+      taxExempt: rf.tax_exempt,
+    },
     nivelAnual
   )
   if (!proj) return null
@@ -1402,14 +1639,15 @@ function EsperadoVencimento({
           </TooltipContent>
         </Tooltip>
       </div>
-      <p className="mt-1 text-2xl font-semibold tabular-nums text-accent-ink">
+      <p className="mt-1 text-2xl font-semibold text-accent-ink tabular-nums">
         ≈ {formatBRL(proj.valorLiquidoEsperado)}
       </p>
       <p className="text-xs text-muted-foreground">
         Valor líquido estimado se mantido até o vencimento, sem novos aportes.
       </p>
       <p className="mt-2 flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
-        Lucro líquido estimado <Valor centavos={lucro} sinal className="text-xs" />
+        Lucro líquido estimado{" "}
+        <Valor centavos={lucro} sinal className="text-xs" />
       </p>
     </section>
   )
@@ -1433,7 +1671,13 @@ function inicioPresetTD(id: string, compra: string | undefined): string {
  *  IPCA opcionais projetados sobre o capital aplicado inicial p/ compartilhar o eixo em reais.
  *  ponytail: benchmark projeta só o aplicado inicial (não reinveste aportes/resgates da janela);
  *  a linha de valor líquido (após IR) fica para depois — o histórico de IR não é armazenado. */
-function EvolucaoInvestimento({ ids, compra }: { ids: number[]; compra: string | undefined }) {
+function EvolucaoInvestimento({
+  ids,
+  compra,
+}: {
+  ids: number[]
+  compra: string | undefined
+}) {
   const [presetId, setPresetId] = useState("1a")
   const inicio = inicioPresetTD(presetId, compra)
   const fim = hojeISO()
@@ -1443,17 +1687,23 @@ function EvolucaoInvestimento({ ids, compra }: { ids: number[]; compra: string |
   const pontos = serie.data?.pontos ?? []
   const reconstruidoAte = serie.data?.reconstruido_ate ?? null
   const inicioComum = pontos[0]?.data ?? inicio
-  const indicadoresSerie = useIndicadoresSerie(pontos.length >= 2 ? selecionados : [], {
-    inicio: inicioComum,
-    fim,
-  })
+  const indicadoresSerie = useIndicadoresSerie(
+    pontos.length >= 2 ? selecionados : [],
+    {
+      inicio: inicioComum,
+      fim,
+    }
+  )
 
   const config: ChartConfig = {
     aplicado: { label: "Valor aplicado", color: "var(--muted-foreground)" },
     bruto: { label: "Valor bruto", color: "var(--primary)" },
   }
   for (const i of indicadores.data ?? [])
-    config[i.codigo] = { label: i.nome, color: COR_INDICADOR[i.codigo] ?? "var(--chart-5)" }
+    config[i.codigo] = {
+      label: i.nome,
+      color: COR_INDICADOR[i.codigo] ?? "var(--chart-5)",
+    }
 
   const porData = new Map<string, Record<string, number | string>>()
   for (const pt of pontos)
@@ -1466,7 +1716,9 @@ function EvolucaoInvestimento({ ids, compra }: { ids: number[]; compra: string |
   // CDI/SELIC/IPCA/IBOV (comparável em R$ com o valor bruto). Ver `serieBenchmark`.
   const aplicadoAcum = pontos.map((pt) => pt.investido_centavos)
   for (const s of indicadoresSerie.data ?? []) {
-    const accPorData = new Map(s.pontos.map((pt) => [pt.data, pt.acumulado_pct / 100]))
+    const accPorData = new Map(
+      s.pontos.map((pt) => [pt.data, pt.acumulado_pct / 100])
+    )
     const accIndice: number[] = []
     let acc = 0
     for (const pt of pontos) {
@@ -1479,7 +1731,9 @@ function EvolucaoInvestimento({ ids, compra }: { ids: number[]; compra: string |
       if (linha) linha[s.codigo] = valores[i]!
     })
   }
-  const dados = [...porData.values()].sort((a, b) => String(a.data).localeCompare(String(b.data)))
+  const dados = [...porData.values()].sort((a, b) =>
+    String(a.data).localeCompare(String(b.data))
+  )
 
   return (
     <section className="space-y-3">
@@ -1525,13 +1779,19 @@ function EvolucaoInvestimento({ ids, compra }: { ids: number[]; compra: string |
       ) : pontos.length < 2 ? (
         <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed px-6 py-10 text-center">
           <ChartLine className="size-6 text-muted-foreground" aria-hidden />
-          <p className="text-sm font-medium">O histórico acumula a partir de agora</p>
+          <p className="text-sm font-medium">
+            O histórico acumula a partir de agora
+          </p>
           <p className="max-w-xs text-xs text-balance text-muted-foreground">
-            Cada sincronização grava um ponto diário; a curva aparece conforme os dias passam.
+            Cada sincronização grava um ponto diário; a curva aparece conforme
+            os dias passam.
           </p>
         </div>
       ) : (
-        <ChartContainer config={config} className="aspect-auto h-[240px] w-full">
+        <ChartContainer
+          config={config}
+          className="aspect-auto h-[240px] w-full"
+        >
           <LineChart data={dados}>
             <CartesianGrid vertical={false} strokeDasharray="3 3" />
             <XAxis
@@ -1621,7 +1881,13 @@ const rotuloMes = (mes: string) => formatBucketLabel(`${mes}-01`, "mensal")
  *  CDI/SELIC/IPCA/IBOV, cada série uma linha. O retorno mensal vem do chain-diff do acumulado
  *  (`retornoMensal`) da série da posição e de cada indicador — sem endpoint novo. Padrão: comparar com
  *  todos os indicadores disponíveis (IBOV só existe com token brapi; `useIndicadores` já o filtra). */
-function PerformanceTesouro({ ids, compra }: { ids: number[]; compra: string | undefined }) {
+function PerformanceTesouro({
+  ids,
+  compra,
+}: {
+  ids: number[]
+  compra: string | undefined
+}) {
   const [presetId, setPresetId] = useState("1a")
   const inicio = inicioPresetTD(presetId, compra)
   const fim = hojeISO()
@@ -1635,14 +1901,22 @@ function PerformanceTesouro({ ids, compra }: { ids: number[]; compra: string | u
   const serie = usePosicaoSerie(ids, { inicio, fim })
   const mensalAtivo = retornoMensal(serie.data?.pontos ?? [])
   const inicioComum = serie.data?.pontos[0]?.data ?? inicio
-  const indicadoresSerie = useIndicadoresSerie(mensalAtivo.length >= 2 ? efetivos : [], {
-    inicio: inicioComum,
-    fim,
-  })
+  const indicadoresSerie = useIndicadoresSerie(
+    mensalAtivo.length >= 2 ? efetivos : [],
+    {
+      inicio: inicioComum,
+      fim,
+    }
+  )
 
-  const config: ChartConfig = { ativo: { label: "Este título", color: "var(--primary)" } }
+  const config: ChartConfig = {
+    ativo: { label: "Este título", color: "var(--primary)" },
+  }
   for (const i of indicadores.data ?? [])
-    config[i.codigo] = { label: i.nome, color: COR_INDICADOR[i.codigo] ?? "var(--chart-5)" }
+    config[i.codigo] = {
+      label: i.nome,
+      color: COR_INDICADOR[i.codigo] ?? "var(--chart-5)",
+    }
 
   const porMes = new Map<string, Record<string, number | string>>()
   for (const m of mensalAtivo) porMes.set(m.mes, { mes: m.mes, ativo: m.pct })
@@ -1651,7 +1925,9 @@ function PerformanceTesouro({ ids, compra }: { ids: number[]; compra: string | u
       const linha = porMes.get(m.mes)
       if (linha) linha[s.codigo] = m.pct
     }
-  const dados = [...porMes.values()].sort((a, b) => String(a.mes).localeCompare(String(b.mes)))
+  const dados = [...porMes.values()].sort((a, b) =>
+    String(a.mes).localeCompare(String(b.mes))
+  )
 
   return (
     <div className="space-y-3">
@@ -1697,14 +1973,19 @@ function PerformanceTesouro({ ids, compra }: { ids: number[]; compra: string | u
       ) : mensalAtivo.length < 2 ? (
         <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed px-6 py-10 text-center">
           <ChartLine className="size-6 text-muted-foreground" aria-hidden />
-          <p className="text-sm font-medium">O rendimento mensal aparece com o tempo</p>
+          <p className="text-sm font-medium">
+            O rendimento mensal aparece com o tempo
+          </p>
           <p className="max-w-xs text-xs text-balance text-muted-foreground">
-            É preciso ao menos dois meses-calendário completos de histórico da posição para comparar o
-            rendimento de cada mês.
+            É preciso ao menos dois meses-calendário completos de histórico da
+            posição para comparar o rendimento de cada mês.
           </p>
         </div>
       ) : (
-        <ChartContainer config={config} className="aspect-auto h-[240px] w-full">
+        <ChartContainer
+          config={config}
+          className="aspect-auto h-[240px] w-full"
+        >
           <LineChart data={dados}>
             <CartesianGrid vertical={false} strokeDasharray="3 3" />
             <XAxis
@@ -1724,7 +2005,9 @@ function PerformanceTesouro({ ids, compra }: { ids: number[]; compra: string | u
             <ChartTooltip
               content={
                 <ChartTooltipContent
-                  labelFormatter={(_, payload) => rotuloMes(String(payload?.[0]?.payload?.mes ?? ""))}
+                  labelFormatter={(_, payload) =>
+                    rotuloMes(String(payload?.[0]?.payload?.mes ?? ""))
+                  }
                   formatter={(value, name, item) => (
                     <>
                       <span
@@ -1736,7 +2019,7 @@ function PerformanceTesouro({ ids, compra }: { ids: number[]; compra: string | u
                         <span className="text-muted-foreground">
                           {config[String(name)]?.label ?? name}
                         </span>
-                        <span className="font-mono font-medium tabular-nums text-foreground">
+                        <span className="font-mono font-medium text-foreground tabular-nums">
                           {pctTexto(Number(value))}
                         </span>
                       </div>
@@ -1768,8 +2051,8 @@ function PerformanceTesouro({ ids, compra }: { ids: number[]; compra: string | u
         </ChartContainer>
       )}
       <p className="text-xs text-muted-foreground">
-        Quanto rendeu em cada mês (%), não valores em R$. O IPCA pode aparecer defasado no mês mais
-        recente até a divulgação do IBGE.
+        Quanto rendeu em cada mês (%), não valores em R$. O IPCA pode aparecer
+        defasado no mês mais recente até a divulgação do IBGE.
       </p>
     </div>
   )
@@ -1784,13 +2067,19 @@ const CATEGORIAS = [
   "Outros",
 ] as const
 
-function categoriaMovimento(m: InvestimentoTransacao): (typeof CATEGORIAS)[number] {
+function categoriaMovimento(
+  m: InvestimentoTransacao
+): (typeof CATEGORIAS)[number] {
   const tipo = (m.type ?? "").toUpperCase()
   if (tipo === "BUY") return "Compras"
   if (tipo === "SELL") return "Vendas"
   if (tipo === "TRANSFER") return "Transferências"
   if (tipo === "BONUS" || tipo === "AMORTIZATION") return "Bonificações"
-  if (tipo === "DIVIDEND" || tipo === "INTEREST" || m.movement_type === "CREDIT")
+  if (
+    tipo === "DIVIDEND" ||
+    tipo === "INTEREST" ||
+    m.movement_type === "CREDIT"
+  )
     return "Proventos"
   return "Outros"
 }
@@ -1800,7 +2089,10 @@ function categoriaMovimento(m: InvestimentoTransacao): (typeof CATEGORIAS)[numbe
 function MovimentacoesFIITab({ ids }: { ids: number[] }) {
   const movimentos = usePosicaoTransacoes(ids)
   const excluir = useExcluirAporte(ids)
-  const [form, setForm] = useState<{ aberto: boolean; editar: InvestimentoTransacao | null }>({
+  const [form, setForm] = useState<{
+    aberto: boolean
+    editar: InvestimentoTransacao | null
+  }>({
     aberto: false,
     editar: null,
   })
@@ -1809,7 +2101,9 @@ function MovimentacoesFIITab({ ids }: { ids: number[] }) {
 
   const linhas = movimentos.data ?? []
   const agregado = agregarNegociacoes(linhas, hojeISO())
-  const porId = new Map<number, InvestimentoTransacao>(linhas.map((m) => [m.id, m]))
+  const porId = new Map<number, InvestimentoTransacao>(
+    linhas.map((m) => [m.id, m])
+  )
 
   return (
     <div className="space-y-5">
@@ -1850,7 +2144,9 @@ function MovimentacoesFIITab({ ids }: { ids: number[] }) {
           <TabelaNegociacoes
             negociacoes={agregado.negociacoes}
             podeEditar={podeAdicionar}
-            onEditar={(id) => setForm({ aberto: true, editar: porId.get(id) ?? null })}
+            onEditar={(id) =>
+              setForm({ aberto: true, editar: porId.get(id) ?? null })
+            }
             onExcluir={(id) => setExcluindo(porId.get(id) ?? null)}
           />
         </>
@@ -1866,12 +2162,16 @@ function MovimentacoesFIITab({ ids }: { ids: number[] }) {
         />
       ) : null}
 
-      <AlertDialog open={excluindo !== null} onOpenChange={(o) => !o && setExcluindo(null)}>
+      <AlertDialog
+        open={excluindo !== null}
+        onOpenChange={(o) => !o && setExcluindo(null)}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Excluir aporte?</AlertDialogTitle>
             <AlertDialogDescription>
-              O aporte sai do cálculo do preço médio e do valor investido. Não dá para desfazer.
+              O aporte sai do cálculo do preço médio e do valor investido. Não
+              dá para desfazer.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -1896,8 +2196,12 @@ function CardTotal({ titulo, total }: { titulo: string; total: TotalLado }) {
   return (
     <div className="rounded-lg border p-3">
       <p className="text-xs text-muted-foreground">{titulo}</p>
-      <p className="text-lg font-semibold tabular-nums">{formatBRL(total.valor)}</p>
-      <p className="text-xs text-muted-foreground">{fmtQtd.format(total.qtd)} cotas</p>
+      <p className="text-lg font-semibold tabular-nums">
+        {formatBRL(total.valor)}
+      </p>
+      <p className="text-xs text-muted-foreground">
+        {fmtQtd.format(total.qtd)} cotas
+      </p>
     </div>
   )
 }
@@ -1926,15 +2230,25 @@ function GraficoCompras({ buckets }: { buckets: BucketCompra[] }) {
           <ToggleGroupItem value="qtd">Quantidade</ToggleGroupItem>
         </ToggleGroup>
       </div>
-      <ChartContainer config={CFG_COMPRAS} className="aspect-auto h-[220px] w-full">
+      <ChartContainer
+        config={CFG_COMPRAS}
+        className="aspect-auto h-[220px] w-full"
+      >
         <BarChart data={buckets}>
           <CartesianGrid vertical={false} strokeDasharray="3 3" />
-          <XAxis dataKey="label" tickLine={false} axisLine={false} tickMargin={8} />
+          <XAxis
+            dataKey="label"
+            tickLine={false}
+            axisLine={false}
+            tickMargin={8}
+          />
           <YAxis
             tickLine={false}
             axisLine={false}
             width={44}
-            tickFormatter={modo === "valor" ? eixoBRL : (v) => fmtQtd.format(Number(v))}
+            tickFormatter={
+              modo === "valor" ? eixoBRL : (v) => fmtQtd.format(Number(v))
+            }
           />
           <ChartTooltip
             content={
@@ -1944,7 +2258,7 @@ function GraficoCompras({ buckets }: { buckets: BucketCompra[] }) {
                     <span className="text-muted-foreground">
                       {CFG_COMPRAS[name as string]?.label ?? name}
                     </span>
-                    <span className="font-mono font-medium tabular-nums text-foreground">
+                    <span className="font-mono font-medium text-foreground tabular-nums">
                       {modo === "valor"
                         ? formatBRL(Number(value))
                         : `${fmtQtd.format(Number(value))} cotas`}
@@ -1985,7 +2299,9 @@ function TabelaNegociacoes({
             <TableHead className="text-right">Qtd.</TableHead>
             <TableHead className="text-right">Preço da cota</TableHead>
             <TableHead className="text-right">Valor total</TableHead>
-            {podeEditar ? <TableHead className="w-0" aria-label="Ações" /> : null}
+            {podeEditar ? (
+              <TableHead className="w-0" aria-label="Ações" />
+            ) : null}
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -1996,17 +2312,24 @@ function TabelaNegociacoes({
                 <span className="inline-flex items-center gap-1.5">
                   {n.lado === "BUY" ? "Compra" : "Venda"}
                   {n.manual ? (
-                    <Badge variant="secondary" className="px-1.5 py-0 text-[10px]">
+                    <Badge
+                      variant="secondary"
+                      className="px-1.5 py-0 text-[10px]"
+                    >
                       Manual
                     </Badge>
                   ) : null}
                 </span>
               </TableCell>
-              <TableCell className="text-right tabular-nums">{fmtQtd.format(n.quantidade)}</TableCell>
+              <TableCell className="text-right tabular-nums">
+                {fmtQtd.format(n.quantidade)}
+              </TableCell>
               <TableCell className="text-right tabular-nums">
                 {n.precoCentavos != null ? formatBRL(n.precoCentavos) : "—"}
               </TableCell>
-              <TableCell className="text-right tabular-nums">{formatBRL(n.valorCentavos)}</TableCell>
+              <TableCell className="text-right tabular-nums">
+                {formatBRL(n.valorCentavos)}
+              </TableCell>
               {podeEditar ? (
                 <TableCell className="text-right">
                   {n.manual ? (
@@ -2046,7 +2369,10 @@ function TabelaNegociacoes({
 function MovimentacoesTab({ ids }: { ids: number[] }) {
   const movimentos = usePosicaoTransacoes(ids)
   const excluir = useExcluirAporte(ids)
-  const [form, setForm] = useState<{ aberto: boolean; editar: InvestimentoTransacao | null }>({
+  const [form, setForm] = useState<{
+    aberto: boolean
+    editar: InvestimentoTransacao | null
+  }>({
     aberto: false,
     editar: null,
   })
@@ -2095,7 +2421,11 @@ function MovimentacoesTab({ ids }: { ids: number[] }) {
                 <MovimentoLinha
                   key={m.id}
                   movimento={m}
-                  onEditar={m.manual ? () => setForm({ aberto: true, editar: m }) : undefined}
+                  onEditar={
+                    m.manual
+                      ? () => setForm({ aberto: true, editar: m })
+                      : undefined
+                  }
                   onExcluir={m.manual ? () => setExcluindo(m) : undefined}
                 />
               ))}
@@ -2114,12 +2444,16 @@ function MovimentacoesTab({ ids }: { ids: number[] }) {
         />
       ) : null}
 
-      <AlertDialog open={excluindo !== null} onOpenChange={(o) => !o && setExcluindo(null)}>
+      <AlertDialog
+        open={excluindo !== null}
+        onOpenChange={(o) => !o && setExcluindo(null)}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Excluir aporte?</AlertDialogTitle>
             <AlertDialogDescription>
-              O aporte sai do cálculo do preço médio e do valor investido. Não dá para desfazer.
+              O aporte sai do cálculo do preço médio e do valor investido. Não
+              dá para desfazer.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -2160,7 +2494,10 @@ function MovimentoLinha({
             </Badge>
           ) : null}
           {m.description ? (
-            <span className="truncate text-muted-foreground"> · {m.description}</span>
+            <span className="truncate text-muted-foreground">
+              {" "}
+              · {m.description}
+            </span>
           ) : null}
         </p>
         {quando ? (
@@ -2169,7 +2506,9 @@ function MovimentoLinha({
       </div>
       <div className="flex shrink-0 items-center gap-1">
         <Valor
-          centavos={m.movement_type === "DEBIT" ? -m.amount_centavos : m.amount_centavos}
+          centavos={
+            m.movement_type === "DEBIT" ? -m.amount_centavos : m.amount_centavos
+          }
           sinal
           className="text-sm"
         />
@@ -2219,9 +2558,12 @@ function AporteDialog({
     <Dialog open={aberto} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{editar ? "Editar aporte" : "Adicionar aporte"}</DialogTitle>
+          <DialogTitle>
+            {editar ? "Editar aporte" : "Adicionar aporte"}
+          </DialogTitle>
           <DialogDescription>
-            Informe uma compra que o banco não trouxe. Entra no cálculo do preço médio.
+            Informe uma compra que o banco não trouxe. Entra no cálculo do preço
+            médio.
           </DialogDescription>
         </DialogHeader>
         {aberto ? (
@@ -2257,16 +2599,25 @@ function AporteForm({
   const [quantidade, setQuantidade] = useState(
     editar?.quantity != null ? String(editar.quantity) : ""
   )
-  const [valor, setValor] = useState(editar ? (editar.amount_centavos / 100).toFixed(2) : "")
+  const [valor, setValor] = useState(
+    editar ? (editar.amount_centavos / 100).toFixed(2) : ""
+  )
 
   const pendente = criar.isPending || editarM.isPending
   function salvar(e: React.FormEvent) {
     e.preventDefault()
     const qtd = Number(quantidade.replace(",", "."))
     const valorCentavos = Math.round(Number(valor.replace(",", ".")) * 100)
-    if (!data || !(qtd > 0) || !Number.isFinite(valorCentavos) || valorCentavos < 0) return
+    if (
+      !data ||
+      !(qtd > 0) ||
+      !Number.isFinite(valorCentavos) ||
+      valorCentavos < 0
+    )
+      return
     const corpo = { data, quantidade: qtd, valor_centavos: valorCentavos }
-    if (editar) editarM.mutate({ aporteId: editar.id, corpo }, { onSuccess: onPronto })
+    if (editar)
+      editarM.mutate({ aporteId: editar.id, corpo }, { onSuccess: onPronto })
     else criar.mutate({ investimentoId, corpo }, { onSuccess: onPronto })
   }
 
@@ -2338,7 +2689,11 @@ function DividendosTab({ ids }: { ids: number[] }) {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h3 className="text-sm font-medium">Histórico</h3>
-        <PeriodoPicker inicio={inicio} fim={fim} onChange={(i, f) => setPeriodo([i, f])} />
+        <PeriodoPicker
+          inicio={inicio}
+          fim={fim}
+          onChange={(i, f) => setPeriodo([i, f])}
+        />
       </div>
       {proventos.isLoading || !dado ? (
         <Skeleton className="h-24 w-full" />
@@ -2357,12 +2712,18 @@ function DividendosTab({ ids }: { ids: number[] }) {
           </div>
           {dado.total_isento_centavos > 0 ? (
             <p className="px-1 text-xs text-muted-foreground">
-              <Valor centavos={dado.total_isento_centavos} neutro className="text-xs" /> isentos
-              de IR (rendimentos do fundo).
+              <Valor
+                centavos={dado.total_isento_centavos}
+                neutro
+                className="text-xs"
+              />{" "}
+              isentos de IR (rendimentos do fundo).
             </p>
           ) : null}
           {dado.proventos.length === 0 ? (
-            <p className="text-xs text-muted-foreground">Nenhum provento no período.</p>
+            <p className="text-xs text-muted-foreground">
+              Nenhum provento no período.
+            </p>
           ) : (
             <ul className="divide-y">
               {dado.proventos.map((m) => (
@@ -2373,8 +2734,8 @@ function DividendosTab({ ids }: { ids: number[] }) {
         </>
       )}
       <div className="rounded-lg border border-dashed p-3 text-xs text-muted-foreground">
-        <span className="font-medium text-foreground">Próximos pagamentos</span> — a agenda de
-        proventos futuros chega em breve.
+        <span className="font-medium text-foreground">Próximos pagamentos</span>{" "}
+        — a agenda de proventos futuros chega em breve.
       </div>
     </div>
   )
@@ -2395,10 +2756,17 @@ function CardResumo({
   return (
     <div className="rounded-lg border p-3">
       <p className="text-xs text-muted-foreground">{titulo}</p>
-      <p className={cn("text-lg font-semibold tabular-nums", destaque && "text-accent-ink")}>
+      <p
+        className={cn(
+          "text-lg font-semibold tabular-nums",
+          destaque && "text-accent-ink"
+        )}
+      >
         {valor}
       </p>
-      {sub ? <p className="truncate text-xs text-muted-foreground">{sub}</p> : null}
+      {sub ? (
+        <p className="truncate text-xs text-muted-foreground">{sub}</p>
+      ) : null}
     </div>
   )
 }
@@ -2420,18 +2788,31 @@ function GraficoProventos({ buckets }: { buckets: BucketProvento[] }) {
   return (
     <section className="space-y-2">
       <h3 className="text-sm font-medium">Histórico de rendimentos</h3>
-      <ChartContainer config={CFG_PROVENTOS} className="aspect-auto h-[220px] w-full">
+      <ChartContainer
+        config={CFG_PROVENTOS}
+        className="aspect-auto h-[220px] w-full"
+      >
         <BarChart data={buckets}>
           <CartesianGrid vertical={false} strokeDasharray="3 3" />
-          <XAxis dataKey="label" tickLine={false} axisLine={false} tickMargin={8} />
-          <YAxis tickLine={false} axisLine={false} width={44} tickFormatter={eixoBRL} />
+          <XAxis
+            dataKey="label"
+            tickLine={false}
+            axisLine={false}
+            tickMargin={8}
+          />
+          <YAxis
+            tickLine={false}
+            axisLine={false}
+            width={44}
+            tickFormatter={eixoBRL}
+          />
           <ChartTooltip
             content={
               <ChartTooltipContent
                 formatter={(value) => (
                   <div className="flex flex-1 items-center justify-between gap-2 leading-none">
                     <span className="text-muted-foreground">Recebido</span>
-                    <span className="font-mono font-medium tabular-nums text-foreground">
+                    <span className="font-mono font-medium text-foreground tabular-nums">
                       {formatBRL(Number(value))}
                     </span>
                   </div>
@@ -2462,7 +2843,9 @@ function TabelaProventos({ linhas }: { linhas: LinhaProvento[] }) {
           {linhas.map((l) => (
             <TableRow key={l.id}>
               <TableCell>{l.label}</TableCell>
-              <TableCell className="text-right tabular-nums">{formatBRL(l.totalCentavos)}</TableCell>
+              <TableCell className="text-right tabular-nums">
+                {formatBRL(l.totalCentavos)}
+              </TableCell>
             </TableRow>
           ))}
         </TableBody>
@@ -2507,7 +2890,9 @@ function DividendosFIITab({
   // atuais (o Pluggy não manda por-cota em dados reais). Expectativa = por-cota × cotas atuais.
   const ultimoPorCota =
     ag.ultimoPorCotaReais ??
-    (qtd && ag.ultimoTotalCentavos != null ? ag.ultimoTotalCentavos / 100 / qtd : null)
+    (qtd && ag.ultimoTotalCentavos != null
+      ? ag.ultimoTotalCentavos / 100 / qtd
+      : null)
   const expectativa =
     ultimoPorCota != null && qtd != null
       ? formatBRL(Math.round(ultimoPorCota * qtd * 100))
@@ -2523,15 +2908,30 @@ function DividendosFIITab({
         />
         <CardResumo
           titulo="Último rendimento"
-          valor={ultimoPorCota != null ? fmtRendimentoCota.format(ultimoPorCota) : "—"}
-          sub={ag.ultimoQuando ? `cota em ${formatDate(ag.ultimoQuando)}` : undefined}
+          valor={
+            ultimoPorCota != null
+              ? fmtRendimentoCota.format(ultimoPorCota)
+              : "—"
+          }
+          sub={
+            ag.ultimoQuando
+              ? `cota em ${formatDate(ag.ultimoQuando)}`
+              : undefined
+          }
         />
         <CardResumo
           titulo="Expectativa no mês"
           valor={expectativa}
-          sub={posicao.quantidade != null ? `${fmtQtd.format(posicao.quantidade)} cotas` : undefined}
+          sub={
+            posicao.quantidade != null
+              ? `${fmtQtd.format(posicao.quantidade)} cotas`
+              : undefined
+          }
         />
-        <CardResumo titulo="Total recebido" valor={formatBRL(ag.totalCentavos)} />
+        <CardResumo
+          titulo="Total recebido"
+          valor={formatBRL(ag.totalCentavos)}
+        />
       </div>
 
       <GraficoProventos buckets={ag.buckets} />
@@ -2557,15 +2957,22 @@ function IndicadoresFIITab({ ids }: { ids: number[] }) {
     { rotulo: "P/VP", valor: f.pvp != null ? fmtPct.format(f.pvp) : null },
     {
       rotulo: "Dividend Yield (12M)",
-      valor: f.dividend_yield_12m_pct != null ? `${fmtPct.format(f.dividend_yield_12m_pct)}%` : null,
+      valor:
+        f.dividend_yield_12m_pct != null
+          ? `${fmtPct.format(f.dividend_yield_12m_pct)}%`
+          : null,
     },
     {
       rotulo: "Patrimônio líquido",
-      valor: f.patrimonio_liquido_centavos != null ? formatBRL(f.patrimonio_liquido_centavos) : null,
+      valor:
+        f.patrimonio_liquido_centavos != null
+          ? formatBRL(f.patrimonio_liquido_centavos)
+          : null,
     },
     {
       rotulo: "Nº de cotistas",
-      valor: f.num_cotistas != null ? f.num_cotistas.toLocaleString("pt-BR") : null,
+      valor:
+        f.num_cotistas != null ? f.num_cotistas.toLocaleString("pt-BR") : null,
     },
     {
       rotulo: "Valor patrim. da cota",
@@ -2576,11 +2983,15 @@ function IndicadoresFIITab({ ids }: { ids: number[] }) {
     },
     {
       rotulo: "Vacância física",
-      valor: f.vacancia_pct != null ? `${fmtPct.format(f.vacancia_pct)}%` : null,
+      valor:
+        f.vacancia_pct != null ? `${fmtPct.format(f.vacancia_pct)}%` : null,
     },
     {
       rotulo: "Inadimplência",
-      valor: f.inadimplencia_pct != null ? `${fmtPct.format(f.inadimplencia_pct)}%` : null,
+      valor:
+        f.inadimplencia_pct != null
+          ? `${fmtPct.format(f.inadimplencia_pct)}%`
+          : null,
     },
   ].filter((i) => i.valor != null)
   return (
@@ -2589,9 +3000,14 @@ function IndicadoresFIITab({ ids }: { ids: number[] }) {
         <h3 className="mb-2 text-sm font-medium">Indicadores principais</h3>
         <div className="grid grid-cols-2 gap-2">
           {principais.map((i) => (
-            <div key={i.rotulo} className="rounded-lg border bg-background/60 px-3 py-2">
+            <div
+              key={i.rotulo}
+              className="rounded-lg border bg-background/60 px-3 py-2"
+            >
               <p className="text-xs text-muted-foreground">{i.rotulo}</p>
-              <p className="font-medium tabular-nums text-accent-ink">{i.valor}</p>
+              <p className="font-medium text-accent-ink tabular-nums">
+                {i.valor}
+              </p>
             </div>
           ))}
         </div>
@@ -2607,8 +3023,11 @@ function IndicadoresFIITab({ ids }: { ids: number[] }) {
       <div className="flex items-start gap-2 rounded-lg border border-dashed p-3 text-xs text-muted-foreground">
         <Info className="mt-0.5 size-3.5 shrink-0" aria-hidden />
         <span>
-          Fonte: CVM{f.data_referencia ? ` · dados de ${formatDate(f.data_referencia)}` : ""}. As
-          informações não constituem recomendação de investimento.
+          Fonte: CVM
+          {f.data_referencia
+            ? ` · dados de ${formatDate(f.data_referencia)}`
+            : ""}
+          . As informações não constituem recomendação de investimento.
         </span>
       </div>
     </div>
@@ -2619,7 +3038,7 @@ function IndicadoresFIITab({ ids }: { ids: number[] }) {
 function AlocacaoDonut({ alocacao }: { alocacao: FundamentosFIIAlocacao[] }) {
   const cor = (i: number) => `var(--chart-${(i % 6) + 1})`
   const config: ChartConfig = Object.fromEntries(
-    alocacao.map((a, i) => [a.classe, { label: a.classe, color: cor(i) }]),
+    alocacao.map((a, i) => [a.classe, { label: a.classe, color: cor(i) }])
   )
   return (
     <div className="flex flex-col items-center gap-3">
@@ -2640,7 +3059,7 @@ function AlocacaoDonut({ alocacao }: { alocacao: FundamentosFIIAlocacao[] }) {
                       <span className="text-muted-foreground">
                         {config[String(name)]?.label ?? name}
                       </span>
-                      <span className="font-mono font-medium tabular-nums text-foreground">
+                      <span className="font-mono font-medium text-foreground tabular-nums">
                         {fmtPct.format(Number(value))}%
                       </span>
                     </div>
@@ -2649,7 +3068,13 @@ function AlocacaoDonut({ alocacao }: { alocacao: FundamentosFIIAlocacao[] }) {
               />
             }
           />
-          <Pie data={alocacao} dataKey="pct" nameKey="classe" innerRadius={45} strokeWidth={2}>
+          <Pie
+            data={alocacao}
+            dataKey="pct"
+            nameKey="classe"
+            innerRadius={45}
+            strokeWidth={2}
+          >
             {alocacao.map((a, i) => (
               <Cell key={a.classe} fill={cor(i)} />
             ))}
@@ -2665,7 +3090,7 @@ function AlocacaoDonut({ alocacao }: { alocacao: FundamentosFIIAlocacao[] }) {
               aria-hidden
             />
             <span className="truncate">{a.classe}</span>
-            <span className="ml-auto shrink-0 tabular-nums text-muted-foreground">
+            <span className="ml-auto shrink-0 text-muted-foreground tabular-nums">
               {fmtPct.format(a.pct)}%
             </span>
           </li>

@@ -15,7 +15,12 @@ export type LadoNegociacao = "BUY" | "SELL"
 export type TotalLado = { qtd: number; valor: number }
 
 /** Uma barra do gráfico de compras (um mês-calendário). `valor` em centavos, `qtd` em cotas. */
-export type BucketCompra = { mes: string; label: string; valor: number; qtd: number }
+export type BucketCompra = {
+  mes: string
+  label: string
+  valor: number
+  qtd: number
+}
 
 /** Linha da tabela de negociações (já normalizada p/ exibição). */
 export type Negociacao = {
@@ -39,7 +44,8 @@ const num = (v: string | null | undefined) => (v == null ? 0 : Number(v))
 
 /** Preço unitário da cota em centavos: `value_unitario` (reais) ou, na falta, valor total ÷ qtd. */
 export function precoCotaCentavos(m: InvestimentoTransacao): number | null {
-  if (m.value_unitario != null) return Math.round(Number(m.value_unitario) * 100)
+  if (m.value_unitario != null)
+    return Math.round(Number(m.value_unitario) * 100)
   const q = num(m.quantity)
   return q > 0 ? Math.round(m.amount_centavos / q) : null
 }
@@ -71,7 +77,15 @@ export function agregarNegociacoes(
 ): AgregadoNegociacoes {
   const chaves = ultimosMeses(hoje.slice(0, 7), 12)
   const buckets = new Map<string, BucketCompra>(
-    chaves.map((k) => [k, { mes: k, label: formatBucketLabel(`${k}-01`, "mensal"), valor: 0, qtd: 0 }])
+    chaves.map((k) => [
+      k,
+      {
+        mes: k,
+        label: formatBucketLabel(`${k}-01`, "mensal"),
+        valor: 0,
+        qtd: 0,
+      },
+    ])
   )
   const janela = new Set(chaves)
 
@@ -108,5 +122,10 @@ export function agregarNegociacoes(
     }
   }
 
-  return { compras12m, vendas12m, buckets: chaves.map((k) => buckets.get(k)!), negociacoes }
+  return {
+    compras12m,
+    vendas12m,
+    buckets: chaves.map((k) => buckets.get(k)!),
+    negociacoes,
+  }
 }

@@ -1,8 +1,26 @@
 import {
-  Wallet, Landmark, TrendingUp, ArrowLeftRight, Send, Scale, Wrench,
-  ShoppingBag, MonitorSmartphone, ShoppingCart, UtensilsCrossed, Plane,
-  HeartHandshake, Dice5, ReceiptText, Percent, Home, HeartPulse, Car,
-  ShieldCheck, Gamepad2, Tag,
+  Wallet,
+  Landmark,
+  TrendingUp,
+  ArrowLeftRight,
+  Send,
+  Scale,
+  Wrench,
+  ShoppingBag,
+  MonitorSmartphone,
+  ShoppingCart,
+  UtensilsCrossed,
+  Plane,
+  HeartHandshake,
+  Dice5,
+  ReceiptText,
+  Percent,
+  Home,
+  HeartPulse,
+  Car,
+  ShieldCheck,
+  Gamepad2,
+  Tag,
 } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 
@@ -34,6 +52,8 @@ const ICONES: Record<string, LucideIcon> = {
 }
 
 /** Ícone da categoria por pluggy_id (raiz ou filho). Tag como fallback. */
-export function iconeCategoria(pluggyId: string | null | undefined): LucideIcon {
+export function iconeCategoria(
+  pluggyId: string | null | undefined
+): LucideIcon {
   return ICONES[pluggyId?.slice(0, 2) ?? ""] ?? Tag
 }

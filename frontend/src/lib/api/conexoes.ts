@@ -103,17 +103,23 @@ export function useCriarItem() {
 export function useVincularInstituicaoItem() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async (args: { itemId: number; connector: Connector | null }): Promise<Item> => {
-      const { data, error } = await api.PUT("/api/itens-pluggy/{item_id}/instituicao", {
-        params: { path: { item_id: args.itemId } },
-        body: args.connector
-          ? {
-              pluggy_connector_id: args.connector.pluggy_connector_id,
-              nome: args.connector.nome,
-              logo_url: args.connector.logo_url,
-            }
-          : { pluggy_connector_id: null },
-      })
+    mutationFn: async (args: {
+      itemId: number
+      connector: Connector | null
+    }): Promise<Item> => {
+      const { data, error } = await api.PUT(
+        "/api/itens-pluggy/{item_id}/instituicao",
+        {
+          params: { path: { item_id: args.itemId } },
+          body: args.connector
+            ? {
+                pluggy_connector_id: args.connector.pluggy_connector_id,
+                nome: args.connector.nome,
+                logo_url: args.connector.logo_url,
+              }
+            : { pluggy_connector_id: null },
+        }
+      )
       if (error || !data)
         throw new Error(mensagemErro(error, "falha ao vincular a instituição"))
       return data

@@ -212,7 +212,10 @@ function TextosUsuario({ transacao }: { transacao: Transacao }) {
   const [observacoes, setObservacoes] = useState(transacao.observacoes ?? "")
 
   /** Só faz PATCH se o texto realmente mudou — senão abrir e fechar o drawer já salvaria. */
-  const salvar = (campo: "descricao_usuario" | "observacoes", valor: string) => {
+  const salvar = (
+    campo: "descricao_usuario" | "observacoes",
+    valor: string
+  ) => {
     const limpo = valor.trim()
     if (limpo === (transacao[campo] ?? "")) return
     atualizar.mutate(

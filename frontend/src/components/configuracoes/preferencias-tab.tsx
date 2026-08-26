@@ -4,9 +4,18 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Skeleton } from "@/components/ui/skeleton"
-import { ACCENT_PADRAO, ACCENTS, aplicarAccent, type Accent } from "@/lib/accent"
+import {
+  ACCENT_PADRAO,
+  ACCENTS,
+  aplicarAccent,
+  type Accent,
+} from "@/lib/accent"
 import { useAtualizarPerfil, usePerfil, type Perfil } from "@/lib/api/perfil"
-import { AVATAR_PADRAO, AVATARES_DISPONIVEIS, ilustracao } from "@/lib/illustrations"
+import {
+  AVATAR_PADRAO,
+  AVATARES_DISPONIVEIS,
+  ilustracao,
+} from "@/lib/illustrations"
 import { cn } from "@/lib/utils"
 
 const NOMES_ACCENT: Record<Accent, string> = {
@@ -22,7 +31,8 @@ const AVATARES = [1, 2, 3, 4]
 
 export function PreferenciasTab() {
   const perfil = usePerfil()
-  if (perfil.isLoading || !perfil.data) return <Skeleton className="h-72 w-full" />
+  if (perfil.isLoading || !perfil.data)
+    return <Skeleton className="h-72 w-full" />
   return <PreferenciasForm perfil={perfil.data} />
 }
 
@@ -59,7 +69,11 @@ function PreferenciasForm({ perfil }: { perfil: Perfil }) {
           <CardTitle className="text-base">Cor principal</CardTitle>
         </CardHeader>
         <CardContent>
-          <div role="radiogroup" aria-label="Cor principal" className="flex flex-wrap gap-4">
+          <div
+            role="radiogroup"
+            aria-label="Cor principal"
+            className="flex flex-wrap gap-4"
+          >
             {(Object.keys(ACCENTS) as Accent[]).map((accent) => (
               <button
                 key={accent}

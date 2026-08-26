@@ -47,7 +47,7 @@ function LegendaValores({
             />
             <span className="truncate">{it.nome}</span>
           </span>
-          <span className="shrink-0 tabular-nums text-muted-foreground">
+          <span className="shrink-0 text-muted-foreground tabular-nums">
             {formatBRL(it.valor)}
             {total > 0 ? ` · ${Math.round((it.valor / total) * 100)}%` : ""}
           </span>
@@ -89,8 +89,18 @@ export function BarrasEntradasSaidas({
     <ChartContainer config={CFG_FLUXO} className="aspect-auto h-[240px] w-full">
       <BarChart data={dados} barGap={2}>
         <CartesianGrid vertical={false} strokeDasharray="3 3" />
-        <XAxis dataKey="label" tickLine={false} axisLine={false} tickMargin={8} />
-        <YAxis tickLine={false} axisLine={false} width={44} tickFormatter={eixoBRL} />
+        <XAxis
+          dataKey="label"
+          tickLine={false}
+          axisLine={false}
+          tickMargin={8}
+        />
+        <YAxis
+          tickLine={false}
+          axisLine={false}
+          width={44}
+          tickFormatter={eixoBRL}
+        />
         <ChartTooltip
           content={
             <ChartTooltipContent
@@ -118,11 +128,24 @@ export function LinhaResultado({
 }) {
   const dados = dadosFluxo(buckets, granularidade)
   return (
-    <ChartContainer config={CFG_RESULTADO} className="aspect-auto h-[240px] w-full">
+    <ChartContainer
+      config={CFG_RESULTADO}
+      className="aspect-auto h-[240px] w-full"
+    >
       <LineChart data={dados}>
         <CartesianGrid vertical={false} strokeDasharray="3 3" />
-        <XAxis dataKey="label" tickLine={false} axisLine={false} tickMargin={8} />
-        <YAxis tickLine={false} axisLine={false} width={44} tickFormatter={eixoBRL} />
+        <XAxis
+          dataKey="label"
+          tickLine={false}
+          axisLine={false}
+          tickMargin={8}
+        />
+        <YAxis
+          tickLine={false}
+          axisLine={false}
+          width={44}
+          tickFormatter={eixoBRL}
+        />
         <ChartTooltip
           content={
             <ChartTooltipContent
@@ -146,7 +169,8 @@ export function LinhaResultado({
 
 // --- Mini-área de tendência (cards do topo) ----------------------------------------------------
 
-export type CampoSerie = "entradas_centavos" | "saidas_centavos" | "resultado_centavos"
+export type CampoSerie =
+  "entradas_centavos" | "saidas_centavos" | "resultado_centavos"
 
 const NOME_CAMPO: Record<CampoSerie, string> = {
   entradas_centavos: "Entradas",
@@ -184,8 +208,16 @@ export function AreaTendencia({
       <AreaChart data={dados} margin={{ top: 4, right: 0, bottom: 0, left: 0 }}>
         <defs>
           <linearGradient id={grad} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="var(--color-valor)" stopOpacity={0.3} />
-            <stop offset="100%" stopColor="var(--color-valor)" stopOpacity={0} />
+            <stop
+              offset="0%"
+              stopColor="var(--color-valor)"
+              stopOpacity={0.3}
+            />
+            <stop
+              offset="100%"
+              stopColor="var(--color-valor)"
+              stopOpacity={0}
+            />
           </linearGradient>
         </defs>
         <XAxis dataKey="label" hide />
@@ -314,8 +346,18 @@ export function BarrasEmpilhadasCategorias({
     <ChartContainer config={config} className="aspect-auto h-[240px] w-full">
       <BarChart data={linhas}>
         <CartesianGrid vertical={false} strokeDasharray="3 3" />
-        <XAxis dataKey="label" tickLine={false} axisLine={false} tickMargin={8} />
-        <YAxis tickLine={false} axisLine={false} width={44} tickFormatter={eixoBRL} />
+        <XAxis
+          dataKey="label"
+          tickLine={false}
+          axisLine={false}
+          tickMargin={8}
+        />
+        <YAxis
+          tickLine={false}
+          axisLine={false}
+          width={44}
+          tickFormatter={eixoBRL}
+        />
         <ChartTooltip
           content={
             <ChartTooltipContent

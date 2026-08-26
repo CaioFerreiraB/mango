@@ -57,7 +57,10 @@ export function useCriarObjetivo() {
 export function useAtualizarObjetivo() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async (args: { id: number; patch: ObjetivoUpdate }): Promise<Objetivo> => {
+    mutationFn: async (args: {
+      id: number
+      patch: ObjetivoUpdate
+    }): Promise<Objetivo> => {
       const { data, error } = await api.PATCH("/api/objetivos/{objetivo_id}", {
         params: { path: { objetivo_id: args.id } },
         body: args.patch,
@@ -89,7 +92,10 @@ export function useRemoverObjetivo() {
 export function useVincularConta() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async (args: { contaId: number; objetivoId: number | null }) => {
+    mutationFn: async (args: {
+      contaId: number
+      objetivoId: number | null
+    }) => {
       const { error } = await api.PATCH("/api/contas/{conta_id}", {
         params: { path: { conta_id: args.contaId } },
         body: { objetivo_id: args.objetivoId },
@@ -108,11 +114,17 @@ export function useVincularConta() {
 export function useVincularInvestimento() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async (args: { investimentoId: number; objetivoId: number | null }) => {
-      const { error } = await api.PATCH("/api/investimentos/{investimento_id}", {
-        params: { path: { investimento_id: args.investimentoId } },
-        body: { objetivo_id: args.objetivoId },
-      })
+    mutationFn: async (args: {
+      investimentoId: number
+      objetivoId: number | null
+    }) => {
+      const { error } = await api.PATCH(
+        "/api/investimentos/{investimento_id}",
+        {
+          params: { path: { investimento_id: args.investimentoId } },
+          body: { objetivo_id: args.objetivoId },
+        }
+      )
       if (error) throw new Error("falha ao vincular o investimento")
     },
     onSuccess: () => {

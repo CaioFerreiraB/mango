@@ -69,7 +69,11 @@ type Classe = {
 
 const CLASSES: Classe[] = [
   { id: "todos", label: "Todos os ativos", match: () => true },
-  { id: "renda_fixa", label: "Renda fixa", match: (p) => p.type === "FIXED_INCOME" },
+  {
+    id: "renda_fixa",
+    label: "Renda fixa",
+    match: (p) => p.type === "FIXED_INCOME",
+  },
   {
     id: "acoes",
     label: "Ações",
@@ -98,12 +102,18 @@ type SortCol =
 
 const num = (v: number | null | undefined) => v ?? Number.NEGATIVE_INFINITY
 
-function comparar(a: CarteiraPosicao, b: CarteiraPosicao, col: SortCol): number {
+function comparar(
+  a: CarteiraPosicao,
+  b: CarteiraPosicao,
+  col: SortCol
+): number {
   switch (col) {
     case "ativo":
       return (a.code ?? a.nome ?? "").localeCompare(b.code ?? b.nome ?? "")
     case "tipo":
-      return rotuloClasse(a.type, a.subtype).localeCompare(rotuloClasse(b.type, b.subtype))
+      return rotuloClasse(a.type, a.subtype).localeCompare(
+        rotuloClasse(b.type, b.subtype)
+      )
     case "instituicao":
       return (a.instituicao ?? "").localeCompare(b.instituicao ?? "")
     case "quantidade":
@@ -129,9 +139,14 @@ export function CarteiraPage() {
 
   const [busca, setBusca] = useState("")
   const [classe, setClasse] = useState("todos")
-  const [filtroInstituicao, setFiltroInstituicao] = useState<string | null>(null)
+  const [filtroInstituicao, setFiltroInstituicao] = useState<string | null>(
+    null
+  )
   const [filtroSubtype, setFiltroSubtype] = useState<string | null>(null)
-  const [ordenacao, setOrdenacao] = useState<{ col: SortCol; dir: "asc" | "desc" }>({
+  const [ordenacao, setOrdenacao] = useState<{
+    col: SortCol
+    dir: "asc" | "desc"
+  }>({
     col: "valor",
     dir: "desc",
   })
@@ -143,7 +158,12 @@ export function CarteiraPage() {
 
   // Instituições/subtypes presentes → opções do "Mais filtros".
   const instituicoes = useMemo(
-    () => [...new Set(posicoes.map((p) => p.instituicao).filter((x): x is string => !!x))].sort(),
+    () =>
+      [
+        ...new Set(
+          posicoes.map((p) => p.instituicao).filter((x): x is string => !!x)
+        ),
+      ].sort(),
     [posicoes]
   )
   const subtypes = useMemo(
@@ -166,11 +186,21 @@ export function CarteiraPage() {
     )
     const sinal = ordenacao.dir === "asc" ? 1 : -1
     return [...lista].sort((a, b) => sinal * comparar(a, b, ordenacao.col))
-  }, [posicoes, classeAtiva, busca, filtroInstituicao, filtroSubtype, ordenacao])
+  }, [
+    posicoes,
+    classeAtiva,
+    busca,
+    filtroInstituicao,
+    filtroSubtype,
+    ordenacao,
+  ])
 
   const totalPaginas = Math.max(1, Math.ceil(filtradas.length / porPagina))
   const paginaSegura = Math.min(pagina, totalPaginas)
-  const visiveis = filtradas.slice((paginaSegura - 1) * porPagina, paginaSegura * porPagina)
+  const visiveis = filtradas.slice(
+    (paginaSegura - 1) * porPagina,
+    paginaSegura * porPagina
+  )
 
   function reiniciar<T>(setter: (v: T) => void) {
     return (v: T) => {
@@ -180,7 +210,9 @@ export function CarteiraPage() {
   }
   function ordenarPor(col: SortCol) {
     setOrdenacao((o) =>
-      o.col === col ? { col, dir: o.dir === "asc" ? "desc" : "asc" } : { col, dir: "desc" }
+      o.col === col
+        ? { col, dir: o.dir === "asc" ? "desc" : "asc" }
+        : { col, dir: "desc" }
     )
   }
   const filtrosAtivos = (filtroInstituicao ? 1 : 0) + (filtroSubtype ? 1 : 0)
@@ -232,8 +264,15 @@ export function CarteiraPage() {
 
       {/* Resumo (KPIs) — sem "valor disponível para investir" (não existe no modelo). */}
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-        <Kpi label="Valor da carteira" hint={`Líquido ${formatBRL(totais.liquido_centavos)}`}>
-          <Valor centavos={totais.valor_centavos} neutro className="text-2xl font-bold" />
+        <Kpi
+          label="Valor da carteira"
+          hint={`Líquido ${formatBRL(totais.liquido_centavos)}`}
+        >
+          <Valor
+            centavos={totais.valor_centavos}
+            neutro
+            className="text-2xl font-bold"
+          />
         </Kpi>
         <Kpi label="Valor investido">
           <Valor
@@ -244,7 +283,11 @@ export function CarteiraPage() {
         </Kpi>
         <Kpi
           label="Resultado"
-          hint={totais.resultado_pct != null ? pctTexto(totais.resultado_pct) : undefined}
+          hint={
+            totais.resultado_pct != null
+              ? pctTexto(totais.resultado_pct)
+              : undefined
+          }
         >
           <Valor
             centavos={totais.resultado_centavos ?? 0}
@@ -267,7 +310,9 @@ export function CarteiraPage() {
           </span>
         </Kpi>
         <Kpi label="Nº de ativos">
-          <span className="text-2xl font-bold tabular-nums">{totais.quantidade_ativos}</span>
+          <span className="text-2xl font-bold tabular-nums">
+            {totais.quantidade_ativos}
+          </span>
         </Kpi>
       </div>
 
@@ -308,7 +353,10 @@ export function CarteiraPage() {
             <Filtro
               rotulo="Tipo"
               valor={filtroSubtype}
-              opcoes={subtypes.map((s) => ({ valor: s, label: rotuloChave(s) }))}
+              opcoes={subtypes.map((s) => ({
+                valor: s,
+                label: rotuloChave(s),
+              }))}
               onChange={reiniciar(setFiltroSubtype)}
             />
             <Button
@@ -338,8 +386,13 @@ export function CarteiraPage() {
               {CLASSES.map((c) => {
                 const n = posicoes.filter(c.match).length
                 return (
-                  <TabsTrigger key={c.id} value={c.id} disabled={n === 0 && c.id !== "todos"}>
-                    {c.label} <span className="ml-1 text-muted-foreground">({n})</span>
+                  <TabsTrigger
+                    key={c.id}
+                    value={c.id}
+                    disabled={n === 0 && c.id !== "todos"}
+                  >
+                    {c.label}{" "}
+                    <span className="ml-1 text-muted-foreground">({n})</span>
                   </TabsTrigger>
                 )
               })}
@@ -360,25 +413,60 @@ export function CarteiraPage() {
                 <Th col="instituicao" ordenacao={ordenacao} onSort={ordenarPor}>
                   Instituição
                 </Th>
-                <Th col="quantidade" ordenacao={ordenacao} onSort={ordenarPor} numerico>
+                <Th
+                  col="quantidade"
+                  ordenacao={ordenacao}
+                  onSort={ordenarPor}
+                  numerico
+                >
                   Quantidade
                 </Th>
-                <Th col="preco" ordenacao={ordenacao} onSort={ordenarPor} numerico>
+                <Th
+                  col="preco"
+                  ordenacao={ordenacao}
+                  onSort={ordenarPor}
+                  numerico
+                >
                   Preço médio
                 </Th>
-                <Th col="cotacao" ordenacao={ordenacao} onSort={ordenarPor} numerico>
+                <Th
+                  col="cotacao"
+                  ordenacao={ordenacao}
+                  onSort={ordenarPor}
+                  numerico
+                >
                   Cotação
                 </Th>
-                <Th col="investido" ordenacao={ordenacao} onSort={ordenarPor} numerico>
+                <Th
+                  col="investido"
+                  ordenacao={ordenacao}
+                  onSort={ordenarPor}
+                  numerico
+                >
                   Valor investido
                 </Th>
-                <Th col="valor" ordenacao={ordenacao} onSort={ordenarPor} numerico>
+                <Th
+                  col="valor"
+                  ordenacao={ordenacao}
+                  onSort={ordenarPor}
+                  numerico
+                >
                   Valor atual
                 </Th>
-                <Th col="resultado" ordenacao={ordenacao} onSort={ordenarPor} numerico>
+                <Th
+                  col="resultado"
+                  ordenacao={ordenacao}
+                  onSort={ordenarPor}
+                  numerico
+                >
                   Rentabilidade
                 </Th>
-                <Th col="participacao" ordenacao={ordenacao} onSort={ordenarPor} numerico>
+                <Th
+                  col="participacao"
+                  ordenacao={ordenacao}
+                  onSort={ordenarPor}
+                  numerico
+                >
                   % Carteira
                 </Th>
               </TableRow>
@@ -386,13 +474,20 @@ export function CarteiraPage() {
             <TableBody>
               {visiveis.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={10} className="py-10 text-center text-muted-foreground">
+                  <TableCell
+                    colSpan={10}
+                    className="py-10 text-center text-muted-foreground"
+                  >
                     Nenhum ativo com esses filtros.
                   </TableCell>
                 </TableRow>
               ) : (
                 visiveis.map((p) => (
-                  <PosicaoLinha key={p.chave} posicao={p} onAbrir={() => setSelecionada(p)} />
+                  <PosicaoLinha
+                    key={p.chave}
+                    posicao={p}
+                    onAbrir={() => setSelecionada(p)}
+                  />
                 ))
               )}
             </TableBody>
@@ -407,7 +502,11 @@ export function CarteiraPage() {
               value={String(porPagina)}
               onValueChange={(v) => reiniciar(setPorPagina)(Number(v))}
             >
-              <SelectTrigger size="sm" className="w-20" aria-label="Itens por página">
+              <SelectTrigger
+                size="sm"
+                className="w-20"
+                aria-label="Itens por página"
+              >
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -430,7 +529,7 @@ export function CarteiraPage() {
             >
               <ChevronLeft className="size-4" />
             </Button>
-            <span className="tabular-nums text-muted-foreground">
+            <span className="text-muted-foreground tabular-nums">
               {paginaSegura} / {totalPaginas}
             </span>
             <Button
@@ -502,7 +601,10 @@ function Filtro({
   return (
     <div className="space-y-1.5">
       <p className="text-sm font-medium">{rotulo}</p>
-      <Select value={valor ?? "todos"} onValueChange={(v) => onChange(v === "todos" ? null : v)}>
+      <Select
+        value={valor ?? "todos"}
+        onValueChange={(v) => onChange(v === "todos" ? null : v)}
+      >
         <SelectTrigger size="sm" className="w-full">
           <SelectValue />
         </SelectTrigger>
@@ -562,7 +664,10 @@ function AvisoIncompleto({ valor }: { valor?: string }) {
       title="Cálculo parcial — compras anteriores a 12 meses não vêm do banco. Complete os aportes na posição."
     >
       {valor ?? <span aria-hidden>—</span>}
-      <AlertTriangle className="size-3.5 text-amber-600 dark:text-amber-500" aria-hidden />
+      <AlertTriangle
+        className="size-3.5 text-amber-600 dark:text-amber-500"
+        aria-hidden
+      />
       <span className="sr-only">cálculo parcial, histórico incompleto</span>
     </span>
   )
@@ -612,7 +717,10 @@ function PosicaoLinha({
       <TableCell>
         {p.instituicao ? (
           <div className="flex items-center gap-2">
-            <AvatarBanco nome={p.instituicao} logoUrl={p.instituicao_logo_url} />
+            <AvatarBanco
+              nome={p.instituicao}
+              logoUrl={p.instituicao_logo_url}
+            />
             <span className="truncate text-sm">{p.instituicao}</span>
           </div>
         ) : (
@@ -625,7 +733,11 @@ function PosicaoLinha({
       <TableCell className="text-right tabular-nums">
         {p.historico_incompleto ? (
           <AvisoIncompleto
-            valor={p.preco_medio_centavos != null ? formatBRL(p.preco_medio_centavos) : undefined}
+            valor={
+              p.preco_medio_centavos != null
+                ? formatBRL(p.preco_medio_centavos)
+                : undefined
+            }
           />
         ) : p.preco_medio_centavos != null ? (
           formatBRL(p.preco_medio_centavos)
@@ -639,7 +751,11 @@ function PosicaoLinha({
       <TableCell className="text-right">
         {p.historico_incompleto ? (
           <AvisoIncompleto
-            valor={p.investido_centavos != null ? formatBRL(p.investido_centavos) : undefined}
+            valor={
+              p.investido_centavos != null
+                ? formatBRL(p.investido_centavos)
+                : undefined
+            }
           />
         ) : p.investido_centavos != null ? (
           <Valor centavos={p.investido_centavos} neutro />
@@ -669,7 +785,9 @@ function PosicaoLinha({
         )}
       </TableCell>
       <TableCell className="text-right tabular-nums">
-        {p.participacao_pct != null ? `${fmtPct.format(p.participacao_pct)}%` : "—"}
+        {p.participacao_pct != null
+          ? `${fmtPct.format(p.participacao_pct)}%`
+          : "—"}
       </TableCell>
     </TableRow>
   )

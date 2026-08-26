@@ -116,7 +116,9 @@ function LinhaUsuario({ usuario }: { usuario: UsuarioAdmin }) {
     const acao = usuario.ativo ? desativar : ativar
     acao.mutate(usuario.id, {
       onSuccess: () =>
-        toast.success(usuario.ativo ? "Usuário desativado." : "Usuário reativado."),
+        toast.success(
+          usuario.ativo ? "Usuário desativado." : "Usuário reativado."
+        ),
       onError: (err) => toast.error(err.message),
     })
   }
@@ -131,8 +133,12 @@ function LinhaUsuario({ usuario }: { usuario: UsuarioAdmin }) {
   async function copiarNovoLink() {
     reenviarConvite.mutate(usuario.id, {
       onSuccess: async (r) => {
-        await navigator.clipboard.writeText(`${window.location.origin}${r.link_convite}`)
-        toast.success("Novo link copiado — o link anterior deixou de funcionar.")
+        await navigator.clipboard.writeText(
+          `${window.location.origin}${r.link_convite}`
+        )
+        toast.success(
+          "Novo link copiado — o link anterior deixou de funcionar."
+        )
       },
       onError: (err) => toast.error(err.message),
     })

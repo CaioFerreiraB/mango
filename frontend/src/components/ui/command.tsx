@@ -9,10 +9,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import {
-  InputGroup,
-  InputGroupAddon,
-} from "@/components/ui/input-group"
+import { InputGroup, InputGroupAddon } from "@/components/ui/input-group"
 import { SearchIcon, CheckIcon } from "lucide-react"
 
 function Command({
@@ -75,7 +72,7 @@ function CommandInput({
           className={cn(
             // text-base no mobile evita o auto-zoom do iOS ao focar input <16px (persiste no SPA e
             // deixa TODAS as telas "maiores"); md:text-sm mantém 14px no desktop. Igual a Input/Textarea.
-            "w-full text-base outline-hidden md:text-sm disabled:cursor-not-allowed disabled:opacity-50",
+            "w-full text-base outline-hidden disabled:cursor-not-allowed disabled:opacity-50 md:text-sm",
             className
           )}
           {...props}

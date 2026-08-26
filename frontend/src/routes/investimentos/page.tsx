@@ -44,10 +44,7 @@ import {
 } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
-import {
-  ToggleGroup,
-  ToggleGroupItem,
-} from "@/components/ui/toggle-group"
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import {
   ChartContainer,
   ChartLegend,
@@ -172,7 +169,9 @@ export function InvestimentosPage() {
       {dados.renda_variavel.length > 0 ? (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Renda variável por ativo</CardTitle>
+            <CardTitle className="text-base">
+              Renda variável por ativo
+            </CardTitle>
             <CardDescription>
               Total investido, valor atual e valorização de cada ativo
             </CardDescription>
@@ -196,7 +195,9 @@ export function InvestimentosPage() {
       {gruposRestantes.map((grupo) => (
         <Card key={grupo.type}>
           <CardHeader className="flex-row items-center justify-between">
-            <CardTitle className="text-base">{rotuloTipo(grupo.type)}</CardTitle>
+            <CardTitle className="text-base">
+              {rotuloTipo(grupo.type)}
+            </CardTitle>
             <Valor centavos={grupo.valor_centavos} neutro className="text-sm" />
           </CardHeader>
           <CardContent className="space-y-1">
@@ -520,7 +521,10 @@ function RendaFixaSection({
           />
         ))}
       </CardContent>
-      <RenomearAtivoDialog ativo={renomear} onFechar={() => setRenomear(null)} />
+      <RenomearAtivoDialog
+        ativo={renomear}
+        onFechar={() => setRenomear(null)}
+      />
       <MoverAtivoDialog posicao={mover} onFechar={() => setMover(null)} />
     </Card>
   )
@@ -549,7 +553,9 @@ function AtivoRFItem({
           <Landmark className="size-4.5" />
         </span>
         <div className="min-w-0">
-          <p className="truncate text-sm font-medium">{ativo.nome ?? "Renda fixa"}</p>
+          <p className="truncate text-sm font-medium">
+            {ativo.nome ?? "Renda fixa"}
+          </p>
           <p className="truncate text-xs text-muted-foreground">
             {n} compra{n === 1 ? "" : "s"}
           </p>
@@ -629,7 +635,11 @@ function RenomearAtivoDialog({
         </DialogHeader>
         {/* key remonta com estado fresco a cada ativo (evita setState em efeito) */}
         {ativo?.ativo_id != null ? (
-          <RenomearForm key={ativo.ativo_id} ativo={ativo} onFechar={onFechar} />
+          <RenomearForm
+            key={ativo.ativo_id}
+            ativo={ativo}
+            onFechar={onFechar}
+          />
         ) : null}
       </DialogContent>
     </Dialog>
@@ -651,7 +661,10 @@ function RenomearForm({
         e.preventDefault()
         const limpo = nome.trim()
         if (ativo.ativo_id != null && limpo)
-          renomear.mutate({ id: ativo.ativo_id, nome: limpo }, { onSuccess: onFechar })
+          renomear.mutate(
+            { id: ativo.ativo_id, nome: limpo },
+            { onSuccess: onFechar }
+          )
       }}
       className="flex gap-2"
     >
@@ -686,7 +699,11 @@ function MoverAtivoDialog({
           </DialogDescription>
         </DialogHeader>
         {posicao != null ? (
-          <MoverConteudo key={posicao.id} posicao={posicao} onFechar={onFechar} />
+          <MoverConteudo
+            key={posicao.id}
+            posicao={posicao}
+            onFechar={onFechar}
+          />
         ) : null}
       </DialogContent>
     </Dialog>
@@ -706,7 +723,10 @@ function MoverConteudo({
   const [novo, setNovo] = useState("")
 
   const mover = (ativoId: number | null) =>
-    vincular.mutate({ investimentoId: posicao.id, ativoId }, { onSuccess: onFechar })
+    vincular.mutate(
+      { investimentoId: posicao.id, ativoId },
+      { onSuccess: onFechar }
+    )
   const criarEMover = () => {
     const nome = novo.trim()
     if (!nome) return
@@ -728,7 +748,10 @@ function MoverConteudo({
             onClick={() => mover(a.id)}
             className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm transition-colors hover:bg-muted/60"
           >
-            <Landmark className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+            <Landmark
+              className="size-4 shrink-0 text-muted-foreground"
+              aria-hidden
+            />
             <span className="truncate">{a.nome}</span>
           </button>
         ))}
@@ -995,7 +1018,7 @@ function ComparacaoMercado({ subtypes }: { subtypes: string[] }) {
                           <span className="text-muted-foreground">
                             {config[String(name)]?.label ?? name}
                           </span>
-                          <span className="font-mono font-medium tabular-nums text-foreground">
+                          <span className="font-mono font-medium text-foreground tabular-nums">
                             {pctTexto(Number(value))}
                           </span>
                         </div>
