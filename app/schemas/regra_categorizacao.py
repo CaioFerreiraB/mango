@@ -7,10 +7,16 @@ from pydantic import BaseModel, Field, field_validator
 from app.models.categoria import RegraCategorizacao
 from app.schemas.auto import read_model
 
-# `texto_normalizado` é derivado (minúsculo/sem acento) e só serve ao casamento — não é API.
-RegraCategorizacaoRead = read_model(RegraCategorizacao, exclude=("texto_normalizado",))
-
 TipoMatch = Literal["exato", "contem"]
+
+# `texto_normalizado` é derivado (minúsculo/sem acento) e só serve ao casamento — não é API.
+# `tipo_match` é `String(8)` no model, então o inferido seria `str`; o override devolve o enum ao
+# OpenAPI e, com ele, ao cliente TS gerado.
+RegraCategorizacaoRead = read_model(
+    RegraCategorizacao,
+    exclude=("texto_normalizado",),
+    overrides={"tipo_match": TipoMatch},
+)
 
 # Mínimo de 3 é defesa, não estética: uma regra "contém" de 1–2 caracteres casaria quase toda
 # transação e recategorizaria o histórico inteiro de uma vez.

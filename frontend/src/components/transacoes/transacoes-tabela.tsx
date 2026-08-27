@@ -133,7 +133,7 @@ export function TransacoesTabela({
           </TableHeader>
           <TableBody>
             {items.map((t) => {
-              const catId = t.categoria_override_id ?? t.categoria_pluggy_id
+              const catId = t.categoria_efetiva_id
               const catNome = catId ? mapaCategorias.get(catId) : undefined
               const IconeCat = iconeCategoria(catId)
               const titulo = descricaoExibida(t)
@@ -247,7 +247,7 @@ export function TransacoesTabela({
 
       <ul className="divide-y rounded-lg border md:hidden">
         {items.map((t) => {
-          const catId = t.categoria_override_id ?? t.categoria_pluggy_id
+          const catId = t.categoria_efetiva_id
           const IconeCat = iconeCategoria(catId)
           const titulo = descricaoExibida(t)
           const subtitulo = subtituloTransacao(t)
