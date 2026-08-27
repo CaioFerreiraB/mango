@@ -48,6 +48,10 @@ class Categoria(Base):
     parent_id: Mapped[str | None] = mapped_column(
         ForeignKey("categoria.pluggy_id", ondelete="RESTRICT"), index=True
     )
+    # Nome de ícone lucide (kebab-case), só para categoria personalizada: a do Pluggy tira o ícone
+    # da raiz do `pluggy_id`, que é fixa. NULL = sem escolha do usuário → o cliente cai no padrão.
+    # Sem CHECK aqui — a allowlist vive na fronteira (`app/enums.ICONE_CATEGORIA`), ver lá o porquê.
+    icone: Mapped[str | None] = mapped_column(String(40))
 
 
 class CategoriaDesativada(Base):

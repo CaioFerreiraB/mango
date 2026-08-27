@@ -17,7 +17,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { useIsMobile } from "@/hooks/use-mobile"
-import { iconeCategoria } from "@/lib/api/categoria-icones"
+import { useIconeCategoria } from "@/lib/api/categoria-icones"
 import { useMapaCategorias } from "@/lib/api/categorias"
 import {
   useAtualizarLimiteMensal,
@@ -64,6 +64,7 @@ export function EditarMesDialog({
   const [salvando, setSalvando] = useState(false)
   const nomes = useMapaCategorias()
   const isMobile = useIsMobile()
+  const iconeCategoria = useIconeCategoria()
 
   const atualizarMensal = useAtualizarLimiteMensal()
   const criarOrcamento = useCriarOrcamento()

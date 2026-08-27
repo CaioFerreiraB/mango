@@ -80,6 +80,42 @@ def test_cria_renomeia_e_exclui_personalizada(
     assert client.get(f"/api/categorias/{cid}").status_code == 404
 
 
+# --- ícone da categoria personalizada -----------------------------------------------------
+
+
+def test_icone_e_gravado_na_criacao_e_alteravel(client_factory, usuario_a: Usuario) -> None:
+    client = client_factory(usuario_a)
+    criada = client.post("/api/categorias", json={"nome": "Pet", "icone": "paw-print"})
+    assert criada.status_code == 201, criada.text
+    assert criada.json()["icone"] == "paw-print"
+
+    cid = criada.json()["pluggy_id"]
+    assert client.patch(f"/api/categorias/{cid}", json={"icone": "dog"}).status_code == 422
+    assert client.patch(f"/api/categorias/{cid}", json={"icone": "gift"}).json()["icone"] == "gift"
+    listada = next(c for c in client.get("/api/categorias").json() if c["pluggy_id"] == cid)
+    assert listada["icone"] == "gift"
+
+
+def test_icone_e_opcional_e_fora_da_allowlist_e_recusado(
+    client_factory, usuario_a: Usuario
+) -> None:
+    """Allowlist na fronteira (S4): o nome vira componente no cliente, não pode ser texto livre."""
+    client = client_factory(usuario_a)
+    assert client.post("/api/categorias", json={"nome": "Sem ícone"}).json()["icone"] is None
+    recusada = client.post("/api/categorias", json={"nome": "X", "icone": "<script>"})
+    assert recusada.status_code == 422
+
+
+def test_icone_da_categoria_do_pluggy_e_recusado(
+    client_factory, db: Session, usuario_a: Usuario
+) -> None:
+    """A linha é compartilhada entre usuários — lá o ícone vem da raiz do id, igual para todos."""
+    _semear_global(db)
+    client = client_factory(usuario_a)
+    assert client.patch("/api/categorias/01000000", json={"icone": "gift"}).status_code == 422
+    assert db.get(Categoria, "01000000").icone is None
+
+
 def test_nome_duplicado_ignora_caixa_e_acento(client_factory, usuario_a: Usuario) -> None:
     client = client_factory(usuario_a)
     assert client.post("/api/categorias", json={"nome": "Farmácia"}).status_code == 201

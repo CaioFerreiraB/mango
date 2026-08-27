@@ -45,7 +45,7 @@ def criar(
     db: Session = Depends(get_db),
     user: Usuario = Depends(get_current_user),
 ):
-    return categoria_service.criar(db, user.id, payload.nome)
+    return categoria_service.criar(db, user.id, payload.nome, payload.icone)
 
 
 @router.patch("/{pluggy_id}", response_model=CategoriaRead)
@@ -56,7 +56,7 @@ def atualizar(
     user: Usuario = Depends(get_current_user),
 ):
     return categoria_service.atualizar(
-        db, user.id, pluggy_id, nome=payload.nome, ativa=payload.ativa
+        db, user.id, pluggy_id, nome=payload.nome, icone=payload.icone, ativa=payload.ativa
     )
 
 

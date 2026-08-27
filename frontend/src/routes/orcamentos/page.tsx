@@ -26,7 +26,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { useIsMobile } from "@/hooks/use-mobile"
-import { iconeCategoria } from "@/lib/api/categoria-icones"
+import { useIconeCategoria } from "@/lib/api/categoria-icones"
 import { useMapaCategorias } from "@/lib/api/categorias"
 import {
   useConsumoOrcamentos,
@@ -203,6 +203,7 @@ function SecaoOrcamento({
   itens: OrcamentoConsumoItem[]
 }) {
   const nomes = useMapaCategorias()
+  const iconeCategoria = useIconeCategoria()
   const isMobile = useIsMobile()
   if (itens.length === 0) return null
 

@@ -6,6 +6,8 @@ import { mensagemErro } from "@/lib/api/erros"
 import type { components } from "@/lib/api/schema"
 
 export type Categoria = components["schemas"]["CategoriaRead"]
+/** Nomes de ícone que o backend aceita — vem do OpenAPI, então a lista não é mantida duas vezes. */
+export type IconeCategoria = NonNullable<Categoria["icone"]>
 
 export const categoriasKeys = {
   all: ["categorias"] as const,
@@ -59,10 +61,11 @@ function invalidar(qc: ReturnType<typeof useQueryClient>) {
 export function useCriarCategoria() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async (nome: string): Promise<Categoria> => {
-      const { data, error } = await api.POST("/api/categorias", {
-        body: { nome },
-      })
+    mutationFn: async (body: {
+      nome: string
+      icone?: IconeCategoria | null
+    }): Promise<Categoria> => {
+      const { data, error } = await api.POST("/api/categorias", { body })
       if (error || !data)
         throw new Error(mensagemErro(error, "falha ao criar categoria"))
       return data
@@ -79,7 +82,7 @@ export function useAtualizarCategoria() {
       patch,
     }: {
       id: string
-      patch: { nome?: string; ativa?: boolean }
+      patch: { nome?: string; icone?: IconeCategoria | null; ativa?: boolean }
     }): Promise<Categoria> => {
       const { data, error } = await api.PATCH("/api/categorias/{pluggy_id}", {
         params: { path: { pluggy_id: id } },

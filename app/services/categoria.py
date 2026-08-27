@@ -27,11 +27,11 @@ def obter(db: Session, usuario_id: int, pluggy_id: str) -> CategoriaRead:
     return CategoriaRead.de_modelo(obj, desativadas=repo.desativadas())
 
 
-def criar(db: Session, usuario_id: int, nome: str) -> CategoriaRead:
+def criar(db: Session, usuario_id: int, nome: str, icone: str | None = None) -> CategoriaRead:
     repo = CategoriaRepository(db, usuario_id)
     if repo.nome_em_uso(nome):
         raise ConflictError(f"você já tem uma categoria chamada “{nome}”")
-    obj = repo.criar_personalizada(nome)
+    obj = repo.criar_personalizada(nome, icone)
     return CategoriaRead.de_modelo(obj, desativadas=repo.desativadas())
 
 
@@ -41,6 +41,7 @@ def atualizar(
     pluggy_id: str,
     *,
     nome: str | None = None,
+    icone: str | None = None,
     ativa: bool | None = None,
 ) -> CategoriaRead:
     repo = CategoriaRepository(db, usuario_id)
@@ -56,6 +57,13 @@ def atualizar(
         if repo.nome_em_uso(nome, ignorando=pluggy_id):
             raise ConflictError(f"você já tem uma categoria chamada “{nome}”")
         obj = repo.renomear(obj, nome)
+
+    if icone is not None:
+        # Mesmo motivo do nome: é escrita na linha, e a do Pluggy é compartilhada — lá o ícone vem
+        # da raiz do `pluggy_id` e é o mesmo para todo mundo.
+        if repo.get_personalizada(pluggy_id) is None:
+            raise ValidationError("só é possível mudar o ícone de uma categoria criada por você")
+        obj = repo.definir_icone(obj, icone)
 
     if ativa is not None:
         # Alcança a subárvore: desativar "Alimentação" sem levar as filhas junto deixaria as

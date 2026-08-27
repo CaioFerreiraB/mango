@@ -96,13 +96,14 @@ class CategoriaRepository:
 
     # --- escrita (só linha do próprio usuário) -----------------------------------------
 
-    def criar_personalizada(self, nome: str) -> Categoria:
+    def criar_personalizada(self, nome: str, icone: str | None = None) -> Categoria:
         obj = Categoria(
             pluggy_id=self._novo_id(),
             usuario_id=self.usuario_id,
             description=nome,
             description_translated=nome,
             parent_id=None,  # personalizada é plana (nível raiz)
+            icone=icone,
         )
         self.db.add(obj)
         self.db.commit()
@@ -112,6 +113,12 @@ class CategoriaRepository:
     def renomear(self, obj: Categoria, nome: str) -> Categoria:
         obj.description = nome
         obj.description_translated = nome
+        self.db.commit()
+        self.db.refresh(obj)
+        return obj
+
+    def definir_icone(self, obj: Categoria, icone: str) -> Categoria:
+        obj.icone = icone
         self.db.commit()
         self.db.refresh(obj)
         return obj

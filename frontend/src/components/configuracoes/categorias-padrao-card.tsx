@@ -140,7 +140,7 @@ function LinhaCategoria({
 
   return (
     <label className="flex min-w-0 flex-1 items-center gap-2 text-sm">
-      {createElement(iconeCategoria(categoria.pluggy_id), {
+      {createElement(iconeCategoria(categoria.pluggy_id, categoria.icone), {
         className: "size-4 shrink-0 text-muted-foreground",
         "aria-hidden": true,
       })}

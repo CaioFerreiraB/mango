@@ -15,7 +15,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { useMapaCategorias } from "@/lib/api/categorias"
-import { iconeCategoria } from "@/lib/api/categoria-icones"
+import { useIconeCategoria } from "@/lib/api/categoria-icones"
 import { useContas } from "@/lib/api/contas"
 import {
   descricaoExibida,
@@ -92,6 +92,7 @@ export function TransacoesTabela({
     ])
   )
   const mapaCategorias = useMapaCategorias()
+  const iconeCategoria = useIconeCategoria()
   // Descrição · Valor · Data · Conta · Categoria · Status
   const { larguras, iniciar } = useLarguras([300, 120, 110, 160, 180, 120])
   const [selecionadaId, setSelecionadaId] = useState<number | null>(null)

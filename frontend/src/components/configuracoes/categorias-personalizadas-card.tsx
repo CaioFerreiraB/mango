@@ -3,6 +3,7 @@ import { useState } from "react"
 import { toast } from "sonner"
 
 import { EmptyState } from "@/components/common/empty-state"
+import { IconeSelect } from "@/components/configuracoes/icone-select"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -41,6 +42,7 @@ import {
   useCriarCategoria,
   useRemoverCategoria,
   type Categoria,
+  type IconeCategoria,
 } from "@/lib/api/categorias"
 
 /** Categorias criadas pelo usuário: criar, renomear, ativar/desativar e excluir (§4.5). */
@@ -106,6 +108,16 @@ function LinhaPersonalizada({ categoria }: { categoria: Categoria }) {
 
   return (
     <li className="flex items-center gap-2 py-2">
+      <IconeSelect
+        value={categoria.icone}
+        nomeCategoria={nomeCategoria(categoria)}
+        onChange={(icone) =>
+          atualizar.mutate(
+            { id: categoria.pluggy_id, patch: { icone } },
+            { onError: (err) => toast.error(err.message) }
+          )
+        }
+      />
       <Input
         value={nome}
         onChange={(e) => setNome(e.target.value)}
@@ -172,17 +184,24 @@ function NovaCategoriaDialog() {
   const criar = useCriarCategoria()
   const [aberto, setAberto] = useState(false)
   const [nome, setNome] = useState("")
+  // "tag" e não `null`: uma categoria nova já nasce com ícone, e o padrão fica visível no gatilho
+  // em vez de esconder a escolha atrás de um estado vazio.
+  const [icone, setIcone] = useState<IconeCategoria>("tag")
 
   function submeter(e: React.FormEvent) {
     e.preventDefault()
-    criar.mutate(nome.trim(), {
-      onSuccess: () => {
-        toast.success("Categoria criada.")
-        setNome("")
-        setAberto(false)
-      },
-      onError: (err) => toast.error(err.message),
-    })
+    criar.mutate(
+      { nome: nome.trim(), icone },
+      {
+        onSuccess: () => {
+          toast.success("Categoria criada.")
+          setNome("")
+          setIcone("tag")
+          setAberto(false)
+        },
+        onError: (err) => toast.error(err.message),
+      }
+    )
   }
 
   return (
@@ -203,17 +222,24 @@ function NovaCategoriaDialog() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-1.5 py-4">
-            <Label htmlFor="nova-categoria">Nome</Label>
-            <Input
-              id="nova-categoria"
-              value={nome}
-              onChange={(e) => setNome(e.target.value)}
-              placeholder="Pet"
-              minLength={2}
-              maxLength={60}
-              autoFocus
-              required
-            />
+            <Label htmlFor="nova-categoria">Nome e ícone</Label>
+            <div className="flex items-center gap-2">
+              <Input
+                id="nova-categoria"
+                value={nome}
+                onChange={(e) => setNome(e.target.value)}
+                placeholder="Pet"
+                minLength={2}
+                maxLength={60}
+                autoFocus
+                required
+              />
+              <IconeSelect value={icone} onChange={setIcone} />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              O ícone aparece junto da categoria em transações, orçamentos e
+              assinaturas.
+            </p>
           </div>
           <DialogFooter>
             <DialogClose asChild>
