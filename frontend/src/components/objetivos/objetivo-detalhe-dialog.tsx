@@ -1,3 +1,4 @@
+import { useMemo } from "react"
 import {
   Info,
   Pencil,
@@ -232,9 +233,13 @@ export function ObjetivoDetalheDialog({
   const vincularInv = useVincularInvestimento()
   const remover = useRemoverObjetivo()
 
-  const contasPorId = new Map((contas.data ?? []).map((c) => [c.id, c]))
-  const investimentosPorId = new Map(
-    (investimentos.data ?? []).map((i) => [i.id, i])
+  const contasPorId = useMemo(
+    () => new Map((contas.data ?? []).map((c) => [c.id, c])),
+    [contas.data]
+  )
+  const investimentosPorId = useMemo(
+    () => new Map((investimentos.data ?? []).map((i) => [i.id, i])),
+    [investimentos.data]
   )
 
   // Disponíveis para vincular = sem objetivo (a regra 1:1-máx impede roubar de outro objetivo).
