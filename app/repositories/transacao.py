@@ -6,6 +6,7 @@ from sqlalchemy import func, or_, select
 
 from app.models.transacao import Transacao
 from app.repositories.base import UserScopedRepository
+from app.services.categoria_resolucao import com_assinatura, expr_categoria_efetiva
 
 # Campos do usuário — o re-sync NUNCA os sobrescreve (§4.5/§4.4).
 CAMPOS_USUARIO = (
@@ -22,7 +23,9 @@ CAMPOS_USUARIO = (
     "investimento_transacao_id",
 )
 
-_CAT_EFETIVA = func.coalesce(Transacao.categoria_override_id, Transacao.categoria_pluggy_id)
+# Categoria efetiva: a precedência mora em `categoria_resolucao` (fonte única, §4.5) e depende do
+# usuário (assinatura + desativadas), então é montada por query — não dá para ser constante aqui.
+
 # Valor efetivo em reais: valor na moeda da conta (internacional), senão o `amount` cru.
 _VALOR_EFETIVO = func.coalesce(
     Transacao.amount_in_account_currency_centavos, Transacao.amount_centavos
@@ -71,8 +74,11 @@ class TransacaoRepository(UserScopedRepository[Transacao]):
             filtros.append(Transacao.date < fim)
         if conta_id is not None:
             filtros.append(Transacao.conta_id == conta_id)
+        # Filtrar por categoria exige a expressão de resolução, que referencia `assinatura` — o
+        # outerjoin só entra quando o filtro é usado, para não pesar o caminho comum.
+        precisa_assinatura = categoria_id is not None
         if categoria_id is not None:
-            filtros.append(_CAT_EFETIVA == categoria_id)
+            filtros.append(expr_categoria_efetiva(self.usuario_id) == categoria_id)
         if fatura_id is not None:
             filtros.append(Transacao.bill_id == fatura_id)
         if tipo is not None:
@@ -101,12 +107,19 @@ class TransacaoRepository(UserScopedRepository[Transacao]):
                 )
             )
 
-        total = self.db.scalar(select(func.count()).select_from(Transacao).where(*filtros))
+        contagem = select(func.count()).select_from(Transacao)
+        listagem = select(Transacao)
+        if precisa_assinatura:
+            # `assinatura_id` → `assinatura.id` é muitos-para-um, então o LEFT JOIN não duplica
+            # linha nem infla a contagem.
+            contagem = com_assinatura(contagem)
+            listagem = com_assinatura(listagem)
+
+        total = self.db.scalar(contagem.where(*filtros))
         coluna = ORDENACAO.get(order, Transacao.date)
         ordem = coluna.desc() if descendente else coluna.asc()
         itens = self.db.scalars(
-            select(Transacao)
-            .where(*filtros)
+            listagem.where(*filtros)
             .order_by(ordem, Transacao.id.desc())
             .limit(limit)
             .offset(offset)

@@ -4,8 +4,22 @@ from pydantic import BaseModel, Field, field_validator
 
 from app.models.transacao import Transacao
 from app.schemas.auto import read_model
+from app.services.categoria_resolucao import Origem
 
-TransacaoRead = read_model(Transacao)
+_TransacaoColunas = read_model(Transacao)
+
+
+class TransacaoRead(_TransacaoColunas):  # type: ignore[misc, valid-type]
+    """Colunas + a categoria já resolvida (§4.5).
+
+    Os quatro campos-fonte (`categoria_pluggy_id`, `_override_`, `_regra_`, `assinatura_id`)
+    continuam expostos para a UI mostrar o que veio de onde, mas quem quer "a categoria desta
+    transação" lê `categoria_efetiva_id` — replicar a precedência no cliente daria divergência.
+    Preenchidos pelo router; os defaults valem para quem construir o schema sem contexto.
+    """
+
+    categoria_efetiva_id: str | None = None
+    categoria_origem: Origem = "desconhecida"
 
 
 class TransacaoUpdate(BaseModel):

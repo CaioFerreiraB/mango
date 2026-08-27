@@ -22,6 +22,7 @@ from app.schemas.dashboard import (
     GastoCategoria,
     SerieBucket,
 )
+from app.services.categoria_resolucao import com_assinatura, expr_categoria_efetiva
 from app.services.periodo import SP, limites_sp
 
 _TOP_CATEGORIAS = 8
@@ -29,8 +30,8 @@ _ULTIMAS = 10
 _FATURAS_ABERTAS = 5
 _FATURAS_GRAFICO = 6
 
-# Categoria efetiva = override do usuário, senão a sugestão do Pluggy (§4.5).
-_CAT_EFETIVA = func.coalesce(Transacao.categoria_override_id, Transacao.categoria_pluggy_id)
+# Categoria efetiva: a precedência mora em `categoria_resolucao` (fonte única, §4.5) e depende
+# do usuário (assinatura + categorias desativadas), então é montada por query, não em módulo.
 
 # Valor efetivo em reais = valor na moeda da conta (compra internacional), senão o `amount` cru.
 # `amount_in_account_currency_centavos` só vem em transação internacional; nula → doméstica.
@@ -66,10 +67,11 @@ def montar_dashboard(db: Session, usuario_id: int, inicio: date, fim: date) -> D
         select(func.count()).select_from(Transacao).where(do_usuario, Transacao.revisada.is_(False))
     )
 
+    cat_efetiva = expr_categoria_efetiva(usuario_id)
     por_categoria = db.execute(
-        select(_CAT_EFETIVA, func.sum(-_VALOR_EFETIVO))
+        com_assinatura(select(cat_efetiva, func.sum(-_VALOR_EFETIVO)))
         .where(do_usuario, *no_periodo, real, Transacao.type == "DEBIT")
-        .group_by(_CAT_EFETIVA)
+        .group_by(cat_efetiva)
         .order_by(func.sum(-_VALOR_EFETIVO).desc())
         .limit(_TOP_CATEGORIAS)
     ).all()
@@ -139,15 +141,16 @@ def resumo_faturas(
     # invertido em relação à conta bancária (compra positiva) — sem isso a barra fica negativa e o
     # top-N por categoria escolhe as menores. Estornos (CREDIT) já ficam de fora pelo filtro
     # de tipo.
+    cat_efetiva = expr_categoria_efetiva(usuario_id)
     linhas = db.execute(
-        select(Transacao.bill_id, _CAT_EFETIVA, func.sum(func.abs(_VALOR_EFETIVO)))
+        com_assinatura(select(Transacao.bill_id, cat_efetiva, func.sum(func.abs(_VALOR_EFETIVO))))
         .where(
             Transacao.usuario_id == usuario_id,
             Transacao.bill_id.in_(ids),
             Transacao.type == "DEBIT",
             Transacao.eh_transferencia.is_(False),
         )
-        .group_by(Transacao.bill_id, _CAT_EFETIVA)
+        .group_by(Transacao.bill_id, cat_efetiva)
     ).all()
 
     por_fatura: dict[int, list[GastoCategoria]] = {}
@@ -203,7 +206,14 @@ def montar_series(
     bancos, sem `date_trunc`/`strftime`."""
     ini, fim_excl = limites_sp(inicio, fim)
     linhas = db.execute(
-        select(Transacao.date, _VALOR_EFETIVO, Transacao.type, _CAT_EFETIVA).where(
+        com_assinatura(
+            select(
+                Transacao.date,
+                _VALOR_EFETIVO,
+                Transacao.type,
+                expr_categoria_efetiva(usuario_id),
+            )
+        ).where(
             Transacao.usuario_id == usuario_id,
             Transacao.date >= ini,
             Transacao.date < fim_excl,
