@@ -59,7 +59,9 @@ export function CategoriasPadraoCard({
       <CardContent className="space-y-3">
         <Input
           value={busca}
-          onChange={(e) => setBusca(e.target.value)}
+          onChange={(e) => {
+            setBusca(e.target.value)
+          }}
           placeholder="Buscar categoria…"
           aria-label="Buscar categoria"
         />
@@ -148,7 +150,9 @@ function LinhaCategoria({
       <Switch
         checked={categoria.ativa}
         aria-label={`${categoria.ativa ? "Desativar" : "Ativar"} ${nome}`}
-        onCheckedChange={(ativa) => onAlternar(categoria.pluggy_id, ativa)}
+        onCheckedChange={(ativa) => {
+          onAlternar(categoria.pluggy_id, ativa)
+        }}
       />
     </label>
   )

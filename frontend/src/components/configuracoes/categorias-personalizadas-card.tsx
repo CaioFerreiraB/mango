@@ -120,7 +120,9 @@ function LinhaPersonalizada({ categoria }: { categoria: Categoria }) {
       />
       <Input
         value={nome}
-        onChange={(e) => setNome(e.target.value)}
+        onChange={(e) => {
+          setNome(e.target.value)
+        }}
         onBlur={salvarNome}
         onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
         aria-label={`Nome da categoria ${nomeCategoria(categoria)}`}
@@ -180,6 +182,45 @@ function LinhaPersonalizada({ categoria }: { categoria: Categoria }) {
   )
 }
 
+/** Nome + ícone da categoria nova. Fora do diálogo porque é o único bloco dele com estado
+ *  próprio de formulário — o resto é moldura (cabeçalho, rodapé, gatilho). */
+function CamposNovaCategoria({
+  nome,
+  icone,
+  onNome,
+  onIcone,
+}: {
+  nome: string
+  icone: IconeCategoria
+  onNome: (valor: string) => void
+  onIcone: (valor: IconeCategoria) => void
+}) {
+  return (
+    <div className="space-y-1.5 py-4">
+      <Label htmlFor="nova-categoria">Nome e ícone</Label>
+      <div className="flex items-center gap-2">
+        <Input
+          id="nova-categoria"
+          value={nome}
+          onChange={(e) => {
+            onNome(e.target.value)
+          }}
+          placeholder="Pet"
+          minLength={2}
+          maxLength={60}
+          autoFocus
+          required
+        />
+        <IconeSelect value={icone} onChange={onIcone} />
+      </div>
+      <p className="text-xs text-muted-foreground">
+        O ícone aparece junto da categoria em transações, orçamentos e
+        assinaturas.
+      </p>
+    </div>
+  )
+}
+
 function NovaCategoriaDialog() {
   const criar = useCriarCategoria()
   const [aberto, setAberto] = useState(false)
@@ -221,26 +262,12 @@ function NovaCategoriaDialog() {
               divisões, como qualquer outra.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-1.5 py-4">
-            <Label htmlFor="nova-categoria">Nome e ícone</Label>
-            <div className="flex items-center gap-2">
-              <Input
-                id="nova-categoria"
-                value={nome}
-                onChange={(e) => setNome(e.target.value)}
-                placeholder="Pet"
-                minLength={2}
-                maxLength={60}
-                autoFocus
-                required
-              />
-              <IconeSelect value={icone} onChange={setIcone} />
-            </div>
-            <p className="text-xs text-muted-foreground">
-              O ícone aparece junto da categoria em transações, orçamentos e
-              assinaturas.
-            </p>
-          </div>
+          <CamposNovaCategoria
+            nome={nome}
+            icone={icone}
+            onNome={setNome}
+            onIcone={setIcone}
+          />
           <DialogFooter>
             <DialogClose asChild>
               <Button type="button" variant="outline">

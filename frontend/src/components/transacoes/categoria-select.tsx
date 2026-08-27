@@ -177,7 +177,9 @@ function Item({
   return (
     <CommandItem
       value={nomeCategoria(categoria)}
-      onSelect={() => onSelect(categoria.pluggy_id)}
+      onSelect={() => {
+        onSelect(categoria.pluggy_id)
+      }}
     >
       <Check
         className={cn("size-4", selecionado ? "opacity-100" : "opacity-0")}

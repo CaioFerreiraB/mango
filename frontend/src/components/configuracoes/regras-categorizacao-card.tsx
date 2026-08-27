@@ -60,6 +60,57 @@ import {
 
 const TEXTO_MIN = 3
 
+/** Os quatro estados da lista (erro, carregando, vazia, preenchida). Separado do card porque é a
+ *  única parte dele que depende da query — o resto é cabeçalho e gatilho, que não mudam. */
+function ConteudoRegras({
+  regras,
+  categorias,
+}: {
+  regras: ReturnType<typeof useRegrasCategorizacao>
+  categorias: Map<string, string>
+}) {
+  if (regras.isError)
+    return <EmptyState title="Não foi possível carregar as regras" />
+  if (regras.isLoading) return <Skeleton className="h-40 w-full" />
+  if (regras.data?.length === 0)
+    return (
+      <EmptyState
+        icon={Wand2}
+        title="Nenhuma regra ainda"
+        description="Exemplo: “contém uber” → Transporte. Toda transação com esse texto no nome passa a cair nessa categoria."
+      />
+    )
+
+  return (
+    <>
+      <div className="overflow-x-auto">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Texto</TableHead>
+              <TableHead>Como casa</TableHead>
+              <TableHead>Categoria</TableHead>
+              <TableHead className="w-20 text-right">Ações</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {regras.data?.map((r) => (
+              <LinhaRegra
+                key={r.id}
+                regra={r}
+                categoria={categorias.get(r.categoria_id)}
+              />
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+      <p className="text-xs text-muted-foreground">
+        {regras.data?.length} de {MAX_REGRAS} regras.
+      </p>
+    </>
+  )
+}
+
 /** Mapeamento automático nome da transação → categoria (§4.5). */
 export function RegrasCategorizacaoCard() {
   const regras = useRegrasCategorizacao()
@@ -90,44 +141,7 @@ export function RegrasCategorizacaoCard() {
         />
       </CardHeader>
       <CardContent className="space-y-3">
-        {regras.isError ? (
-          <EmptyState title="Não foi possível carregar as regras" />
-        ) : regras.isLoading ? (
-          <Skeleton className="h-40 w-full" />
-        ) : regras.data?.length === 0 ? (
-          <EmptyState
-            icon={Wand2}
-            title="Nenhuma regra ainda"
-            description="Exemplo: “contém uber” → Transporte. Toda transação com esse texto no nome passa a cair nessa categoria."
-          />
-        ) : (
-          <>
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Texto</TableHead>
-                    <TableHead>Como casa</TableHead>
-                    <TableHead>Categoria</TableHead>
-                    <TableHead className="w-20 text-right">Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {regras.data?.map((r) => (
-                    <LinhaRegra
-                      key={r.id}
-                      regra={r}
-                      categoria={categorias.get(r.categoria_id)}
-                    />
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {regras.data?.length} de {MAX_REGRAS} regras.
-            </p>
-          </>
-        )}
+        <ConteudoRegras regras={regras} categorias={categorias} />
       </CardContent>
     </Card>
   )
@@ -208,6 +222,49 @@ function LinhaRegra({
 }
 
 /** Criar ou editar — o mesmo formulário; `regra` presente significa edição. */
+/** "Contém" vs. "exato", com a explicação de cada um. Bloco próprio porque o texto explicativo é
+ *  o que decide a escolha e ocupa mais espaço que todo o resto do formulário junto. */
+function EscolhaTipoMatch({
+  valor,
+  onMudar,
+}: {
+  valor: TipoMatch
+  onMudar: (novo: TipoMatch) => void
+}) {
+  return (
+    <div className="space-y-2">
+      <Label>Como casar</Label>
+      <RadioGroup
+        value={valor}
+        onValueChange={(v) => {
+          onMudar(v as TipoMatch)
+        }}
+      >
+        <label className="flex items-start gap-2 text-sm">
+          <RadioGroupItem value="contem" className="mt-0.5" />
+          <span className="flex flex-col gap-0.5">
+            <span className="font-medium">Contém o texto</span>
+            <span className="text-muted-foreground">
+              Casa “UBER *TRIP 4521”. É o que você quer na maioria dos casos — o
+              banco costuma anexar códigos ao nome.
+            </span>
+          </span>
+        </label>
+        <label className="flex items-start gap-2 text-sm">
+          <RadioGroupItem value="exato" className="mt-0.5" />
+          <span className="flex flex-col gap-0.5">
+            <span className="font-medium">Texto exato</span>
+            <span className="text-muted-foreground">
+              Casa só o nome inteiro, idêntico. Tem precedência sobre as regras
+              de “contém”.
+            </span>
+          </span>
+        </label>
+      </RadioGroup>
+    </div>
+  )
+}
+
 export function RegraDialog({
   regra,
   gatilho,
@@ -278,7 +335,9 @@ export function RegraDialog({
               <Input
                 id="regra-texto"
                 value={texto}
-                onChange={(e) => setTexto(e.target.value)}
+                onChange={(e) => {
+                  setTexto(e.target.value)
+                }}
                 placeholder="uber"
                 minLength={TEXTO_MIN}
                 maxLength={120}
@@ -290,34 +349,7 @@ export function RegraDialog({
                 quase tudo.
               </p>
             </div>
-            <div className="space-y-2">
-              <Label>Como casar</Label>
-              <RadioGroup
-                value={tipo}
-                onValueChange={(v) => setTipo(v as TipoMatch)}
-              >
-                <label className="flex items-start gap-2 text-sm">
-                  <RadioGroupItem value="contem" className="mt-0.5" />
-                  <span className="flex flex-col gap-0.5">
-                    <span className="font-medium">Contém o texto</span>
-                    <span className="text-muted-foreground">
-                      Casa “UBER *TRIP 4521”. É o que você quer na maioria dos
-                      casos — o banco costuma anexar códigos ao nome.
-                    </span>
-                  </span>
-                </label>
-                <label className="flex items-start gap-2 text-sm">
-                  <RadioGroupItem value="exato" className="mt-0.5" />
-                  <span className="flex flex-col gap-0.5">
-                    <span className="font-medium">Texto exato</span>
-                    <span className="text-muted-foreground">
-                      Casa só o nome inteiro, idêntico. Tem precedência sobre as
-                      regras de “contém”.
-                    </span>
-                  </span>
-                </label>
-              </RadioGroup>
-            </div>
+            <EscolhaTipoMatch valor={tipo} onMudar={setTipo} />
             <div className="space-y-1.5">
               <Label>Categoria</Label>
               <CategoriaSelect value={categoriaId} onChange={setCategoriaId} />

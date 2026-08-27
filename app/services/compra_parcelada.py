@@ -31,15 +31,22 @@ from sqlalchemy.orm import Session
 from app.models.transacao import Transacao
 from app.services.texto import normalizar_texto
 
+# Os dois padrões abaixo só rodam DEPOIS de `normalizar_texto`, que já entregou minúsculo, sem
+# acento e com espaço simples — por isso usam espaço literal em vez de `\s`. Não é detalhe de
+# estilo: `\s+` seguido de `\s*` dentro de um grupo repetido deixa o casamento ambíguo (vários
+# jeitos de fatiar a mesma sequência de espaços) e o custo deixa de ser linear no tamanho da
+# entrada. Com espaço literal a leitura é única.
+
 # O contador de parcela vem DENTRO da descrição ("Decolar Com 1/6", "Shoppingdefilhote 10/10"):
 # é o campo que mais varia entre parcelas da mesma compra e, sem remover, cada parcela ganharia
 # uma chave própria — o grupo nunca se formava. Só no fim da string: "Shopee *Loja 1/2" tem o
 # marcador no fim, mas um nome que contenha "24/7" no meio não é contador.
-_MARCADOR_PARCELA = re.compile(r"\s*\d{1,3}\s*/\s*\d{1,3}\s*$")
+_MARCADOR_PARCELA = re.compile(r" ?\d{1,3} ?/ ?\d{1,3}$")
 
 # Sufixo societário: o mesmo estabelecimento aparece ora com ele, ora sem ("Decolar Com 1/6" e
-# "DECOLAR COM LTDA 5/6" são a MESMA compra). Só no fim, e repetível ("... comercio ltda me").
-_SUFIXO_SOCIETARIO = re.compile(r"(?:\s+(?:ltda|s\s*/?\s*a|sa|eireli|epp|mei|me))+$")
+# "DECOLAR COM LTDA 5/6" são a MESMA compra). UM por vez — quem repete é o laço em
+# `_estabelecimento`, e não um `(...)+` aqui, que traria de volta o aninhamento de quantificadores.
+_SUFIXO_SOCIETARIO = re.compile(r" (?:ltda|s ?/ ?a|sa|eireli|epp|mei|me)$")
 
 
 class _Parcela:
@@ -64,9 +71,12 @@ def _estabelecimento(tx: _Parcela) -> str:
     """
     if tx.merchant_cnpj:
         return tx.merchant_cnpj
-    texto = normalizar_texto(tx.merchant_nome or tx.description)
-    texto = _SUFIXO_SOCIETARIO.sub("", _MARCADOR_PARCELA.sub("", texto))
-    return " ".join(texto.split())
+    texto = _MARCADOR_PARCELA.sub("", normalizar_texto(tx.merchant_nome or tx.description))
+    # Encolhe enquanto houver sufixo ("... comercio ltda me" perde os dois). Cada passada remove
+    # no máximo um sufixo e o laço só continua se a string diminuiu, então termina sempre.
+    while (menor := _SUFIXO_SOCIETARIO.sub("", texto)) != texto:
+        texto = menor
+    return texto
 
 
 def _ancora_da_compra(data: datetime, parcela: int | None) -> str:
