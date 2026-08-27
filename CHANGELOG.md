@@ -12,6 +12,24 @@ ainda está se assentando. Cada versão publicada tem uma imagem correspondente 
 
 ### Adicionado
 
+- **Gestão de categorias** — dá para criar categorias próprias ("Pet", "Faculdade"), desativar as
+  do banco que você não usa e ensinar o sistema a categorizar sozinho. Tudo numa aba nova em
+  Configurações → Categorias.
+  - **Categorias próprias**: nascem disponíveis em transações, orçamentos, assinaturas e divisões,
+    como qualquer outra. Só você as vê. Excluir é recusado se ela estiver em uso em algum orçamento.
+  - **Ativar/desativar**: some dos seletores; desativar uma categoria-mãe alcança as filhas. A
+    escolha é sua, não da instância — cada pessoa esconde o que quiser. Transação que o banco
+    classificar numa categoria desativada passa a aparecer como "Desconhecida".
+  - **Regras automáticas**: um texto (exato ou "contém") mapeia para uma categoria, valendo para o
+    histórico inteiro e para o que chegar depois. Dá para criar da própria transação, pelo atalho
+    "Sempre categorizar «X» assim".
+  - **Parcelas coerentes**: mudar a categoria de uma parcela muda todas as parcelas daquela compra.
+  - **Assinaturas mandam na categoria**: cobrança vinculada a uma assinatura usa a categoria dela e
+    não é editável na transação — altere na assinatura e todas as cobranças acompanham.
+  - A ordem de decisão é explícita: assinatura → seu ajuste manual → regra → sugestão do banco. Uma
+    regra criada depois nunca desfaz uma correção que você fez à mão numa transação específica.
+  - A migration é aditiva e roda sozinha na subida do container.
+
 - **Descrição própria e observações na transação** — dá para escrever o que a transação realmente
   foi ("almoço com o time") em vez de conviver com o texto do banco, e anotar uma observação livre.
   Quando há descrição própria, ela vira o título na listagem e a do banco desce para o subtítulo;

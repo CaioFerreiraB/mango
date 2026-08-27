@@ -1,4 +1,7 @@
-"""Seed idempotente da taxonomia de categorias do Pluggy (read-only, §4.5).
+"""Seed idempotente da taxonomia de categorias do Pluggy (§4.5).
+
+Escreve só as linhas GLOBAIS (`usuario_id` NULL) — as categorias personalizadas do usuário moram
+na mesma tabela e nunca são tocadas aqui (o upsert é por `pluggy_id` do snapshot).
 
 Lê o snapshot versionado `data/categories.json` (capturado na descoberta) e faz upsert por
 `pluggy_id`. Raízes antes dos filhos (FK auto-referente `parent_id`). Idempotente: roda a
