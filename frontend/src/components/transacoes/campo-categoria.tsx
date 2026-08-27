@@ -64,8 +64,12 @@ export function CampoCategoria({ transacao: t }: { transacao: Transacao }) {
 
       {daAssinatura ? null : parcelas > 1 ? (
         <p className="text-xs text-muted-foreground">
-          Compra em {parcelas}x — mudar aqui vale para todas as parcelas já
-          lançadas.
+          {/* Condicional de propósito: o agrupamento das parcelas é heurístico (o banco não manda
+              id de compra) e pode não achar nenhuma irmã. Prometer "vale para todas" antes da
+              ação era uma garantia que o sistema não tem como dar — quantas foram de fato sai no
+              aviso depois, com o número que o servidor devolveu. */}
+          Compra em {parcelas}x — as outras parcelas já lançadas que o sistema
+          reconhecer como desta mesma compra acompanham a mudança.
         </p>
       ) : null}
 

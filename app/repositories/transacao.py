@@ -112,8 +112,8 @@ class TransacaoRepository(UserScopedRepository[Transacao]):
         if precisa_assinatura:
             # `assinatura_id` → `assinatura.id` é muitos-para-um, então o LEFT JOIN não duplica
             # linha nem infla a contagem.
-            contagem = com_assinatura(contagem)
-            listagem = com_assinatura(listagem)
+            contagem = com_assinatura(contagem, self.usuario_id)
+            listagem = com_assinatura(listagem, self.usuario_id)
 
         total = self.db.scalar(contagem.where(*filtros))
         coluna = ORDENACAO.get(order, Transacao.date)

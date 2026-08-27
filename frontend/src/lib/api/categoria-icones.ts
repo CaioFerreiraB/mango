@@ -52,55 +52,59 @@ import { useCategorias, type Categoria } from "@/lib/api/categorias"
 
 /** Catálogo oferecido ao usuário para uma categoria própria. A chave é o que vai para o banco
  * (`categoria.icone`) e precisa casar com `app/enums.ICONE_CATEGORIA` — aquela lista valida na
- * fronteira, esta é a que de fato desenha. */
+ * fronteira, esta é a que de fato desenha.
+ *
+ * O `rotulo` mora aqui junto do componente, e não num segundo mapa, para não existir ícone sem
+ * nome legível: a chave é identificador técnico ("utensils-crossed") e o leitor de tela precisa
+ * ouvir português. */
 export const ICONES_DISPONIVEIS = {
   // Os 22 das raízes do Pluggy, para uma categoria própria conversar com a taxonomia.
-  wallet: Wallet,
-  landmark: Landmark,
-  "trending-up": TrendingUp,
-  "arrow-left-right": ArrowLeftRight,
-  send: Send,
-  scale: Scale,
-  wrench: Wrench,
-  "shopping-bag": ShoppingBag,
-  "monitor-smartphone": MonitorSmartphone,
-  "shopping-cart": ShoppingCart,
-  "utensils-crossed": UtensilsCrossed,
-  plane: Plane,
-  "heart-handshake": HeartHandshake,
-  "dice-5": Dice5,
-  "receipt-text": ReceiptText,
-  percent: Percent,
-  home: Home,
-  "heart-pulse": HeartPulse,
-  car: Car,
-  "shield-check": ShieldCheck,
-  "gamepad-2": Gamepad2,
-  tag: Tag,
+  wallet: { icone: Wallet, rotulo: "Carteira" },
+  landmark: { icone: Landmark, rotulo: "Banco" },
+  "trending-up": { icone: TrendingUp, rotulo: "Investimentos" },
+  "arrow-left-right": { icone: ArrowLeftRight, rotulo: "Transferência" },
+  send: { icone: Send, rotulo: "Envio" },
+  scale: { icone: Scale, rotulo: "Balança" },
+  wrench: { icone: Wrench, rotulo: "Ferramenta" },
+  "shopping-bag": { icone: ShoppingBag, rotulo: "Sacola" },
+  "monitor-smartphone": { icone: MonitorSmartphone, rotulo: "Eletrônicos" },
+  "shopping-cart": { icone: ShoppingCart, rotulo: "Carrinho" },
+  "utensils-crossed": { icone: UtensilsCrossed, rotulo: "Talheres" },
+  plane: { icone: Plane, rotulo: "Avião" },
+  "heart-handshake": { icone: HeartHandshake, rotulo: "Doação" },
+  "dice-5": { icone: Dice5, rotulo: "Dado" },
+  "receipt-text": { icone: ReceiptText, rotulo: "Recibo" },
+  percent: { icone: Percent, rotulo: "Porcentagem" },
+  home: { icone: Home, rotulo: "Casa" },
+  "heart-pulse": { icone: HeartPulse, rotulo: "Saúde" },
+  car: { icone: Car, rotulo: "Carro" },
+  "shield-check": { icone: ShieldCheck, rotulo: "Escudo" },
+  "gamepad-2": { icone: Gamepad2, rotulo: "Videogame" },
+  tag: { icone: Tag, rotulo: "Etiqueta" },
   // Os que a taxonomia do banco não cobre — o motivo de existir categoria personalizada.
-  "paw-print": PawPrint,
-  gift: Gift,
-  "graduation-cap": GraduationCap,
-  baby: Baby,
-  dumbbell: Dumbbell,
-  coffee: Coffee,
-  "book-open": BookOpen,
-  music: Music,
-  shirt: Shirt,
-  scissors: Scissors,
-  hammer: Hammer,
-  sparkles: Sparkles,
-  briefcase: Briefcase,
-  "piggy-bank": PiggyBank,
-  cake: Cake,
-  church: Church,
-  bus: Bus,
-  fuel: Fuel,
-  wifi: Wifi,
-  pill: Pill,
-  "flower-2": Flower2,
-  camera: Camera,
-} satisfies Record<string, LucideIcon>
+  "paw-print": { icone: PawPrint, rotulo: "Pata" },
+  gift: { icone: Gift, rotulo: "Presente" },
+  "graduation-cap": { icone: GraduationCap, rotulo: "Formatura" },
+  baby: { icone: Baby, rotulo: "Bebê" },
+  dumbbell: { icone: Dumbbell, rotulo: "Halteres" },
+  coffee: { icone: Coffee, rotulo: "Café" },
+  "book-open": { icone: BookOpen, rotulo: "Livro" },
+  music: { icone: Music, rotulo: "Música" },
+  shirt: { icone: Shirt, rotulo: "Camiseta" },
+  scissors: { icone: Scissors, rotulo: "Tesoura" },
+  hammer: { icone: Hammer, rotulo: "Martelo" },
+  sparkles: { icone: Sparkles, rotulo: "Brilhos" },
+  briefcase: { icone: Briefcase, rotulo: "Maleta" },
+  "piggy-bank": { icone: PiggyBank, rotulo: "Cofrinho" },
+  cake: { icone: Cake, rotulo: "Bolo" },
+  church: { icone: Church, rotulo: "Igreja" },
+  bus: { icone: Bus, rotulo: "Ônibus" },
+  fuel: { icone: Fuel, rotulo: "Combustível" },
+  wifi: { icone: Wifi, rotulo: "Wi-Fi" },
+  pill: { icone: Pill, rotulo: "Remédio" },
+  "flower-2": { icone: Flower2, rotulo: "Flor" },
+  camera: { icone: Camera, rotulo: "Câmera" },
+} satisfies Record<string, { icone: LucideIcon; rotulo: string }>
 
 export type NomeIcone = keyof typeof ICONES_DISPONIVEIS
 
@@ -146,7 +150,7 @@ export function iconeCategoria(
 ): LucideIcon {
   if (!pluggyId) return ICONE_SEM_CATEGORIA
   if (icone && icone in ICONES_DISPONIVEIS)
-    return ICONES_DISPONIVEIS[icone as NomeIcone]
+    return ICONES_DISPONIVEIS[icone as NomeIcone].icone
   return ICONES[pluggyId.slice(0, 2)] ?? Tag
 }
 

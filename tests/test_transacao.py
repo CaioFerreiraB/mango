@@ -221,13 +221,20 @@ def test_categoria_de_cobranca_de_assinatura_nao_e_editavel(
         == 400
     )
 
-    # Sem tocar na categoria, vincular continua funcionando.
+    # E o PATCH recusado não pode deixar rastro: o alias é escrita, e aprender antes das demais
+    # validações mudaria o pareamento automático dos próximos syncs por conta de um 400.
+    db.refresh(assinatura)
+    assert assinatura.nomes_transacao == []
+
+    # Sem tocar na categoria, vincular continua funcionando — e AÍ o alias é aprendido.
     assert (
         client.patch(
             f"/api/transacoes/{solta.id}", json={"assinatura_id": assinatura.id}
         ).status_code
         == 200
     )
+    db.refresh(assinatura)
+    assert assinatura.nomes_transacao != []
 
 
 def test_leitura_traz_categoria_efetiva_e_origem(

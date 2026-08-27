@@ -56,15 +56,23 @@ def expr_categoria_efetiva(usuario_id: int):
     )
 
 
-def com_assinatura(stmt):
+def com_assinatura(stmt, usuario_id: int):
     """Adiciona o outerjoin que `expr_categoria_efetiva` referencia. LEFT JOIN sobre
     `transacao.assinatura_id`, que já é indexado — e muitos-para-um, então não duplica linha.
+
+    O `usuario_id` entra na condição do JOIN (S3), não porque hoje seja alcançável — `assinatura_id`
+    só é gravado via repositório escopado —, mas porque este é o único ponto em que um vínculo
+    errado colocaria a categoria de OUTRO usuário dentro de uma agregação. Com o predicado aqui, o
+    LEFT JOIN devolve NULL nesse caso e a precedência cai para o próximo nível, em vez de vazar.
 
     A query precisa ter `transacao` no FROM: selecione alguma coluna dela (o caso normal) ou use
     `select_from(Transacao)`. Selecionar SÓ a expressão não basta — o SQLAlchemy não descobre de
     onde partir e levanta `InvalidRequestError`.
     """
-    return stmt.outerjoin(Assinatura, Transacao.assinatura_id == Assinatura.id)
+    return stmt.outerjoin(
+        Assinatura,
+        (Transacao.assinatura_id == Assinatura.id) & (Assinatura.usuario_id == usuario_id),
+    )
 
 
 # --- forma Python (serialização) --------------------------------------------------------

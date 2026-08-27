@@ -102,8 +102,13 @@ def test_icone_e_opcional_e_fora_da_allowlist_e_recusado(
     """Allowlist na fronteira (S4): o nome vira componente no cliente, não pode ser texto livre."""
     client = client_factory(usuario_a)
     assert client.post("/api/categorias", json={"nome": "Sem ícone"}).json()["icone"] is None
-    recusada = client.post("/api/categorias", json={"nome": "X", "icone": "<script>"})
+
+    # O nome tem de ser VÁLIDO, senão o 422 viria de `NOME_MIN` e a asserção não diria nada sobre
+    # o ícone — o par abaixo isola a allowlist: mesmo nome, muda só o ícone.
+    recusada = client.post("/api/categorias", json={"nome": "Com ícone", "icone": "<script>"})
     assert recusada.status_code == 422
+    aceita = client.post("/api/categorias", json={"nome": "Com ícone", "icone": "gift"})
+    assert aceita.status_code == 201, aceita.text
 
 
 def test_icone_da_categoria_do_pluggy_e_recusado(

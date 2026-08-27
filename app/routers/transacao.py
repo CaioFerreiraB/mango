@@ -124,24 +124,30 @@ def atualizar(
     # pareamento automático do próximo sync não a sobrescreve (§4.4).
     if "eh_transferencia" in dados:
         dados["transferencia_origem"] = "manual"
-    _vincular_assinatura(repo, obj, dados)
+    # Validação inteira ANTES de qualquer escrita: `_aprender_alias` comita, e um PATCH recusado
+    # depois disso deixaria a assinatura com um alias novo — que muda o pareamento automático dos
+    # próximos syncs. Por isso a assinatura é só resolvida aqui e o alias só é aprendido no fim.
+    assinatura = _assinatura_do_vinculo(repo, dados)
     _validar_provento(repo, dados)
     _recusar_categoria_de_assinatura(obj, dados)
 
     atualizada = repo.update(obj, **dados)
+    if assinatura is not None:
+        _aprender_alias(repo.db, assinatura, atualizada)
     parcelas = _propagar_para_parcelas(repo, atualizada) if "categoria_override_id" in dados else 0
     return _read(atualizada, carregar_contexto(repo.db, repo.usuario_id), parcelas=parcelas)
 
 
-def _vincular_assinatura(repo: TransacaoRepository, obj: Transacao, dados: dict) -> None:
-    """Valida posse (S3) e aprende o nome da transação como alias, para o sync casar cobranças
-    futuras iguais (§4.7). `assinatura_id=None` desvincula."""
+def _assinatura_do_vinculo(repo: TransacaoRepository, dados: dict) -> Assinatura | None:
+    """A assinatura que o PATCH quer vincular, com posse validada (S3). Só LÊ: o alias que ela vai
+    aprender (§4.7) é escrita, e escrever antes das demais validações deixaria rastro de um PATCH
+    recusado. `assinatura_id=None` desvincula e não tem alias a aprender."""
     if dados.get("assinatura_id") is None:
-        return
+        return None
     assinatura = AssinaturaRepository(repo.db, repo.usuario_id).get(dados["assinatura_id"])
     if assinatura is None:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "assinatura não encontrada")
-    _aprender_alias(repo.db, assinatura, obj)
+    return assinatura
 
 
 def _validar_provento(repo: TransacaoRepository, dados: dict) -> None:

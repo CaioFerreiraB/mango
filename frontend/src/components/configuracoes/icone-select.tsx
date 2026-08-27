@@ -60,31 +60,38 @@ export function IconeSelect({
           aria-label="Ícones disponíveis"
           className="scrollbar-sutil grid max-h-[min(20rem,var(--radix-popover-content-available-height,60vh))] grid-cols-7 gap-1 overflow-y-auto"
         >
-          {Object.entries(ICONES_DISPONIVEIS).map(([nome, Icone]) => {
-            const selecionado = nome === value
-            return (
-              <button
-                key={nome}
-                type="button"
-                role="option"
-                aria-selected={selecionado}
-                aria-label={nome}
-                title={nome}
-                onClick={() => onChange(nome as IconeCategoria)}
-                className={cn(
-                  "grid size-8 place-items-center rounded-md text-muted-foreground transition-colors",
-                  "hover:bg-accent hover:text-accent-foreground",
-                  "focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none",
-                  selecionado && "bg-primary text-primary-foreground"
-                )}
-              >
-                {createElement(Icone, {
-                  className: "size-4",
-                  "aria-hidden": true,
-                })}
-              </button>
-            )
-          })}
+          {Object.entries(ICONES_DISPONIVEIS).map(
+            ([nome, { icone, rotulo }]) => {
+              const selecionado = nome === value
+              return (
+                <button
+                  key={nome}
+                  type="button"
+                  role="option"
+                  aria-selected={selecionado}
+                  // O rótulo em português, não a chave: o leitor de tela anunciaria
+                  // "utensils-crossed" e a interface é pt-BR. A chave segue só como identificador
+                  // persistido.
+                  aria-label={rotulo}
+                  title={rotulo}
+                  onClick={() => {
+                    onChange(nome as IconeCategoria)
+                  }}
+                  className={cn(
+                    "grid size-8 place-items-center rounded-md text-muted-foreground transition-colors",
+                    "hover:bg-accent hover:text-accent-foreground",
+                    "focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none",
+                    selecionado && "bg-primary text-primary-foreground"
+                  )}
+                >
+                  {createElement(icone, {
+                    className: "size-4",
+                    "aria-hidden": true,
+                  })}
+                </button>
+              )
+            }
+          )}
         </div>
       </PopoverContent>
     </Popover>

@@ -69,7 +69,7 @@ def montar_dashboard(db: Session, usuario_id: int, inicio: date, fim: date) -> D
 
     cat_efetiva = expr_categoria_efetiva(usuario_id)
     por_categoria = db.execute(
-        com_assinatura(select(cat_efetiva, func.sum(-_VALOR_EFETIVO)))
+        com_assinatura(select(cat_efetiva, func.sum(-_VALOR_EFETIVO)), usuario_id)
         .where(do_usuario, *no_periodo, real, Transacao.type == "DEBIT")
         .group_by(cat_efetiva)
         .order_by(func.sum(-_VALOR_EFETIVO).desc())
@@ -143,7 +143,9 @@ def resumo_faturas(
     # de tipo.
     cat_efetiva = expr_categoria_efetiva(usuario_id)
     linhas = db.execute(
-        com_assinatura(select(Transacao.bill_id, cat_efetiva, func.sum(func.abs(_VALOR_EFETIVO))))
+        com_assinatura(
+            select(Transacao.bill_id, cat_efetiva, func.sum(func.abs(_VALOR_EFETIVO))), usuario_id
+        )
         .where(
             Transacao.usuario_id == usuario_id,
             Transacao.bill_id.in_(ids),
@@ -212,7 +214,8 @@ def montar_series(
                 _VALOR_EFETIVO,
                 Transacao.type,
                 expr_categoria_efetiva(usuario_id),
-            )
+            ),
+            usuario_id,
         ).where(
             Transacao.usuario_id == usuario_id,
             Transacao.date >= ini,

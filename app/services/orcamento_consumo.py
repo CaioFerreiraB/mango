@@ -56,7 +56,7 @@ def _valores_por_categoria(
     ini, fim_excl = limites_sp(*_intervalo_mes(ano, mes))
     cat_efetiva = expr_categoria_efetiva(usuario_id)
     rows = db.execute(
-        com_assinatura(select(cat_efetiva, Transacao.type, func.sum(_VALOR_EFETIVO)))
+        com_assinatura(select(cat_efetiva, Transacao.type, func.sum(_VALOR_EFETIVO)), usuario_id)
         .where(
             Transacao.usuario_id == usuario_id,
             Transacao.date >= ini,

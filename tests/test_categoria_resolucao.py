@@ -124,9 +124,9 @@ def test_paridade_sql_e_python(db: Session, usuario_a: Usuario, cenario) -> None
     por_python = {tx.id: resolver(tx, ctx)[0] for tx in cenario.values()}
 
     linhas = db.execute(
-        com_assinatura(select(Transacao.id, expr_categoria_efetiva(usuario_a.id))).where(
-            Transacao.usuario_id == usuario_a.id
-        )
+        com_assinatura(
+            select(Transacao.id, expr_categoria_efetiva(usuario_a.id)), usuario_a.id
+        ).where(Transacao.usuario_id == usuario_a.id)
     ).all()
     assert dict(linhas) == por_python
 
@@ -139,9 +139,9 @@ def test_desativacao_de_um_usuario_nao_afeta_o_outro(
 
     def efetiva(usuario_id: int) -> str | None:
         linha = db.execute(
-            com_assinatura(select(Transacao.id, expr_categoria_efetiva(usuario_id))).where(
-                Transacao.id == tx.id
-            )
+            com_assinatura(
+                select(Transacao.id, expr_categoria_efetiva(usuario_id)), usuario_id
+            ).where(Transacao.id == tx.id)
         ).one()
         return linha[1]
 

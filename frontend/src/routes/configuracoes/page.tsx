@@ -26,7 +26,20 @@ export function ConfiguracoesPage() {
   // manda para as regras de categorização. `key` remonta quando as permissões chegam e mudam o
   // padrão.
   const [params, setParams] = useSearchParams()
-  const aba = params.get("aba") ?? abaPadrao
+  // Só as abas que ESTA conta enxerga. Sem a checagem, `?aba=xyz` — ou um link com `?aba=usuarios`
+  // aberto por quem não é admin — deixa nenhum trigger ativo e nenhum conteúdo renderizado: a
+  // página fica só com a faixa de abas. Links de configuração são compartilháveis, então o estado
+  // é alcançável; cair no padrão é o comportamento que não confunde.
+  const abasVisiveis = [
+    ...(podeVerConexoes ? ["conexoes"] : []),
+    "perfil",
+    "preferencias",
+    "categorias",
+    ...(podeVerSeguranca ? ["seguranca"] : []),
+    ...(podeAdministrarInstancia ? ["usuarios", "sistema"] : []),
+  ] // precisa espelhar os `TabsTrigger` abaixo
+  const naUrl = params.get("aba")
+  const aba = naUrl !== null && abasVisiveis.includes(naUrl) ? naUrl : abaPadrao
 
   function trocarAba(valor: string) {
     setParams(
