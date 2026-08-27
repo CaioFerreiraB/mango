@@ -45,10 +45,13 @@ export function CampoCategoria({ transacao: t }: { transacao: Transacao }) {
               },
             },
             {
-              onSuccess: () =>
-                parcelas > 1
+              // Quem sabe quantas irmãs foram alcançadas é o servidor (o agrupamento das parcelas
+              // é heurístico e pode não achar nenhuma) — anunciar por `total_installments > 1`
+              // prometia o que não tinha acontecido.
+              onSuccess: (atualizada) =>
+                atualizada.parcelas_atualizadas > 0
                   ? toast.success(
-                      "Categoria aplicada a todas as parcelas desta compra."
+                      `Categoria aplicada também a ${atualizada.parcelas_atualizadas} outra(s) parcela(s) desta compra.`
                     )
                   : undefined,
               onError: (err) => toast.error(err.message),

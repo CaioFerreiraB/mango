@@ -10,12 +10,19 @@ caírem no mesmo grupo: a parcela k foi lançada k−1 meses depois da compra, e
 deslocamento devolve o mês de origem, igual para todas as parcelas de uma compra e diferente
 entre compras distintas.
 
+Na prática o cartão não manda `merchant_nome`, `merchant_cnpj` nem `totalAmount` — sobra a
+descrição, e ela NÃO é constante entre as parcelas: traz o contador ("Decolar Com 1/6") e às vezes
+troca de forma no meio da compra ("DECOLAR COM LTDA 5/6"). Por isso a chave passa por
+`_estabelecimento`, que tira esses dois pedaços antes de comparar; sem isso cada parcela ganhava
+uma chave própria e o agrupamento não formava grupo nenhum.
+
 Sem coluna persistida: a chave é função pura de colunas que já existem, e materializá-la custaria
 migration, backfill e risco de dado obsoleto por um caminho que roda uma vez por clique.
 """
 
 from __future__ import annotations
 
+import re
 from datetime import datetime
 
 from sqlalchemy import select
@@ -23,6 +30,16 @@ from sqlalchemy.orm import Session
 
 from app.models.transacao import Transacao
 from app.services.texto import normalizar_texto
+
+# O contador de parcela vem DENTRO da descrição ("Decolar Com 1/6", "Shoppingdefilhote 10/10"):
+# é o campo que mais varia entre parcelas da mesma compra e, sem remover, cada parcela ganharia
+# uma chave própria — o grupo nunca se formava. Só no fim da string: "Shopee *Loja 1/2" tem o
+# marcador no fim, mas um nome que contenha "24/7" no meio não é contador.
+_MARCADOR_PARCELA = re.compile(r"\s*\d{1,3}\s*/\s*\d{1,3}\s*$")
+
+# Sufixo societário: o mesmo estabelecimento aparece ora com ele, ora sem ("Decolar Com 1/6" e
+# "DECOLAR COM LTDA 5/6" são a MESMA compra). Só no fim, e repetível ("... comercio ltda me").
+_SUFIXO_SOCIETARIO = re.compile(r"(?:\s+(?:ltda|s\s*/?\s*a|sa|eireli|epp|mei|me))+$")
 
 
 class _Parcela:
@@ -36,6 +53,20 @@ class _Parcela:
     installment_number: int | None
     total_installments: int | None
     total_amount_centavos: int | None
+
+
+def _estabelecimento(tx: _Parcela) -> str:
+    """Identidade do estabelecimento, estável entre as parcelas de uma compra.
+
+    CNPJ quando houver (estável); senão o texto normalizado — mesma escolha de
+    `assinatura_deteccao._chave`. Mas o texto real é a descrição do cartão, que muda de parcela
+    para parcela: nela vêm o contador ("1/6") e, às vezes, o sufixo societário. Os dois saem.
+    """
+    if tx.merchant_cnpj:
+        return tx.merchant_cnpj
+    texto = normalizar_texto(tx.merchant_nome or tx.description)
+    texto = _SUFIXO_SOCIETARIO.sub("", _MARCADOR_PARCELA.sub("", texto))
+    return " ".join(texto.split())
 
 
 def _ancora_da_compra(data: datetime, parcela: int | None) -> str:
@@ -52,9 +83,7 @@ def chave_compra(tx: _Parcela) -> str | None:
     """
     if not tx.total_installments or tx.total_installments <= 1:
         return None
-    # CNPJ quando houver (estável); senão o nome normalizado — mesma escolha de
-    # `assinatura_deteccao._chave`.
-    estabelecimento = tx.merchant_cnpj or normalizar_texto(tx.merchant_nome or tx.description)
+    estabelecimento = _estabelecimento(tx)
     # Sem como identificar o estabelecimento, não agrupa: agrupar errado alteraria a categoria de
     # transações que não são da mesma compra.
     if not estabelecimento:

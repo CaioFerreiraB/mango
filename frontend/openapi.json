@@ -7214,6 +7214,63 @@
             "maxLength": 60,
             "minLength": 2,
             "title": "Nome"
+          },
+          "icone": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "wallet",
+                  "landmark",
+                  "trending-up",
+                  "arrow-left-right",
+                  "send",
+                  "scale",
+                  "wrench",
+                  "shopping-bag",
+                  "monitor-smartphone",
+                  "shopping-cart",
+                  "utensils-crossed",
+                  "plane",
+                  "heart-handshake",
+                  "dice-5",
+                  "receipt-text",
+                  "percent",
+                  "home",
+                  "heart-pulse",
+                  "car",
+                  "shield-check",
+                  "gamepad-2",
+                  "tag",
+                  "paw-print",
+                  "gift",
+                  "graduation-cap",
+                  "baby",
+                  "dumbbell",
+                  "coffee",
+                  "book-open",
+                  "music",
+                  "shirt",
+                  "scissors",
+                  "hammer",
+                  "sparkles",
+                  "briefcase",
+                  "piggy-bank",
+                  "cake",
+                  "church",
+                  "bus",
+                  "fuel",
+                  "wifi",
+                  "pill",
+                  "flower-2",
+                  "camera"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Icone"
           }
         },
         "type": "object",
@@ -7221,7 +7278,7 @@
           "nome"
         ],
         "title": "CategoriaCreate",
-        "description": "Criação de categoria personalizada. Só o nome: a hierarquia do Pluggy é dele, e uma\ncategoria do usuário nasce plana (nível raiz)."
+        "description": "Criação de categoria personalizada. Nome e ícone: a hierarquia do Pluggy é dele, e uma\ncategoria do usuário nasce plana (nível raiz)."
       },
       "CategoriaRead": {
         "properties": {
@@ -7254,6 +7311,63 @@
               }
             ],
             "title": "Parent Id"
+          },
+          "icone": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "wallet",
+                  "landmark",
+                  "trending-up",
+                  "arrow-left-right",
+                  "send",
+                  "scale",
+                  "wrench",
+                  "shopping-bag",
+                  "monitor-smartphone",
+                  "shopping-cart",
+                  "utensils-crossed",
+                  "plane",
+                  "heart-handshake",
+                  "dice-5",
+                  "receipt-text",
+                  "percent",
+                  "home",
+                  "heart-pulse",
+                  "car",
+                  "shield-check",
+                  "gamepad-2",
+                  "tag",
+                  "paw-print",
+                  "gift",
+                  "graduation-cap",
+                  "baby",
+                  "dumbbell",
+                  "coffee",
+                  "book-open",
+                  "music",
+                  "shirt",
+                  "scissors",
+                  "hammer",
+                  "sparkles",
+                  "briefcase",
+                  "piggy-bank",
+                  "cake",
+                  "church",
+                  "bus",
+                  "fuel",
+                  "wifi",
+                  "pill",
+                  "flower-2",
+                  "camera"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Icone"
           },
           "personalizada": {
             "type": "boolean",
@@ -7288,6 +7402,63 @@
             ],
             "title": "Nome"
           },
+          "icone": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "wallet",
+                  "landmark",
+                  "trending-up",
+                  "arrow-left-right",
+                  "send",
+                  "scale",
+                  "wrench",
+                  "shopping-bag",
+                  "monitor-smartphone",
+                  "shopping-cart",
+                  "utensils-crossed",
+                  "plane",
+                  "heart-handshake",
+                  "dice-5",
+                  "receipt-text",
+                  "percent",
+                  "home",
+                  "heart-pulse",
+                  "car",
+                  "shield-check",
+                  "gamepad-2",
+                  "tag",
+                  "paw-print",
+                  "gift",
+                  "graduation-cap",
+                  "baby",
+                  "dumbbell",
+                  "coffee",
+                  "book-open",
+                  "music",
+                  "shirt",
+                  "scissors",
+                  "hammer",
+                  "sparkles",
+                  "briefcase",
+                  "piggy-bank",
+                  "cake",
+                  "church",
+                  "bus",
+                  "fuel",
+                  "wifi",
+                  "pill",
+                  "flower-2",
+                  "camera"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Icone"
+          },
           "ativa": {
             "anyOf": [
               {
@@ -7302,7 +7473,7 @@
         },
         "type": "object",
         "title": "CategoriaUpdate",
-        "description": "`nome` só vale para personalizada; `ativa` vale para as duas (é estado por usuário)."
+        "description": "`nome` e `icone` só valem para personalizada; `ativa` vale para as duas (é estado por\nusuário)."
       },
       "ConfigTelegramCreate": {
         "properties": {
@@ -12691,6 +12862,11 @@
             ],
             "title": "Categoria Origem",
             "default": "desconhecida"
+          },
+          "parcelas_atualizadas": {
+            "type": "integer",
+            "title": "Parcelas Atualizadas",
+            "default": 0
           }
         },
         "type": "object",

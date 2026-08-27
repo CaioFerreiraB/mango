@@ -20,6 +20,11 @@ class TransacaoRead(_TransacaoColunas):  # type: ignore[misc, valid-type]
 
     categoria_efetiva_id: str | None = None
     categoria_origem: Origem = "desconhecida"
+    # Quantas OUTRAS parcelas da mesma compra o PATCH recategorizou junto (§4.5). Só o PATCH
+    # preenche; na listagem é sempre 0. Existe para a UI dizer o que de fato aconteceu — o aviso
+    # "aplicada a todas as parcelas" era emitido só por `total_installments > 1`, e mentia quando
+    # o agrupamento não achava irmã nenhuma.
+    parcelas_atualizadas: int = 0
 
 
 class TransacaoUpdate(BaseModel):

@@ -83,6 +83,70 @@ def test_sem_estabelecimento_nao_agrupa() -> None:
     assert chave_compra(TxFalsa(description=None, merchant_nome=None)) is None
 
 
+# --- descrição real do cartão (regressão) ---------------------------------------------------
+#
+# O caso que quebrava na prática: a Pluggy manda `merchant_nome`, `merchant_cnpj` e
+# `total_amount_centavos` VAZIOS, e o único identificador é a descrição — que carrega o contador
+# de parcela ("1/6") e às vezes muda de forma no meio da compra. Sem tirar esses dois pedaços,
+# cada parcela ganhava uma chave própria e o grupo nunca se formava.
+
+
+def _decolar(numero: int, mes: int, description: str) -> TxFalsa:
+    """As quatro parcelas Decolar como o banco de fato as gravou (compra de abr/2026 em 6x)."""
+    return TxFalsa(
+        date=datetime(2026, mes, 10, tzinfo=UTC),
+        description=description,
+        installment_number=numero,
+        total_installments=6,
+        total_amount_centavos=None,
+    )
+
+
+def test_contador_de_parcela_na_descricao_nao_separa_o_grupo() -> None:
+    a = _decolar(1, 4, "Decolar Com 1/6")
+    b = _decolar(2, 5, "Decolar Com 2/6")
+    assert chave_compra(a) == chave_compra(b)
+
+
+def test_sufixo_societario_nao_separa_o_grupo() -> None:
+    """ "Decolar Com 1/6" e "DECOLAR COM LTDA 5/6" são a MESMA compra — o cartão trocou a forma."""
+    a = _decolar(1, 4, "Decolar Com 1/6")
+    b = _decolar(5, 8, "DECOLAR COM LTDA 5/6")
+    assert chave_compra(a) == chave_compra(b)
+
+
+def test_contador_de_dois_digitos_tambem_sai() -> None:
+    a = TxFalsa(
+        date=datetime(2025, 12, 25, tzinfo=UTC),
+        description="Shoppingdefilhote 1/10",
+        installment_number=1,
+        total_installments=10,
+        total_amount_centavos=None,
+    )
+    b = TxFalsa(
+        date=datetime(2026, 9, 25, tzinfo=UTC),
+        description="ShoppingDeFilhote 10/10",
+        installment_number=10,
+        total_installments=10,
+        total_amount_centavos=None,
+    )
+    assert chave_compra(a) == chave_compra(b)
+
+
+def test_barra_no_meio_do_nome_nao_e_contador() -> None:
+    """Só o fim da string é contador — "24/7" no meio do nome é parte do estabelecimento."""
+    a = TxFalsa(description="Loja 24/7 Centro")
+    b = TxFalsa(description="Loja Centro")
+    assert chave_compra(a) != chave_compra(b)
+
+
+def test_estabelecimentos_diferentes_continuam_separados() -> None:
+    """O risco de tirar pedaços da descrição é colar compras que não são a mesma."""
+    a = _decolar(1, 4, "Decolar Com 1/6")
+    b = _decolar(1, 4, "Hyundai Alphaville 1/6")
+    assert chave_compra(a) != chave_compra(b)
+
+
 # --- propagação via API ---------------------------------------------------------------------
 
 
@@ -132,6 +196,33 @@ def test_mudar_a_categoria_de_uma_parcela_muda_todas(
         db.refresh(p)
         assert p.categoria_override_id == "03000000"
         assert p.categoria_ajustada_usuario is True
+
+
+def test_resposta_diz_quantas_parcelas_foram_junto(
+    client_factory, db: Session, usuario_a: Usuario, categorias
+) -> None:
+    """A UI anuncia a propagação por este número. Anunciar por `total_installments > 1` prometia
+    o que não tinha acontecido quando o agrupamento não achava irmã nenhuma."""
+    conta = criar_conta(db, usuario_a.id, "acc-a")
+    parcelas = [_parcela(db, usuario_a, conta.id, n, mes) for n, mes in ((1, 1), (2, 2), (3, 3))]
+
+    corpo = client_factory(usuario_a).patch(
+        f"/api/transacoes/{parcelas[0].id}", json={"categoria_override_id": "03000000"}
+    )
+    assert corpo.json()["parcelas_atualizadas"] == 2  # as OUTRAS duas
+
+
+def test_sem_irma_a_resposta_nao_promete_propagacao(
+    client_factory, db: Session, usuario_a: Usuario, categorias
+) -> None:
+    """Parcelada, mas sozinha no banco (as irmãs ainda não foram lançadas)."""
+    conta = criar_conta(db, usuario_a.id, "acc-a")
+    sozinha = _parcela(db, usuario_a, conta.id, 1, 1)
+
+    corpo = client_factory(usuario_a).patch(
+        f"/api/transacoes/{sozinha.id}", json={"categoria_override_id": "03000000"}
+    )
+    assert corpo.json()["parcelas_atualizadas"] == 0
 
 
 def test_propagacao_nao_alcanca_outra_compra(

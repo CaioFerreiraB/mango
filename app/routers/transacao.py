@@ -39,10 +39,14 @@ def _repo(
     return TransacaoRepository(db, user.id)
 
 
-def _read(obj: Transacao, ctx: Contexto) -> TransacaoRead:
+def _read(obj: Transacao, ctx: Contexto, *, parcelas: int = 0) -> TransacaoRead:
     categoria, origem = resolver(obj, ctx)
     return TransacaoRead.model_validate(obj).model_copy(
-        update={"categoria_efetiva_id": categoria, "categoria_origem": origem}
+        update={
+            "categoria_efetiva_id": categoria,
+            "categoria_origem": origem,
+            "parcelas_atualizadas": parcelas,
+        }
     )
 
 
@@ -125,9 +129,8 @@ def atualizar(
     _recusar_categoria_de_assinatura(obj, dados)
 
     atualizada = repo.update(obj, **dados)
-    if "categoria_override_id" in dados:
-        _propagar_para_parcelas(repo, atualizada)
-    return _read(atualizada, carregar_contexto(repo.db, repo.usuario_id))
+    parcelas = _propagar_para_parcelas(repo, atualizada) if "categoria_override_id" in dados else 0
+    return _read(atualizada, carregar_contexto(repo.db, repo.usuario_id), parcelas=parcelas)
 
 
 def _vincular_assinatura(repo: TransacaoRepository, obj: Transacao, dados: dict) -> None:
