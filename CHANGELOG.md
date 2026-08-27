@@ -16,14 +16,21 @@ ainda está se assentando. Cada versão publicada tem uma imagem correspondente 
   do banco que você não usa e ensinar o sistema a categorizar sozinho. Tudo numa aba nova em
   Configurações → Categorias.
   - **Categorias próprias**: nascem disponíveis em transações, orçamentos, assinaturas e divisões,
-    como qualquer outra. Só você as vê. Excluir é recusado se ela estiver em uso em algum orçamento.
+    como qualquer outra, com um **ícone à sua escolha** (44 opções) que aparece junto delas em toda
+    a interface, igual às do banco. Só você as vê. Excluir é recusado se ela estiver em uso em algum
+    orçamento.
   - **Ativar/desativar**: some dos seletores; desativar uma categoria-mãe alcança as filhas. A
     escolha é sua, não da instância — cada pessoa esconde o que quiser. Transação que o banco
-    classificar numa categoria desativada passa a aparecer como "Desconhecida".
+    classificar numa categoria desativada passa a aparecer como "Desconhecida", com um ícone de
+    interrogação — distinto da etiqueta genérica, porque é o único estado que pede uma ação sua.
   - **Regras automáticas**: um texto (exato ou "contém") mapeia para uma categoria, valendo para o
     histórico inteiro e para o que chegar depois. Dá para criar da própria transação, pelo atalho
     "Sempre categorizar «X» assim".
   - **Parcelas coerentes**: mudar a categoria de uma parcela muda todas as parcelas daquela compra.
+    O agrupamento lê a descrição do cartão ignorando o contador ("Decolar Com **1/6**") e o sufixo
+    societário ("DECOLAR COM **LTDA** 5/6") — é o que faz as parcelas de uma mesma compra se
+    reconhecerem mesmo quando o banco não manda estabelecimento nem valor total. O aviso na tela
+    passa a dizer quantas parcelas foram junto, em vez de prometer a propagação de antemão.
   - **Assinaturas mandam na categoria**: cobrança vinculada a uma assinatura usa a categoria dela e
     não é editável na transação — altere na assinatura e todas as cobranças acompanham.
   - A ordem de decisão é explícita: assinatura → seu ajuste manual → regra → sugestão do banco. Uma

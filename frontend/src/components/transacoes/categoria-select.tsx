@@ -69,7 +69,13 @@ export function CategoriaSelect({
   }
 
   return (
-    <Popover open={aberto} onOpenChange={setAberto}>
+    // `modal`: sem isto a lista não rola com roda nem com gesto — só arrastando a barra. O
+    // seletor quase sempre abre dentro de um Dialog ou do Drawer de detalhe, e os dois montam um
+    // `RemoveScroll` que cancela `wheel`/`touchmove` de qualquer alvo fora do conteúdo deles.
+    // Como o popover é portalado para o `body`, ele cai justamente nesse "fora" (arrastar a barra
+    // escapava por não emitir esses eventos). `modal` faz o próprio popover empilhar um
+    // `RemoveScroll`, e só o último da pilha fica ativo — a lista volta a ser área rolável.
+    <Popover open={aberto} onOpenChange={setAberto} modal>
       <PopoverTrigger asChild>
         <Button
           variant="outline"
@@ -109,7 +115,12 @@ export function CategoriaSelect({
       >
         <Command>
           <CommandInput placeholder="Buscar categoria…" />
-          <CommandList className="max-h-56">
+          {/* A taxonomia tem ~130 categorias e o `max-h-56` daqui mostrava 6 — o resto só pela
+              busca. A barra de rolagem vem do `CommandList` (ver o porquê lá); a altura é o menor
+              entre 24rem e o espaço que o Radix mediu até a borda da tela (menos o campo de
+              busca), então a lista cresce onde cabe e não estoura em janela baixa nem no celular.
+              O fallback do `var()` cobre o caso de o popover renderizar sem medida. */}
+          <CommandList className="max-h-[min(24rem,calc(var(--radix-popover-content-available-height,60vh)-4rem))]">
             <CommandEmpty>Nenhuma categoria.</CommandEmpty>
             <CommandGroup>
               {incluirTodas ? (

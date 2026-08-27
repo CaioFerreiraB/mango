@@ -29,7 +29,9 @@ export function IconeSelect({
   className?: string
 }) {
   return (
-    <Popover>
+    // `modal` pelo mesmo motivo do `CategoriaSelect`: o diálogo "Nova categoria" monta um
+    // `RemoveScroll` que cancelaria a rolagem da grade de ícones, portalada para fora dele.
+    <Popover modal>
       <PopoverTrigger asChild>
         <Button
           type="button"
@@ -51,10 +53,12 @@ export function IconeSelect({
         </Button>
       </PopoverTrigger>
       <PopoverContent align="start" className="w-64 p-2">
+        {/* A grade cabe inteira na maioria das telas; o teto pelo espaço que o Radix mediu
+            evita que ela vaze da viewport em janela baixa ou celular deitado. */}
         <div
           role="listbox"
           aria-label="Ícones disponíveis"
-          className="grid grid-cols-7 gap-1"
+          className="scrollbar-sutil grid max-h-[min(20rem,var(--radix-popover-content-available-height,60vh))] grid-cols-7 gap-1 overflow-y-auto"
         >
           {Object.entries(ICONES_DISPONIVEIS).map(([nome, Icone]) => {
             const selecionado = nome === value

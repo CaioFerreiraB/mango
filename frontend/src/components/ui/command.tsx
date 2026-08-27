@@ -93,7 +93,10 @@ function CommandList({
     <CommandPrimitive.List
       data-slot="command-list"
       className={cn(
-        "no-scrollbar max-h-72 scroll-py-1 overflow-x-hidden overflow-y-auto outline-none",
+        // `scrollbar-sutil` no lugar do `no-scrollbar` do registro: a lista é rolável e recortada,
+        // e esconder a barra fazia o conteúdo abaixo do corte parecer inexistente — quem abria o
+        // seletor de categoria (~130 opções) via 6 e concluía que só a busca alcançava o resto.
+        "scrollbar-sutil max-h-72 scroll-py-1 overflow-x-hidden overflow-y-auto outline-none",
         className
       )}
       {...props}
