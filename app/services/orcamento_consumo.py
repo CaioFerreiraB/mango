@@ -23,10 +23,10 @@ from datetime import date, timedelta
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.models.categoria import Categoria
 from app.models.orcamento import Orcamento, OrcamentoMensal
 from app.models.transacao import Transacao
 from app.schemas.orcamento import OrcamentoConsumoItem, OrcamentoConsumoRead
+from app.services.categoria_arvore import subarvores as montar_subarvores
 from app.services.orcamento_mensal import materializar_mes
 from app.services.periodo import hoje_sp, limites_sp
 
@@ -74,27 +74,6 @@ def _valores_por_categoria(
     return valores
 
 
-def _subarvores(db: Session, raizes: set[str]) -> dict[str, set[str]]:
-    """Para cada categoria em `raizes`, o conjunto {ela + descendentes}. Taxonomia é ≤3 níveis
-    e pequena → resolvida em memória a partir de `categoria.parent_id`."""
-    filhos: dict[str, list[str]] = {}
-    for cid, pid in db.execute(select(Categoria.pluggy_id, Categoria.parent_id)).all():
-        if pid is not None:
-            filhos.setdefault(pid, []).append(cid)
-
-    def descendentes(raiz: str) -> set[str]:
-        vistos = {raiz}
-        pilha = [raiz]
-        while pilha:
-            for f in filhos.get(pilha.pop(), []):
-                if f not in vistos:
-                    vistos.add(f)
-                    pilha.append(f)
-        return vistos
-
-    return {r: descendentes(r) for r in raizes}
-
-
 def consumo_do_mes(db: Session, usuario_id: int, ano: int, mes: int) -> OrcamentoConsumoRead:
     hoje = hoje_sp()
     if (ano, mes) == (hoje.year, hoje.month):
@@ -109,7 +88,7 @@ def consumo_do_mes(db: Session, usuario_id: int, ano: int, mes: int) -> Orcament
     ).all()
 
     valores = _valores_por_categoria(db, usuario_id, ano, mes)
-    subarvores = _subarvores(db, {m.categoria_id for m in mensais})
+    subarvores = montar_subarvores(db, usuario_id, {m.categoria_id for m in mensais})
     # (ordem, recorrente) do orçamento padrão — "Editar mês" usa `recorrente` pra saber se
     # remover é "suprimir só este mês" (padrão) ou "apagar de vez" (pontual, ver `criar_pontual`).
     orcamentos_info = {

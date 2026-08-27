@@ -20,7 +20,9 @@ class TimestampMixin:
 class UserOwnedMixin:
     """`usuario_id` em toda entidade de domínio — base do isolamento por repositório.
 
-    Exceção única: `categoria` (referência global read-only) NÃO usa este mixin.
+    Exceção única: `categoria` NÃO usa este mixin porque seu `usuario_id` é **nulável** (NULL = a
+    taxonomia global do Pluggy; preenchido = categoria personalizada do usuário, §4.5). O
+    isolamento dela é feito à mão no `CategoriaRepository`, não pelo mixin.
     """
 
     usuario_id: Mapped[int] = mapped_column(

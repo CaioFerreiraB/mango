@@ -55,6 +55,13 @@ class Transacao(UserOwnedMixin, TimestampMixin, Base):
         ForeignKey("categoria.pluggy_id", ondelete="SET NULL"), index=True
     )
     categoria_ajustada_usuario: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    # Categoria vinda de uma `regra_categorizacao` do usuário (§4.5). Coluna DERIVADA: pertence às
+    # regras, é recalculada inteira por `aplicar_regras_categorizacao` e por isso NÃO entra em
+    # `CAMPOS_USUARIO` (o payload do sync nunca a contém). Materializada — e não resolvida em SQL —
+    # porque casar "contém" contra a tabela de regras em toda agregação seria um join com LIKE.
+    categoria_regra_id: Mapped[str | None] = mapped_column(
+        ForeignKey("categoria.pluggy_id", ondelete="SET NULL"), index=True
+    )
 
     # Merchant / operação.
     merchant_cnpj: Mapped[str | None] = mapped_column(String(20))

@@ -29,6 +29,10 @@ MODO_DIVISAO = ("igualmente", "integral")
 # §4.6 orcamento — tipo do orçamento (categoria não carrega tipo, o orçamento sim)
 TIPO_ORCAMENTO = ("despesa", "receita")
 
+# §4.5 regra_categorizacao — como o texto da regra casa o nome da transação:
+# "exato" = nome normalizado idêntico; "contem" = texto da regra é substring do nome.
+TIPO_MATCH = ("exato", "contem")
+
 # §5.2 usuario — tipo de conta: acesso completo ou só ao módulo de divisão de contas.
 TIPO_USUARIO = ("completo", "divisao")
 

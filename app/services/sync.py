@@ -147,7 +147,11 @@ def sincronizar_usuario(
     else:
         itens = item_repo.list()
 
-    categorias_validas = set(db.scalars(select(Categoria.pluggy_id)).all())
+    # Só a taxonomia GLOBAL (§4.5): o Pluggy só devolve id dele, e restringir aqui garante que uma
+    # categoria personalizada — de qualquer usuário — nunca chegue a ser gravada pelo sync.
+    categorias_validas = set(
+        db.scalars(select(Categoria.pluggy_id).where(Categoria.usuario_id.is_(None))).all()
+    )
     # 1º sync de qualquer item → pareia sobre todo o histórico; senão, só a janela recente.
     primeiro_sync = any(it.ultimo_sync_em is None for it in itens)
     resumo = ResumoSync()

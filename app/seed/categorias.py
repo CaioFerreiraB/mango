@@ -9,7 +9,7 @@ import json
 from pathlib import Path
 
 from app.db.session import SessionLocal
-from app.repositories.categoria import CategoriaRepository
+from app.repositories.categoria import upsert_global
 
 _DATA = Path(__file__).resolve().parent / "data" / "categories.json"
 
@@ -20,9 +20,9 @@ def seed_categorias() -> None:
     registros.sort(key=lambda c: (c.get("parentId") is not None, c["id"]))
 
     with SessionLocal() as db:
-        repo = CategoriaRepository(db)
         for c in registros:
-            repo.upsert(
+            upsert_global(
+                db,
                 c["id"],
                 description=c["description"],
                 description_translated=c.get("descriptionTranslated"),
