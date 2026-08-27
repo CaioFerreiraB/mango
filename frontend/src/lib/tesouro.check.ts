@@ -41,17 +41,42 @@ assert.equal(liquidoAtual([inv({})]), null, "sem campos de valor → null")
 
 // retornoJanela: pct encadeado + ganho bruto; janela ancora no 1º ponto ≥ início.
 const serie: CarteiraSeriePonto[] = [
-  { data: "2025-01-02", valor_centavos: 1000000, investido_centavos: 1000000, acumulado_pct: 0 },
-  { data: "2025-06-30", valor_centavos: 1040000, investido_centavos: 1000000, acumulado_pct: 4 },
-  { data: "2025-12-30", valor_centavos: 1085742, investido_centavos: 1000000, acumulado_pct: 8.5742 },
+  {
+    data: "2025-01-02",
+    valor_centavos: 1000000,
+    investido_centavos: 1000000,
+    acumulado_pct: 0,
+  },
+  {
+    data: "2025-06-30",
+    valor_centavos: 1040000,
+    investido_centavos: 1000000,
+    acumulado_pct: 4,
+  },
+  {
+    data: "2025-12-30",
+    valor_centavos: 1085742,
+    investido_centavos: 1000000,
+    acumulado_pct: 8.5742,
+  },
 ]
 const noAno = retornoJanela(serie, "2025-01-01")!
-assert.ok(Math.abs(noAno.pct - 8.5742) < 1e-9, "janela desde o início = acumulado total")
+assert.ok(
+  Math.abs(noAno.pct - 8.5742) < 1e-9,
+  "janela desde o início = acumulado total"
+)
 assert.equal(noAno.ganho_centavos, 85742, "ganho R$ = bruto_fim − bruto_ini")
 const desdeMeio = retornoJanela(serie, "2025-06-01")!
-assert.ok(Math.abs(desdeMeio.pct - ((1.085742 / 1.04 - 1) * 100)) < 1e-9, "janela encadeada")
+assert.ok(
+  Math.abs(desdeMeio.pct - (1.085742 / 1.04 - 1) * 100) < 1e-9,
+  "janela encadeada"
+)
 assert.equal(desdeMeio.ganho_centavos, 45742, "ganho da 2ª metade")
-assert.equal(retornoJanela([serie[0]!], "2025-01-01"), null, "menos de 2 pontos → null")
+assert.equal(
+  retornoJanela([serie[0]!], "2025-01-01"),
+  null,
+  "menos de 2 pontos → null"
+)
 
 // projetarVencimento IPCA+ : usa o nível ATUAL do IPCA (12m) + cupom real contratado.
 const proj = projetarVencimento(
@@ -63,7 +88,10 @@ const proj = projetarVencimento(
   "2026-07-28"
 )!
 const taxaEsperada = 1.045 * 1.0682 - 1
-assert.ok(Math.abs(proj.taxaAnual - taxaEsperada) < 1e-9, "taxa efetiva = (1+ipca)(1+cupom)−1")
+assert.ok(
+  Math.abs(proj.taxaAnual - taxaEsperada) < 1e-9,
+  "taxa efetiva = (1+ipca)(1+cupom)−1"
+)
 assert.ok(Math.abs(proj.anos - 8.8) < 0.1, "anos até o vencimento ~8.8")
 assert.equal(
   proj.valorEsperado,
@@ -85,7 +113,10 @@ const selic = projetarVencimento(
   0.105, // SELIC 12m atual = 10,5%
   "2026-07-28"
 )!
-assert.ok(Math.abs(selic.taxaAnual - (1.105 * 1.001 - 1)) < 1e-9, "SELIC atual × spread")
+assert.ok(
+  Math.abs(selic.taxaAnual - (1.105 * 1.001 - 1)) < 1e-9,
+  "SELIC atual × spread"
+)
 // Prefixado ignora o mercado: usa a taxa travada; isento não desconta IR.
 const pre = projetarVencimento(
   100000,
@@ -95,10 +126,24 @@ const pre = projetarVencimento(
   0.5, // nível de mercado é ignorado no prefixado
   "2026-07-28"
 )!
-assert.ok(Math.abs(pre.taxaAnual - 0.1) < 1e-9, "prefixado usa a taxa travada, não o mercado")
-assert.equal(pre.valorLiquidoEsperado, pre.valorEsperado, "isento → líquido = bruto")
+assert.ok(
+  Math.abs(pre.taxaAnual - 0.1) < 1e-9,
+  "prefixado usa a taxa travada, não o mercado"
+)
 assert.equal(
-  projetarVencimento(100000, 100000, "2020-01-01", { rateType: "IPCA", rate: "6", annualRate: null, taxExempt: false }, 0.045, "2026-07-28"),
+  pre.valorLiquidoEsperado,
+  pre.valorEsperado,
+  "isento → líquido = bruto"
+)
+assert.equal(
+  projetarVencimento(
+    100000,
+    100000,
+    "2020-01-01",
+    { rateType: "IPCA", rate: "6", annualRate: null, taxExempt: false },
+    0.045,
+    "2026-07-28"
+  ),
   null,
   "título já vencido → null"
 )
@@ -115,9 +160,21 @@ assert.deepEqual(bench, [
 assert.deepEqual(serieBenchmark([], []), [], "vazio → vazio")
 
 // tempoRestante
-assert.equal(tempoRestante("2035-05-15", "2026-07-28"), "8 anos e 293 dias", "restante formatado")
-assert.equal(tempoRestante("2026-07-29", "2026-07-28"), "1 dia", "singular de dia sem anos")
-assert.equal(tempoRestante("2020-01-01", "2026-07-28"), null, "já vencido → null")
+assert.equal(
+  tempoRestante("2035-05-15", "2026-07-28"),
+  "8 anos e 293 dias",
+  "restante formatado"
+)
+assert.equal(
+  tempoRestante("2026-07-29", "2026-07-28"),
+  "1 dia",
+  "singular de dia sem anos"
+)
+assert.equal(
+  tempoRestante("2020-01-01", "2026-07-28"),
+  null,
+  "já vencido → null"
+)
 
 // retornoMensal: chain-diff do acumulado por mês-calendário completo.
 // (a) 3 meses cheios (série começa no dia 1) → ~1,0% cada (1.01^n − 1 encadeado).
@@ -132,7 +189,8 @@ assert.deepEqual(
   ["2025-01", "2025-02", "2025-03"],
   "3 meses completos"
 )
-for (const m of mensal3) assert.ok(Math.abs(m.pct - 1.0) < 1e-9, `mês ${m.mes} ≈ 1,0%`)
+for (const m of mensal3)
+  assert.ok(Math.abs(m.pct - 1.0) < 1e-9, `mês ${m.mes} ≈ 1,0%`)
 
 // (b) 1º mês parcial descartado; o mês completo seguinte fica EXATO (a base parcial cancela).
 const mensalParcial = retornoMensal([
@@ -142,7 +200,10 @@ const mensalParcial = retornoMensal([
 ])
 assert.equal(mensalParcial.length, 1, "janeiro parcial descartado")
 assert.equal(mensalParcial[0]!.mes, "2025-02", "sobra fevereiro")
-assert.ok(Math.abs(mensalParcial[0]!.pct - 1.0) < 1e-9, "fevereiro exato apesar da base parcial")
+assert.ok(
+  Math.abs(mensalParcial[0]!.pct - 1.0) < 1e-9,
+  "fevereiro exato apesar da base parcial"
+)
 
 // (c) mês corrente incompleto descartado (série termina no meio do mês).
 const mensalCorrente = retornoMensal([
@@ -158,6 +219,10 @@ assert.deepEqual(
 
 // (d) menos de 2 pontos → vazio.
 assert.deepEqual(retornoMensal([]), [], "vazio → vazio")
-assert.deepEqual(retornoMensal([{ data: "2025-01-01", acumulado_pct: 0 }]), [], "1 ponto → vazio")
+assert.deepEqual(
+  retornoMensal([{ data: "2025-01-01", acumulado_pct: 0 }]),
+  [],
+  "1 ponto → vazio"
+)
 
 console.log("ok — tesouro")

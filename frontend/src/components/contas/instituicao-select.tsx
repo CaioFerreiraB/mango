@@ -47,11 +47,20 @@ export function InstituicaoSelect({
               : "Nenhuma instituição encontrada."}
         </CommandEmpty>
         <CommandGroup>
-          <CommandItem value="Sem vínculo manual" onSelect={() => onChange(null)}>
+          <CommandItem
+            value="Sem vínculo manual"
+            onSelect={() => onChange(null)}
+          >
             <Check
-              className={cn("size-4", value === null ? "opacity-100" : "opacity-0")}
+              className={cn(
+                "size-4",
+                value === null ? "opacity-100" : "opacity-0"
+              )}
             />
-            <Ban className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+            <Ban
+              className="size-4 shrink-0 text-muted-foreground"
+              aria-hidden
+            />
             Sem vínculo manual
           </CommandItem>
           {connectores.map((c) => (

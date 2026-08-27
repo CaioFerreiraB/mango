@@ -1,11 +1,55 @@
+# Actions de terceiros ficam fixadas em SHA completo, com a versão legível no comentário ao lado
+# (`@<sha> # vX.Y.Z`). Tag é referência mutável: quem controla a action pode reapontar `@v1` para
+# outro commit, e aqui elas recebem segredos — a do Codacy vê o CODACY_PROJECT_TOKEN, e as do
+# docker/* no release.yml veem o GITHUB_TOKEN com `packages: write`. O Dependabot reconhece esse
+# formato e atualiza SHA e comentário juntos (ver .github/dependabot.yml).
+#
+# As actions `actions/*` seguem em tag: são do próprio GitHub, o mesmo dono da plataforma que
+# executaria o commit reapontado.
 name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, dev]
   pull_request:
+    branches: [main, dev]
+
+permissions:
+  contents: read
+
+# Um push novo na mesma branch cancela o run anterior — só em PR, onde o resultado intermediário
+# não interessa. Em `push` na main/dev cada commit continua com o seu run próprio, que é o que dá
+# o histórico verde/vermelho por commit.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  # Git flow: a main só recebe merge da dev (ou de um release/hotfix). O GitHub não tem regra
+  # nativa de "restringir a branch de origem", então a imposição é este job marcado como status
+  # check obrigatório da main — ver CONTRIBUTING.md.
+  #
+  # Ele roda em TODO PR, inclusive nos que miram a dev (onde sai por `exit 0` na primeira linha).
+  # Isso é deliberado: um job pulado por `if:` reporta "skipped", e um check obrigatório que nunca
+  # reporta deixa o PR travado para sempre.
+  guard-origem-do-pr:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Só dev, release/* ou hotfix/* podem entrar na main
+        env:
+          BASE: ${{ github.base_ref }}
+          HEAD: ${{ github.head_ref }}
+        run: |
+          [ "$BASE" = "main" ] || { echo "PR para '$BASE' — regra não se aplica."; exit 0; }
+          case "$HEAD" in
+            dev|release/*|hotfix/*)
+              echo "Origem '$HEAD' permitida na main." ;;
+            *)
+              echo "::error::PR na main só a partir de dev, release/* ou hotfix/* (veio de '$HEAD'). Mire a dev."
+              exit 1 ;;
+          esac
+
   test:
     runs-on: ubuntu-latest
 
@@ -32,7 +76,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Setup uv + Python
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5.4.2
         with:
           python-version: "3.12"
 
@@ -51,7 +95,24 @@ jobs:
         run: uv run alembic upgrade head
 
       - name: Testes (SQLite + PostgreSQL)
-        run: uv run pytest
+        run: uv run pytest --cov=app --cov-report=xml --cov-report=term-missing
+
+      # O token existe só no `with:` deste passo — nunca no `env:` do job, senão ficaria legível
+      # para `uv sync`, para a suíte e para qualquer action de terceiro rodando aqui.
+      #
+      # O `if:` pula PR vindo de fork, que não recebe secrets. A condição olha só o contexto
+      # `github` de propósito: assim não é preciso pôr o secret em lugar nenhum para decidir.
+      #
+      # `continue-on-error` porque isto é publicação de métrica, não portão: o Codacy é serviço
+      # externo, e uma indisponibilidade dele não pode reprovar a suíte e travar o merge. A análise
+      # estática do Codacy continua reportando no check próprio dela, à parte deste job.
+      - name: Envia a cobertura ao Codacy
+        if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
+        continue-on-error: true
+        uses: codacy/codacy-coverage-reporter-action@89d6c85cfafaec52c72b6c5e8b2878d33104c699 # v1.3.0
+        with:
+          project-token: ${{ secrets.CODACY_PROJECT_TOKEN }}
+          coverage-reports: coverage.xml
 
   # Frontend: só Node. Usa o frontend/openapi.json commitado para gerar o cliente tipado, então
   # não precisa de Python nem de servidor. `npm run build` faz generate:api → tsc -b → vite build.
@@ -75,6 +136,12 @@ jobs:
 
       - name: Instala dependências
         run: npm ci
+
+      - name: Lint (eslint)
+        run: npm run lint
+
+      - name: Formatação (prettier)
+        run: npm run format:check
 
       - name: Build (cliente tipado + typecheck + Vite)
         run: npm run build

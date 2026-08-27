@@ -5,13 +5,24 @@
  */
 import { useId } from "react"
 
-function Mastercard({ className, prata }: { className?: string; prata?: boolean }) {
+function Mastercard({
+  className,
+  prata,
+}: {
+  className?: string
+  prata?: boolean
+}) {
   // Versão "black card": círculos em prata monocromática. `id` único (useId) evita colisão de
   // gradiente quando vários cartões aparecem juntos.
   const g = useId()
   if (prata) {
     return (
-      <svg viewBox="0 0 48 30" className={className} role="img" aria-label="Mastercard">
+      <svg
+        viewBox="0 0 48 30"
+        className={className}
+        role="img"
+        aria-label="Mastercard"
+      >
         <defs>
           <linearGradient id={g} x1="0" y1="0" x2="0.3" y2="1">
             <stop offset="0" stopColor="#f4f4f7" />
@@ -22,12 +33,20 @@ function Mastercard({ className, prata }: { className?: string; prata?: boolean 
         <circle cx="18" cy="15" r="11" fill={`url(#${g})`} />
         <circle cx="30" cy="15" r="11" fill={`url(#${g})`} fillOpacity="0.85" />
         {/* interseção dos dois círculos, um tom mais escuro */}
-        <path d="M24 6.4a11 11 0 0 1 0 17.2 11 11 0 0 1 0-17.2Z" fill="#7f7f88" />
+        <path
+          d="M24 6.4a11 11 0 0 1 0 17.2 11 11 0 0 1 0-17.2Z"
+          fill="#7f7f88"
+        />
       </svg>
     )
   }
   return (
-    <svg viewBox="0 0 48 30" className={className} role="img" aria-label="Mastercard">
+    <svg
+      viewBox="0 0 48 30"
+      className={className}
+      role="img"
+      aria-label="Mastercard"
+    >
       <circle cx="18" cy="15" r="11" fill="#EB001B" />
       <circle cx="30" cy="15" r="11" fill="#F79E1B" />
       {/* interseção dos dois círculos */}
@@ -74,12 +93,16 @@ export function Bandeira({
 }) {
   const b = (brand ?? "").toLowerCase().trim()
   if (!b) return null
-  if (b.includes("master")) return <Mastercard className={className} prata={prata} />
-  if (b.includes("visa")) return <Wordmark texto="VISA" italic className={className} />
+  if (b.includes("master"))
+    return <Mastercard className={className} prata={prata} />
+  if (b.includes("visa"))
+    return <Wordmark texto="VISA" italic className={className} />
   if (b.includes("amex") || b.includes("american"))
     return <Wordmark texto="AMEX" className={className} />
   if (b.includes("elo")) return <Wordmark texto="elo" className={className} />
-  if (b.includes("hiper")) return <Wordmark texto="Hipercard" className={className} />
-  if (b.includes("diners")) return <Wordmark texto="Diners" className={className} />
+  if (b.includes("hiper"))
+    return <Wordmark texto="Hipercard" className={className} />
+  if (b.includes("diners"))
+    return <Wordmark texto="Diners" className={className} />
   return <Wordmark texto={brand!.toUpperCase()} className={className} />
 }

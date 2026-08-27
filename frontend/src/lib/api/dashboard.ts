@@ -41,7 +41,8 @@ export function useDashboardSeries(
           query: { inicio: periodo?.inicio, fim: periodo?.fim, granularidade },
         },
       })
-      if (error || !data) throw new Error("falha ao carregar a série do dashboard")
+      if (error || !data)
+        throw new Error("falha ao carregar a série do dashboard")
       return data
     },
   })

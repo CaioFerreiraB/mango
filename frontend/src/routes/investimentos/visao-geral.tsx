@@ -62,7 +62,11 @@ import {
   type CarteiraResumo,
   type VisaoGeralInvestimentos,
 } from "@/lib/api/investimentos"
-import { iconeTipo, rotuloSubtype, rotuloTipo } from "@/lib/investimento-taxonomia"
+import {
+  iconeTipo,
+  rotuloSubtype,
+  rotuloTipo,
+} from "@/lib/investimento-taxonomia"
 import {
   formatBRL,
   formatDataISO,
@@ -156,7 +160,11 @@ export function VisaoGeralPage() {
         <div className="h-full lg:col-span-2">
           <EvolucaoPatrimonio oculto={oculto} />
         </div>
-        <AlocacaoPorTipo alocacao={resumo.data?.alocacao ?? []} total={total} oculto={oculto} />
+        <AlocacaoPorTipo
+          alocacao={resumo.data?.alocacao ?? []}
+          total={total}
+          oculto={oculto}
+        />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-3">
@@ -256,7 +264,9 @@ function KpiCard({
           <div className="truncate text-xl font-bold tracking-tight tabular-nums">
             {valor}
           </div>
-          {detalhe ? <div className="mt-1 truncate text-xs">{detalhe}</div> : null}
+          {detalhe ? (
+            <div className="mt-1 truncate text-xs">{detalhe}</div>
+          ) : null}
         </div>
       </CardContent>
     </Card>
@@ -264,7 +274,13 @@ function KpiCard({
 }
 
 /** Variação percentual: seta (direção, a11y) + valor absoluto; cor semântica da casa. */
-function VarPct({ pct, sufixo }: { pct: number | null | undefined; sufixo?: string }) {
+function VarPct({
+  pct,
+  sufixo,
+}: {
+  pct: number | null | undefined
+  sufixo?: string
+}) {
   if (pct == null) return <span className="text-muted-foreground">—</span>
   const sobe = pct >= 0
   const Icone = sobe ? ArrowUpRight : ArrowDownRight
@@ -277,7 +293,9 @@ function VarPct({ pct, sufixo }: { pct: number | null | undefined; sufixo?: stri
     >
       <Icone className="size-3.5" aria-hidden />
       {formatPct(Math.abs(pct))}
-      {sufixo ? <span className="font-normal text-muted-foreground"> {sufixo}</span> : null}
+      {sufixo ? (
+        <span className="font-normal text-muted-foreground"> {sufixo}</span>
+      ) : null}
     </span>
   )
 }
@@ -323,7 +341,11 @@ function Kpis({
             aria-pressed={oculto}
             onClick={onToggleOculto}
           >
-            {oculto ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+            {oculto ? (
+              <EyeOff className="size-4" />
+            ) : (
+              <Eye className="size-4" />
+            )}
           </Button>
         }
         valor={
@@ -350,7 +372,9 @@ function Kpis({
                 className="text-xs"
               />
               {t.resultado_pct != null ? (
-                <span className="text-muted-foreground">({formatPct(t.resultado_pct)})</span>
+                <span className="text-muted-foreground">
+                  ({formatPct(t.resultado_pct)})
+                </span>
               ) : null}
             </span>
           ) : null
@@ -359,13 +383,17 @@ function Kpis({
       <KpiCard
         icon={Coins}
         label="Valor investido"
-        valor={<Valor centavos={t.investido_centavos ?? 0} neutro oculto={oculto} />}
+        valor={
+          <Valor centavos={t.investido_centavos ?? 0} neutro oculto={oculto} />
+        }
         detalhe={<span className="text-muted-foreground">Total aportado</span>}
       />
       <KpiCard
         icon={TrendingUp}
         label="Resultado"
-        valor={<Valor centavos={t.resultado_centavos ?? 0} neutro oculto={oculto} />}
+        valor={
+          <Valor centavos={t.resultado_centavos ?? 0} neutro oculto={oculto} />
+        }
         detalhe={<VarPct pct={t.resultado_pct} />}
       />
       <KpiCard
@@ -392,8 +420,16 @@ function Kpis({
       <KpiCard
         icon={CircleDollarSign}
         label="Dividendos (mês)"
-        valor={<Valor centavos={vg?.dividendos_mes_centavos ?? 0} neutro oculto={oculto} />}
-        detalhe={<span className="text-muted-foreground">Recebidos neste mês</span>}
+        valor={
+          <Valor
+            centavos={vg?.dividendos_mes_centavos ?? 0}
+            neutro
+            oculto={oculto}
+          />
+        }
+        detalhe={
+          <span className="text-muted-foreground">Recebidos neste mês</span>
+        }
       />
       <KpiCard
         icon={Layers}
@@ -421,8 +457,18 @@ const PRESETS = [
 ]
 
 const MESES_CURTOS = [
-  "jan", "fev", "mar", "abr", "mai", "jun",
-  "jul", "ago", "set", "out", "nov", "dez",
+  "jan",
+  "fev",
+  "mar",
+  "abr",
+  "mai",
+  "jun",
+  "jul",
+  "ago",
+  "set",
+  "out",
+  "nov",
+  "dez",
 ]
 const tickMes = (iso: string) => {
   const [ano, mes] = iso.split("-")
@@ -452,8 +498,12 @@ function linhaEvolucao(
         aria-hidden
       />
       <div className="flex flex-1 items-center justify-between gap-2 leading-none">
-        <span className="text-muted-foreground">{config[nome]?.label ?? nome}</span>
-        <span className="font-mono font-medium tabular-nums text-foreground">{texto}</span>
+        <span className="text-muted-foreground">
+          {config[nome]?.label ?? nome}
+        </span>
+        <span className="font-mono font-medium text-foreground tabular-nums">
+          {texto}
+        </span>
       </div>
     </>
   )
@@ -474,10 +524,13 @@ function EvolucaoPatrimonio({ oculto }: { oculto: boolean }) {
   const serie = useCarteiraSerie({ recorte: "todos", inicio, fim })
   const pontos = serie.data?.pontos ?? []
   const inicioComum = pontos[0]?.data ?? inicio
-  const indSerie = useIndicadoresSerie(pontos.length >= 2 ? benchVisiveis : [], {
-    inicio: inicioComum,
-    fim,
-  })
+  const indSerie = useIndicadoresSerie(
+    pontos.length >= 2 ? benchVisiveis : [],
+    {
+      inicio: inicioComum,
+      fim,
+    }
+  )
 
   // Esquerda (R$): patrimônio e capital investido. Direita (% de crescimento): a própria carteira
   // (indicador do patrimônio) + benchmarks — todos em % acumulado, comparáveis entre si.
@@ -514,7 +567,9 @@ function EvolucaoPatrimonio({ oculto }: { oculto: boolean }) {
       <CardHeader className="flex-row flex-wrap items-start justify-between gap-3">
         <div>
           <CardTitle className="text-base">Evolução do patrimônio</CardTitle>
-          <CardDescription>Valor à esquerda; crescimento vs. mercado à direita</CardDescription>
+          <CardDescription>
+            Valor à esquerda; crescimento vs. mercado à direita
+          </CardDescription>
         </div>
         <div className="flex items-center gap-2">
           <ToggleGroup
@@ -534,7 +589,11 @@ function EvolucaoPatrimonio({ oculto }: { oculto: boolean }) {
           {benchAll.length > 0 ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="icon-sm" aria-label="Escolher indicadores">
+                <Button
+                  variant="outline"
+                  size="icon-sm"
+                  aria-label="Escolher indicadores"
+                >
                   <MoreHorizontal className="size-4" />
                 </Button>
               </DropdownMenuTrigger>
@@ -570,7 +629,10 @@ function EvolucaoPatrimonio({ oculto }: { oculto: boolean }) {
           </p>
         ) : (
           <>
-            <ChartContainer config={config} className="aspect-auto h-[300px] w-full">
+            <ChartContainer
+              config={config}
+              className="aspect-auto h-[300px] w-full"
+            >
               <LineChart data={dados} margin={{ left: 4, right: 8, top: 8 }}>
                 <XAxis
                   dataKey="data"
@@ -600,10 +662,18 @@ function EvolucaoPatrimonio({ oculto }: { oculto: boolean }) {
                     <ChartTooltipContent
                       labelFormatter={(v) => {
                         const s = String(v)
-                        return /^\d{4}-\d{2}-\d{2}$/.test(s) ? formatDataISO(s) : s
+                        return /^\d{4}-\d{2}-\d{2}$/.test(s)
+                          ? formatDataISO(s)
+                          : s
                       }}
                       formatter={(value, name, item) =>
-                        linhaEvolucao(value, String(name), item.color, config, oculto)
+                        linhaEvolucao(
+                          value,
+                          String(name),
+                          item.color,
+                          config,
+                          oculto
+                        )
                       }
                     />
                   }
@@ -650,8 +720,8 @@ function EvolucaoPatrimonio({ oculto }: { oculto: boolean }) {
               </LineChart>
             </ChartContainer>
             <p className="mt-2 text-center text-xs text-muted-foreground">
-              No período de {formatDataISO(inicioComum)} até {formatDataISO(fim)} · crescimento em %
-              acumulado.
+              No período de {formatDataISO(inicioComum)} até{" "}
+              {formatDataISO(fim)} · crescimento em % acumulado.
             </p>
           </>
         )}
@@ -692,7 +762,10 @@ function AlocacaoPorTipo({
         ) : (
           <div className="space-y-4">
             <div className="relative mx-auto w-fit">
-              <ChartContainer config={config} className="aspect-square h-[180px]">
+              <ChartContainer
+                config={config}
+                className="aspect-square h-[180px]"
+              >
                 <PieChart>
                   <ChartTooltip
                     content={
@@ -706,8 +779,10 @@ function AlocacaoPorTipo({
                               aria-hidden
                             />
                             <div className="flex flex-1 items-center justify-between gap-2 leading-none">
-                              <span className="text-muted-foreground">{String(name)}</span>
-                              <span className="font-mono font-medium tabular-nums text-foreground">
+                              <span className="text-muted-foreground">
+                                {String(name)}
+                              </span>
+                              <span className="font-mono font-medium text-foreground tabular-nums">
                                 {oculto ? "R$ ••••" : formatBRL(Number(value))}
                               </span>
                             </div>
@@ -733,22 +808,35 @@ function AlocacaoPorTipo({
               </ChartContainer>
               <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
                 <span className="text-xs text-muted-foreground">Total</span>
-                <Valor centavos={total} neutro oculto={oculto} className="text-sm font-bold" />
+                <Valor
+                  centavos={total}
+                  neutro
+                  oculto={oculto}
+                  className="text-sm font-bold"
+                />
               </div>
             </div>
 
             <ul className="space-y-2 text-sm">
               {fatias.map((f) => (
-                <li key={f.nome} className="grid grid-cols-[auto_1fr_auto] items-center gap-2">
+                <li
+                  key={f.nome}
+                  className="grid grid-cols-[auto_1fr_auto] items-center gap-2"
+                >
                   <span
                     className="size-2.5 rounded-[2px]"
                     style={{ background: f.cor }}
                     aria-hidden
                   />
                   <span className="truncate">{f.nome}</span>
-                  <span className="text-right whitespace-nowrap tabular-nums text-muted-foreground">
+                  <span className="text-right whitespace-nowrap text-muted-foreground tabular-nums">
                     {formatPct(f.pct, { casas: 1 })} ·{" "}
-                    <Valor centavos={f.valor} neutro oculto={oculto} className="text-foreground" />
+                    <Valor
+                      centavos={f.valor}
+                      neutro
+                      oculto={oculto}
+                      className="text-foreground"
+                    />
                   </span>
                 </li>
               ))}
@@ -781,7 +869,8 @@ function MaioresMovers({
   oculto: boolean
 }) {
   const comPct = ativos.filter(
-    (a): a is CarteiraAtivoRV & { valorizacao_pct: number } => a.valorizacao_pct != null
+    (a): a is CarteiraAtivoRV & { valorizacao_pct: number } =>
+      a.valorizacao_pct != null
   )
   const ordenado = comPct.sort((a, b) =>
     tipo === "alta"
@@ -789,7 +878,9 @@ function MaioresMovers({
       : a.valorizacao_pct - b.valorizacao_pct
   )
   const top = ordenado
-    .filter((a) => (tipo === "alta" ? a.valorizacao_pct >= 0 : a.valorizacao_pct < 0))
+    .filter((a) =>
+      tipo === "alta" ? a.valorizacao_pct >= 0 : a.valorizacao_pct < 0
+    )
     .slice(0, 3)
 
   return (
@@ -799,7 +890,9 @@ function MaioresMovers({
       </CardHeader>
       <CardContent className="space-y-1">
         {top.length === 0 ? (
-          <p className="py-6 text-center text-sm text-muted-foreground">Sem dados no período.</p>
+          <p className="py-6 text-center text-sm text-muted-foreground">
+            Sem dados no período.
+          </p>
         ) : (
           top.map((a) => (
             <div
@@ -815,7 +908,9 @@ function MaioresMovers({
               <div className="min-w-0">
                 <p className="truncate text-sm font-medium">{a.code}</p>
                 {a.nome ? (
-                  <p className="truncate text-xs text-muted-foreground">{a.nome}</p>
+                  <p className="truncate text-xs text-muted-foreground">
+                    {a.nome}
+                  </p>
                 ) : null}
               </div>
               <div className="text-right">
@@ -849,7 +944,9 @@ function MaioresPosicoes({
   total: number
   oculto: boolean
 }) {
-  const top = [...itens].sort((a, b) => b.valor_centavos - a.valor_centavos).slice(0, 5)
+  const top = [...itens]
+    .sort((a, b) => b.valor_centavos - a.valor_centavos)
+    .slice(0, 5)
   return (
     <Card>
       <CardHeader className="flex-row items-center justify-between">
@@ -872,13 +969,18 @@ function MaioresPosicoes({
                 <Icone className="size-4.5" />
               </span>
               <div className="min-w-0">
-                <p className="truncate text-sm font-medium">{it.nome ?? it.code ?? "—"}</p>
-                <Badge variant="secondary" className="mt-0.5 text-[0.7rem] font-normal">
+                <p className="truncate text-sm font-medium">
+                  {it.nome ?? it.code ?? "—"}
+                </p>
+                <Badge
+                  variant="secondary"
+                  className="mt-0.5 text-[0.7rem] font-normal"
+                >
                   {rotuloSubtype(it.subtype) ?? rotuloTipo(it.type)}
                 </Badge>
               </div>
               <div className="text-right">
-                <p className="text-sm font-medium tabular-nums text-accent-ink">
+                <p className="text-sm font-medium text-accent-ink tabular-nums">
                   {formatPct(part, { casas: 1 })}
                 </p>
                 <p className="text-xs text-muted-foreground">
@@ -915,7 +1017,9 @@ function InsightsBar({
   oculto: boolean
 }) {
   const [dispensado, setDispensado] = useState(
-    () => typeof localStorage !== "undefined" && localStorage.getItem(INSIGHTS_KEY) === "1"
+    () =>
+      typeof localStorage !== "undefined" &&
+      localStorage.getItem(INSIGHTS_KEY) === "1"
   )
   if (dispensado || !vg) return null
 
@@ -926,7 +1030,9 @@ function InsightsBar({
     )
   }
   if (!oculto && vg.dividendos_mes_centavos > 0) {
-    insights.push(`Você recebeu ${formatBRL(vg.dividendos_mes_centavos)} em dividendos neste mês.`)
+    insights.push(
+      `Você recebeu ${formatBRL(vg.dividendos_mes_centavos)} em dividendos neste mês.`
+    )
   }
   if (numCategorias > 0) {
     insights.push(
@@ -937,7 +1043,9 @@ function InsightsBar({
     .filter((c) => c.type !== "CREDIT" && c.saldo_centavos > 0)
     .reduce((s, c) => s + c.saldo_centavos, 0)
   if (!oculto && disponivel > 0) {
-    insights.push(`Há ${formatBRL(disponivel)} disponíveis para um novo aporte.`)
+    insights.push(
+      `Há ${formatBRL(disponivel)} disponíveis para um novo aporte.`
+    )
   }
   if (insights.length === 0) return null
 
@@ -962,8 +1070,14 @@ function InsightsBar({
       </CardHeader>
       <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {insights.map((texto, i) => (
-          <div key={i} className="flex gap-2.5 rounded-lg border bg-muted/30 p-3">
-            <CircleCheck className="mt-0.5 size-4 shrink-0 text-positive" aria-hidden />
+          <div
+            key={i}
+            className="flex gap-2.5 rounded-lg border bg-muted/30 p-3"
+          >
+            <CircleCheck
+              className="mt-0.5 size-4 shrink-0 text-positive"
+              aria-hidden
+            />
             <p className="text-sm">{texto}</p>
           </div>
         ))}

@@ -11,8 +11,15 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/CaioFerreiraB/mango/actions/workflows/ci.yml"><img src="https://github.com/CaioFerreiraB/mango/actions/workflows/ci.yml/badge.svg?branch=dev" alt="CI"></a>
+  <a href="https://app.codacy.com/gh/CaioFerreiraB/mango/dashboard"><img src="https://app.codacy.com/project/badge/Grade/6515ec13bbe2448cbb50d6561ea35f05" alt="Qualidade no Codacy"></a>
+  <a href="https://app.codacy.com/gh/CaioFerreiraB/mango/coverage/dashboard"><img src="https://app.codacy.com/project/badge/Coverage/6515ec13bbe2448cbb50d6561ea35f05" alt="Cobertura de testes"></a>
+  <a href="https://coderabbit.ai"><img src="https://img.shields.io/coderabbit/prs/github/CaioFerreiraB/mango?labelColor=171717&color=FF570A&label=CodeRabbit" alt="Revisões do CodeRabbit"></a>
   <img src="https://img.shields.io/badge/status-em%20desenvolvimento-orange" alt="Status: em desenvolvimento">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green.svg" alt="License: MIT"></a>
+</p>
+
+<p align="center">
   <img src="https://img.shields.io/badge/python-3.12-3776AB?logo=python&logoColor=white" alt="Python 3.12">
   <img src="https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white" alt="FastAPI">
   <img src="https://img.shields.io/badge/React-20232A?logo=react&logoColor=61DAFB" alt="React">
@@ -115,8 +122,11 @@ make doctor   # checklist "pronto para desenvolver"
 ```
 
 Os demais atalhos — build do frontend, geração do cliente tipado, migrations — estão no
-[`Makefile`](Makefile). Para publicar uma versão: `make release v=X.Y.Z`, e o push da tag dispara a
-imagem no GHCR.
+[`Makefile`](Makefile).
+
+O projeto segue git flow: toda branch de trabalho sai da `dev` e volta para ela por PR, e a `main`
+só recebe merge da `dev`. O fluxo de branches, os portões de qualidade do CI e o processo de release
+estão em [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 ## Licença
 

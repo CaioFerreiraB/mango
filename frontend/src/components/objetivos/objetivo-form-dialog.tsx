@@ -15,7 +15,11 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { useAtualizarObjetivo, useCriarObjetivo, type Objetivo } from "@/lib/api/objetivos"
+import {
+  useAtualizarObjetivo,
+  useCriarObjetivo,
+  type Objetivo,
+} from "@/lib/api/objetivos"
 
 /** Modal de criar/editar objetivo — mesmo formulário serve os dois casos (`objetivo` opcional). */
 export function ObjetivoFormDialog({
@@ -49,7 +53,8 @@ export function ObjetivoFormDialog({
       setAberto(false)
     }
     const onError = (err: Error) => toast.error(err.message)
-    if (objetivo) atualizar.mutate({ id: objetivo.id, patch: body }, { onSuccess, onError })
+    if (objetivo)
+      atualizar.mutate({ id: objetivo.id, patch: body }, { onSuccess, onError })
     else criar.mutate(body, { onSuccess, onError })
   }
 
@@ -58,7 +63,9 @@ export function ObjetivoFormDialog({
       <DialogTrigger asChild>{trigger}</DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{objetivo ? "Editar objetivo" : "Novo objetivo"}</DialogTitle>
+          <DialogTitle>
+            {objetivo ? "Editar objetivo" : "Novo objetivo"}
+          </DialogTitle>
         </DialogHeader>
         <form className="space-y-4" onSubmit={salvar}>
           <div className="space-y-1.5">
@@ -92,7 +99,9 @@ export function ObjetivoFormDialog({
             <Textarea
               id="justificativa"
               value={form.justificativa}
-              onChange={(e) => setForm({ ...form, justificativa: e.target.value })}
+              onChange={(e) =>
+                setForm({ ...form, justificativa: e.target.value })
+              }
             />
           </div>
           <DialogFooter>
@@ -101,7 +110,10 @@ export function ObjetivoFormDialog({
                 Cancelar
               </Button>
             </DialogClose>
-            <Button type="submit" disabled={!form.titulo || form.alvoCentavos <= 0 || pendente}>
+            <Button
+              type="submit"
+              disabled={!form.titulo || form.alvoCentavos <= 0 || pendente}
+            >
               Salvar
             </Button>
           </DialogFooter>

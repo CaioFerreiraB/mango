@@ -23,10 +23,7 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
-import {
-  ToggleGroup,
-  ToggleGroupItem,
-} from "@/components/ui/toggle-group"
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { useCategorias, nomeCategoria } from "@/lib/api/categorias"
 import { useContas } from "@/lib/api/contas"
 import {
@@ -52,10 +49,26 @@ const PERIODO_LABEL: Record<Granularidade, string> = {
 
 /** Presets do filtro rápido: intervalo até hoje (fuso SP). */
 const PRESETS_RAPIDOS = [
-  { id: "7d", label: "7 dias", range: () => [addDias(hojeISO(), -6), hojeISO()] as const },
-  { id: "30d", label: "30 dias", range: () => [addDias(hojeISO(), -29), hojeISO()] as const },
-  { id: "3m", label: "3 meses", range: () => [subMeses(hojeISO(), 3), hojeISO()] as const },
-  { id: "6m", label: "6 meses", range: () => [subMeses(hojeISO(), 6), hojeISO()] as const },
+  {
+    id: "7d",
+    label: "7 dias",
+    range: () => [addDias(hojeISO(), -6), hojeISO()] as const,
+  },
+  {
+    id: "30d",
+    label: "30 dias",
+    range: () => [addDias(hojeISO(), -29), hojeISO()] as const,
+  },
+  {
+    id: "3m",
+    label: "3 meses",
+    range: () => [subMeses(hojeISO(), 3), hojeISO()] as const,
+  },
+  {
+    id: "6m",
+    label: "6 meses",
+    range: () => [subMeses(hojeISO(), 6), hojeISO()] as const,
+  },
 ]
 
 /** Variação relativa vs. período anterior; `null` quando não há base de comparação. */
@@ -233,7 +246,10 @@ export function DashboardPage() {
             <SeletorGranularidade valor={granFluxo} onChange={setGranFluxo} />
           </CardHeader>
           <CardContent className="grid gap-6 lg:grid-cols-2">
-            <SecaoGrafico titulo="Entradas vs. saídas" carregando={serieFluxo.isLoading}>
+            <SecaoGrafico
+              titulo="Entradas vs. saídas"
+              carregando={serieFluxo.isLoading}
+            >
               <BarrasEntradasSaidas
                 buckets={serieFluxo.data?.buckets ?? []}
                 granularidade={granFluxo}
@@ -251,7 +267,9 @@ export function DashboardPage() {
         <Card>
           <CardHeader className="flex-row items-start justify-between gap-4">
             <div>
-              <CardTitle className="text-base">Despesas por categoria</CardTitle>
+              <CardTitle className="text-base">
+                Despesas por categoria
+              </CardTitle>
               <CardDescription>
                 Distribuição e evolução do período (exclui transferências)
               </CardDescription>
@@ -259,7 +277,10 @@ export function DashboardPage() {
             <SeletorGranularidade valor={granCat} onChange={setGranCat} />
           </CardHeader>
           <CardContent className="grid gap-6 lg:grid-cols-2">
-            <SecaoGrafico titulo="Distribuição do período" carregando={serieCat.isLoading}>
+            <SecaoGrafico
+              titulo="Distribuição do período"
+              carregando={serieCat.isLoading}
+            >
               <RoscaCategorias
                 buckets={serieCat.data?.buckets ?? []}
                 rotulo={rotulo}

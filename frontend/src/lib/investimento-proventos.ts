@@ -12,7 +12,11 @@ import { formatBucketLabel, mesISO } from "@/lib/format"
 import { ultimosMeses } from "@/lib/investimento-negociacoes"
 
 /** Uma barra do gráfico de rendimentos (um mês-calendário). `totalCentavos` = soma recebida no mês. */
-export type BucketProvento = { mes: string; label: string; totalCentavos: number }
+export type BucketProvento = {
+  mes: string
+  label: string
+  totalCentavos: number
+}
 
 /** Linha da tabela de proventos: só mês + total (o Pluggy não manda por-cota/cotas em dados reais). */
 export type LinhaProvento = {
@@ -58,7 +62,14 @@ export function agregarProventos(
 ): AgregadoProventos {
   const chaves = ultimosMeses(hoje.slice(0, 7), 12)
   const buckets = new Map<string, BucketProvento>(
-    chaves.map((k) => [k, { mes: k, label: formatBucketLabel(`${k}-01`, "mensal"), totalCentavos: 0 }])
+    chaves.map((k) => [
+      k,
+      {
+        mes: k,
+        label: formatBucketLabel(`${k}-01`, "mensal"),
+        totalCentavos: 0,
+      },
+    ])
   )
   const janela = new Set(chaves)
 
@@ -75,7 +86,8 @@ export function agregarProventos(
       quando: m.date ?? m.trade_date ?? null,
       totalCentavos: m.amount_centavos,
     })
-    if (mes && janela.has(mes)) buckets.get(mes)!.totalCentavos += m.amount_centavos
+    if (mes && janela.has(mes))
+      buckets.get(mes)!.totalCentavos += m.amount_centavos
   }
 
   // Mais recente: API já vem por dia DESC, então é o 1º provento com data.

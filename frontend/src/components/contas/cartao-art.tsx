@@ -37,7 +37,7 @@ export function CartaoArt({
       className={cn(
         "pointer-events-none flex aspect-[0.63] w-28 flex-col rounded-xl p-3",
         "shadow-lg ring-1 ring-black/10 transition-transform duration-300",
-        "rotate-[6deg] group-hover:rotate-[3deg] group-hover:-translate-y-1",
+        "rotate-[6deg] group-hover:-translate-y-1 group-hover:rotate-[3deg]",
         className
       )}
       style={{ background: estilo.fundo, color: estilo.texto }}
@@ -46,15 +46,25 @@ export function CartaoArt({
       {ultravioleta ? (
         <LogoNubank className="h-7 w-auto" />
       ) : logoUrl ? (
-        <img src={logoUrl} alt="" className="h-8 w-auto max-w-[75%] object-contain" />
+        <img
+          src={logoUrl}
+          alt=""
+          className="h-8 w-auto max-w-[75%] object-contain"
+        />
       ) : (
         <span className="text-xl font-bold opacity-90">{iniciais(nome)}</span>
       )}
 
       {/* mais abaixo, à direita: número + bandeira */}
       <div className="mt-6 flex items-center justify-end gap-1.5">
-        <span className="font-mono text-[10px] font-medium tabular-nums opacity-95">{num}</span>
-        <Bandeira brand={conta.brand} prata={ultravioleta} className="h-4 w-auto shrink-0" />
+        <span className="font-mono text-[10px] font-medium tabular-nums opacity-95">
+          {num}
+        </span>
+        <Bandeira
+          brand={conta.brand}
+          prata={ultravioleta}
+          className="h-4 w-auto shrink-0"
+        />
       </div>
     </div>
   )

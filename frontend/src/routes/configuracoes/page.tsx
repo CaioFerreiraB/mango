@@ -26,7 +26,7 @@ export function ConfiguracoesPage() {
         {/* Faixa rolável: com 6 abas a lista estoura telas estreitas e arrastava a página inteira.
             overflow-y-hidden porque overflow-x-auto promove overflow-y a auto e o after:bottom-[-5px]
             do trigger criaria scroll vertical; py-1 dá folga ao anel de foco. Ver carteira.tsx. */}
-        <div className="overflow-x-auto overflow-y-hidden py-1 no-scrollbar">
+        <div className="no-scrollbar overflow-x-auto overflow-y-hidden py-1">
           <TabsList>
             {podeVerConexoes ? (
               <TabsTrigger value="conexoes">Conexões</TabsTrigger>

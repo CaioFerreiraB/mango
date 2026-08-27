@@ -7,7 +7,8 @@ export type Assinatura = components["schemas"]["AssinaturaRead"]
 export type AssinaturaCreate = components["schemas"]["AssinaturaCreate"]
 export type AssinaturaUpdate = components["schemas"]["AssinaturaUpdate"]
 export type AssinaturaResumo = components["schemas"]["AssinaturaResumoRead"]
-export type AssinaturaCandidato = components["schemas"]["AssinaturaCandidatoRead"]
+export type AssinaturaCandidato =
+  components["schemas"]["AssinaturaCandidatoRead"]
 export type Periodicidade = AssinaturaCreate["periodicidade"]
 
 export const assinaturasKeys = {
@@ -33,7 +34,8 @@ export function useResumoAssinaturas() {
     queryKey: assinaturasKeys.resumo,
     queryFn: async (): Promise<AssinaturaResumo> => {
       const { data, error } = await api.GET("/api/assinaturas/resumo")
-      if (error || !data) throw new Error("falha ao carregar o resumo de assinaturas")
+      if (error || !data)
+        throw new Error("falha ao carregar o resumo de assinaturas")
       return data
     },
   })
@@ -92,7 +94,10 @@ export function useCriarAssinatura() {
 export function useAtualizarAssinatura() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async (args: { id: number; patch: AssinaturaUpdate }): Promise<Assinatura> => {
+    mutationFn: async (args: {
+      id: number
+      patch: AssinaturaUpdate
+    }): Promise<Assinatura> => {
       const { data, error } = await api.PATCH("/api/assinaturas/{item_id}", {
         params: { path: { item_id: args.id } },
         body: args.patch,

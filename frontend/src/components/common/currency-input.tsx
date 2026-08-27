@@ -40,7 +40,10 @@ export function CurrencyInput({
       value={texto}
       onChange={(e) => {
         const digitos = e.target.value.replace(/\D/g, "")
-        const centavos = digitos === "" ? 0 : Math.min(Number(digitos), Number.MAX_SAFE_INTEGER)
+        const centavos =
+          digitos === ""
+            ? 0
+            : Math.min(Number(digitos), Number.MAX_SAFE_INTEGER)
         onChange(centavos)
       }}
     />

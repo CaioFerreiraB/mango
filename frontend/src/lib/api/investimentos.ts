@@ -6,7 +6,8 @@ import { mensagemErro } from "@/lib/api/erros"
 import type { components } from "@/lib/api/schema"
 
 export type Investimento = components["schemas"]["InvestimentoRead"]
-export type InvestimentoTransacao = components["schemas"]["InvestimentoTransacaoRead"]
+export type InvestimentoTransacao =
+  components["schemas"]["InvestimentoTransacaoRead"]
 export type CarteiraResumo = components["schemas"]["CarteiraResumo"]
 export type CarteiraAtivoRV = components["schemas"]["CarteiraAtivoRV"]
 export type CarteiraAtivoRF = components["schemas"]["CarteiraAtivoRF"]
@@ -16,10 +17,12 @@ export type CarteiraGrupo = components["schemas"]["CarteiraGrupo"]
 export type CarteiraSerie = components["schemas"]["CarteiraSerie"]
 export type ProventosFII = components["schemas"]["ProventosFII"]
 export type FundamentosFII = components["schemas"]["FundamentosFII"]
-export type FundamentosFIIAlocacao = components["schemas"]["FundamentosFIIAlocacao"]
+export type FundamentosFIIAlocacao =
+  components["schemas"]["FundamentosFIIAlocacao"]
 export type CotaSeriePonto = components["schemas"]["CotaSeriePonto"]
 export type Ativo = components["schemas"]["AtivoRead"]
-export type VisaoGeralInvestimentos = components["schemas"]["VisaoGeralInvestimentos"]
+export type VisaoGeralInvestimentos =
+  components["schemas"]["VisaoGeralInvestimentos"]
 export type RecorteCarteira = "todos" | "renda_fixa" | "renda_variavel"
 
 export const ativosKeys = { all: ["ativos"] as const }
@@ -28,8 +31,12 @@ export const investimentosKeys = {
   all: ["investimentos"] as const,
   resumo: ["investimentos", "resumo"] as const,
   visaoGeral: ["investimentos", "visao-geral"] as const,
-  serie: (recorte: string, subtype: string | null, inicio: string, fim: string) =>
-    ["investimentos", "serie", recorte, subtype, inicio, fim] as const,
+  serie: (
+    recorte: string,
+    subtype: string | null,
+    inicio: string,
+    fim: string
+  ) => ["investimentos", "serie", recorte, subtype, inicio, fim] as const,
   transacoes: (id: number) => ["investimentos", id, "transacoes"] as const,
   proventos: (id: number, inicio: string, fim: string) =>
     ["investimentos", id, "proventos", inicio, fim] as const,
@@ -61,9 +68,12 @@ export function useInvestimento(id: number | null) {
     queryKey: ["investimentos", id],
     enabled: id != null,
     queryFn: async (): Promise<Investimento> => {
-      const { data, error } = await api.GET("/api/investimentos/{investimento_id}", {
-        params: { path: { investimento_id: id! } },
-      })
+      const { data, error } = await api.GET(
+        "/api/investimentos/{investimento_id}",
+        {
+          params: { path: { investimento_id: id! } },
+        }
+      )
       if (error || !data) throw new Error("falha ao carregar o investimento")
       return data
     },
@@ -106,9 +116,12 @@ export function useCarteiraSerie(params: {
     queryKey: investimentosKeys.serie(recorte, subtype ?? null, inicio, fim),
     queryFn: async (): Promise<CarteiraSerie> => {
       const { data, error } = await api.GET("/api/investimentos/serie", {
-        params: { query: { recorte, subtype: subtype ?? undefined, inicio, fim } },
+        params: {
+          query: { recorte, subtype: subtype ?? undefined, inicio, fim },
+        },
       })
-      if (error || !data) throw new Error("falha ao carregar a série da carteira")
+      if (error || !data)
+        throw new Error("falha ao carregar a série da carteira")
       return data
     },
   })
@@ -136,9 +149,12 @@ export function usePosicaoTransacoes(ids: number[]) {
     queryKey: investimentosKeys.posicaoTransacoes(ids),
     enabled: ids.length > 0,
     queryFn: async (): Promise<InvestimentoTransacao[]> => {
-      const { data, error } = await api.GET("/api/investimentos/posicao/transacoes", {
-        params: { query: { ids } },
-      })
+      const { data, error } = await api.GET(
+        "/api/investimentos/posicao/transacoes",
+        {
+          params: { query: { ids } },
+        }
+      )
       if (error || !data) throw new Error("falha ao carregar os movimentos")
       return data
     },
@@ -154,10 +170,14 @@ export function usePosicaoSerie(
     queryKey: investimentosKeys.posicaoSerie(ids, periodo.inicio, periodo.fim),
     enabled: ids.length > 0,
     queryFn: async (): Promise<CarteiraSerie> => {
-      const { data, error } = await api.GET("/api/investimentos/posicao/serie", {
-        params: { query: { ids, inicio: periodo.inicio, fim: periodo.fim } },
-      })
-      if (error || !data) throw new Error("falha ao carregar a série da posição")
+      const { data, error } = await api.GET(
+        "/api/investimentos/posicao/serie",
+        {
+          params: { query: { ids, inicio: periodo.inicio, fim: periodo.fim } },
+        }
+      )
+      if (error || !data)
+        throw new Error("falha ao carregar a série da posição")
       return data
     },
   })
@@ -169,12 +189,19 @@ export function usePosicaoProventos(
   periodo: { inicio: string; fim: string }
 ) {
   return useQuery({
-    queryKey: investimentosKeys.posicaoProventos(ids, periodo.inicio, periodo.fim),
+    queryKey: investimentosKeys.posicaoProventos(
+      ids,
+      periodo.inicio,
+      periodo.fim
+    ),
     enabled: ids.length > 0,
     queryFn: async (): Promise<ProventosFII> => {
-      const { data, error } = await api.GET("/api/investimentos/posicao/proventos", {
-        params: { query: { ids, inicio: periodo.inicio, fim: periodo.fim } },
-      })
+      const { data, error } = await api.GET(
+        "/api/investimentos/posicao/proventos",
+        {
+          params: { query: { ids, inicio: periodo.inicio, fim: periodo.fim } },
+        }
+      )
       if (error || !data) throw new Error("falha ao carregar os proventos")
       return data
     },
@@ -187,9 +214,12 @@ export function usePosicaoFundamentos(ids: number[], enabled: boolean) {
     queryKey: investimentosKeys.posicaoFundamentos(ids),
     enabled: enabled && ids.length > 0,
     queryFn: async (): Promise<FundamentosFII> => {
-      const { data, error } = await api.GET("/api/investimentos/posicao/fundamentos", {
-        params: { query: { ids } },
-      })
+      const { data, error } = await api.GET(
+        "/api/investimentos/posicao/fundamentos",
+        {
+          params: { query: { ids } },
+        }
+      )
       if (error || !data) throw new Error("falha ao carregar os fundamentos")
       return data
     },
@@ -203,12 +233,19 @@ export function usePosicaoCotaSerie(
   enabled: boolean
 ) {
   return useQuery({
-    queryKey: investimentosKeys.posicaoCotaSerie(ids, periodo.inicio, periodo.fim),
+    queryKey: investimentosKeys.posicaoCotaSerie(
+      ids,
+      periodo.inicio,
+      periodo.fim
+    ),
     enabled: enabled && ids.length > 0,
     queryFn: async (): Promise<CotaSeriePonto[]> => {
-      const { data, error } = await api.GET("/api/investimentos/posicao/cota-serie", {
-        params: { query: { ids, inicio: periodo.inicio, fim: periodo.fim } },
-      })
+      const { data, error } = await api.GET(
+        "/api/investimentos/posicao/cota-serie",
+        {
+          params: { query: { ids, inicio: periodo.inicio, fim: periodo.fim } },
+        }
+      )
       if (error || !data) throw new Error("falha ao carregar a série da cota")
       return data
     },
@@ -232,7 +269,8 @@ export function useCriarAtivo() {
   return useMutation({
     mutationFn: async (nome: string): Promise<Ativo> => {
       const { data, error } = await api.POST("/api/ativos", { body: { nome } })
-      if (error || !data) throw new Error(mensagemErro(error, "falha ao criar o ativo"))
+      if (error || !data)
+        throw new Error(mensagemErro(error, "falha ao criar o ativo"))
       return data
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ativosKeys.all }),
@@ -248,7 +286,8 @@ export function useRenomearAtivo() {
         params: { path: { item_id: args.id } },
         body: { nome: args.nome },
       })
-      if (error || !data) throw new Error(mensagemErro(error, "falha ao renomear o ativo"))
+      if (error || !data)
+        throw new Error(mensagemErro(error, "falha ao renomear o ativo"))
       return data
     },
     onSuccess: () => {
@@ -268,11 +307,15 @@ export function useVincularAtivo() {
       investimentoId: number
       ativoId: number | null
     }): Promise<Investimento> => {
-      const { data, error } = await api.PATCH("/api/investimentos/{investimento_id}", {
-        params: { path: { investimento_id: args.investimentoId } },
-        body: { ativo_id: args.ativoId },
-      })
-      if (error || !data) throw new Error(mensagemErro(error, "falha ao vincular ao ativo"))
+      const { data, error } = await api.PATCH(
+        "/api/investimentos/{investimento_id}",
+        {
+          params: { path: { investimento_id: args.investimentoId } },
+          body: { ativo_id: args.ativoId },
+        }
+      )
+      if (error || !data)
+        throw new Error(mensagemErro(error, "falha ao vincular ao ativo"))
       return data
     },
     onSuccess: () => {
@@ -287,7 +330,10 @@ export function useVincularAtivo() {
 export type AporteManualCreate = components["schemas"]["AporteManualCreate"]
 
 /** Invalida tudo que depende dos movimentos de uma posição (resumo, visão geral e a lista). */
-function invalidarAportes(qc: ReturnType<typeof useQueryClient>, ids: number[]) {
+function invalidarAportes(
+  qc: ReturnType<typeof useQueryClient>,
+  ids: number[]
+) {
   qc.invalidateQueries({ queryKey: investimentosKeys.resumo })
   qc.invalidateQueries({ queryKey: investimentosKeys.visaoGeral })
   qc.invalidateQueries({ queryKey: investimentosKeys.posicaoTransacoes(ids) })
@@ -301,11 +347,15 @@ export function useCriarAporte(ids: number[]) {
       investimentoId: number
       corpo: AporteManualCreate
     }): Promise<InvestimentoTransacao> => {
-      const { data, error } = await api.POST("/api/investimentos/{investimento_id}/aportes", {
-        params: { path: { investimento_id: args.investimentoId } },
-        body: args.corpo,
-      })
-      if (error || !data) throw new Error(mensagemErro(error, "falha ao adicionar o aporte"))
+      const { data, error } = await api.POST(
+        "/api/investimentos/{investimento_id}/aportes",
+        {
+          params: { path: { investimento_id: args.investimentoId } },
+          body: args.corpo,
+        }
+      )
+      if (error || !data)
+        throw new Error(mensagemErro(error, "falha ao adicionar o aporte"))
       return data
     },
     onSuccess: () => {
@@ -324,11 +374,15 @@ export function useEditarAporte(ids: number[]) {
       aporteId: number
       corpo: Partial<AporteManualCreate>
     }): Promise<InvestimentoTransacao> => {
-      const { data, error } = await api.PATCH("/api/investimentos/aportes/{aporte_id}", {
-        params: { path: { aporte_id: args.aporteId } },
-        body: args.corpo,
-      })
-      if (error || !data) throw new Error(mensagemErro(error, "falha ao salvar o aporte"))
+      const { data, error } = await api.PATCH(
+        "/api/investimentos/aportes/{aporte_id}",
+        {
+          params: { path: { aporte_id: args.aporteId } },
+          body: args.corpo,
+        }
+      )
+      if (error || !data)
+        throw new Error(mensagemErro(error, "falha ao salvar o aporte"))
       return data
     },
     onSuccess: () => {
@@ -344,10 +398,14 @@ export function useExcluirAporte(ids: number[]) {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (aporteId: number): Promise<void> => {
-      const { error } = await api.DELETE("/api/investimentos/aportes/{aporte_id}", {
-        params: { path: { aporte_id: aporteId } },
-      })
-      if (error) throw new Error(mensagemErro(error, "falha ao excluir o aporte"))
+      const { error } = await api.DELETE(
+        "/api/investimentos/aportes/{aporte_id}",
+        {
+          params: { path: { aporte_id: aporteId } },
+        }
+      )
+      if (error)
+        throw new Error(mensagemErro(error, "falha ao excluir o aporte"))
     },
     onSuccess: () => {
       invalidarAportes(qc, ids)
@@ -363,7 +421,11 @@ export function useProventosFII(
   periodo: { inicio: string; fim: string }
 ) {
   return useQuery({
-    queryKey: investimentosKeys.proventos(id ?? -1, periodo.inicio, periodo.fim),
+    queryKey: investimentosKeys.proventos(
+      id ?? -1,
+      periodo.inicio,
+      periodo.fim
+    ),
     enabled: id != null,
     queryFn: async (): Promise<ProventosFII> => {
       const { data, error } = await api.GET(

@@ -25,8 +25,10 @@ export function linhaTooltip(
         aria-hidden
       />
       <div className="flex flex-1 items-center justify-between gap-2 leading-none">
-        <span className="text-muted-foreground">{config[nome]?.label ?? nome}</span>
-        <span className="font-mono font-medium tabular-nums text-foreground">
+        <span className="text-muted-foreground">
+          {config[nome]?.label ?? nome}
+        </span>
+        <span className="font-mono font-medium text-foreground tabular-nums">
           {formatBRL(Number(valor))}
         </span>
       </div>

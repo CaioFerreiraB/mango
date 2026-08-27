@@ -7,13 +7,15 @@ export type Orcamento = components["schemas"]["OrcamentoRead"]
 export type OrcamentoCreate = components["schemas"]["OrcamentoCreate"]
 export type OrcamentoUpdate = components["schemas"]["OrcamentoUpdate"]
 export type OrcamentoMensal = components["schemas"]["OrcamentoMensalRead"]
-export type OrcamentoMensalCreate = components["schemas"]["OrcamentoMensalCreate"]
+export type OrcamentoMensalCreate =
+  components["schemas"]["OrcamentoMensalCreate"]
 export type OrcamentoConsumo = components["schemas"]["OrcamentoConsumoRead"]
 export type OrcamentoConsumoItem = components["schemas"]["OrcamentoConsumoItem"]
 
 export const orcamentosKeys = {
   all: ["orcamentos"] as const,
-  consumo: (ano: number, mes: number) => ["orcamentos", "consumo", ano, mes] as const,
+  consumo: (ano: number, mes: number) =>
+    ["orcamentos", "consumo", ano, mes] as const,
 }
 
 /** Consumo e alertas (50/75/90/100%) dos orçamentos do mês (§4.6). */
@@ -24,7 +26,8 @@ export function useConsumoOrcamentos(ano: number, mes: number) {
       const { data, error } = await api.GET("/api/orcamentos/consumo", {
         params: { query: { ano, mes } },
       })
-      if (error || !data) throw new Error("falha ao carregar o consumo dos orçamentos")
+      if (error || !data)
+        throw new Error("falha ao carregar o consumo dos orçamentos")
       return data
     },
   })
@@ -70,10 +73,13 @@ export function useAtualizarOrcamentoPadrao() {
       ordem?: number
     }): Promise<Orcamento> => {
       const { id, ...body } = args
-      const { data, error } = await api.PATCH("/api/orcamentos/{orcamento_id}", {
-        params: { path: { orcamento_id: id } },
-        body,
-      })
+      const { data, error } = await api.PATCH(
+        "/api/orcamentos/{orcamento_id}",
+        {
+          params: { path: { orcamento_id: id } },
+          body,
+        }
+      )
       if (error || !data) throw new Error("falha ao salvar o orçamento padrão")
       return data
     },
@@ -86,18 +92,29 @@ export function useAtualizarOrcamentoPadrao() {
 export function useAtualizarLimiteMensal() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async (args: { id: number; limite_centavos?: number; suprimido?: boolean }) => {
+    mutationFn: async (args: {
+      id: number
+      limite_centavos?: number
+      suprimido?: boolean
+    }) => {
       const { id, limite_centavos, suprimido } = args
-      const body: { limite_centavos?: number; editado_manualmente?: boolean; suprimido?: boolean } = {}
+      const body: {
+        limite_centavos?: number
+        editado_manualmente?: boolean
+        suprimido?: boolean
+      } = {}
       if (limite_centavos !== undefined) {
         body.limite_centavos = limite_centavos
         body.editado_manualmente = true
       }
       if (suprimido !== undefined) body.suprimido = suprimido
-      const { data, error } = await api.PATCH("/api/orcamentos-mensais/{item_id}", {
-        params: { path: { item_id: id } },
-        body,
-      })
+      const { data, error } = await api.PATCH(
+        "/api/orcamentos-mensais/{item_id}",
+        {
+          params: { path: { item_id: id } },
+          body,
+        }
+      )
       if (error || !data) throw new Error("falha ao salvar o limite do mês")
       return data
     },
@@ -110,8 +127,12 @@ export function useAtualizarLimiteMensal() {
 export function useCriarLimiteMensal() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async (body: OrcamentoMensalCreate): Promise<OrcamentoMensal> => {
-      const { data, error } = await api.POST("/api/orcamentos-mensais", { body })
+    mutationFn: async (
+      body: OrcamentoMensalCreate
+    ): Promise<OrcamentoMensal> => {
+      const { data, error } = await api.POST("/api/orcamentos-mensais", {
+        body,
+      })
       if (error || !data) throw new Error("falha ao criar o orçamento do mês")
       return data
     },
@@ -124,11 +145,15 @@ export function useCriarLimiteMensal() {
 export function useMaterializarMes() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async (args: { ano: number; mes: number }): Promise<OrcamentoConsumo> => {
+    mutationFn: async (args: {
+      ano: number
+      mes: number
+    }): Promise<OrcamentoConsumo> => {
       const { data, error } = await api.POST("/api/orcamentos/materializar", {
         params: { query: { ano: args.ano, mes: args.mes } },
       })
-      if (error || !data) throw new Error("falha ao aplicar o orçamento padrão a este mês")
+      if (error || !data)
+        throw new Error("falha ao aplicar o orçamento padrão a este mês")
       return data
     },
     onSuccess: () => invalidar(qc),

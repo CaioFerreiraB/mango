@@ -32,8 +32,9 @@ export const descricaoExibida = (t: Transacao): string | null =>
 
 /** Linha secundária: com descrição própria, a do banco vira o subtítulo; senão, o estabelecimento. */
 export const subtituloTransacao = (t: Transacao): string | null =>
-  (t.descricao_usuario ? (descricaoBanco(t) ?? t.merchant_nome) : t.merchant_nome) ??
-  null
+  (t.descricao_usuario
+    ? (descricaoBanco(t) ?? t.merchant_nome)
+    : t.merchant_nome) ?? null
 
 export type TransacaoFiltro = {
   inicio?: string
@@ -68,7 +69,10 @@ export function useTransacoes(filtro: TransacaoFiltro = {}) {
 }
 
 /** Proventos de investimento candidatos a serem esta transação (mesmo valor, data ±5 dias, §4.9). */
-export function useProventosSugeridos(transacaoId: number | null, enabled = true) {
+export function useProventosSugeridos(
+  transacaoId: number | null,
+  enabled = true
+) {
   return useQuery({
     queryKey: ["transacoes", transacaoId, "proventos-sugeridos"],
     enabled: transacaoId != null && enabled,

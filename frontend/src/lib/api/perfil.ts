@@ -39,7 +39,9 @@ export function useDefinirBrapiToken() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (token: string): Promise<void> => {
-      const { error } = await api.PUT("/api/perfil/brapi-token", { body: { token } })
+      const { error } = await api.PUT("/api/perfil/brapi-token", {
+        body: { token },
+      })
       if (error) throw new Error(mensagemErro(error, "falha ao salvar o token"))
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["perfil"] }),
@@ -52,7 +54,8 @@ export function useRemoverBrapiToken() {
   return useMutation({
     mutationFn: async (): Promise<void> => {
       const { error } = await api.DELETE("/api/perfil/brapi-token")
-      if (error) throw new Error(mensagemErro(error, "falha ao remover o token"))
+      if (error)
+        throw new Error(mensagemErro(error, "falha ao remover o token"))
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["perfil"] }),
   })

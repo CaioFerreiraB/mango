@@ -1,0 +1,32 @@
+# Análise estática do Codacy. A cobertura chega pelo CI (ver .github/workflows/ci.yml).
+#
+# O ruff e o eslint já rodam no CI e barram o merge; aqui o interesse é o que eles não cobrem —
+# duplicação, complexidade e segurança. As engines que só repetiriam o lint local ficam desligadas
+# para não gerar duas vozes sobre o mesmo problema.
+---
+engines:
+  pylint:
+    enabled: true
+  bandit:
+    enabled: true
+  eslint:
+    enabled: false # já roda no CI com a config do projeto (frontend/eslint.config.js)
+  pmd:
+    enabled: false
+
+exclude_paths:
+  # Gerados — não são código autoral.
+  - "frontend/dist/**"
+  - "frontend/node_modules/**"
+  - "frontend/src/lib/api/schema.d.ts"
+  - "frontend/openapi.json"
+  - "frontend/package-lock.json"
+  - "uv.lock"
+  # Migrations são geradas pelo alembic e já ficam fora do ruff (ver pyproject.toml).
+  - "alembic/versions/**"
+  # Sandbox de descoberta, descartável (ver pyproject.toml: extend-exclude).
+  - "scripts/discovery/**"
+  # Primitivos do shadcn/ui, mantidos como vieram do registro.
+  - "frontend/src/components/ui/**"
+  - "tests/**"
+  - "docs/**"

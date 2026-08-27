@@ -39,8 +39,18 @@ function BarrasTotal({ buckets }: { buckets: FaturaResumoBucket[] }) {
     <ChartContainer config={CFG_TOTAL} className="aspect-auto h-[240px] w-full">
       <BarChart data={dados}>
         <CartesianGrid vertical={false} strokeDasharray="3 3" />
-        <XAxis dataKey="label" tickLine={false} axisLine={false} tickMargin={8} />
-        <YAxis tickLine={false} axisLine={false} width={44} tickFormatter={eixoBRL} />
+        <XAxis
+          dataKey="label"
+          tickLine={false}
+          axisLine={false}
+          tickMargin={8}
+        />
+        <YAxis
+          tickLine={false}
+          axisLine={false}
+          width={44}
+          tickFormatter={eixoBRL}
+        />
         <ChartTooltip
           content={
             <ChartTooltipContent
@@ -67,7 +77,10 @@ export function GraficoFaturas({ contaId }: { contaId: number }) {
   const { data: buckets, isLoading } = useFaturasResumo(contaId)
   // Rótulo do segmento sintético que fecha a quebra no total (AJUSTE_CATEGORIA_ID no backend):
   // encargos (IOF/juros/multa), saldo anterior e estornos que não são compras categorizáveis.
-  const rotulo = new Map(useMapaCategorias()).set("__ajuste__", "Encargos e ajustes")
+  const rotulo = new Map(useMapaCategorias()).set(
+    "__ajuste__",
+    "Encargos e ajustes"
+  )
 
   // Cartão sem faturas ainda: nada a mostrar (não polui o detalhe com um card vazio).
   if (!isLoading && (buckets?.length ?? 0) === 0) return null

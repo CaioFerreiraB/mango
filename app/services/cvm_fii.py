@@ -330,7 +330,8 @@ def _parse_mensal(zip_srcs, isins: set[str]) -> dict[str, FundamentoBruto]:  # n
 
 
 def _parse_trimestral(
-    zip_src, cnpjs: set[str]  # noqa: ANN001
+    zip_src,
+    cnpjs: set[str],  # noqa: ANN001
 ) -> dict[str, tuple[Decimal | None, Decimal | None, date | None]]:
     with zipfile.ZipFile(zip_src) as zf:
         imovel = _rows_re(zf, r"fii_imovel_\d{4}\.csv$")  # exato: não pega alienacao/desempenho

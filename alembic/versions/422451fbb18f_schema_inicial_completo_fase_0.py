@@ -1,7 +1,7 @@
 """schema inicial completo (fase 0)
 
 Revision ID: 422451fbb18f
-Revises: 
+Revises:
 Create Date: 2026-06-30 08:45:28.335984
 
 """

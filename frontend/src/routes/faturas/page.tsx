@@ -30,7 +30,13 @@ function ult4(numero?: string | null): string | null {
 }
 
 /** Nome do cartão + sufixo `****1234` menor e esmaecido (só quando há número). */
-function NomeCartao({ nome, numero }: { nome: string; numero?: string | null }) {
+function NomeCartao({
+  nome,
+  numero,
+}: {
+  nome: string
+  numero?: string | null
+}) {
   const u = ult4(numero)
   return (
     <>
@@ -53,7 +59,7 @@ export function FaturasPage() {
   const [mesKey, setMesKey] = useState<string | null>(null)
   const [instituicaoId, setInstituicaoId] = useState<number | null>(null)
   const [cartaoId, setCartaoId] = useState<number | null>(
-    params.get("cartao_id") ? Number(params.get("cartao_id")) : null,
+    params.get("cartao_id") ? Number(params.get("cartao_id")) : null
   )
 
   // fatura.cartao_id === conta.id (do cartão). O título do card é o nome da própria conta
@@ -94,12 +100,14 @@ export function FaturasPage() {
     .sort(
       (a, b) =>
         a.nome.localeCompare(b.nome) ||
-        (a.numero ?? "").localeCompare(b.numero ?? ""),
+        (a.numero ?? "").localeCompare(b.numero ?? "")
     )
 
   // Meses presentes (competência do vencimento), rotulados "junho de 2026", mais recente primeiro.
   const opcoesMes = [
-    ...new Map(faturas.map((f) => [mesISO(f.due_date), formatMesAno(f.due_date)])),
+    ...new Map(
+      faturas.map((f) => [mesISO(f.due_date), formatMesAno(f.due_date)])
+    ),
   ]
     .sort((a, b) => (a[0] < b[0] ? 1 : -1))
     .map(([key, label]) => ({ key, label }))
@@ -219,7 +227,7 @@ export function FaturasPage() {
                                   alinhado ao texto (não ao avatar); no desktop fica à direita. */}
                               <div className="flex min-w-0 flex-1 flex-wrap items-start justify-between gap-x-3 gap-y-2">
                                 <div className="min-w-0">
-                                  <p className="font-medium break-words [overflow-wrap:anywhere]">
+                                  <p className="font-medium [overflow-wrap:anywhere] break-words">
                                     <NomeCartao nome={nome} numero={numero} />
                                   </p>
                                   <p className="mt-1 text-sm text-muted-foreground">
@@ -227,7 +235,9 @@ export function FaturasPage() {
                                   </p>
                                   <div className="mt-1 flex flex-wrap items-center gap-2">
                                     <Badge
-                                      variant={st.aberta ? "default" : "secondary"}
+                                      variant={
+                                        st.aberta ? "default" : "secondary"
+                                      }
                                     >
                                       {st.rotulo}
                                     </Badge>

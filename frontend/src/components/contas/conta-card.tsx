@@ -45,8 +45,12 @@ export function ContaCard({
         <CardHeader className="flex-row items-start gap-3 pb-2">
           <AvatarBanco nome={nome} logoUrl={logoUrl} />
           <div className="min-w-0 flex-1">
-            <p className="font-medium line-clamp-2 break-words [overflow-wrap:anywhere]">{nome}</p>
-            <p className="text-xs text-muted-foreground">{mascarar(conta.numero)}</p>
+            <p className="line-clamp-2 font-medium [overflow-wrap:anywhere] break-words">
+              {nome}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {mascarar(conta.numero)}
+            </p>
           </div>
         </CardHeader>
 

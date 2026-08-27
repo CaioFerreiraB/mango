@@ -14,9 +14,16 @@ export type CartaoEstilo = {
   id?: string
 }
 
-const grad = (a: string, b: string): string => `linear-gradient(135deg, ${a}, ${b})`
-const escuro = (a: string, b: string): CartaoEstilo => ({ fundo: grad(a, b), texto: "#ffffff" })
-const claro = (a: string, b: string): CartaoEstilo => ({ fundo: grad(a, b), texto: "#161616" })
+const grad = (a: string, b: string): string =>
+  `linear-gradient(135deg, ${a}, ${b})`
+const escuro = (a: string, b: string): CartaoEstilo => ({
+  fundo: grad(a, b),
+  texto: "#ffffff",
+})
+const claro = (a: string, b: string): CartaoEstilo => ({
+  fundo: grad(a, b),
+  texto: "#161616",
+})
 
 // Cartões icônicos do Brasil (casados por trecho do nome/marketing_name). Poucos e específicos de
 // propósito — falso-positivo é pior que cair no tipo. Ampliar sob demanda.
@@ -39,7 +46,8 @@ const SKINS: Array<{ re: RegExp; estilo: CartaoEstilo }> = [
 ]
 
 const ACCENT: CartaoEstilo = {
-  fundo: "linear-gradient(135deg, var(--primary), color-mix(in oklab, var(--primary) 55%, #000))",
+  fundo:
+    "linear-gradient(135deg, var(--primary), color-mix(in oklab, var(--primary) 55%, #000))",
   texto: "#ffffff",
 }
 
@@ -56,7 +64,8 @@ export function corDoCartao(
   nome?: string | null
 ): CartaoEstilo {
   // Sandbox/manual nem sempre traz `marketingName` — a identidade do cartão costuma vir no `nome`.
-  const alvo = `${marketingName ?? ""} ${nome ?? ""} ${level ?? ""}`.toLowerCase()
+  const alvo =
+    `${marketingName ?? ""} ${nome ?? ""} ${level ?? ""}`.toLowerCase()
   const skin = SKINS.find((s) => s.re.test(alvo))
   return skin ? skin.estilo : porTipo((level ?? "").toUpperCase())
 }
