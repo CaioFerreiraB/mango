@@ -22,7 +22,7 @@ import {
   TrendingUp,
   X,
 } from "lucide-react"
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import {
   Bar,
   BarChart,
@@ -247,9 +247,12 @@ function CorpoAtivo({
   const fund = usePosicaoFundamentos(p.investimento_ids, ehFII).data
   // Extras do título (taxa/indexador/vencimento/IR) não vêm na linha agregada — leem dos
   // investimentos da posição (compras do mesmo papel). Cacheado; só a renda fixa consome.
-  const invsPosicao =
-    useInvestimentos().data?.filter((i) => p.investimento_ids.includes(i.id)) ??
-    []
+  const investimentosData = useInvestimentos().data
+  const invsPosicao = useMemo(
+    () =>
+      investimentosData?.filter((i) => p.investimento_ids.includes(i.id)) ?? [],
+    [investimentosData, p.investimento_ids]
+  )
   const indexadorTexto = ehRendaFixa
     ? rotuloIndexador(invsPosicao[0]?.rate_type, invsPosicao[0]?.rate)
     : null
