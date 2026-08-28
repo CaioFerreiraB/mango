@@ -27,9 +27,6 @@ import { cn } from "@/lib/utils"
  * `incluirTodas` adiciona a opção "Todas" (para filtro); `excluir` esconde ids da lista (ex.:
  * categorias já adicionadas em outro lugar); `disabled` bloqueia a escolha (cobrança de
  * assinatura tem a categoria da assinatura). */
-// Os parâmetros nas anotações de tipo abaixo levam `_` porque são só documentação: o TypeScript
-// exige um nome na sintaxe de tipo de função, mas ali não existe binding nenhum. Sem o prefixo, o
-// analisador estático os reporta como variável não usada.
 export function CategoriaSelect({
   value,
   onChange,
@@ -40,7 +37,7 @@ export function CategoriaSelect({
   disabled = false,
 }: {
   value: string | null
-  onChange: (_v: string | null) => void
+  onChange: (v: string | null) => void
   incluirTodas?: boolean
   placeholder?: string
   className?: string
@@ -175,7 +172,7 @@ function Item({
 }: {
   categoria: Categoria
   selecionado: boolean
-  onSelect: (_v: string) => void
+  onSelect: (v: string) => void
 }) {
   return (
     <CommandItem

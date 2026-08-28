@@ -97,7 +97,7 @@ function NoRaiz({
 }: {
   no: No
   expandido: boolean
-  onAlternar: (_id: string, _ativa: boolean) => void
+  onAlternar: (id: string, ativa: boolean) => void
 }) {
   const [aberto, setAberto] = useState(expandido)
   return (
@@ -131,15 +131,12 @@ function NoRaiz({
   )
 }
 
-// Os parâmetros nas anotações de tipo abaixo levam `_` porque são só documentação: o TypeScript
-// exige um nome na sintaxe de tipo de função, mas ali não existe binding nenhum. Sem o prefixo, o
-// analisador estático os reporta como variável não usada.
 function LinhaCategoria({
   categoria,
   onAlternar,
 }: {
   categoria: Categoria
-  onAlternar: (_id: string, _ativa: boolean) => void
+  onAlternar: (id: string, ativa: boolean) => void
 }) {
   const nome = nomeCategoria(categoria)
 
