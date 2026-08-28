@@ -4,7 +4,7 @@
  */
 import assert from "node:assert/strict"
 
-import { estadoRevisao } from "@/lib/revisao"
+import { deveGravarNoBlur, estadoRevisao } from "@/lib/revisao"
 
 // Sem corte definido, "não revisada" é sempre pendente — comportamento anterior ao campo.
 assert.equal(
@@ -58,3 +58,31 @@ assert.equal(
 )
 
 console.log("revisao.check.ts OK")
+
+// --- guarda do blur no card de configurações -------------------------------------------
+// Regressão real (47d571c): a guarda era `relatedTarget === limpar.current`. Sem data salva o botão
+// "Limpar" não é renderizado (ref nula) e clicar em área não-focável dá relatedTarget nulo, então
+// `null === null` engolia a PRIMEIRA gravação — justamente a que importa.
+const botao = {} as EventTarget
+assert.equal(
+  deveGravarNoBlur(null, null),
+  true,
+  "sem data salva (ref nula) + clique em área não-focável: TEM de gravar"
+)
+assert.equal(
+  deveGravarNoBlur(botao, botao),
+  false,
+  "foco indo para o botão Limpar: não grava (evita a corrida)"
+)
+assert.equal(
+  deveGravarNoBlur({} as EventTarget, botao),
+  true,
+  "foco indo para outro elemento: grava normalmente"
+)
+assert.equal(
+  deveGravarNoBlur(null, botao),
+  true,
+  "com data salva + clique em área não-focável: grava"
+)
+
+console.log("guarda do blur OK")

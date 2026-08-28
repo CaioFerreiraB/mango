@@ -20,3 +20,20 @@ export function estadoRevisao(
   if (revisaoDesde && diaCivilSP(data) < revisaoDesde) return "ignorado"
   return "pendente"
 }
+
+/**
+ * O blur do campo de corte deve gravar?
+ *
+ * Não grava só quando o foco está indo para o próprio botão "Limpar" — senão a data editada sairia
+ * em paralelo com o `null` e, chegando depois, ressuscitaria o corte.
+ *
+ * O `refLimpar &&` NÃO é redundante: sem data salva o botão não é renderizado (ref nula) e clicar
+ * em área não-focável dá `relatedTarget` nulo. Sem essa checagem, `null === null` engoliria a
+ * PRIMEIRA gravação — justamente a que importa.
+ */
+export function deveGravarNoBlur(
+  relatedTarget: EventTarget | null,
+  refLimpar: EventTarget | null
+): boolean {
+  return !(refLimpar && relatedTarget === refLimpar)
+}

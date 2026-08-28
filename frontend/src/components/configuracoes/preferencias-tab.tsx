@@ -25,6 +25,7 @@ import {
   AVATARES_DISPONIVEIS,
   ilustracao,
 } from "@/lib/illustrations"
+import { deveGravarNoBlur } from "@/lib/revisao"
 import { cn } from "@/lib/utils"
 
 const NOMES_ACCENT: Record<Accent, string> = {
@@ -219,10 +220,10 @@ function RevisaoCorteCard({ perfil }: { perfil: Perfil }) {
                 setValor(e.target.value)
               }}
               // Grava no blur: `type="date"` dispara `onChange` com data ainda pela metade.
-              // Clicar em "Limpar" também borra o campo — sem esta guarda a data editada seria
-              // gravada em paralelo com o null e, se chegasse depois, ressuscitaria o corte.
+              // A regra de "quando gravar" mora em `deveGravarNoBlur` — tem uma sutileza de
+              // relatedTarget nulo que já causou regressão e agora está coberta por self-check.
               onBlur={(e) => {
-                if (e.relatedTarget === limpar.current) return
+                if (!deveGravarNoBlur(e.relatedTarget, limpar.current)) return
                 gravar(e.target.value)
               }}
               onKeyDown={(e) => {
