@@ -290,6 +290,14 @@ export function TransacoesTabela({
                       {subtitulo}
                     </p>
                   ) : null}
+                  <StatusBadge
+                    className="mt-1 px-1.5 py-0 text-[10px]"
+                    estado={estadoRevisao(
+                      t.revisada,
+                      t.date,
+                      perfil.data?.revisao_desde
+                    )}
+                  />
                 </div>
                 <div className="shrink-0 text-right">
                   <Valor

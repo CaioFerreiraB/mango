@@ -32,12 +32,18 @@ function estilo(estado: EstadoRevisao) {
 }
 
 /** Badge de revisão: fundo neutro suave, bolinha + texto coloridos — cor nunca é o único sentido. */
-export function StatusBadge({ estado }: { estado: EstadoRevisao }) {
+export function StatusBadge({
+  estado,
+  className,
+}: {
+  estado: EstadoRevisao
+  className?: string
+}) {
   const { texto, badge, ponto } = estilo(estado)
   return (
     <Badge
       variant="secondary"
-      className={cn("gap-1.5 font-medium", badge)}
+      className={cn("gap-1.5 font-medium", badge, className)}
       title={estado === "ignorado" ? AJUDA_IGNORADA : undefined}
     >
       <span className={cn("size-1.5 rounded-full", ponto)} aria-hidden />

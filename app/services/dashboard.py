@@ -48,6 +48,64 @@ def _soma(db: Session, filtros: tuple, tipo: str) -> int:
     )
 
 
+def _saldo_em_contas(db: Session, usuario_id: int) -> int:
+    """Saldo somado das contas BANK (cartão não tem saldo, tem fatura)."""
+    return db.scalar(
+        select(func.coalesce(func.sum(Conta.saldo_centavos), 0)).where(
+            Conta.usuario_id == usuario_id, Conta.type == "BANK"
+        )
+    )
+
+
+def _contar_pendentes(db: Session, do_usuario, corte: datetime | None) -> int:
+    """Transações na fila de revisão (§4.3).
+
+    Contagem GLOBAL de propósito (não respeita o período do dashboard): a fila é uma pendência do
+    usuário, não um recorte temporal. O corte tira o histórico que ele já declarou que não vai
+    revisar.
+    """
+    return db.scalar(
+        select(func.count()).select_from(Transacao).where(do_usuario, expr_pendente_revisao(corte))
+    )
+
+
+def _gasto_por_categoria(db: Session, usuario_id: int, filtros: tuple) -> list[GastoCategoria]:
+    """Top-N categorias por gasto no período, pela categoria efetiva (§4.5)."""
+    cat_efetiva = expr_categoria_efetiva(usuario_id)
+    linhas = db.execute(
+        com_assinatura(select(cat_efetiva, func.sum(-_VALOR_EFETIVO)), usuario_id)
+        .where(*filtros, Transacao.type == "DEBIT")
+        .group_by(cat_efetiva)
+        .order_by(func.sum(-_VALOR_EFETIVO).desc())
+        .limit(_TOP_CATEGORIAS)
+    ).all()
+    return [GastoCategoria(categoria_id=cat, total_centavos=total) for cat, total in linhas]
+
+
+def _ultimas_transacoes(db: Session, do_usuario) -> list[Transacao]:
+    """As mais recentes do usuário, sem recorte de período (é um atalho, não um relatório)."""
+    return list(
+        db.scalars(
+            select(Transacao)
+            .where(do_usuario)
+            .order_by(Transacao.date.desc(), Transacao.id.desc())
+            .limit(_ULTIMAS)
+        ).all()
+    )
+
+
+def _faturas_abertas(db: Session, usuario_id: int) -> list[Fatura]:
+    """Próximas faturas a vencer."""
+    return list(
+        db.scalars(
+            select(Fatura)
+            .where(Fatura.usuario_id == usuario_id, Fatura.due_date >= datetime.now(UTC))
+            .order_by(Fatura.due_date.asc())
+            .limit(_FATURAS_ABERTAS)
+        ).all()
+    )
+
+
 def montar_dashboard(
     db: Session,
     usuario_id: int,
@@ -64,54 +122,15 @@ def montar_dashboard(
     entradas = _soma(db, base, "CREDIT")
     saidas = -_soma(db, base, "DEBIT")  # débitos são negativos → total de saída positivo
 
-    saldo_total = db.scalar(
-        select(func.coalesce(func.sum(Conta.saldo_centavos), 0)).where(
-            Conta.usuario_id == usuario_id, Conta.type == "BANK"
-        )
-    )
-    # Contagem GLOBAL de propósito (não respeita o período do dashboard): a fila de revisão é uma
-    # pendência do usuário, não um recorte temporal. O corte (§4.3) tira o histórico que ele já
-    # declarou que não vai revisar.
-    nao_revisadas = db.scalar(
-        select(func.count())
-        .select_from(Transacao)
-        .where(do_usuario, expr_pendente_revisao(corte_revisao))
-    )
-
-    cat_efetiva = expr_categoria_efetiva(usuario_id)
-    por_categoria = db.execute(
-        com_assinatura(select(cat_efetiva, func.sum(-_VALOR_EFETIVO)), usuario_id)
-        .where(do_usuario, *no_periodo, real, Transacao.type == "DEBIT")
-        .group_by(cat_efetiva)
-        .order_by(func.sum(-_VALOR_EFETIVO).desc())
-        .limit(_TOP_CATEGORIAS)
-    ).all()
-
-    ultimas = db.scalars(
-        select(Transacao)
-        .where(do_usuario)
-        .order_by(Transacao.date.desc(), Transacao.id.desc())
-        .limit(_ULTIMAS)
-    ).all()
-
-    faturas = db.scalars(
-        select(Fatura)
-        .where(Fatura.usuario_id == usuario_id, Fatura.due_date >= datetime.now(UTC))
-        .order_by(Fatura.due_date.asc())
-        .limit(_FATURAS_ABERTAS)
-    ).all()
-
     return DashboardResumo(
-        saldo_total_centavos=saldo_total,
+        saldo_total_centavos=_saldo_em_contas(db, usuario_id),
         entradas_centavos=entradas,
         saidas_centavos=saidas,
         resultado_centavos=entradas - saidas,
-        nao_revisadas=nao_revisadas,
-        gasto_por_categoria=[
-            GastoCategoria(categoria_id=cat, total_centavos=total) for cat, total in por_categoria
-        ],
-        ultimas_transacoes=list(ultimas),
-        faturas_abertas=list(faturas),
+        nao_revisadas=_contar_pendentes(db, do_usuario, corte_revisao),
+        gasto_por_categoria=_gasto_por_categoria(db, usuario_id, base),
+        ultimas_transacoes=_ultimas_transacoes(db, do_usuario),
+        faturas_abertas=_faturas_abertas(db, usuario_id),
     )
 
 

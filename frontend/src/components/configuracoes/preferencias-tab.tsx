@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useRef, useState } from "react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
@@ -49,7 +49,6 @@ function PreferenciasForm({ perfil }: { perfil: Perfil }) {
   const atualizar = useAtualizarPerfil()
   const accentAtual = (perfil.accent ?? ACCENT_PADRAO) as Accent
   const avatarAtual = perfil.avatar ?? AVATAR_PADRAO
-  const [revisaoDesde, setRevisaoDesde] = useState(perfil.revisao_desde ?? "")
 
   function escolherAccent(accent: Accent) {
     if (accent === accentAtual) return
@@ -69,29 +68,6 @@ function PreferenciasForm({ perfil }: { perfil: Perfil }) {
     atualizar.mutate(
       { avatar: Number(valor) },
       { onError: (err) => toast.error(err.message) }
-    )
-  }
-
-  const salvoRevisao = perfil.revisao_desde ?? ""
-
-  /** Grava a data de corte; "" limpa. Só chama o servidor se mudou de verdade. */
-  function gravarRevisao(valor: string) {
-    if (valor === salvoRevisao) return
-    setRevisaoDesde(valor)
-    atualizar.mutate(
-      { revisao_desde: valor || null },
-      {
-        onSuccess: () =>
-          toast.success(
-            valor
-              ? "Data de início da revisão atualizada."
-              : "Todo o histórico volta a pedir revisão."
-          ),
-        onError: (err) => {
-          setRevisaoDesde(salvoRevisao)
-          toast.error(err.message)
-        },
-      }
     )
   }
 
@@ -185,50 +161,89 @@ function PreferenciasForm({ perfil }: { perfil: Perfil }) {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Revisão de transações</CardTitle>
-          <CardDescription>
-            Transações anteriores a esta data não entram na fila de revisão —
-            elas não são marcadas como revisadas, apenas deixam de ser cobradas.
-            Deixe em branco para revisar todo o histórico.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-wrap items-end gap-3">
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="revisao-desde">Revisar a partir de</Label>
-              <Input
-                id="revisao-desde"
-                type="date"
-                className="w-44"
-                value={revisaoDesde}
-                onChange={(e) => {
-                  setRevisaoDesde(e.target.value)
-                }}
-                // Grava no blur: `type="date"` dispara `onChange` com data ainda pela metade.
-                onBlur={(e) => {
-                  gravarRevisao(e.target.value)
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") e.currentTarget.blur()
-                }}
-              />
-            </div>
-            {salvoRevisao ? (
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() => {
-                  gravarRevisao("")
-                }}
-              >
-                Limpar
-              </Button>
-            ) : null}
-          </div>
-        </CardContent>
-      </Card>
+      <RevisaoCorteCard perfil={perfil} />
     </div>
+  )
+}
+
+/** Corte da fila de revisão (§4.3): grava no blur do campo, com "Limpar" para voltar ao histórico
+ *  inteiro. Card próprio porque tem estado e regra de gravação que não são das preferências visuais. */
+function RevisaoCorteCard({ perfil }: { perfil: Perfil }) {
+  const atualizar = useAtualizarPerfil()
+  const salvo = perfil.revisao_desde ?? ""
+  const [valor, setValor] = useState(salvo)
+  const limpar = useRef<HTMLButtonElement>(null)
+
+  /** Grava a data de corte; "" limpa. Só chama o servidor se mudou de verdade. */
+  function gravar(novo: string) {
+    if (novo === salvo) return
+    setValor(novo)
+    atualizar.mutate(
+      { revisao_desde: novo || null },
+      {
+        onSuccess: () => {
+          toast.success(
+            novo
+              ? "Data de início da revisão atualizada."
+              : "Todo o histórico volta a pedir revisão."
+          )
+        },
+        onError: (err) => {
+          setValor(salvo)
+          toast.error(err.message)
+        },
+      }
+    )
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">Revisão de transações</CardTitle>
+        <CardDescription>
+          Transações anteriores a esta data não entram na fila de revisão — elas
+          não são marcadas como revisadas, apenas deixam de ser cobradas. Deixe
+          em branco para revisar todo o histórico.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="flex flex-wrap items-end gap-3">
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="revisao-desde">Revisar a partir de</Label>
+            <Input
+              id="revisao-desde"
+              type="date"
+              className="w-44"
+              value={valor}
+              onChange={(e) => {
+                setValor(e.target.value)
+              }}
+              // Grava no blur: `type="date"` dispara `onChange` com data ainda pela metade.
+              // Clicar em "Limpar" também borra o campo — sem esta guarda a data editada seria
+              // gravada em paralelo com o null e, se chegasse depois, ressuscitaria o corte.
+              onBlur={(e) => {
+                if (e.relatedTarget === limpar.current) return
+                gravar(e.target.value)
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") e.currentTarget.blur()
+              }}
+            />
+          </div>
+          {salvo ? (
+            <Button
+              ref={limpar}
+              type="button"
+              variant="ghost"
+              onClick={() => {
+                gravar("")
+              }}
+            >
+              Limpar
+            </Button>
+          ) : null}
+        </div>
+      </CardContent>
+    </Card>
   )
 }
