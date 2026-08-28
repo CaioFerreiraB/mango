@@ -1,14 +1,15 @@
 """Filtros da listagem de transações (§4.5) + vínculo com provento de investimento (§4.9)."""
 
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, time, timedelta
 
 from sqlalchemy.orm import Session
 
-from app.models.categoria import Categoria
+from app.models.categoria import CATEGORIA_PAGAMENTO_FATURA, Categoria
 from app.models.investimento import Investimento, InvestimentoTransacao
 from app.models.usuario import Usuario
 from app.repositories.assinatura import AssinaturaRepository
 from app.repositories.transacao import TransacaoRepository
+from app.services.periodo import SP, hoje_sp
 from tests.helpers import criar_conta
 
 
@@ -339,3 +340,92 @@ def test_pendente_revisao_respeita_o_corte(db: Session, usuario_a: Usuario, clie
     # O filtro cru da coluna não mudou de significado com o corte.
     assert ids("revisada=false") == nao_revisadas
     assert ids("revisada=true") == {ja_revisada.id}
+
+
+# --- padrões de exibição da listagem (§4.2/§4.4) ---------------------------------------
+
+
+def test_ocultar_pagamento_fatura_usa_a_categoria_efetiva(
+    db: Session, usuario_a: Usuario, client_factory
+) -> None:
+    """§4.4: o filtro segue a precedência de §4.5, não a categoria crua. Recategorizar um pagamento
+    à mão o traz de volta à listagem; ser pagamento por regra já basta para escondê-lo."""
+    db.add(Categoria(pluggy_id=CATEGORIA_PAGAMENTO_FATURA, description="Pagamento de cartão"))
+    db.add(Categoria(pluggy_id="02000000", description="Food"))
+    db.commit()
+    conta = criar_conta(db, usuario_a.id, "acc-pgto")
+    repo = TransacaoRepository(db, usuario_a.id)
+    do_banco = _criar_tx(repo, conta.id, "t-banco", categoria_pluggy_id=CATEGORIA_PAGAMENTO_FATURA)
+    por_regra = _criar_tx(repo, conta.id, "t-regra", categoria_regra_id=CATEGORIA_PAGAMENTO_FATURA)
+    por_mao = _criar_tx(
+        repo,
+        conta.id,
+        "t-mao",
+        categoria_pluggy_id="02000000",
+        categoria_override_id=CATEGORIA_PAGAMENTO_FATURA,
+    )
+    recategorizada = _criar_tx(
+        repo,
+        conta.id,
+        "t-recat",
+        categoria_pluggy_id=CATEGORIA_PAGAMENTO_FATURA,
+        categoria_override_id="02000000",
+    )
+    sem_categoria = _criar_tx(repo, conta.id, "t-sem-cat")
+
+    client = client_factory(usuario_a)
+
+    def ids(query: str) -> set[int]:
+        resp = client.get(f"/api/transacoes?{query}")
+        assert resp.status_code == 200, resp.text
+        corpo = resp.json()
+        assert corpo["total"] == len(corpo["items"])  # a contagem usa os mesmos filtros
+        return {t["id"] for t in corpo["items"]}
+
+    todas = {do_banco.id, por_regra.id, por_mao.id, recategorizada.id, sem_categoria.id}
+    assert ids("") == todas  # desligado por padrão no backend
+    # Some o que É pagamento pela categoria efetiva — inclusive quando isso veio de uma regra.
+    # Fica quem o usuário recategorizou à mão e quem não tem categoria nenhuma (NULL não é
+    # pagamento de fatura — a armadilha do `!=`).
+    assert ids("ocultar_pagamento_fatura=true") == {recategorizada.id, sem_categoria.id}
+
+
+def test_ocultar_futuras_corta_no_fim_do_dia_de_hoje(
+    db: Session, usuario_a: Usuario, client_factory
+) -> None:
+    """§4.2: o corte é o fim do dia civil em SP. Um lançamento de hoje às 23h já está no dia
+    seguinte em UTC e continua visível — é a borda que a comparação ingênua em UTC erraria."""
+    hoje = hoje_sp()
+    conta = criar_conta(db, usuario_a.id, "acc-futuras")
+    repo = TransacaoRepository(db, usuario_a.id)
+
+    def em_sp(dia: date, hora: int) -> datetime:
+        return datetime.combine(dia, time(hora), tzinfo=SP).astimezone(UTC)
+
+    ontem = _criar_tx(repo, conta.id, "t-ontem", date=em_sp(hoje - timedelta(days=1), 12))
+    borda = _criar_tx(repo, conta.id, "t-borda", date=em_sp(hoje, 23))
+    parcela = _criar_tx(
+        repo,
+        conta.id,
+        "t-parcela",
+        date=em_sp(hoje + timedelta(days=40), 12),
+        installment_number=2,
+        total_installments=6,
+    )
+
+    client = client_factory(usuario_a)
+
+    def ids(query: str) -> set[int]:
+        resp = client.get(f"/api/transacoes?{query}")
+        assert resp.status_code == 200, resp.text
+        corpo = resp.json()
+        assert corpo["total"] == len(corpo["items"])
+        return {t["id"] for t in corpo["items"]}
+
+    assert ids("") == {ontem.id, borda.id, parcela.id}  # desligado por padrão no backend
+    assert ids("ocultar_futuras=true") == {ontem.id, borda.id}
+    # Convive com `fim`: prevalece sempre o limite mais apertado, venha de qual dos dois vier.
+    fim_amplo = (hoje + timedelta(days=60)).isoformat()
+    assert ids(f"ocultar_futuras=true&fim={fim_amplo}") == {ontem.id, borda.id}
+    fim_estreito = (hoje - timedelta(days=1)).isoformat()
+    assert ids(f"ocultar_futuras=true&fim={fim_estreito}") == {ontem.id}

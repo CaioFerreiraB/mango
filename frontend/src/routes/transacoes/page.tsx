@@ -74,6 +74,11 @@ export function TransacoesPage() {
     params.get("pendente") === "true" || params.get("revisada") === "false"
   )
   const [transf, setTransf] = useState<"todas" | "ocultar" | "so">("todas")
+  // Nascem LIGADOS (§4.2/§4.4): a listagem é a tela do "o que eu gastei", e o pagamento da fatura
+  // (que só quita compras já listadas) e as parcelas dos meses que ainda não chegaram empurram o
+  // presente para baixo. Quem precisa do quadro completo desliga no popover.
+  const [ocultarPagFatura, setOcultarPagFatura] = useState(true)
+  const [ocultarFuturas, setOcultarFuturas] = useState(true)
   // "__todas__" · "__qualquer__" (com assinatura) · "__sem__" (sem) · id da assinatura.
   const [assinaturaFiltro, setAssinaturaFiltro] = useState(TODAS)
   const [page, setPage] = useState(0)
@@ -106,16 +111,22 @@ export function TransacoesPage() {
     pendente_revisao: soNaoRevisadas ? true : undefined,
     eh_transferencia:
       transf === "ocultar" ? false : transf === "so" ? true : undefined,
+    ocultar_pagamento_fatura: ocultarPagFatura || undefined,
+    ocultar_futuras: ocultarFuturas || undefined,
     assinatura_id: assinaturaId,
     tem_assinatura: temAssinatura,
     limit: LIMIT,
     offset: page * LIMIT,
   })
 
+  // Conta DESVIOS do padrão, não filtros ligados: os dois "ocultar" nascem ligados, então o badge
+  // aparece justamente quando você os desliga e a listagem passa a mostrar mais do que o normal.
   const filtrosAvancados =
     (tipo !== null ? 1 : 0) +
     (transf !== "todas" ? 1 : 0) +
-    (assinaturaFiltro !== TODAS ? 1 : 0)
+    (assinaturaFiltro !== TODAS ? 1 : 0) +
+    (ocultarPagFatura ? 0 : 1) +
+    (ocultarFuturas ? 0 : 1)
 
   const total = listagem.data?.total ?? 0
   const paginas = Math.max(1, Math.ceil(total / LIMIT))
@@ -169,6 +180,29 @@ export function TransacoesPage() {
                   onCheckedChange={(c) => reset(setSoNaoRevisadas)(c)}
                 />
               </label>
+              <label className="flex items-center justify-between gap-2 text-sm">
+                Ocultar pagamentos de fatura
+                <Switch
+                  checked={ocultarPagFatura}
+                  onCheckedChange={(c) => reset(setOcultarPagFatura)(c)}
+                />
+              </label>
+              <div className="space-y-1">
+                <label className="flex items-center justify-between gap-2 text-sm">
+                  Ocultar lançamentos futuros
+                  <Switch
+                    aria-describedby="ajuda-ocultar-futuras"
+                    checked={ocultarFuturas}
+                    onCheckedChange={(c) => reset(setOcultarFuturas)(c)}
+                  />
+                </label>
+                <p
+                  id="ajuda-ocultar-futuras"
+                  className="text-xs text-muted-foreground"
+                >
+                  Parcelas e agendamentos com data depois de hoje.
+                </p>
+              </div>
               <div className="space-y-1.5">
                 <Label>Tipo</Label>
                 <Select

@@ -4,6 +4,7 @@ from datetime import datetime
 
 from sqlalchemy import func, or_, select
 
+from app.models.categoria import CATEGORIA_PAGAMENTO_FATURA
 from app.models.transacao import Transacao
 from app.repositories.base import UserScopedRepository
 from app.services.categoria_resolucao import com_assinatura, expr_categoria_efetiva
@@ -61,6 +62,7 @@ class TransacaoRepository(UserScopedRepository[Transacao]):
         pendente_revisao: bool | None = None,
         corte_revisao: datetime | None = None,
         eh_transferencia: bool | None = None,
+        ocultar_pagamento_fatura: bool = False,
         assinatura_id: int | None = None,
         tem_assinatura: bool | None = None,
         busca: str | None = None,
@@ -79,7 +81,7 @@ class TransacaoRepository(UserScopedRepository[Transacao]):
             filtros.append(Transacao.conta_id == conta_id)
         # Filtrar por categoria exige a expressão de resolução, que referencia `assinatura` — o
         # outerjoin só entra quando o filtro é usado, para não pesar o caminho comum.
-        precisa_assinatura = categoria_id is not None
+        precisa_assinatura = categoria_id is not None or ocultar_pagamento_fatura
         if categoria_id is not None:
             filtros.append(expr_categoria_efetiva(self.usuario_id) == categoria_id)
         if fatura_id is not None:
@@ -96,6 +98,16 @@ class TransacaoRepository(UserScopedRepository[Transacao]):
             filtros.append(pendente if pendente_revisao else ~pendente)
         if eh_transferencia is not None:
             filtros.append(Transacao.eh_transferencia.is_(eh_transferencia))
+        # Pagamento de fatura pela categoria EFETIVA (§4.4): recategorizar à mão, por regra ou por
+        # assinatura tira a transação do filtro — o `transferencia.py` usa a categoria crua porque
+        # responde outra pergunta, e a divergência está documentada lá.
+        # `is_distinct_from` e não `!=`: com `!=`, categoria desconhecida (NULL) sumiria junto, já
+        # que `NULL != '05100000'` é NULL, não TRUE. Vira `IS NOT` no SQLite e `IS DISTINCT FROM` no
+        # Postgres — mesma semântica nos dois dialetos (§5.4).
+        if ocultar_pagamento_fatura:
+            filtros.append(
+                expr_categoria_efetiva(self.usuario_id).is_distinct_from(CATEGORIA_PAGAMENTO_FATURA)
+            )
         # Assinatura específica tem precedência sobre o "qualquer/nenhuma" (tem_assinatura).
         if assinatura_id is not None:
             filtros.append(Transacao.assinatura_id == assinatura_id)

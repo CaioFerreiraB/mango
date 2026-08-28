@@ -49,6 +49,10 @@ export type TransacaoFiltro = {
   /** Não revisada E a partir da data de corte do usuário (`perfil.revisao_desde`). */
   pendente_revisao?: boolean
   eh_transferencia?: boolean
+  /** Esconde o pagamento de fatura de cartão (categoria efetiva 05100000, §4.4). */
+  ocultar_pagamento_fatura?: boolean
+  /** Esconde lançamentos com data depois de hoje — parcelas futuras, sobretudo (§4.2). */
+  ocultar_futuras?: boolean
   assinatura_id?: number
   tem_assinatura?: boolean
   busca?: string
