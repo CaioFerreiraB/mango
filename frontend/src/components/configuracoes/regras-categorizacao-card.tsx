@@ -1,5 +1,5 @@
 import { Pencil, Plus, Trash2, Wand2 } from "lucide-react"
-import { useState } from "react"
+import { useState, type Dispatch, type SetStateAction } from "react"
 import { toast } from "sonner"
 
 import { EmptyState } from "@/components/common/empty-state"
@@ -147,6 +147,50 @@ export function RegrasCategorizacaoCard() {
   )
 }
 
+/** Lixeira + confirmação da regra. Fora da linha pelo mesmo motivo da categoria: é metade do
+ *  código dela e não divide estado com o resto. */
+function ExcluirRegra({ regra }: { regra: RegraCategorizacao }) {
+  const remover = useRemoverRegra()
+
+  return (
+    <AlertDialog>
+      <AlertDialogTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="size-8 text-muted-foreground hover:text-destructive"
+          aria-label={`Excluir regra ${regra.texto}`}
+        >
+          <Trash2 className="size-4" />
+        </Button>
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Excluir regra</AlertDialogTitle>
+          <AlertDialogDescription>
+            As transações que caíram nesta categoria por causa dela voltam à
+            classificação do banco. Ajustes feitos à mão não mudam.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+          <AlertDialogAction
+            className={buttonVariants({ variant: "destructive" })}
+            onClick={() =>
+              remover.mutate(regra.id, {
+                onSuccess: () => toast.success("Regra excluída."),
+                onError: (err) => toast.error(err.message),
+              })
+            }
+          >
+            Excluir
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  )
+}
+
 function LinhaRegra({
   regra,
   categoria,
@@ -154,8 +198,6 @@ function LinhaRegra({
   regra: RegraCategorizacao
   categoria: string | undefined
 }) {
-  const remover = useRemoverRegra()
-
   return (
     <TableRow>
       <TableCell className="font-medium">{regra.texto}</TableCell>
@@ -180,48 +222,13 @@ function LinhaRegra({
               </Button>
             }
           />
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="size-8 text-muted-foreground hover:text-destructive"
-                aria-label={`Excluir regra ${regra.texto}`}
-              >
-                <Trash2 className="size-4" />
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Excluir regra</AlertDialogTitle>
-                <AlertDialogDescription>
-                  As transações que caíram nesta categoria por causa dela voltam
-                  à classificação do banco. Ajustes feitos à mão não mudam.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                <AlertDialogAction
-                  className={buttonVariants({ variant: "destructive" })}
-                  onClick={() =>
-                    remover.mutate(regra.id, {
-                      onSuccess: () => toast.success("Regra excluída."),
-                      onError: (err) => toast.error(err.message),
-                    })
-                  }
-                >
-                  Excluir
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+          <ExcluirRegra regra={regra} />
         </div>
       </TableCell>
     </TableRow>
   )
 }
 
-/** Criar ou editar — o mesmo formulário; `regra` presente significa edição. */
 /** "Contém" vs. "exato", com a explicação de cada um. Bloco próprio porque o texto explicativo é
  *  o que decide a escolha e ocupa mais espaço que todo o resto do formulário junto. */
 function EscolhaTipoMatch({
@@ -229,7 +236,7 @@ function EscolhaTipoMatch({
   onMudar,
 }: {
   valor: TipoMatch
-  onMudar: (novo: TipoMatch) => void
+  onMudar: Dispatch<SetStateAction<TipoMatch>>
 }) {
   return (
     <div className="space-y-2">
@@ -265,6 +272,53 @@ function EscolhaTipoMatch({
   )
 }
 
+/** Os três campos da regra. Separados do diálogo, que fica só com estado, submissão e moldura. */
+function CamposRegra({
+  texto,
+  tipo,
+  categoriaId,
+  onTexto,
+  onTipo,
+  onCategoria,
+}: {
+  texto: string
+  tipo: TipoMatch
+  categoriaId: string | null
+  onTexto: Dispatch<SetStateAction<string>>
+  onTipo: Dispatch<SetStateAction<TipoMatch>>
+  onCategoria: Dispatch<SetStateAction<string | null>>
+}) {
+  return (
+    <div className="space-y-4 py-4">
+      <div className="space-y-1.5">
+        <Label htmlFor="regra-texto">Texto</Label>
+        <Input
+          id="regra-texto"
+          value={texto}
+          onChange={(e) => {
+            onTexto(e.target.value)
+          }}
+          placeholder="uber"
+          minLength={TEXTO_MIN}
+          maxLength={120}
+          autoFocus
+          required
+        />
+        <p className="text-xs text-muted-foreground">
+          No mínimo {TEXTO_MIN} caracteres — um texto muito curto casaria quase
+          tudo.
+        </p>
+      </div>
+      <EscolhaTipoMatch valor={tipo} onMudar={onTipo} />
+      <div className="space-y-1.5">
+        <Label>Categoria</Label>
+        <CategoriaSelect value={categoriaId} onChange={onCategoria} />
+      </div>
+    </div>
+  )
+}
+
+/** Criar ou editar — o mesmo formulário; `regra` presente significa edição. */
 export function RegraDialog({
   regra,
   gatilho,
@@ -300,7 +354,9 @@ export function RegraDialog({
 
   function submeter(e: React.FormEvent) {
     e.preventDefault()
-    if (!valido || categoriaId === null) return
+    // `valido` já inclui `categoriaId !== null`, e o TypeScript estreita por condição aliasada
+    // desde a 4.4 — repetir a checagem aqui era código morto, não defesa.
+    if (!valido) return
     const corpo = {
       texto: texto.trim(),
       tipo_match: tipo,
@@ -329,32 +385,14 @@ export function RegraDialog({
               descrição do banco, ignorando maiúsculas e acentos.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="regra-texto">Texto</Label>
-              <Input
-                id="regra-texto"
-                value={texto}
-                onChange={(e) => {
-                  setTexto(e.target.value)
-                }}
-                placeholder="uber"
-                minLength={TEXTO_MIN}
-                maxLength={120}
-                autoFocus
-                required
-              />
-              <p className="text-xs text-muted-foreground">
-                No mínimo {TEXTO_MIN} caracteres — um texto muito curto casaria
-                quase tudo.
-              </p>
-            </div>
-            <EscolhaTipoMatch valor={tipo} onMudar={setTipo} />
-            <div className="space-y-1.5">
-              <Label>Categoria</Label>
-              <CategoriaSelect value={categoriaId} onChange={setCategoriaId} />
-            </div>
-          </div>
+          <CamposRegra
+            texto={texto}
+            tipo={tipo}
+            categoriaId={categoriaId}
+            onTexto={setTexto}
+            onTipo={setTipo}
+            onCategoria={setCategoriaId}
+          />
           <DialogFooter>
             <DialogClose asChild>
               <Button type="button" variant="outline">

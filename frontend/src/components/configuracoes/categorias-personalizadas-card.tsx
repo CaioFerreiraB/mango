@@ -1,5 +1,5 @@
 import { Plus, Tag, Trash2 } from "lucide-react"
-import { useState } from "react"
+import { useState, type Dispatch, type SetStateAction } from "react"
 import { toast } from "sonner"
 
 import { EmptyState } from "@/components/common/empty-state"
@@ -82,9 +82,55 @@ export function CategoriasPersonalizadasCard({
   )
 }
 
+/** Botão de lixeira + confirmação. Fora da linha porque é metade dela em código e não divide
+ *  estado nenhum com o resto — a linha cuida de nome, ícone e ativação. */
+function ExcluirCategoria({ categoria }: { categoria: Categoria }) {
+  const remover = useRemoverCategoria()
+
+  return (
+    <AlertDialog>
+      <AlertDialogTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="size-9 shrink-0 text-muted-foreground hover:text-destructive"
+          aria-label={`Excluir ${nomeCategoria(categoria)}`}
+        >
+          <Trash2 className="size-4" />
+        </Button>
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>
+            Excluir “{nomeCategoria(categoria)}”
+          </AlertDialogTitle>
+          <AlertDialogDescription>
+            As transações classificadas nela ficam sem categoria, e as regras
+            que apontam para ela são removidas. Se ela estiver em uso em algum
+            orçamento, a exclusão é recusada — tire-a de lá antes.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+          <AlertDialogAction
+            className={buttonVariants({ variant: "destructive" })}
+            onClick={() =>
+              remover.mutate(categoria.pluggy_id, {
+                onSuccess: () => toast.success("Categoria excluída."),
+                onError: (err) => toast.error(err.message),
+              })
+            }
+          >
+            Excluir
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  )
+}
+
 function LinhaPersonalizada({ categoria }: { categoria: Categoria }) {
   const atualizar = useAtualizarCategoria()
-  const remover = useRemoverCategoria()
   const [nome, setNome] = useState(nomeCategoria(categoria))
 
   /** Só grava se mudou de verdade — abrir e sair do campo não deve disparar um PATCH. */
@@ -140,44 +186,7 @@ function LinhaPersonalizada({ categoria }: { categoria: Categoria }) {
           )
         }
       />
-      <AlertDialog>
-        <AlertDialogTrigger asChild>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="size-9 shrink-0 text-muted-foreground hover:text-destructive"
-            aria-label={`Excluir ${nomeCategoria(categoria)}`}
-          >
-            <Trash2 className="size-4" />
-          </Button>
-        </AlertDialogTrigger>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              Excluir “{nomeCategoria(categoria)}”
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              As transações classificadas nela ficam sem categoria, e as regras
-              que apontam para ela são removidas. Se ela estiver em uso em algum
-              orçamento, a exclusão é recusada — tire-a de lá antes.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              className={buttonVariants({ variant: "destructive" })}
-              onClick={() =>
-                remover.mutate(categoria.pluggy_id, {
-                  onSuccess: () => toast.success("Categoria excluída."),
-                  onError: (err) => toast.error(err.message),
-                })
-              }
-            >
-              Excluir
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ExcluirCategoria categoria={categoria} />
     </li>
   )
 }
@@ -192,8 +201,8 @@ function CamposNovaCategoria({
 }: {
   nome: string
   icone: IconeCategoria
-  onNome: (valor: string) => void
-  onIcone: (valor: IconeCategoria) => void
+  onNome: Dispatch<SetStateAction<string>>
+  onIcone: Dispatch<SetStateAction<IconeCategoria>>
 }) {
   return (
     <div className="space-y-1.5 py-4">

@@ -1,13 +1,20 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useMemo } from "react"
 
+import type { NomeIcone } from "@/lib/api/categoria-icones"
 import { api } from "@/lib/api/client"
 import { mensagemErro } from "@/lib/api/erros"
 import type { components } from "@/lib/api/schema"
 
 export type Categoria = components["schemas"]["CategoriaRead"]
-/** Nomes de ícone que o backend aceita — vem do OpenAPI, então a lista não é mantida duas vezes. */
-export type IconeCategoria = NonNullable<Categoria["icone"]>
+/** Nomes de ícone aceitos. Vem do catálogo que de fato desenha, e não de `Categoria["icone"]`,
+ * porque `schema.d.ts` é gerado e pode não existir (checkout limpo, analisador estático) — ali o
+ * tipo degradaria para `any` e contaminaria todo mundo que recebe um ícone por prop.
+ *
+ * A amarra com a API continua existindo e é de graça: `useCriarCategoria`/`useAtualizarCategoria`
+ * passam este tipo no corpo da requisição, que o OpenAPI tipa. Um ícone no catálogo que o backend
+ * não aceite para de compilar ali. */
+export type IconeCategoria = NomeIcone
 
 export const categoriasKeys = {
   all: ["categorias"] as const,

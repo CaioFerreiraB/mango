@@ -104,7 +104,14 @@ export const ICONES_DISPONIVEIS = {
   pill: { icone: Pill, rotulo: "Remédio" },
   "flower-2": { icone: Flower2, rotulo: "Flor" },
   camera: { icone: Camera, rotulo: "Câmera" },
-} satisfies Record<string, { icone: LucideIcon; rotulo: string }>
+} satisfies Record<
+  // Trava de sincronia com o backend, nas DUAS direções: `Record` com união exige todas as chaves
+  // (ícone que o backend aceita e falta aqui não compila) e `satisfies` recusa chave excedente
+  // (ícone daqui que o backend não aceita também não). Sem `schema.d.ts` isto vira `Record<any,…>`
+  // e degrada em silêncio — a trava é para nós, não para o analisador.
+  NonNullable<Categoria["icone"]>,
+  { icone: LucideIcon; rotulo: string }
+>
 
 export type NomeIcone = keyof typeof ICONES_DISPONIVEIS
 
