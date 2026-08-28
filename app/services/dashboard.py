@@ -41,6 +41,13 @@ _VALOR_EFETIVO = func.coalesce(
 )
 
 
+def _soma(db: Session, filtros: tuple, tipo: str) -> int:
+    """Soma o valor efetivo (em reais) das transações do tipo dentro dos filtros já montados."""
+    return db.scalar(
+        select(func.coalesce(func.sum(_VALOR_EFETIVO), 0)).where(*filtros, Transacao.type == tipo)
+    )
+
+
 def montar_dashboard(
     db: Session,
     usuario_id: int,
@@ -53,17 +60,9 @@ def montar_dashboard(
     no_periodo = (Transacao.date >= ini, Transacao.date < fim_excl)
     real = Transacao.eh_transferencia.is_(False)  # exclui transferências (§4.2)
 
-    entradas = db.scalar(
-        select(func.coalesce(func.sum(_VALOR_EFETIVO), 0)).where(
-            do_usuario, *no_periodo, real, Transacao.type == "CREDIT"
-        )
-    )
-    saidas_neg = db.scalar(
-        select(func.coalesce(func.sum(_VALOR_EFETIVO), 0)).where(
-            do_usuario, *no_periodo, real, Transacao.type == "DEBIT"
-        )
-    )
-    saidas = -saidas_neg  # débitos são negativos → total de saída positivo
+    base = (do_usuario, *no_periodo, real)
+    entradas = _soma(db, base, "CREDIT")
+    saidas = -_soma(db, base, "DEBIT")  # débitos são negativos → total de saída positivo
 
     saldo_total = db.scalar(
         select(func.coalesce(func.sum(Conta.saldo_centavos), 0)).where(

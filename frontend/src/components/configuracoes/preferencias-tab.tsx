@@ -203,9 +203,13 @@ function PreferenciasForm({ perfil }: { perfil: Perfil }) {
                 type="date"
                 className="w-44"
                 value={revisaoDesde}
-                onChange={(e) => setRevisaoDesde(e.target.value)}
+                onChange={(e) => {
+                  setRevisaoDesde(e.target.value)
+                }}
                 // Grava no blur: `type="date"` dispara `onChange` com data ainda pela metade.
-                onBlur={(e) => gravarRevisao(e.target.value)}
+                onBlur={(e) => {
+                  gravarRevisao(e.target.value)
+                }}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") e.currentTarget.blur()
                 }}
@@ -215,7 +219,9 @@ function PreferenciasForm({ perfil }: { perfil: Perfil }) {
               <Button
                 type="button"
                 variant="ghost"
-                onClick={() => gravarRevisao("")}
+                onClick={() => {
+                  gravarRevisao("")
+                }}
               >
                 Limpar
               </Button>
