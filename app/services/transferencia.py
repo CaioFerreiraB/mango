@@ -21,12 +21,9 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.config import settings
+from app.models.categoria import CATEGORIA_PAGAMENTO_FATURA, PREFIXO_MESMA_TITULARIDADE
 from app.models.transacao import Transacao, TransacaoPagamento
 from app.repositories.transacao import TransacaoRepository
-
-# Categorias-chave da taxonomia do Pluggy (§4.4, confirmadas na descoberta).
-CATEGORIA_PAGAMENTO_FATURA = "05100000"
-PREFIXO_MESMA_TITULARIDADE = "04"
 
 
 def aplicar_regras_transferencia(
@@ -46,6 +43,13 @@ def _carregar(db: Session, usuario_id: int, desde: date | None) -> list[Transaca
 
 
 def _cat_efetiva(t: Transacao) -> str | None:
+    """Categoria CRUA (manual > banco) — de propósito mais estreita que `categoria_resolucao`.
+
+    Aqui a pergunta é "o banco/usuário disse que isto é pagamento de fatura?", e a resposta tem de
+    valer no pós-sync, antes de regras e assinaturas estarem resolvidas. O filtro da listagem
+    (`ocultar_pagamento_fatura`) usa a categoria EFETIVA: lá a pergunta é "isto deve sumir da tela
+    agora?", e recategorizar por regra ou assinatura tem de bastar. A divergência é intencional.
+    """
     return t.categoria_override_id or t.categoria_pluggy_id
 
 

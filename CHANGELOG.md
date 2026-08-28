@@ -12,6 +12,18 @@ ainda está se assentando. Cada versão publicada tem uma imagem correspondente 
 
 ### Adicionado
 
+- **Listagem de transações mais limpa por padrão** — dois filtros novos, ambos ligados quando você
+  abre a página, em **Mais filtros**:
+  - **Ocultar pagamentos de fatura**: o débito que quita a fatura do cartão sai da lista. Ele não é
+    um gasto novo — as compras que ele paga já estão ali —, e vê-lo ao lado delas só atrapalha a
+    conferência. Se você recategorizar um pagamento à mão, ele volta a aparecer: a sua decisão vale
+    mais que a do banco.
+  - **Ocultar lançamentos futuros**: uma compra em 6× chega como seis lançamentos, um por mês, e os
+    cinco que ainda não aconteceram ficavam no topo da lista, empurrando o presente para baixo.
+    Agora a lista termina em hoje — o histórico anterior continua inteiro. Nada é apagado: desligue
+    o filtro para ver também o que está por vir, e o detalhe da fatura segue mostrando todas as
+    parcelas.
+
 - **Data de início da revisão** — em Configurações → Preferências dá para dizer a partir de quando
   você quer revisar suas transações. Conectar uma conta traz o histórico inteiro dela, e a fila de
   revisão nascia com anos de lançamentos que ninguém vai conferir. O que vem antes da data escolhida

@@ -3405,6 +3405,26 @@
             }
           },
           {
+            "name": "ocultar_pagamento_fatura",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Ocultar Pagamento Fatura"
+            }
+          },
+          {
+            "name": "ocultar_futuras",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Ocultar Futuras"
+            }
+          },
+          {
             "name": "assinatura_id",
             "in": "query",
             "required": false,

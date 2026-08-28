@@ -22,6 +22,25 @@ def hoje_sp() -> date:
     return datetime.now(SP).date()
 
 
+def janela_listagem(
+    inicio: date | None, fim: date | None, *, ocultar_futuras: bool = False
+) -> tuple[datetime | None, datetime | None]:
+    """Limites [ini, fim) da listagem de transações, cada um resolvido no fuso SP e independente
+    do outro. `None` em qualquer ponta = sem limite daquele lado.
+
+    `ocultar_futuras` só APERTA o fim até o fim do dia de hoje. É corte de data, não predicado novo:
+    dizer "sem lançamentos futuros" é dizer `fim <= hoje` (§4.2), e a listagem já sabe filtrar por
+    fim. Uma segunda cláusula com o mesmo significado seria uma segunda voz sobre a mesma regra.
+    """
+    ini = limites_sp(inicio, inicio)[0] if inicio else None
+    fim_dt = limites_sp(fim, fim)[1] if fim else None
+    if ocultar_futuras:
+        hoje = hoje_sp()
+        corte = limites_sp(hoje, hoje)[1]
+        fim_dt = corte if fim_dt is None else min(fim_dt, corte)
+    return ini, fim_dt
+
+
 def mes_corrente() -> tuple[date, date]:
     """(1º dia do mês, hoje) no fuso SP — período padrão do dashboard."""
     hoje = hoje_sp()

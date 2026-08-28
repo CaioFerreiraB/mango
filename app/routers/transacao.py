@@ -29,7 +29,7 @@ from app.services import investimento as carteira_service
 from app.services.assinatura_deteccao import normalizar_nome
 from app.services.categoria_resolucao import Contexto, carregar_contexto, resolver
 from app.services.compra_parcelada import irmas_da_compra
-from app.services.periodo import limites_sp
+from app.services.periodo import janela_listagem
 from app.services.revisao import corte_revisao
 
 router = APIRouter(prefix="/transacoes", tags=["transacao"])
@@ -65,6 +65,8 @@ def listar(
     revisada: bool | None = Query(None),
     pendente_revisao: bool | None = Query(None),
     eh_transferencia: bool | None = Query(None),
+    ocultar_pagamento_fatura: bool = Query(False),
+    ocultar_futuras: bool = Query(False),
     assinatura_id: int | None = Query(None),
     tem_assinatura: bool | None = Query(None),
     busca: str | None = Query(None, max_length=200),
@@ -73,9 +75,20 @@ def listar(
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
 ) -> TransacaoListagem:
-    # Cada limite de data é resolvido no fuso SP (§4.10), independente do outro.
-    ini = limites_sp(inicio, inicio)[0] if inicio else None
-    fim_dt = limites_sp(fim, fim)[1] if fim else None
+    """Listagem paginada de transações. Todo filtro é opcional e combina por AND com os demais.
+
+    Três pares pedem atenção porque parecem redundantes e não são: `revisada` é o filtro cru da
+    coluna e `pendente_revisao` é o conceito de produto ("está na fila?", §4.3); `eh_transferencia`
+    alcança toda transferência e `ocultar_pagamento_fatura` só o pagamento de fatura (§4.4), que é
+    um subconjunto dela; `fim` é o limite escolhido pelo usuário e `ocultar_futuras` é o corte em
+    hoje (§4.2) — juntos, prevalece o mais apertado.
+
+    Os dois `ocultar_*` nascem DESLIGADOS aqui: quem decide o padrão de exibição é a tela, e o
+    detalhe da fatura precisa da fatura inteira.
+    """
+    # Cada limite de data é resolvido no fuso SP (§4.10), independente do outro; `ocultar_futuras`
+    # entra aqui porque é corte de data, não predicado — a regra mora em `periodo.janela_listagem`.
+    ini, fim_dt = janela_listagem(inicio, fim, ocultar_futuras=ocultar_futuras)
     itens, total = repo.listar_filtrado(
         inicio=ini,
         fim=fim_dt,
@@ -87,6 +100,7 @@ def listar(
         pendente_revisao=pendente_revisao,
         corte_revisao=corte_revisao(user.revisao_desde),
         eh_transferencia=eh_transferencia,
+        ocultar_pagamento_fatura=ocultar_pagamento_fatura,
         assinatura_id=assinatura_id,
         tem_assinatura=tem_assinatura,
         busca=busca,

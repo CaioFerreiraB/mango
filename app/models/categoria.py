@@ -21,10 +21,17 @@ from app.db.base import Base
 from app.enums import TIPO_MATCH, check_in
 from app.models.mixins import TimestampMixin, UserOwnedMixin
 
-# Prefixo do id gerado para categoria personalizada. NÃO-numérico de propósito: `transferencia.py`
-# decide regra por prefixo de id do Pluggy ("04", "05100000") e o frontend escolhe o ícone pelos 2
-# primeiros dígitos — um id personalizado numérico sequestraria as duas.
+# Prefixo do id gerado para categoria personalizada. NÃO-numérico de propósito: as regras abaixo
+# decidem por prefixo de id do Pluggy e o frontend escolhe o ícone pelos 2 primeiros dígitos — um id
+# personalizado numérico sequestraria as duas.
 PREFIXO_PERSONALIZADA = "u"
+
+# Categorias-chave da taxonomia do Pluggy (§4.4, confirmadas na descoberta). Moram aqui, e não no
+# serviço que as usa, porque hoje têm dois consumidores em camadas diferentes — `transferencia.py`
+# (marca o pagamento de fatura como transferência) e o repositório de transação (filtra a listagem).
+# O repositório não pode importar do serviço: `transferencia.py` importa `TransacaoRepository`.
+CATEGORIA_PAGAMENTO_FATURA = "05100000"
+PREFIXO_MESMA_TITULARIDADE = "04"
 
 
 class Categoria(Base):
