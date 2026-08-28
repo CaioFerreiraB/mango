@@ -104,16 +104,14 @@ export const ICONES_DISPONIVEIS = {
   pill: { icone: Pill, rotulo: "Remédio" },
   "flower-2": { icone: Flower2, rotulo: "Flor" },
   camera: { icone: Camera, rotulo: "Câmera" },
-} satisfies Record<
-  // Trava de sincronia com o backend, nas DUAS direções: `Record` com união exige todas as chaves
-  // (ícone que o backend aceita e falta aqui não compila) e `satisfies` recusa chave excedente
-  // (ícone daqui que o backend não aceita também não). Sem `schema.d.ts` isto vira `Record<any,…>`
-  // e degrada em silêncio — a trava é para nós, não para o analisador.
-  NonNullable<Categoria["icone"]>,
-  { icone: LucideIcon; rotulo: string }
->
+} satisfies Record<string, { icone: LucideIcon; rotulo: string }>
 
 export type NomeIcone = keyof typeof ICONES_DISPONIVEIS
+
+// Trava de sincronia com o backend: `useCriarCategoria` passa `IconeCategoria` no corpo tipado
+// pelo OpenAPI, então um ícone daqui que a API não aceite para de compilar lá (verificado com
+// `tsc -b`). A tipagem NÃO é feita contra `Categoria["icone"]` aqui de propósito: `schema.d.ts` é
+// gerado e, quando falta, aquele tipo vira `any` e contaminaria todo mundo que recebe um ícone.
 
 // Chave = 2 primeiros dígitos do pluggy_id (categoria raiz). Filhos herdam o ícone do pai.
 // Taxonomia é fixa e read-only (Pluggy retorna 405 p/ criar) → mapa estático basta. Uma categoria

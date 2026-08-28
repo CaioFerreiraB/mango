@@ -16,6 +16,9 @@ import { cn } from "@/lib/utils"
  * mais rápido do que ler "utensils-crossed" numa lista vertical. O gatilho mostra o ícone atual,
  * que é o próprio rótulo do campo.
  */
+// Os parâmetros nas anotações de tipo abaixo levam `_` porque são só documentação: o TypeScript
+// exige um nome na sintaxe de tipo de função, mas ali não existe binding nenhum. Sem o prefixo, o
+// analisador estático os reporta como variável não usada.
 export function IconeSelect({
   value,
   onChange,
@@ -23,7 +26,7 @@ export function IconeSelect({
   className,
 }: {
   value: IconeCategoria | null | undefined
-  onChange: (v: IconeCategoria) => void
+  onChange: (_v: IconeCategoria) => void
   /** Entra no `aria-label` — numa lista de categorias há um destes por linha. */
   nomeCategoria?: string
   className?: string

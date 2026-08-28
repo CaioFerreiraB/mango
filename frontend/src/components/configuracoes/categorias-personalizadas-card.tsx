@@ -3,6 +3,7 @@ import { useState, type Dispatch, type SetStateAction } from "react"
 import { toast } from "sonner"
 
 import { EmptyState } from "@/components/common/empty-state"
+import { RodapeDialogoForm } from "@/components/common/rodape-dialogo-form"
 import { IconeSelect } from "@/components/configuracoes/icone-select"
 import {
   AlertDialog,
@@ -25,10 +26,8 @@ import {
 } from "@/components/ui/card"
 import {
   Dialog,
-  DialogClose,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -277,16 +276,10 @@ function NovaCategoriaDialog() {
             onNome={setNome}
             onIcone={setIcone}
           />
-          <DialogFooter>
-            <DialogClose asChild>
-              <Button type="button" variant="outline">
-                Cancelar
-              </Button>
-            </DialogClose>
-            <Button type="submit" disabled={nome.trim().length < 2}>
-              Criar
-            </Button>
-          </DialogFooter>
+          <RodapeDialogoForm
+            acao="Criar"
+            desabilitado={nome.trim().length < 2}
+          />
         </form>
       </DialogContent>
     </Dialog>

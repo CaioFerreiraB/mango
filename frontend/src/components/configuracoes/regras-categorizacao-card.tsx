@@ -3,6 +3,7 @@ import { useState, type Dispatch, type SetStateAction } from "react"
 import { toast } from "sonner"
 
 import { EmptyState } from "@/components/common/empty-state"
+import { RodapeDialogoForm } from "@/components/common/rodape-dialogo-form"
 import { CategoriaSelect } from "@/components/transacoes/categoria-select"
 import {
   AlertDialog,
@@ -26,10 +27,8 @@ import {
 } from "@/components/ui/card"
 import {
   Dialog,
-  DialogClose,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -324,9 +323,11 @@ function CamposRegra({
  * com a moldura e os campos, que já são componentes próprios.
  */
 function useFormularioRegra(
-  regra: RegraCategorizacao | undefined,
-  textoInicial: string | undefined,
-  categoriaInicial: string | null | undefined
+  // Opcionais em vez de `| undefined` explícito: a união com o tipo vindo do OpenAPI degrada para
+  // `any` quando `schema.d.ts` não foi gerado, e aí a união inteira vira `any`.
+  regra?: RegraCategorizacao,
+  textoInicial?: string,
+  categoriaInicial?: string | null
 ) {
   const criar = useCriarRegra()
   const atualizar = useAtualizarRegra()
@@ -418,16 +419,10 @@ export function RegraDialog({
             onTipo={campos.setTipo}
             onCategoria={campos.setCategoriaId}
           />
-          <DialogFooter>
-            <DialogClose asChild>
-              <Button type="button" variant="outline">
-                Cancelar
-              </Button>
-            </DialogClose>
-            <Button type="submit" disabled={!valido}>
-              {regra ? "Salvar" : "Criar regra"}
-            </Button>
-          </DialogFooter>
+          <RodapeDialogoForm
+            acao={regra ? "Salvar" : "Criar regra"}
+            desabilitado={!valido}
+          />
         </form>
       </DialogContent>
     </Dialog>
