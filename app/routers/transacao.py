@@ -75,6 +75,17 @@ def listar(
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
 ) -> TransacaoListagem:
+    """Listagem paginada de transações. Todo filtro é opcional e combina por AND com os demais.
+
+    Três pares pedem atenção porque parecem redundantes e não são: `revisada` é o filtro cru da
+    coluna e `pendente_revisao` é o conceito de produto ("está na fila?", §4.3); `eh_transferencia`
+    alcança toda transferência e `ocultar_pagamento_fatura` só o pagamento de fatura (§4.4), que é
+    um subconjunto dela; `fim` é o limite escolhido pelo usuário e `ocultar_futuras` é o corte em
+    hoje (§4.2) — juntos, prevalece o mais apertado.
+
+    Os dois `ocultar_*` nascem DESLIGADOS aqui: quem decide o padrão de exibição é a tela, e o
+    detalhe da fatura precisa da fatura inteira.
+    """
     # Cada limite de data é resolvido no fuso SP (§4.10), independente do outro; `ocultar_futuras`
     # entra aqui porque é corte de data, não predicado — a regra mora em `periodo.janela_listagem`.
     ini, fim_dt = janela_listagem(inicio, fim, ocultar_futuras=ocultar_futuras)

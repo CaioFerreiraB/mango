@@ -58,6 +58,12 @@ function janelaPaginas(atual: number, total: number): (number | "gap")[] {
   return saida
 }
 
+/**
+ * Listagem de transações: busca, filtros e paginação, todos em estado local (a URL só semeia o
+ * estado inicial, para não quebrar link salvo). Dois filtros nascem LIGADOS — ocultar pagamentos
+ * de fatura (§4.4) e ocultar lançamentos futuros (§4.2) —, então o badge de "Mais filtros" conta
+ * desvios do padrão, e não filtros ativos.
+ */
 export function TransacoesPage() {
   const [params] = useSearchParams()
   const [busca, setBusca] = useState("")

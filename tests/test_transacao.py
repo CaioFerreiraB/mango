@@ -376,10 +376,12 @@ def test_ocultar_pagamento_fatura_usa_a_categoria_efetiva(
     client = client_factory(usuario_a)
 
     def ids(query: str) -> set[int]:
+        """Ids que a listagem devolve para esta query, conferindo de passagem que a contagem
+        enxerga os mesmos filtros que a página."""
         resp = client.get(f"/api/transacoes?{query}")
         assert resp.status_code == 200, resp.text
         corpo = resp.json()
-        assert corpo["total"] == len(corpo["items"])  # a contagem usa os mesmos filtros
+        assert corpo["total"] == len(corpo["items"])
         return {t["id"] for t in corpo["items"]}
 
     todas = {do_banco.id, por_regra.id, por_mao.id, recategorizada.id, sem_categoria.id}
@@ -400,6 +402,8 @@ def test_ocultar_futuras_corta_no_fim_do_dia_de_hoje(
     repo = TransacaoRepository(db, usuario_a.id)
 
     def em_sp(dia: date, hora: int) -> datetime:
+        """Instante local de SP em UTC — é assim que `transacao.date` é gravado, e escrever a data
+        já em UTC esconderia justamente a borda que este teste existe para cobrir."""
         return datetime.combine(dia, time(hora), tzinfo=SP).astimezone(UTC)
 
     ontem = _criar_tx(repo, conta.id, "t-ontem", date=em_sp(hoje - timedelta(days=1), 12))
@@ -416,6 +420,8 @@ def test_ocultar_futuras_corta_no_fim_do_dia_de_hoje(
     client = client_factory(usuario_a)
 
     def ids(query: str) -> set[int]:
+        """Ids que a listagem devolve para esta query, conferindo de passagem que a contagem
+        enxerga os mesmos filtros que a página."""
         resp = client.get(f"/api/transacoes?{query}")
         assert resp.status_code == 200, resp.text
         corpo = resp.json()
