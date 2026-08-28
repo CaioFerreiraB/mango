@@ -49,6 +49,7 @@ from app.repositories.pluggy import (
 from app.repositories.transacao import TransacaoRepository
 from app.services.assinatura_match import aplicar_match_assinaturas
 from app.services.ativo_agrupamento import agrupar_renda_fixa
+from app.services.categoria_regras import aplicar_regras_categorizacao
 from app.services.orcamento_mensal import materializar_mes
 from app.services.periodo import SP
 from app.services.saldo_diario import registrar_snapshot, registrar_snapshot_investimento
@@ -147,7 +148,11 @@ def sincronizar_usuario(
     else:
         itens = item_repo.list()
 
-    categorias_validas = set(db.scalars(select(Categoria.pluggy_id)).all())
+    # Só a taxonomia GLOBAL (§4.5): o Pluggy só devolve id dele, e restringir aqui garante que uma
+    # categoria personalizada — de qualquer usuário — nunca chegue a ser gravada pelo sync.
+    categorias_validas = set(
+        db.scalars(select(Categoria.pluggy_id).where(Categoria.usuario_id.is_(None))).all()
+    )
     # 1º sync de qualquer item → pareia sobre todo o histórico; senão, só a janela recente.
     primeiro_sync = any(it.ultimo_sync_em is None for it in itens)
     resumo = ResumoSync()
@@ -175,6 +180,9 @@ def sincronizar_usuario(
         # Auto-vincula transações a assinaturas por nome exato (§4.7). Idempotente, não toca vínculo
         # manual (assinatura_id já preenchido). Mesma janela da passada de transferência.
         aplicar_match_assinaturas(db, usuario_id, desde=janela)
+        # Aplica as regras de categorização do usuário às transações da janela (§4.5). Só escreve
+        # `categoria_regra_id` (coluna derivada) — o ajuste manual tem precedência e não é tocado.
+        aplicar_regras_categorizacao(db, usuario_id, desde=janela)
         # Agrupa novas posições de renda fixa num ativo (§4.9). Best-effort: um bug aqui não pode
         # derrubar um sync já commitado. Só preenche ativo_id NULL (idempotente, não toca ajuste
         # manual).

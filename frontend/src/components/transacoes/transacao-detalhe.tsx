@@ -4,7 +4,7 @@ import { Link } from "react-router"
 import { toast } from "sonner"
 
 import { AssinaturaSelect } from "@/components/transacoes/assinatura-select"
-import { CategoriaSelect } from "@/components/transacoes/categoria-select"
+import { CampoCategoria } from "@/components/transacoes/campo-categoria"
 import { StatusBadge } from "@/components/transacoes/status-badge"
 import { Valor } from "@/components/common/valor"
 import { Button } from "@/components/ui/button"
@@ -122,30 +122,7 @@ export function TransacaoDetalhe({
                 ) : null}
               </dl>
 
-              <div className="space-y-1.5">
-                <Label>Categoria</Label>
-                <CategoriaSelect
-                  className="w-full"
-                  value={
-                    t.categoria_override_id ?? t.categoria_pluggy_id ?? null
-                  }
-                  onChange={(v) =>
-                    v &&
-                    atualizar.mutate({
-                      id: t.id,
-                      patch: {
-                        categoria_override_id: v,
-                        categoria_ajustada_usuario: true,
-                      },
-                    })
-                  }
-                />
-                {t.categoria_ajustada_usuario ? (
-                  <p className="text-xs text-muted-foreground">
-                    Categoria ajustada por você.
-                  </p>
-                ) : null}
-              </div>
+              <CampoCategoria key={`cat-${t.id}`} transacao={t} />
 
               <TextosUsuario key={`texto-${t.id}`} transacao={t} />
 

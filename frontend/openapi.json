@@ -4542,17 +4542,80 @@
         ],
         "summary": "Listar",
         "operationId": "listar_api_categorias_get",
+        "parameters": [
+          {
+            "name": "apenas_ativas",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Só as ativas. O default devolve tudo com o flag `ativa` — a tela de configurações precisa das inativas, e o rótulo de uma categoria ainda referenciada por um ajuste manual continua resolvendo.",
+              "default": false,
+              "title": "Apenas Ativas"
+            },
+            "description": "Só as ativas. O default devolve tudo com o flag `ativa` — a tela de configurações precisa das inativas, e o rótulo de uma categoria ainda referenciada por um ajuste manual continua resolvendo."
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {
+                  "type": "array",
                   "items": {
                     "$ref": "#/components/schemas/CategoriaRead"
                   },
-                  "type": "array",
                   "title": "Response Listar Api Categorias Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "categoria"
+        ],
+        "summary": "Criar",
+        "operationId": "criar_api_categorias_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CategoriaCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CategoriaRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
             }
@@ -4574,6 +4637,7 @@
             "required": true,
             "schema": {
               "type": "string",
+              "maxLength": 16,
               "title": "Pluggy Id"
             }
           }
@@ -4588,6 +4652,280 @@
                 }
               }
             }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "categoria"
+        ],
+        "summary": "Atualizar",
+        "operationId": "atualizar_api_categorias__pluggy_id__patch",
+        "parameters": [
+          {
+            "name": "pluggy_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 16,
+              "title": "Pluggy Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CategoriaUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CategoriaRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "categoria"
+        ],
+        "summary": "Remover",
+        "operationId": "remover_api_categorias__pluggy_id__delete",
+        "parameters": [
+          {
+            "name": "pluggy_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 16,
+              "title": "Pluggy Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/regras-categorizacao": {
+      "get": {
+        "tags": [
+          "regra_categorizacao"
+        ],
+        "summary": "Listar",
+        "operationId": "listar_api_regras_categorizacao_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/RegraCategorizacaoRead"
+                  },
+                  "type": "array",
+                  "title": "Response Listar Api Regras Categorizacao Get"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "regra_categorizacao"
+        ],
+        "summary": "Criar",
+        "operationId": "criar_api_regras_categorizacao_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegraCategorizacaoCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegraCategorizacaoRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/regras-categorizacao/{regra_id}": {
+      "get": {
+        "tags": [
+          "regra_categorizacao"
+        ],
+        "summary": "Obter",
+        "operationId": "obter_api_regras_categorizacao__regra_id__get",
+        "parameters": [
+          {
+            "name": "regra_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Regra Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegraCategorizacaoRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "regra_categorizacao"
+        ],
+        "summary": "Atualizar",
+        "operationId": "atualizar_api_regras_categorizacao__regra_id__patch",
+        "parameters": [
+          {
+            "name": "regra_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Regra Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegraCategorizacaoUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegraCategorizacaoRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "regra_categorizacao"
+        ],
+        "summary": "Remover",
+        "operationId": "remover_api_regras_categorizacao__regra_id__delete",
+        "parameters": [
+          {
+            "name": "regra_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Regra Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
           },
           "422": {
             "description": "Validation Error",
@@ -6869,6 +7207,79 @@
         ],
         "title": "CarteiraTotais"
       },
+      "CategoriaCreate": {
+        "properties": {
+          "nome": {
+            "type": "string",
+            "maxLength": 60,
+            "minLength": 2,
+            "title": "Nome"
+          },
+          "icone": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "wallet",
+                  "landmark",
+                  "trending-up",
+                  "arrow-left-right",
+                  "send",
+                  "scale",
+                  "wrench",
+                  "shopping-bag",
+                  "monitor-smartphone",
+                  "shopping-cart",
+                  "utensils-crossed",
+                  "plane",
+                  "heart-handshake",
+                  "dice-5",
+                  "receipt-text",
+                  "percent",
+                  "home",
+                  "heart-pulse",
+                  "car",
+                  "shield-check",
+                  "gamepad-2",
+                  "tag",
+                  "paw-print",
+                  "gift",
+                  "graduation-cap",
+                  "baby",
+                  "dumbbell",
+                  "coffee",
+                  "book-open",
+                  "music",
+                  "shirt",
+                  "scissors",
+                  "hammer",
+                  "sparkles",
+                  "briefcase",
+                  "piggy-bank",
+                  "cake",
+                  "church",
+                  "bus",
+                  "fuel",
+                  "wifi",
+                  "pill",
+                  "flower-2",
+                  "camera"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Icone"
+          }
+        },
+        "type": "object",
+        "required": [
+          "nome"
+        ],
+        "title": "CategoriaCreate",
+        "description": "Criação de categoria personalizada. Nome e ícone: a hierarquia do Pluggy é dele, e uma\ncategoria do usuário nasce plana (nível raiz)."
+      },
       "CategoriaRead": {
         "properties": {
           "pluggy_id": {
@@ -6900,14 +7311,169 @@
               }
             ],
             "title": "Parent Id"
+          },
+          "icone": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "wallet",
+                  "landmark",
+                  "trending-up",
+                  "arrow-left-right",
+                  "send",
+                  "scale",
+                  "wrench",
+                  "shopping-bag",
+                  "monitor-smartphone",
+                  "shopping-cart",
+                  "utensils-crossed",
+                  "plane",
+                  "heart-handshake",
+                  "dice-5",
+                  "receipt-text",
+                  "percent",
+                  "home",
+                  "heart-pulse",
+                  "car",
+                  "shield-check",
+                  "gamepad-2",
+                  "tag",
+                  "paw-print",
+                  "gift",
+                  "graduation-cap",
+                  "baby",
+                  "dumbbell",
+                  "coffee",
+                  "book-open",
+                  "music",
+                  "shirt",
+                  "scissors",
+                  "hammer",
+                  "sparkles",
+                  "briefcase",
+                  "piggy-bank",
+                  "cake",
+                  "church",
+                  "bus",
+                  "fuel",
+                  "wifi",
+                  "pill",
+                  "flower-2",
+                  "camera"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Icone"
+          },
+          "personalizada": {
+            "type": "boolean",
+            "title": "Personalizada"
+          },
+          "ativa": {
+            "type": "boolean",
+            "title": "Ativa"
           }
         },
         "type": "object",
         "required": [
           "pluggy_id",
-          "description"
+          "description",
+          "personalizada",
+          "ativa"
         ],
         "title": "CategoriaRead"
+      },
+      "CategoriaUpdate": {
+        "properties": {
+          "nome": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 60,
+                "minLength": 2
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nome"
+          },
+          "icone": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "wallet",
+                  "landmark",
+                  "trending-up",
+                  "arrow-left-right",
+                  "send",
+                  "scale",
+                  "wrench",
+                  "shopping-bag",
+                  "monitor-smartphone",
+                  "shopping-cart",
+                  "utensils-crossed",
+                  "plane",
+                  "heart-handshake",
+                  "dice-5",
+                  "receipt-text",
+                  "percent",
+                  "home",
+                  "heart-pulse",
+                  "car",
+                  "shield-check",
+                  "gamepad-2",
+                  "tag",
+                  "paw-print",
+                  "gift",
+                  "graduation-cap",
+                  "baby",
+                  "dumbbell",
+                  "coffee",
+                  "book-open",
+                  "music",
+                  "shirt",
+                  "scissors",
+                  "hammer",
+                  "sparkles",
+                  "briefcase",
+                  "piggy-bank",
+                  "cake",
+                  "church",
+                  "bus",
+                  "fuel",
+                  "wifi",
+                  "pill",
+                  "flower-2",
+                  "camera"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Icone"
+          },
+          "ativa": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ativa"
+          }
+        },
+        "type": "object",
+        "title": "CategoriaUpdate",
+        "description": "`nome` e `icone` só valem para personalizada; `ativa` vale para as duas (é estado por\nusuário)."
       },
       "ConfigTelegramCreate": {
         "properties": {
@@ -11411,6 +11977,131 @@
         ],
         "title": "RecuperarSenhaRequest"
       },
+      "RegraCategorizacaoCreate": {
+        "properties": {
+          "texto": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 3,
+            "title": "Texto"
+          },
+          "tipo_match": {
+            "type": "string",
+            "enum": [
+              "exato",
+              "contem"
+            ],
+            "title": "Tipo Match"
+          },
+          "categoria_id": {
+            "type": "string",
+            "maxLength": 16,
+            "title": "Categoria Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "texto",
+          "tipo_match",
+          "categoria_id"
+        ],
+        "title": "RegraCategorizacaoCreate"
+      },
+      "RegraCategorizacaoRead": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "texto": {
+            "type": "string",
+            "title": "Texto"
+          },
+          "tipo_match": {
+            "type": "string",
+            "enum": [
+              "exato",
+              "contem"
+            ],
+            "title": "Tipo Match"
+          },
+          "categoria_id": {
+            "type": "string",
+            "title": "Categoria Id"
+          },
+          "usuario_id": {
+            "type": "integer",
+            "title": "Usuario Id"
+          },
+          "criado_em": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Criado Em"
+          },
+          "atualizado_em": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Atualizado Em"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "texto",
+          "tipo_match",
+          "categoria_id",
+          "usuario_id",
+          "criado_em",
+          "atualizado_em"
+        ],
+        "title": "RegraCategorizacaoRead"
+      },
+      "RegraCategorizacaoUpdate": {
+        "properties": {
+          "texto": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120,
+                "minLength": 3
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Texto"
+          },
+          "tipo_match": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "exato",
+                  "contem"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tipo Match"
+          },
+          "categoria_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 16
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Categoria Id"
+          }
+        },
+        "type": "object",
+        "title": "RegraCategorizacaoUpdate"
+      },
       "ResumoDivisoes": {
         "properties": {
           "saldo_a_receber_centavos": {
@@ -11879,6 +12570,17 @@
             "type": "boolean",
             "title": "Categoria Ajustada Usuario"
           },
+          "categoria_regra_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Categoria Regra Id"
+          },
           "merchant_cnpj": {
             "anyOf": [
               {
@@ -12137,6 +12839,34 @@
             "type": "string",
             "format": "date-time",
             "title": "Atualizado Em"
+          },
+          "categoria_efetiva_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Categoria Efetiva Id"
+          },
+          "categoria_origem": {
+            "type": "string",
+            "enum": [
+              "assinatura",
+              "manual",
+              "regra",
+              "banco",
+              "desconhecida"
+            ],
+            "title": "Categoria Origem",
+            "default": "desconhecida"
+          },
+          "parcelas_atualizadas": {
+            "type": "integer",
+            "title": "Parcelas Atualizadas",
+            "default": 0
           }
         },
         "type": "object",
@@ -12157,7 +12887,8 @@
           "criado_em",
           "atualizado_em"
         ],
-        "title": "TransacaoRead"
+        "title": "TransacaoRead",
+        "description": "Colunas + a categoria já resolvida (§4.5).\n\nOs quatro campos-fonte (`categoria_pluggy_id`, `_override_`, `_regra_`, `assinatura_id`)\ncontinuam expostos para a UI mostrar o que veio de onde, mas quem quer \"a categoria desta\ntransação\" lê `categoria_efetiva_id` — replicar a precedência no cliente daria divergência.\nPreenchidos pelo router; os defaults valem para quem construir o schema sem contexto."
       },
       "TransacaoUpdate": {
         "properties": {

@@ -15,7 +15,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { useMapaCategorias } from "@/lib/api/categorias"
-import { iconeCategoria } from "@/lib/api/categoria-icones"
+import { useIconeCategoria } from "@/lib/api/categoria-icones"
 import { useContas } from "@/lib/api/contas"
 import {
   descricaoExibida,
@@ -92,6 +92,7 @@ export function TransacoesTabela({
     ])
   )
   const mapaCategorias = useMapaCategorias()
+  const iconeCategoria = useIconeCategoria()
   // Descrição · Valor · Data · Conta · Categoria · Status
   const { larguras, iniciar } = useLarguras([300, 120, 110, 160, 180, 120])
   const [selecionadaId, setSelecionadaId] = useState<number | null>(null)
@@ -133,7 +134,7 @@ export function TransacoesTabela({
           </TableHeader>
           <TableBody>
             {items.map((t) => {
-              const catId = t.categoria_override_id ?? t.categoria_pluggy_id
+              const catId = t.categoria_efetiva_id
               const catNome = catId ? mapaCategorias.get(catId) : undefined
               const IconeCat = iconeCategoria(catId)
               const titulo = descricaoExibida(t)
@@ -247,7 +248,7 @@ export function TransacoesTabela({
 
       <ul className="divide-y rounded-lg border md:hidden">
         {items.map((t) => {
-          const catId = t.categoria_override_id ?? t.categoria_pluggy_id
+          const catId = t.categoria_efetiva_id
           const IconeCat = iconeCategoria(catId)
           const titulo = descricaoExibida(t)
           const subtitulo = subtituloTransacao(t)

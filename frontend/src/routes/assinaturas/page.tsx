@@ -20,7 +20,7 @@ import { toast } from "sonner"
 
 import { CategoriaSelect } from "@/components/transacoes/categoria-select"
 import { EmptyState } from "@/components/common/empty-state"
-import { iconeCategoria } from "@/lib/api/categoria-icones"
+import { useIconeCategoria } from "@/lib/api/categoria-icones"
 import { useMe } from "@/lib/api/auth"
 import { ilustracao } from "@/lib/illustrations"
 import { Valor } from "@/components/common/valor"
@@ -230,6 +230,7 @@ function AssinaturaRow({
   categoriaNome?: string
 }) {
   const [aberto, setAberto] = useState(false)
+  const iconeCategoria = useIconeCategoria()
 
   return (
     <>
@@ -701,6 +702,7 @@ function GraficoPorCategoria({
   selecionada: string | null | undefined
   onSelecionar: (categoria: string | null | undefined) => void
 }) {
+  const iconeCategoria = useIconeCategoria()
   const dados = itens
     .filter((c) => c.total_mensal_centavos > 0)
     .map((c) => ({
@@ -801,6 +803,7 @@ function Fato({
 /** Busca sob demanda de assinaturas: loading → lista com switches (default off) → adiciona as escolhidas. */
 function BuscarAssinaturasDialog() {
   const [aberto, setAberto] = useState(false)
+  const iconeCategoria = useIconeCategoria()
   // Chaveado por nome (não índice): sobrevive ao refetch quando um candidato é dispensado.
   const [selecionadas, setSelecionadas] = useState<Record<string, boolean>>({})
   const nomes = useMapaCategorias()

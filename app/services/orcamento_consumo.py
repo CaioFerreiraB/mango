@@ -23,17 +23,16 @@ from datetime import date, timedelta
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.models.categoria import Categoria
 from app.models.orcamento import Orcamento, OrcamentoMensal
 from app.models.transacao import Transacao
 from app.schemas.orcamento import OrcamentoConsumoItem, OrcamentoConsumoRead
+from app.services.categoria_arvore import subarvores as montar_subarvores
+from app.services.categoria_resolucao import com_assinatura, expr_categoria_efetiva
 from app.services.orcamento_mensal import materializar_mes
 from app.services.periodo import hoje_sp, limites_sp
 
 # Do maior para o menor: o primeiro que o percentual cruza é o alerta a exibir.
 _LIMIARES = (100, 90, 75, 50)
-
-_CAT_EFETIVA = func.coalesce(Transacao.categoria_override_id, Transacao.categoria_pluggy_id)
 
 # Valor efetivo em reais: valor na moeda da conta (internacional), senão o `amount` cru (§4.6).
 _VALOR_EFETIVO = func.coalesce(
@@ -55,8 +54,9 @@ def _valores_por_categoria(
     conforme DEBIT/CREDIT não é confiável o bastante pra pautar o sinal exibido (varia entre
     origens), e "gasto"/"recebido" nunca faz sentido negativo pro usuário de qualquer forma."""
     ini, fim_excl = limites_sp(*_intervalo_mes(ano, mes))
+    cat_efetiva = expr_categoria_efetiva(usuario_id)
     rows = db.execute(
-        select(_CAT_EFETIVA, Transacao.type, func.sum(_VALOR_EFETIVO))
+        com_assinatura(select(cat_efetiva, Transacao.type, func.sum(_VALOR_EFETIVO)), usuario_id)
         .where(
             Transacao.usuario_id == usuario_id,
             Transacao.date >= ini,
@@ -64,7 +64,7 @@ def _valores_por_categoria(
             Transacao.eh_transferencia.is_(False),
             Transacao.type.in_(("DEBIT", "CREDIT")),
         )
-        .group_by(_CAT_EFETIVA, Transacao.type)
+        .group_by(cat_efetiva, Transacao.type)
     ).all()
     valores: dict[tuple[str, str], int] = {}
     for cat, tipo_tx, total in rows:
@@ -72,27 +72,6 @@ def _valores_por_categoria(
             continue
         valores[(cat, "despesa" if tipo_tx == "DEBIT" else "receita")] = abs(total)
     return valores
-
-
-def _subarvores(db: Session, raizes: set[str]) -> dict[str, set[str]]:
-    """Para cada categoria em `raizes`, o conjunto {ela + descendentes}. Taxonomia é ≤3 níveis
-    e pequena → resolvida em memória a partir de `categoria.parent_id`."""
-    filhos: dict[str, list[str]] = {}
-    for cid, pid in db.execute(select(Categoria.pluggy_id, Categoria.parent_id)).all():
-        if pid is not None:
-            filhos.setdefault(pid, []).append(cid)
-
-    def descendentes(raiz: str) -> set[str]:
-        vistos = {raiz}
-        pilha = [raiz]
-        while pilha:
-            for f in filhos.get(pilha.pop(), []):
-                if f not in vistos:
-                    vistos.add(f)
-                    pilha.append(f)
-        return vistos
-
-    return {r: descendentes(r) for r in raizes}
 
 
 def consumo_do_mes(db: Session, usuario_id: int, ano: int, mes: int) -> OrcamentoConsumoRead:
@@ -109,7 +88,7 @@ def consumo_do_mes(db: Session, usuario_id: int, ano: int, mes: int) -> Orcament
     ).all()
 
     valores = _valores_por_categoria(db, usuario_id, ano, mes)
-    subarvores = _subarvores(db, {m.categoria_id for m in mensais})
+    subarvores = montar_subarvores(db, usuario_id, {m.categoria_id for m in mensais})
     # (ordem, recorrente) do orçamento padrão — "Editar mês" usa `recorrente` pra saber se
     # remover é "suprimir só este mês" (padrão) ou "apagar de vez" (pontual, ver `criar_pontual`).
     orcamentos_info = {

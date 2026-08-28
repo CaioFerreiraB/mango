@@ -30,6 +30,7 @@ from app.routers import (
     orcamento,
     perfil,
     pluggy,
+    regra_categorizacao,
     setup,
     sync,
     transacao,
@@ -132,6 +133,7 @@ _manuais: list[APIRouter] = [
     investimento.router,
     indicadores.router,  # dados de mercado p/ comparação da carteira (§4.9)
     categoria.router,
+    regra_categorizacao.router,  # mapeamento nome→categoria (§4.5)
     divisao.router,  # visibilidade multi-usuário + rateio/saldo (§4.11)
     configuracao.router,  # leitura aberta + escrita só admin (§4.11-otimização)
     usuarios.router,  # busca de usuários da instância (§4.11)
