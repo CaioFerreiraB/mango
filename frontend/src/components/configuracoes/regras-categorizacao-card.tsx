@@ -318,18 +318,16 @@ function CamposRegra({
   )
 }
 
-/** Criar ou editar — o mesmo formulário; `regra` presente significa edição. */
-export function RegraDialog({
-  regra,
-  gatilho,
-  textoInicial,
-  categoriaInicial,
-}: {
-  regra?: RegraCategorizacao
-  gatilho: React.ReactNode
-  textoInicial?: string
-  categoriaInicial?: string | null
-}) {
+/** Estado do formulário de regra: valores, validade, recarga na abertura e submissão.
+ *
+ * Hook e não componente porque o que se repete aqui é lógica, não marcação — o diálogo fica só
+ * com a moldura e os campos, que já são componentes próprios.
+ */
+function useFormularioRegra(
+  regra: RegraCategorizacao | undefined,
+  textoInicial: string | undefined,
+  categoriaInicial: string | null | undefined
+) {
   const criar = useCriarRegra()
   const atualizar = useAtualizarRegra()
   const [aberto, setAberto] = useState(false)
@@ -373,6 +371,33 @@ export function RegraDialog({
     else criar.mutate(corpo, opcoes)
   }
 
+  return {
+    aberto,
+    alternar,
+    valido,
+    submeter,
+    campos: { texto, tipo, categoriaId, setTexto, setTipo, setCategoriaId },
+  }
+}
+
+/** Criar ou editar — o mesmo formulário; `regra` presente significa edição. */
+export function RegraDialog({
+  regra,
+  gatilho,
+  textoInicial,
+  categoriaInicial,
+}: {
+  regra?: RegraCategorizacao
+  gatilho: React.ReactNode
+  textoInicial?: string
+  categoriaInicial?: string | null
+}) {
+  const { aberto, alternar, campos, valido, submeter } = useFormularioRegra(
+    regra,
+    textoInicial,
+    categoriaInicial
+  )
+
   return (
     <Dialog open={aberto} onOpenChange={alternar}>
       <DialogTrigger asChild>{gatilho}</DialogTrigger>
@@ -386,12 +411,12 @@ export function RegraDialog({
             </DialogDescription>
           </DialogHeader>
           <CamposRegra
-            texto={texto}
-            tipo={tipo}
-            categoriaId={categoriaId}
-            onTexto={setTexto}
-            onTipo={setTipo}
-            onCategoria={setCategoriaId}
+            texto={campos.texto}
+            tipo={campos.tipo}
+            categoriaId={campos.categoriaId}
+            onTexto={campos.setTexto}
+            onTipo={campos.setTipo}
+            onCategoria={campos.setCategoriaId}
           />
           <DialogFooter>
             <DialogClose asChild>
