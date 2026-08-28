@@ -10,6 +10,8 @@ ainda está se assentando. Cada versão publicada tem uma imagem correspondente 
 
 ## [Não publicado]
 
+## [0.2.0] — 2026-08-28
+
 ### Adicionado
 
 - **Listagem de transações mais limpa por padrão** — dois filtros novos, ambos ligados quando você
@@ -133,6 +135,7 @@ Primeira versão publicada. Imagem única servindo API e interface, instalável 
 - Os endpoints de autenticação ainda não têm rate-limiting nem lockout. Ver **Problemas conhecidos**
   em [ROADMAP.md](ROADMAP.md) antes de expor a instância à internet aberta.
 
-[Não publicado]: https://github.com/CaioFerreiraB/mango/compare/v0.1.1...HEAD
+[Não publicado]: https://github.com/CaioFerreiraB/mango/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/CaioFerreiraB/mango/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/CaioFerreiraB/mango/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/CaioFerreiraB/mango/releases/tag/v0.1.0
