@@ -1,5 +1,5 @@
 import { ChevronRight, SearchX } from "lucide-react"
-import { createElement, useMemo, useState } from "react"
+import { createElement, useMemo, useState, type Dispatch } from "react"
 import { toast } from "sonner"
 
 import { EmptyState } from "@/components/common/empty-state"
@@ -27,6 +27,10 @@ import { normalizarBusca } from "@/lib/texto"
 
 type No = { categoria: Categoria; filhos: Categoria[] }
 
+/** Alvo de uma alternância de ativação. Objeto em vez de `(id, ativa)` porque booleano posicional
+ *  no ponto de chamada não diz o que significa — `{ id, ativa: false }` diz. */
+type Alternancia = { id: string; ativa: boolean }
+
 /** Taxonomia do banco: só ativar/desativar — renomear mudaria a taxonomia de todos (§4.5). */
 export function CategoriasPadraoCard({
   categorias,
@@ -37,11 +41,12 @@ export function CategoriasPadraoCard({
   // Uma única mutação para o card inteiro: um `useMutation` por linha criaria ~130 observers
   // inscritos no cache só para renderizar a lista.
   const atualizar = useAtualizarCategoria()
-  const alternar = (id: string, ativa: boolean) =>
+  const alternar = ({ id, ativa }: Alternancia) => {
     atualizar.mutate(
       { id, patch: { ativa } },
       { onError: (err) => toast.error(err.message) }
     )
+  }
 
   const arvore = useMemo(() => montarArvore(categorias), [categorias])
   const visiveis = useMemo(() => filtrar(arvore, busca), [arvore, busca])
@@ -97,7 +102,7 @@ function NoRaiz({
 }: {
   no: No
   expandido: boolean
-  onAlternar: (id: string, ativa: boolean) => void
+  onAlternar: Dispatch<Alternancia>
 }) {
   const [aberto, setAberto] = useState(expandido)
   return (
@@ -136,7 +141,7 @@ function LinhaCategoria({
   onAlternar,
 }: {
   categoria: Categoria
-  onAlternar: (id: string, ativa: boolean) => void
+  onAlternar: Dispatch<Alternancia>
 }) {
   const nome = nomeCategoria(categoria)
 
@@ -151,7 +156,7 @@ function LinhaCategoria({
         checked={categoria.ativa}
         aria-label={`${categoria.ativa ? "Desativar" : "Ativar"} ${nome}`}
         onCheckedChange={(ativa) => {
-          onAlternar(categoria.pluggy_id, ativa)
+          onAlternar({ id: categoria.pluggy_id, ativa })
         }}
       />
     </label>

@@ -165,15 +165,15 @@ export function iconeCategoria(
  * assinatura) — sem isto, uma categoria personalizada apareceria com o ícone genérico em todo
  * lugar menos na tela de configurações, que é justamente o que a coluna `icone` veio resolver.
  */
-export function useIconeCategoria(): (
-  pluggyId: string | null | undefined
-) => LucideIcon {
+export function useIconeCategoria() {
   const { data } = useCategorias()
   return useMemo(() => {
     const escolhidos = new Map<string, Categoria["icone"]>(
       (data ?? []).filter((c) => c.icone).map((c) => [c.pluggy_id, c.icone])
     )
-    return (pluggyId) =>
+    // O tipo de retorno sai por inferência, e não anotado: a anotação repetiria exatamente esta
+    // linha, e o parâmetro nela seria só um nome sem binding.
+    return (pluggyId: string | null | undefined): LucideIcon =>
       iconeCategoria(pluggyId, pluggyId ? escolhidos.get(pluggyId) : null)
   }, [data])
 }

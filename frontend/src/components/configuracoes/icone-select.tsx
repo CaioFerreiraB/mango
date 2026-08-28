@@ -1,4 +1,4 @@
-import { createElement } from "react"
+import { createElement, type Dispatch } from "react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -22,8 +22,9 @@ export function IconeSelect({
   nomeCategoria,
   className,
 }: {
-  value: IconeCategoria | null | undefined
-  onChange: (v: IconeCategoria) => void
+  /** Ausente = ainda sem ícone escolhido. Uma forma só de dizer "nada", em vez de três. */
+  value?: IconeCategoria
+  onChange: Dispatch<IconeCategoria>
   /** Entra no `aria-label` — numa lista de categorias há um destes por linha. */
   nomeCategoria?: string
   className?: string

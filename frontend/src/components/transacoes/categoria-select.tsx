@@ -1,5 +1,5 @@
 import { Check, ChevronsUpDown } from "lucide-react"
-import { createElement, useState } from "react"
+import { createElement, useState, type Dispatch } from "react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -37,7 +37,7 @@ export function CategoriaSelect({
   disabled = false,
 }: {
   value: string | null
-  onChange: (v: string | null) => void
+  onChange: Dispatch<string | null>
   incluirTodas?: boolean
   placeholder?: string
   className?: string
@@ -172,7 +172,7 @@ function Item({
 }: {
   categoria: Categoria
   selecionado: boolean
-  onSelect: (v: string) => void
+  onSelect: Dispatch<string>
 }) {
   return (
     <CommandItem

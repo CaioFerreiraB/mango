@@ -154,7 +154,7 @@ function LinhaPersonalizada({ categoria }: { categoria: Categoria }) {
   return (
     <li className="flex items-center gap-2 py-2">
       <IconeSelect
-        value={categoria.icone}
+        value={categoria.icone ?? undefined}
         nomeCategoria={nomeCategoria(categoria)}
         onChange={(icone) =>
           atualizar.mutate(
