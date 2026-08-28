@@ -19,6 +19,7 @@ from app.models.investimento import InvestimentoTransacao
 from app.models.transacao import Transacao
 from app.models.usuario import Usuario
 from app.repositories.assinatura import AssinaturaRepository
+from app.repositories.categoria import CategoriaRepository
 from app.repositories.investimento import InvestimentoRepository
 from app.repositories.transacao import TransacaoRepository
 from app.schemas.investimento import InvestimentoTransacaoRead
@@ -129,6 +130,7 @@ def atualizar(
     # próximos syncs. Por isso a assinatura é só resolvida aqui e o alias só é aprendido no fim.
     assinatura = _assinatura_do_vinculo(repo, dados)
     _validar_provento(repo, dados)
+    _validar_categoria_override(repo, dados)
     _recusar_categoria_de_assinatura(obj, dados)
 
     atualizada = repo.update(obj, **dados)
@@ -160,6 +162,23 @@ def _validar_provento(repo: TransacaoRepository, dados: dict) -> None:
         None
     ):
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "provento não encontrado")
+
+
+def _validar_categoria_override(repo: TransacaoRepository, dados: dict) -> None:
+    """A categoria escolhida tem de ser visível ao usuário: global do Pluggy ou criada por ele (S3).
+
+    A FK só exige que a linha exista, e `categoria` é a única tabela que mistura linha global com
+    linha de usuário — sem esta checagem o PATCH aceitava o id da categoria PERSONALIZADA de outra
+    conta. `CategoriaRepository` é o único ponto que sabe distinguir as duas coisas.
+
+    Não exige que esteja ativa, ao contrário de `regra_categorizacao`: o seletor mantém na lista a
+    categoria já escolhida mesmo inativa, e recusar o reenvio dela seria regressão. Criar uma regra
+    nova é outra história — lá a exigência faz sentido e continua valendo.
+    """
+    if dados.get("categoria_override_id") is None:
+        return
+    if CategoriaRepository(repo.db, repo.usuario_id).get(dados["categoria_override_id"]) is None:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "categoria não encontrada")
 
 
 def _recusar_categoria_de_assinatura(obj: Transacao, dados: dict) -> None:

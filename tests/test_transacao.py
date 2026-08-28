@@ -237,6 +237,38 @@ def test_categoria_de_cobranca_de_assinatura_nao_e_editavel(
     assert assinatura.nomes_transacao != []
 
 
+def test_categoria_override_nao_alcanca_categoria_de_outro_usuario(
+    db: Session, usuario_a: Usuario, usuario_b: Usuario, client_factory
+) -> None:
+    """S3: a FK só exige que a linha exista, e `categoria` mistura linha global com linha de
+    usuário — sem checagem de posse, B gravava na própria transação o id da categoria PRIVADA de A.
+    """
+    cat_de_a = (
+        client_factory(usuario_a)
+        .post("/api/categorias", json={"nome": "Segredo de A"})
+        .json()["pluggy_id"]
+    )
+    conta = criar_conta(db, usuario_b.id, "acc-b")
+    tx = _criar_tx(TransacaoRepository(db, usuario_b.id), conta.id, "t-de-b")
+
+    resposta = client_factory(usuario_b).patch(
+        f"/api/transacoes/{tx.id}", json={"categoria_override_id": cat_de_a}
+    )
+    assert resposta.status_code == 400
+    db.refresh(tx)
+    assert tx.categoria_override_id is None  # e a transação não foi tocada
+
+    # A global do Pluggy continua valendo para os dois — a recusa é de posse, não de categoria.
+    db.add(Categoria(pluggy_id="07000000", description="Services"))
+    db.commit()
+    assert (
+        client_factory(usuario_b)
+        .patch(f"/api/transacoes/{tx.id}", json={"categoria_override_id": "07000000"})
+        .status_code
+        == 200
+    )
+
+
 def test_leitura_traz_categoria_efetiva_e_origem(
     db: Session, usuario_a: Usuario, client_factory
 ) -> None:
