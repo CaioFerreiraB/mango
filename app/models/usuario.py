@@ -45,6 +45,12 @@ class Usuario(TimestampMixin, Base):
     accent: Mapped[str | None] = mapped_column(String(20))
     avatar: Mapped[int | None] = mapped_column()
 
+    # Data de corte da revisão (§4.3): transação ANTES dela tem a revisão **ignorada** — não é
+    # marcada como revisada, só sai da fila. O Pluggy traz o histórico inteiro ao conectar a conta,
+    # e ninguém quer revisar anos de lançamentos passados. null = sem corte, todo o histórico pede
+    # revisão (comportamento anterior a este campo).
+    revisao_desde: Mapped[date | None] = mapped_column(Date)
+
     # Token brapi.dev (preços/IBOV, §4.9) — cifrado em repouso (§5.5); nunca devolvido pela API.
     brapi_token_cifrado: Mapped[str | None] = mapped_column(EncryptedStr)
 

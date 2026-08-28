@@ -30,6 +30,7 @@ from app.services.assinatura_deteccao import normalizar_nome
 from app.services.categoria_resolucao import Contexto, carregar_contexto, resolver
 from app.services.compra_parcelada import irmas_da_compra
 from app.services.periodo import limites_sp
+from app.services.revisao import corte_revisao
 
 router = APIRouter(prefix="/transacoes", tags=["transacao"])
 
@@ -54,6 +55,7 @@ def _read(obj: Transacao, ctx: Contexto, *, parcelas: int = 0) -> TransacaoRead:
 @router.get("", response_model=TransacaoListagem)
 def listar(
     repo: TransacaoRepository = Depends(_repo),
+    user: Usuario = Depends(get_current_user),
     inicio: date | None = Query(None),
     fim: date | None = Query(None),
     conta_id: int | None = Query(None),
@@ -61,6 +63,7 @@ def listar(
     fatura_id: int | None = Query(None),
     tipo: Literal["DEBIT", "CREDIT"] | None = Query(None),
     revisada: bool | None = Query(None),
+    pendente_revisao: bool | None = Query(None),
     eh_transferencia: bool | None = Query(None),
     assinatura_id: int | None = Query(None),
     tem_assinatura: bool | None = Query(None),
@@ -81,6 +84,8 @@ def listar(
         fatura_id=fatura_id,
         tipo=tipo,
         revisada=revisada,
+        pendente_revisao=pendente_revisao,
+        corte_revisao=corte_revisao(user.revisao_desde),
         eh_transferencia=eh_transferencia,
         assinatura_id=assinatura_id,
         tem_assinatura=tem_assinatura,

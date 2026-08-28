@@ -44,7 +44,10 @@ export type TransacaoFiltro = {
   categoria_id?: string
   fatura_id?: number
   tipo?: "DEBIT" | "CREDIT"
+  /** Filtro cru da coluna. Para "está na fila de revisão?" use `pendente_revisao` (§4.3). */
   revisada?: boolean
+  /** Não revisada E a partir da data de corte do usuário (`perfil.revisao_desde`). */
+  pendente_revisao?: boolean
   eh_transferencia?: boolean
   assinatura_id?: number
   tem_assinatura?: boolean

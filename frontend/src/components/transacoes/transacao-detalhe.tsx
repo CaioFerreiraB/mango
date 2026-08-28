@@ -23,6 +23,7 @@ import { Switch } from "@/components/ui/switch"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { useAssinaturas } from "@/lib/api/assinaturas"
 import { useContas } from "@/lib/api/contas"
+import { usePerfil } from "@/lib/api/perfil"
 import {
   descricaoBanco,
   descricaoExibida,
@@ -33,6 +34,7 @@ import {
 } from "@/lib/api/transacoes"
 import { sugerir } from "@/lib/assinatura-sugestao"
 import { formatDateTime, formatMoeda } from "@/lib/format"
+import { estadoRevisao } from "@/lib/revisao"
 
 /** Sem isto o último campo do bottom sheet fica sob a barra de gestos. */
 const SAFE_AREA_BOTTOM = "env(safe-area-inset-bottom)"
@@ -51,11 +53,17 @@ export function TransacaoDetalhe({
 }) {
   const atualizar = useAtualizarTransacao()
   const contas = useContas()
+  const perfil = usePerfil() // corte da revisão (§4.3)
   // `direction` é comportamento do vaul (eixo da animação e do arraste), não dá para resolver por
   // CSS. Ao contrário da bottom nav, aqui o hook pode ser usado: o drawer nasce fechado, então o
   // `false` do primeiro paint não pisca nada.
   const isMobile = useIsMobile()
   const t = transacao
+  // Só com transação: com o drawer fechado não há data para comparar (e `estadoRevisao` não tem
+  // o que fazer com string vazia).
+  const revisao = t
+    ? estadoRevisao(t.revisada, t.date, perfil.data?.revisao_desde)
+    : "pendente"
   const conta = contas.data?.find((c) => c.id === t?.conta_id)
   const contaNome = conta
     ? (conta.marketing_name ?? conta.nome ?? conta.pluggy_account_id)
@@ -92,7 +100,7 @@ export function TransacaoDetalhe({
               <DrawerDescription className="sr-only">
                 {`${descricaoExibida(t) ?? "Transação"} · ${formatDateTime(t.date)}`}
               </DrawerDescription>
-              <StatusBadge revisada={t.revisada} />
+              <StatusBadge estado={revisao} />
             </DrawerHeader>
 
             <div className="space-y-5 px-4 pb-6">
@@ -127,15 +135,23 @@ export function TransacaoDetalhe({
               <TextosUsuario key={`texto-${t.id}`} transacao={t} />
 
               <div className="space-y-3 rounded-lg border p-3">
-                <label className="flex items-center justify-between gap-2 text-sm">
-                  Transação revisada
-                  <Switch
-                    checked={t.revisada}
-                    onCheckedChange={(c) =>
-                      atualizar.mutate({ id: t.id, patch: { revisada: c } })
-                    }
-                  />
-                </label>
+                <div className="space-y-1">
+                  <label className="flex items-center justify-between gap-2 text-sm">
+                    Transação revisada
+                    <Switch
+                      checked={t.revisada}
+                      onCheckedChange={(c) =>
+                        atualizar.mutate({ id: t.id, patch: { revisada: c } })
+                      }
+                    />
+                  </label>
+                  {revisao === "ignorado" ? (
+                    <p className="text-xs text-muted-foreground">
+                      Anterior à data de início da revisão, então não entra na
+                      fila — mas você ainda pode marcá-la como revisada.
+                    </p>
+                  ) : null}
+                </div>
                 <label className="flex items-center justify-between gap-2 text-sm">
                   É transferência interna
                   <Switch

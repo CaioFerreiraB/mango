@@ -12,6 +12,13 @@ ainda está se assentando. Cada versão publicada tem uma imagem correspondente 
 
 ### Adicionado
 
+- **Data de início da revisão** — em Configurações → Preferências dá para dizer a partir de quando
+  você quer revisar suas transações. Conectar uma conta traz o histórico inteiro dela, e a fila de
+  revisão nascia com anos de lançamentos que ninguém vai conferir. O que vem antes da data escolhida
+  passa a aparecer como **"Ignorada"**: sai da contagem do dashboard e do filtro "Só pendentes", mas
+  **não** é marcado como revisado — nada é reescrito, e você ainda pode revisar uma delas à mão.
+  Mudar ou apagar a data tem efeito na hora, sem perder nada. Em branco (o padrão) tudo continua como
+  antes: todo o histórico pede revisão.
 - **Gestão de categorias** — dá para criar categorias próprias ("Pet", "Faculdade"), desativar as
   do banco que você não usa e ensinar o sistema a categorizar sozinho. Tudo numa aba nova em
   Configurações → Categorias.
