@@ -3,16 +3,19 @@
 from datetime import UTC, date, datetime, timedelta
 
 import pytest
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models.cartao_fatura import Cartao, Fatura
 from app.models.categoria import Categoria
 from app.models.pluggy import CredencialPluggy, Instituicao, ItemPluggy
+from app.models.transacao import Transacao
 from app.models.usuario import Usuario
 from app.repositories.conta import ContaRepository
 from app.repositories.transacao import TransacaoRepository
 from app.services.dashboard import montar_dashboard, montar_series, resumo_faturas
 from app.services.periodo import mes_corrente
+from app.services.revisao import corte_revisao
 
 
 def _usuario(db: Session, email: str) -> Usuario:
@@ -264,3 +267,29 @@ def test_series_isola_usuario(db, usuario):
 
     serie = montar_series(db, usuario.id, date(2026, 6, 1), date(2026, 6, 30), "semanal")
     assert sum(b.entradas_centavos for b in serie.buckets) == 100_000  # sem os 999_000 de B
+
+
+def test_dashboard_corte_da_revisao(db, usuario):
+    """A data de corte (§4.3) tira da contagem o histórico que o usuário não vai revisar — sem
+    marcar nada como revisado. A contagem segue global (não respeita o período do dashboard)."""
+    bank, _ = _contas(db, usuario.id)
+    repo = TransacaoRepository(db, usuario.id)
+    _tx(repo, bank, "velha", -1_000, quando=datetime(2020, 5, 10, tzinfo=UTC))
+    # 01/06 02:00 UTC = 31/05 23:00 em SP → antes do corte de 01/06.
+    _tx(repo, bank, "borda", -2_000, quando=datetime(2020, 6, 1, 2, tzinfo=UTC))
+    _tx(repo, bank, "no-corte", -3_000, quando=datetime(2020, 6, 1, 12, tzinfo=UTC))
+    _tx(repo, bank, "recente", -4_000, quando=datetime(2026, 7, 1, tzinfo=UTC))
+
+    periodo = mes_corrente()
+    assert montar_dashboard(db, usuario.id, *periodo).nao_revisadas == 4  # sem corte
+
+    corte = corte_revisao(date(2020, 6, 1))
+    d = montar_dashboard(db, usuario.id, *periodo, corte)
+    assert d.nao_revisadas == 2  # 'no-corte' (inclusivo) e 'recente'
+
+    # Nenhuma transação foi marcada como revisada — o corte só filtra.
+    db.expire_all()
+    assert all(t.revisada is False for t in db.scalars(select(Transacao)).all())
+
+    # E limpar o corte devolve a contagem cheia.
+    assert montar_dashboard(db, usuario.id, *periodo, None).nao_revisadas == 4

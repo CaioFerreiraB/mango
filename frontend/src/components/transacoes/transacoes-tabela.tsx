@@ -17,6 +17,7 @@ import {
 import { useMapaCategorias } from "@/lib/api/categorias"
 import { useIconeCategoria } from "@/lib/api/categoria-icones"
 import { useContas } from "@/lib/api/contas"
+import { usePerfil } from "@/lib/api/perfil"
 import {
   descricaoExibida,
   subtituloTransacao,
@@ -24,6 +25,7 @@ import {
   type Transacao,
 } from "@/lib/api/transacoes"
 import { formatDate } from "@/lib/format"
+import { estadoRevisao } from "@/lib/revisao"
 import { cn } from "@/lib/utils"
 
 /** Avatar de categoria: fundo tingido suave + ícone colorido, por tipo (entrada/saída). */
@@ -93,6 +95,7 @@ export function TransacoesTabela({
   )
   const mapaCategorias = useMapaCategorias()
   const iconeCategoria = useIconeCategoria()
+  const perfil = usePerfil() // corte da revisão (§4.3) — decide o estado do StatusBadge
   // Descrição · Valor · Data · Conta · Categoria · Status
   const { larguras, iniciar } = useLarguras([300, 120, 110, 160, 180, 120])
   const [selecionadaId, setSelecionadaId] = useState<number | null>(null)
@@ -237,7 +240,13 @@ export function TransacoesTabela({
                     )}
                   </TableCell>
                   <TableCell className="text-right">
-                    <StatusBadge revisada={t.revisada} />
+                    <StatusBadge
+                      estado={estadoRevisao(
+                        t.revisada,
+                        t.date,
+                        perfil.data?.revisao_desde
+                      )}
+                    />
                   </TableCell>
                 </TableRow>
               )

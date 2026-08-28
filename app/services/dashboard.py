@@ -24,6 +24,7 @@ from app.schemas.dashboard import (
 )
 from app.services.categoria_resolucao import com_assinatura, expr_categoria_efetiva
 from app.services.periodo import SP, limites_sp
+from app.services.revisao import expr_pendente_revisao
 
 _TOP_CATEGORIAS = 8
 _ULTIMAS = 10
@@ -40,7 +41,13 @@ _VALOR_EFETIVO = func.coalesce(
 )
 
 
-def montar_dashboard(db: Session, usuario_id: int, inicio: date, fim: date) -> DashboardResumo:
+def montar_dashboard(
+    db: Session,
+    usuario_id: int,
+    inicio: date,
+    fim: date,
+    corte_revisao: datetime | None = None,
+) -> DashboardResumo:
     ini, fim_excl = limites_sp(inicio, fim)
     do_usuario = Transacao.usuario_id == usuario_id
     no_periodo = (Transacao.date >= ini, Transacao.date < fim_excl)
@@ -63,8 +70,13 @@ def montar_dashboard(db: Session, usuario_id: int, inicio: date, fim: date) -> D
             Conta.usuario_id == usuario_id, Conta.type == "BANK"
         )
     )
+    # Contagem GLOBAL de propósito (não respeita o período do dashboard): a fila de revisão é uma
+    # pendência do usuário, não um recorte temporal. O corte (§4.3) tira o histórico que ele já
+    # declarou que não vai revisar.
     nao_revisadas = db.scalar(
-        select(func.count()).select_from(Transacao).where(do_usuario, Transacao.revisada.is_(False))
+        select(func.count())
+        .select_from(Transacao)
+        .where(do_usuario, expr_pendente_revisao(corte_revisao))
     )
 
     cat_efetiva = expr_categoria_efetiva(usuario_id)

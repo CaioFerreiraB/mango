@@ -190,7 +190,7 @@ export function DashboardPage() {
 
             {dashMes.data.nao_revisadas > 0 ? (
               <Link
-                to="/transacoes?revisada=false"
+                to="/transacoes?pendente=true"
                 className="flex items-center justify-between rounded-lg border border-dashed bg-muted/40 px-4 py-3 text-sm transition-colors hover:bg-muted"
               >
                 <span>

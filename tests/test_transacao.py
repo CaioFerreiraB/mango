@@ -1,6 +1,6 @@
 """Filtros da listagem de transações (§4.5) + vínculo com provento de investimento (§4.9)."""
 
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 
 from sqlalchemy.orm import Session
 
@@ -297,3 +297,45 @@ def test_leitura_traz_categoria_efetiva_e_origem(
     assert lido["categoria_origem"] == "desconhecida"
     # ...mas não mexe no ajuste manual, que é escolha explícita.
     assert client.get(f"/api/transacoes/{tx.id}").json()["categoria_efetiva_id"] == "03000000"
+
+
+# --- fila de revisão + data de corte (§4.3) -------------------------------------------
+
+
+def test_pendente_revisao_respeita_o_corte(db: Session, usuario_a: Usuario, client_factory) -> None:
+    """`pendente_revisao` é o conceito de produto ("está na fila?") e obedece ao corte do usuário;
+    `revisada` continua sendo o filtro cru da coluna e ignora o corte."""
+    conta = criar_conta(db, usuario_a.id, "acc-revisao")
+    repo = TransacaoRepository(db, usuario_a.id)
+    antiga = _criar_tx(repo, conta.id, "t-antiga", date=datetime(2026, 2, 20, tzinfo=UTC))
+    # 01/03 02:00 UTC = 28/02 23:00 em SP → cai ANTES do corte (a comparação é no fuso SP).
+    borda = _criar_tx(repo, conta.id, "t-borda", date=datetime(2026, 3, 1, 2, tzinfo=UTC))
+    no_corte = _criar_tx(repo, conta.id, "t-no-corte", date=datetime(2026, 3, 1, 12, tzinfo=UTC))
+    nova = _criar_tx(repo, conta.id, "t-nova", date=datetime(2026, 3, 10, tzinfo=UTC))
+    ja_revisada = _criar_tx(
+        repo, conta.id, "t-revisada", date=datetime(2026, 3, 12, tzinfo=UTC), revisada=True
+    )
+
+    client = client_factory(usuario_a)
+
+    def ids(query: str) -> set[int]:
+        resp = client.get(f"/api/transacoes?{query}")
+        assert resp.status_code == 200, resp.text
+        corpo = resp.json()
+        assert corpo["total"] == len(corpo["items"])  # a contagem usa os mesmos filtros
+        return {t["id"] for t in corpo["items"]}
+
+    nao_revisadas = {antiga.id, borda.id, no_corte.id, nova.id}
+    # Sem corte, "pendente" é exatamente "não revisada".
+    assert ids("pendente_revisao=true") == nao_revisadas
+
+    usuario_a.revisao_desde = date(2026, 3, 1)
+    db.commit()
+
+    # O corte é inclusivo: o próprio dia 01/03 (no fuso SP) já pede revisão.
+    assert ids("pendente_revisao=true") == {no_corte.id, nova.id}
+    # O complemento traz as revisadas E as ignoradas — ninguém some da listagem.
+    assert ids("pendente_revisao=false") == {antiga.id, borda.id, ja_revisada.id}
+    # O filtro cru da coluna não mudou de significado com o corte.
+    assert ids("revisada=false") == nao_revisadas
+    assert ids("revisada=true") == {ja_revisada.id}

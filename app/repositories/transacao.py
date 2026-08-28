@@ -7,6 +7,7 @@ from sqlalchemy import func, or_, select
 from app.models.transacao import Transacao
 from app.repositories.base import UserScopedRepository
 from app.services.categoria_resolucao import com_assinatura, expr_categoria_efetiva
+from app.services.revisao import expr_pendente_revisao
 
 # Campos do usuário — o re-sync NUNCA os sobrescreve (§4.5/§4.4).
 CAMPOS_USUARIO = (
@@ -57,6 +58,8 @@ class TransacaoRepository(UserScopedRepository[Transacao]):
         fatura_id: int | None = None,
         tipo: str | None = None,
         revisada: bool | None = None,
+        pendente_revisao: bool | None = None,
+        corte_revisao: datetime | None = None,
         eh_transferencia: bool | None = None,
         assinatura_id: int | None = None,
         tem_assinatura: bool | None = None,
@@ -83,8 +86,14 @@ class TransacaoRepository(UserScopedRepository[Transacao]):
             filtros.append(Transacao.bill_id == fatura_id)
         if tipo is not None:
             filtros.append(Transacao.type == tipo)
+        # `revisada` é o filtro CRU da coluna; `pendente_revisao` é o conceito de produto "está na
+        # fila?", que também respeita a data de corte do usuário (§4.3). Os dois coexistem de
+        # propósito — mudar o significado de `revisada` em silêncio seria a armadilha aqui.
         if revisada is not None:
             filtros.append(Transacao.revisada.is_(revisada))
+        if pendente_revisao is not None:
+            pendente = expr_pendente_revisao(corte_revisao)
+            filtros.append(pendente if pendente_revisao else ~pendente)
         if eh_transferencia is not None:
             filtros.append(Transacao.eh_transferencia.is_(eh_transferencia))
         # Assinatura específica tem precedência sobre o "qualquer/nenhuma" (tem_assinatura).

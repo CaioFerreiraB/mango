@@ -68,8 +68,10 @@ export function TransacoesPage() {
     params.get("categoria_id")
   )
   const [tipo, setTipo] = useState<"DEBIT" | "CREDIT" | null>(null)
+  // `revisada=false` é o link antigo (§4.3, antes da data de corte) — continua entrando aqui para
+  // não quebrar link salvo ou favoritado.
   const [soNaoRevisadas, setSoNaoRevisadas] = useState(
-    params.get("revisada") === "false"
+    params.get("pendente") === "true" || params.get("revisada") === "false"
   )
   const [transf, setTransf] = useState<"todas" | "ocultar" | "so">("todas")
   // "__todas__" · "__qualquer__" (com assinatura) · "__sem__" (sem) · id da assinatura.
@@ -101,7 +103,7 @@ export function TransacoesPage() {
     conta_id: contaId ?? undefined,
     categoria_id: categoriaId ?? undefined,
     tipo: tipo ?? undefined,
-    revisada: soNaoRevisadas ? false : undefined,
+    pendente_revisao: soNaoRevisadas ? true : undefined,
     eh_transferencia:
       transf === "ocultar" ? false : transf === "so" ? true : undefined,
     assinatura_id: assinaturaId,

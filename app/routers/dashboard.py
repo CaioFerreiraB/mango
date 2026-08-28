@@ -12,6 +12,7 @@ from app.schemas.dashboard import DashboardResumo, DashboardSeries
 from app.security.current_user import get_current_user
 from app.services.dashboard import montar_dashboard, montar_series
 from app.services.periodo import mes_corrente
+from app.services.revisao import corte_revisao
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 
@@ -25,7 +26,7 @@ def obter(
 ) -> DashboardResumo:
     if inicio is None or fim is None:
         inicio, fim = mes_corrente()
-    return montar_dashboard(db, user.id, inicio, fim)
+    return montar_dashboard(db, user.id, inicio, fim, corte_revisao(user.revisao_desde))
 
 
 @router.get("/series", response_model=DashboardSeries)

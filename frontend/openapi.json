@@ -3373,6 +3373,22 @@
             }
           },
           {
+            "name": "pendente_revisao",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Pendente Revisao"
+            }
+          },
+          {
             "name": "eh_transferencia",
             "in": "query",
             "required": false,
@@ -11662,6 +11678,18 @@
             ],
             "title": "Avatar"
           },
+          "revisao_desde": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revisao Desde"
+          },
           "brapi_token_configurado": {
             "type": "boolean",
             "title": "Brapi Token Configurado"
@@ -11686,6 +11714,7 @@
           "ocupacao",
           "accent",
           "avatar",
+          "revisao_desde",
           "brapi_token_configurado",
           "totp_configurado",
           "totp_login_habilitado"
@@ -11797,6 +11826,18 @@
               }
             ],
             "title": "Avatar"
+          },
+          "revisao_desde": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revisao Desde"
           }
         },
         "type": "object",

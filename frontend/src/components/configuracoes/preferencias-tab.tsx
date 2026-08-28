@@ -1,6 +1,15 @@
+import { useState } from "react"
 import { toast } from "sonner"
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -33,13 +42,14 @@ export function PreferenciasTab() {
   const perfil = usePerfil()
   if (perfil.isLoading || !perfil.data)
     return <Skeleton className="h-72 w-full" />
-  return <PreferenciasForm perfil={perfil.data} />
+  return <PreferenciasForm key={perfil.data.id} perfil={perfil.data} />
 }
 
 function PreferenciasForm({ perfil }: { perfil: Perfil }) {
   const atualizar = useAtualizarPerfil()
   const accentAtual = (perfil.accent ?? ACCENT_PADRAO) as Accent
   const avatarAtual = perfil.avatar ?? AVATAR_PADRAO
+  const [revisaoDesde, setRevisaoDesde] = useState(perfil.revisao_desde ?? "")
 
   function escolherAccent(accent: Accent) {
     if (accent === accentAtual) return
@@ -59,6 +69,29 @@ function PreferenciasForm({ perfil }: { perfil: Perfil }) {
     atualizar.mutate(
       { avatar: Number(valor) },
       { onError: (err) => toast.error(err.message) }
+    )
+  }
+
+  const salvoRevisao = perfil.revisao_desde ?? ""
+
+  /** Grava a data de corte; "" limpa. Só chama o servidor se mudou de verdade. */
+  function gravarRevisao(valor: string) {
+    if (valor === salvoRevisao) return
+    setRevisaoDesde(valor)
+    atualizar.mutate(
+      { revisao_desde: valor || null },
+      {
+        onSuccess: () =>
+          toast.success(
+            valor
+              ? "Data de início da revisão atualizada."
+              : "Todo o histórico volta a pedir revisão."
+          ),
+        onError: (err) => {
+          setRevisaoDesde(salvoRevisao)
+          toast.error(err.message)
+        },
+      }
     )
   }
 
@@ -149,6 +182,45 @@ function PreferenciasForm({ perfil }: { perfil: Perfil }) {
               )
             })}
           </RadioGroup>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Revisão de transações</CardTitle>
+          <CardDescription>
+            Transações anteriores a esta data não entram na fila de revisão —
+            elas não são marcadas como revisadas, apenas deixam de ser cobradas.
+            Deixe em branco para revisar todo o histórico.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-wrap items-end gap-3">
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="revisao-desde">Revisar a partir de</Label>
+              <Input
+                id="revisao-desde"
+                type="date"
+                className="w-44"
+                value={revisaoDesde}
+                onChange={(e) => setRevisaoDesde(e.target.value)}
+                // Grava no blur: `type="date"` dispara `onChange` com data ainda pela metade.
+                onBlur={(e) => gravarRevisao(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") e.currentTarget.blur()
+                }}
+              />
+            </div>
+            {salvoRevisao ? (
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => gravarRevisao("")}
+              >
+                Limpar
+              </Button>
+            ) : null}
+          </div>
         </CardContent>
       </Card>
     </div>

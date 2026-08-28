@@ -30,6 +30,10 @@ export function useAtualizarPerfil() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["perfil"] })
       qc.invalidateQueries({ queryKey: ["me"] })
+      // `revisao_desde` (§4.3) muda a fila de revisão: o badge da listagem e a contagem do
+      // dashboard são derivados dele e ficariam parados até o staleTime.
+      qc.invalidateQueries({ queryKey: ["transacoes"] })
+      qc.invalidateQueries({ queryKey: ["dashboard"] })
     },
   })
 }
