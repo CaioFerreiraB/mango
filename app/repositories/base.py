@@ -2,7 +2,9 @@
 
 INVARIANTE DE SEGURANÇA: toda leitura/escrita é filtrada por `usuario_id`. Um repositório
 ligado ao usuário B nunca enxerga nem altera linhas do usuário A — base dos testes de
-isolamento. `categoria` é a única entidade de domínio fora deste padrão (global read-only).
+isolamento. `categoria` é a única fora deste padrão: mistura linha global (`usuario_id` NULL,
+taxonomia do Pluggy) com linha do usuário (categoria personalizada), e aplica o escopo à mão em
+`app/repositories/categoria.py`.
 """
 
 from sqlalchemy import select

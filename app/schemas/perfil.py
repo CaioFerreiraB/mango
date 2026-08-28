@@ -22,6 +22,8 @@ class PerfilRead(ORMModel):
     ocupacao: str | None
     accent: Accent | None
     avatar: int | None
+    # Corte da fila de revisão (§4.3): null = sem corte, todo o histórico pede revisão.
+    revisao_desde: date | None
     # Booleano derivado (o token brapi nunca é devolvido — §5.5).
     brapi_token_configurado: bool
     # 2FA opcional (§5.2, #15): booleanos derivados, o segredo nunca é devolvido.
@@ -38,6 +40,7 @@ class PerfilUpdate(BaseModel):
     ocupacao: str | None = Field(default=None, max_length=255)
     accent: Accent | None = None
     avatar: int | None = Field(default=None, ge=1, le=4)
+    revisao_desde: date | None = None
 
     @field_validator("email")
     @classmethod

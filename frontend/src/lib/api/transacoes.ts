@@ -7,6 +7,7 @@ import {
 
 import { assinaturasKeys } from "@/lib/api/assinaturas"
 import { api } from "@/lib/api/client"
+import { mensagemErro } from "@/lib/api/erros"
 import type { InvestimentoTransacao } from "@/lib/api/investimentos"
 import type { components } from "@/lib/api/schema"
 
@@ -43,8 +44,15 @@ export type TransacaoFiltro = {
   categoria_id?: string
   fatura_id?: number
   tipo?: "DEBIT" | "CREDIT"
+  /** Filtro cru da coluna. Para "está na fila de revisão?" use `pendente_revisao` (§4.3). */
   revisada?: boolean
+  /** Não revisada E a partir da data de corte do usuário (`perfil.revisao_desde`). */
+  pendente_revisao?: boolean
   eh_transferencia?: boolean
+  /** Esconde o pagamento de fatura de cartão (categoria efetiva 05100000, §4.4). */
+  ocultar_pagamento_fatura?: boolean
+  /** Esconde lançamentos com data depois de hoje — parcelas futuras, sobretudo (§4.2). */
+  ocultar_futuras?: boolean
   assinatura_id?: number
   tem_assinatura?: boolean
   busca?: string
@@ -102,12 +110,17 @@ export function useAtualizarTransacao() {
           body: args.patch,
         }
       )
-      if (error || !data) throw new Error("falha ao salvar a transação")
+      if (error || !data)
+        throw new Error(mensagemErro(error, "falha ao salvar a transação"))
       return data
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["transacoes"] })
       qc.invalidateQueries({ queryKey: ["dashboard"] })
+      // Trocar categoria muda o consumo do orçamento e as séries do dashboard — sem invalidar
+      // aqui, a Visão Geral seguia mostrando o número antigo até a próxima navegação.
+      qc.invalidateQueries({ queryKey: ["dashboard-series"] })
+      qc.invalidateQueries({ queryKey: ["orcamentos"] })
     },
   })
 }

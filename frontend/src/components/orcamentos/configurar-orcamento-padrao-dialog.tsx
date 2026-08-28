@@ -30,7 +30,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { iconeCategoria } from "@/lib/api/categoria-icones"
+import { useIconeCategoria } from "@/lib/api/categoria-icones"
 import {
   nomeCategoria,
   useCategorias,
@@ -401,6 +401,7 @@ function LinhaArrastavel({
   onMudarValor: (centavos: number) => void
   onRemover: () => void
 }) {
+  const iconeCategoria = useIconeCategoria()
   const {
     attributes,
     listeners,

@@ -10,7 +10,53 @@ ainda está se assentando. Cada versão publicada tem uma imagem correspondente 
 
 ## [Não publicado]
 
+## [0.2.0] — 2026-08-28
+
 ### Adicionado
+
+- **Listagem de transações mais limpa por padrão** — dois filtros novos, ambos ligados quando você
+  abre a página, em **Mais filtros**:
+  - **Ocultar pagamentos de fatura**: o débito que quita a fatura do cartão sai da lista. Ele não é
+    um gasto novo — as compras que ele paga já estão ali —, e vê-lo ao lado delas só atrapalha a
+    conferência. Se você recategorizar um pagamento à mão, ele volta a aparecer: a sua decisão vale
+    mais que a do banco.
+  - **Ocultar lançamentos futuros**: uma compra em 6× chega como seis lançamentos, um por mês, e os
+    cinco que ainda não aconteceram ficavam no topo da lista, empurrando o presente para baixo.
+    Agora a lista termina em hoje — o histórico anterior continua inteiro. Nada é apagado: desligue
+    o filtro para ver também o que está por vir, e o detalhe da fatura segue mostrando todas as
+    parcelas.
+
+- **Data de início da revisão** — em Configurações → Preferências dá para dizer a partir de quando
+  você quer revisar suas transações. Conectar uma conta traz o histórico inteiro dela, e a fila de
+  revisão nascia com anos de lançamentos que ninguém vai conferir. O que vem antes da data escolhida
+  passa a aparecer como **"Ignorada"**: sai da contagem do dashboard e do filtro "Só pendentes", mas
+  **não** é marcado como revisado — nada é reescrito, e você ainda pode revisar uma delas à mão.
+  Mudar ou apagar a data tem efeito na hora, sem perder nada. Em branco (o padrão) tudo continua como
+  antes: todo o histórico pede revisão.
+- **Gestão de categorias** — dá para criar categorias próprias ("Pet", "Faculdade"), desativar as
+  do banco que você não usa e ensinar o sistema a categorizar sozinho. Tudo numa aba nova em
+  Configurações → Categorias.
+  - **Categorias próprias**: nascem disponíveis em transações, orçamentos, assinaturas e divisões,
+    como qualquer outra, com um **ícone à sua escolha** (44 opções) que aparece junto delas em toda
+    a interface, igual às do banco. Só você as vê. Excluir é recusado se ela estiver em uso em algum
+    orçamento.
+  - **Ativar/desativar**: some dos seletores; desativar uma categoria-mãe alcança as filhas. A
+    escolha é sua, não da instância — cada pessoa esconde o que quiser. Transação que o banco
+    classificar numa categoria desativada passa a aparecer como "Desconhecida", com um ícone de
+    interrogação — distinto da etiqueta genérica, porque é o único estado que pede uma ação sua.
+  - **Regras automáticas**: um texto (exato ou "contém") mapeia para uma categoria, valendo para o
+    histórico inteiro e para o que chegar depois. Dá para criar da própria transação, pelo atalho
+    "Sempre categorizar «X» assim".
+  - **Parcelas coerentes**: mudar a categoria de uma parcela muda todas as parcelas daquela compra.
+    O agrupamento lê a descrição do cartão ignorando o contador ("Decolar Com **1/6**") e o sufixo
+    societário ("DECOLAR COM **LTDA** 5/6") — é o que faz as parcelas de uma mesma compra se
+    reconhecerem mesmo quando o banco não manda estabelecimento nem valor total. O aviso na tela
+    passa a dizer quantas parcelas foram junto, em vez de prometer a propagação de antemão.
+  - **Assinaturas mandam na categoria**: cobrança vinculada a uma assinatura usa a categoria dela e
+    não é editável na transação — altere na assinatura e todas as cobranças acompanham.
+  - A ordem de decisão é explícita: assinatura → seu ajuste manual → regra → sugestão do banco. Uma
+    regra criada depois nunca desfaz uma correção que você fez à mão numa transação específica.
+  - A migration é aditiva e roda sozinha na subida do container.
 
 - **Descrição própria e observações na transação** — dá para escrever o que a transação realmente
   foi ("almoço com o time") em vez de conviver com o texto do banco, e anotar uma observação livre.
@@ -89,6 +135,7 @@ Primeira versão publicada. Imagem única servindo API e interface, instalável 
 - Os endpoints de autenticação ainda não têm rate-limiting nem lockout. Ver **Problemas conhecidos**
   em [ROADMAP.md](ROADMAP.md) antes de expor a instância à internet aberta.
 
-[Não publicado]: https://github.com/CaioFerreiraB/mango/compare/v0.1.1...HEAD
+[Não publicado]: https://github.com/CaioFerreiraB/mango/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/CaioFerreiraB/mango/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/CaioFerreiraB/mango/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/CaioFerreiraB/mango/releases/tag/v0.1.0

@@ -59,6 +59,20 @@ export function formatDate(value: string | number | Date): string {
   return dateFmt.format(toDate(value))
 }
 
+// `en-CA` formata como `2026-03-01` — mesma forma do `<input type="date">` e do backend, então
+// duas saídas deste helper são comparáveis como string (ordem lexicográfica = ordem cronológica).
+const diaCivilFmt = new Intl.DateTimeFormat("en-CA", {
+  timeZone: TZ,
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+})
+
+/** Data ISO/epoch → dia civil `yyyy-mm-dd` em São Paulo. Usar para COMPARAR datas, não exibir. */
+export function diaCivilSP(value: string | number | Date): string {
+  return diaCivilFmt.format(toDate(value))
+}
+
 /** Data/hora ISO/epoch → `30 de jun. de 2026, 14:05` (America/Sao_Paulo). */
 export function formatDateTime(value: string | number | Date): string {
   return dateTimeFmt.format(toDate(value))

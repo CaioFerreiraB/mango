@@ -1,5 +1,7 @@
-"""Preferências do sistema no perfil (accent + avatar): leitura, atualização e validação;
-+ token brapi write-only, cifrado em repouso e nunca devolvido (§5.5)."""
+"""Preferências do sistema no perfil (accent, avatar, corte da revisão): leitura, atualização e
+validação; + token brapi write-only, cifrado em repouso e nunca devolvido (§5.5)."""
+
+from datetime import date
 
 from sqlalchemy import text
 from sqlalchemy.orm import Session
@@ -39,6 +41,34 @@ def test_preferencias_invalidas_rejeitadas(client_factory, usuario_a: Usuario) -
     assert client.patch("/api/perfil", json={"accent": "magenta"}).status_code == 422
     assert client.patch("/api/perfil", json={"avatar": 5}).status_code == 422
     assert client.patch("/api/perfil", json={"avatar": 0}).status_code == 422
+
+
+# --- data de corte da revisão (§4.3) --------------------------------------------------
+
+
+def test_revisao_desde_grava_e_limpa(client_factory, usuario_a: Usuario, db: Session) -> None:
+    client = client_factory(usuario_a)
+    assert client.get("/api/perfil").json()["revisao_desde"] is None  # sem corte por padrão
+
+    patch = client.patch("/api/perfil", json={"revisao_desde": "2026-03-01"})
+    assert patch.status_code == 200, patch.text
+    assert patch.json()["revisao_desde"] == "2026-03-01"
+
+    db.expire_all()
+    fresh = db.get(Usuario, usuario_a.id)
+    assert fresh is not None and fresh.revisao_desde == date(2026, 3, 1)
+
+    # Limpar volta ao "todo o histórico pede revisão".
+    assert client.patch("/api/perfil", json={"revisao_desde": None}).json()["revisao_desde"] is None
+    db.expire_all()
+    fresh = db.get(Usuario, usuario_a.id)
+    assert fresh is not None and fresh.revisao_desde is None
+
+
+def test_revisao_desde_invalida_rejeitada(client_factory, usuario_a: Usuario) -> None:
+    client = client_factory(usuario_a)
+    assert client.patch("/api/perfil", json={"revisao_desde": "01/03/2026"}).status_code == 422
+    assert client.patch("/api/perfil", json={"revisao_desde": "2026-02-30"}).status_code == 422
 
 
 # --- token brapi (§4.9): write-only, cifrado, nunca devolvido -------------------------

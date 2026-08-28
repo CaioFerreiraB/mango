@@ -1,8 +1,20 @@
 """Isolamento abrangente: para cada entidade user-owned, B nunca acessa o dado de A (§5.2)."""
 
 import pytest
+from sqlalchemy.orm import Session
 
+from app.models.categoria import Categoria
 from app.models.usuario import Usuario
+
+# Id da taxonomia global usado pela regra de categorização (o payload de CASOS é estático).
+CATEGORIA_GLOBAL = "99999999"
+
+
+@pytest.fixture(autouse=True)
+def _semear_categoria(db: Session) -> None:
+    db.add(Categoria(pluggy_id=CATEGORIA_GLOBAL, description="Other"))
+    db.commit()
+
 
 # (prefixo, payload de criação válido)
 CASOS = [
@@ -18,6 +30,10 @@ CASOS = [
     ),
     ("/api/assinaturas", {"nome": "Streaming", "valor_centavos": 2990, "periodicidade": "mensal"}),
     ("/api/credenciais-pluggy", {"client_id": "cid", "client_secret": "sec"}),
+    (
+        "/api/regras-categorizacao",
+        {"texto": "netflix", "tipo_match": "exato", "categoria_id": CATEGORIA_GLOBAL},
+    ),
 ]
 
 

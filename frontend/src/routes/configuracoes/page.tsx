@@ -1,3 +1,6 @@
+import { useSearchParams } from "react-router"
+
+import { CategoriasTab } from "@/components/configuracoes/categorias-tab"
 import { ConexoesTab } from "@/components/configuracoes/conexoes-tab"
 import { PerfilTab } from "@/components/configuracoes/perfil-tab"
 import { PreferenciasTab } from "@/components/configuracoes/preferencias-tab"
@@ -19,11 +22,41 @@ export function ConfiguracoesPage() {
     me.data?.is_admin === true && status.data?.app_mode === "self_hosted"
   const abaPadrao = podeVerConexoes ? "conexoes" : "perfil"
 
+  // Aba na URL (`?aba=categorias`): permite linkar direto de outra tela — o drawer da transação
+  // manda para as regras de categorização. `key` remonta quando as permissões chegam e mudam o
+  // padrão.
+  const [params, setParams] = useSearchParams()
+  // Só as abas que ESTA conta enxerga. Sem a checagem, `?aba=xyz` — ou um link com `?aba=usuarios`
+  // aberto por quem não é admin — deixa nenhum trigger ativo e nenhum conteúdo renderizado: a
+  // página fica só com a faixa de abas. Links de configuração são compartilháveis, então o estado
+  // é alcançável; cair no padrão é o comportamento que não confunde.
+  const abasVisiveis = [
+    ...(podeVerConexoes ? ["conexoes"] : []),
+    "perfil",
+    "preferencias",
+    "categorias",
+    ...(podeVerSeguranca ? ["seguranca"] : []),
+    ...(podeAdministrarInstancia ? ["usuarios", "sistema"] : []),
+  ] // precisa espelhar os `TabsTrigger` abaixo
+  const naUrl = params.get("aba")
+  const aba = naUrl !== null && abasVisiveis.includes(naUrl) ? naUrl : abaPadrao
+
+  function trocarAba(valor: string) {
+    setParams(
+      (atual) => {
+        const proximo = new URLSearchParams(atual)
+        proximo.set("aba", valor)
+        return proximo
+      },
+      { replace: true } // trocar de aba não deve encher o histórico do navegador
+    )
+  }
+
   return (
     <div className="space-y-4">
       <h1 className="text-xl font-semibold">Configurações</h1>
-      <Tabs defaultValue={abaPadrao} key={abaPadrao}>
-        {/* Faixa rolável: com 6 abas a lista estoura telas estreitas e arrastava a página inteira.
+      <Tabs value={aba} onValueChange={trocarAba} key={abaPadrao}>
+        {/* Faixa rolável: com 7 abas a lista estoura telas estreitas e arrastava a página inteira.
             overflow-y-hidden porque overflow-x-auto promove overflow-y a auto e o after:bottom-[-5px]
             do trigger criaria scroll vertical; py-1 dá folga ao anel de foco. Ver carteira.tsx. */}
         <div className="no-scrollbar overflow-x-auto overflow-y-hidden py-1">
@@ -33,6 +66,7 @@ export function ConfiguracoesPage() {
             ) : null}
             <TabsTrigger value="perfil">Perfil</TabsTrigger>
             <TabsTrigger value="preferencias">Preferências</TabsTrigger>
+            <TabsTrigger value="categorias">Categorias</TabsTrigger>
             {podeVerSeguranca ? (
               <TabsTrigger value="seguranca">Segurança</TabsTrigger>
             ) : null}
@@ -54,6 +88,9 @@ export function ConfiguracoesPage() {
         </TabsContent>
         <TabsContent value="preferencias" className="pt-4">
           <PreferenciasTab />
+        </TabsContent>
+        <TabsContent value="categorias" className="pt-4">
+          <CategoriasTab />
         </TabsContent>
         {podeVerSeguranca ? (
           <TabsContent value="seguranca" className="pt-4">
