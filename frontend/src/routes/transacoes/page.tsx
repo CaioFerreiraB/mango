@@ -184,7 +184,7 @@ export function TransacoesPage() {
                 Ocultar pagamentos de fatura
                 <Switch
                   checked={ocultarPagFatura}
-                  onCheckedChange={(c) => reset(setOcultarPagFatura)(c)}
+                  onCheckedChange={reset(setOcultarPagFatura)}
                 />
               </label>
               <div className="space-y-1">
@@ -193,7 +193,7 @@ export function TransacoesPage() {
                   <Switch
                     aria-describedby="ajuda-ocultar-futuras"
                     checked={ocultarFuturas}
-                    onCheckedChange={(c) => reset(setOcultarFuturas)(c)}
+                    onCheckedChange={reset(setOcultarFuturas)}
                   />
                 </label>
                 <p

@@ -20,8 +20,9 @@ ainda está se assentando. Cada versão publicada tem uma imagem correspondente 
     mais que a do banco.
   - **Ocultar lançamentos futuros**: uma compra em 6× chega como seis lançamentos, um por mês, e os
     cinco que ainda não aconteceram ficavam no topo da lista, empurrando o presente para baixo.
-    Agora a página começa no dia de hoje. Nada é apagado — desligue o filtro para ver o quadro
-    inteiro, e o detalhe da fatura continua mostrando todas as parcelas.
+    Agora a lista termina em hoje — o histórico anterior continua inteiro. Nada é apagado: desligue
+    o filtro para ver também o que está por vir, e o detalhe da fatura segue mostrando todas as
+    parcelas.
 
 - **Data de início da revisão** — em Configurações → Preferências dá para dizer a partir de quando
   você quer revisar suas transações. Conectar uma conta traz o histórico inteiro dela, e a fila de

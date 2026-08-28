@@ -2,7 +2,9 @@
 
 from datetime import date, timedelta
 
-from app.services.periodo import hoje_sp, janela_listagem, limites_sp
+import pytest
+
+from app.services.periodo import janela_listagem, limites_sp
 
 
 def test_janela_listagem_resolve_cada_ponta_no_fuso_sp() -> None:
@@ -21,10 +23,15 @@ def test_janela_listagem_resolve_cada_ponta_no_fuso_sp() -> None:
     )
 
 
-def test_ocultar_futuras_so_aperta_o_fim() -> None:
+def test_ocultar_futuras_so_aperta_o_fim(monkeypatch: pytest.MonkeyPatch) -> None:
     """§4.2: "sem lançamentos futuros" é `fim <= hoje`. Prevalece sempre o limite mais apertado —
-    o filtro nunca AFROUXA um `fim` que o usuário pediu, e nunca mexe no início."""
-    hoje = hoje_sp()
+    o filtro nunca AFROUXA um `fim` que o usuário pediu, e nunca mexe no início.
+
+    `hoje_sp` fica congelado: sem isso, uma execução que cruzasse a meia-noite em SP compararia o
+    `fim_de_hoje` de um dia com o corte do dia seguinte e falharia sem regressão nenhuma no código.
+    """
+    hoje = date(2026, 3, 10)
+    monkeypatch.setattr("app.services.periodo.hoje_sp", lambda: hoje)
     fim_de_hoje = limites_sp(hoje, hoje)[1]
 
     # Sem `fim` explícito, o corte de hoje assume.
