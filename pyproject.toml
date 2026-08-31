@@ -5,12 +5,12 @@ description = "Controle financeiro pessoal — backend (FastAPI)"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "fastapi>=0.115",
+    "fastapi>=0.141.1",
     "uvicorn[standard]>=0.30",
-    "sqlalchemy>=2.0",
-    "alembic>=1.13",
-    "pydantic>=2.7",
-    "pydantic-settings>=2.3",
+    "sqlalchemy>=2.0.52",
+    "alembic>=1.19.1",
+    "pydantic>=2.13.5",
+    "pydantic-settings>=2.15.0",
     "cryptography>=42",
     "psycopg[binary]>=3.2",
     "bcrypt>=4.1",
@@ -23,8 +23,8 @@ dependencies = [
 dev = [
     "pytest>=8",
     "pytest-cov>=5",
-    "ruff>=0.6",
-    "pre-commit>=3.7",
+    "ruff>=0.16.5",
+    "pre-commit>=4.6.2",
 ]
 
 [tool.uv]
