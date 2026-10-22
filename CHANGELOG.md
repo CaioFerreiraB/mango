@@ -10,6 +10,32 @@ ainda está se assentando. Cada versão publicada tem uma imagem correspondente 
 
 ## [Não publicado]
 
+## [0.3.0] — 2026-10-21
+
+### Adicionado
+
+- **MCP para agentes de IA:** Claude Code, Codex, Open WebUI, VS Code ou um bot no n8n podem
+  consultar e editar seus dados pelo endereço `/mcp`. O que dá para fazer:
+  - listar e buscar transações com todos os filtros da tela;
+  - revisar e categorizar em lote;
+  - ver contas, cartões e faturas;
+  - acompanhar objetivos e orçamentos;
+  - gerenciar assinaturas;
+  - rachar despesas e ver quanto cada pessoa deve.
+
+  Respostas em tabela markdown (ou lista, para chats sem tabela). Gráficos chegam como imagem, com
+  versão interativa nos clientes que suportam. Liga, desliga, permissão (só leitura ou leitura e
+  escrita) e token ficam em **Configurações → MCP**. Configurações do sistema nunca ficam
+  acessíveis por ali. Guia em [docs/mcp.md](docs/mcp.md).
+
+### Corrigido
+
+- **Gasto no cartão abatia as saídas do dashboard.** O banco manda a compra de cartão com o sinal
+  oposto ao da conta corrente, e o dashboard somava com sinal. Por isso saídas, gasto por categoria
+  e a série mensal saíam menores, ou até negativos, para quem usa cartão. Agora vale a grandeza de
+  cada lançamento.
+- **Valor guardado dos objetivos chegava como texto no Postgres** (`"500000"` em vez de número).
+
 ## [0.2.0] — 2026-08-28
 
 ### Adicionado
@@ -135,7 +161,8 @@ Primeira versão publicada. Imagem única servindo API e interface, instalável 
 - Os endpoints de autenticação ainda não têm rate-limiting nem lockout. Ver **Problemas conhecidos**
   em [ROADMAP.md](ROADMAP.md) antes de expor a instância à internet aberta.
 
-[Não publicado]: https://github.com/CaioFerreiraB/mango/compare/v0.2.0...HEAD
+[Não publicado]: https://github.com/CaioFerreiraB/mango/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/CaioFerreiraB/mango/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/CaioFerreiraB/mango/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/CaioFerreiraB/mango/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/CaioFerreiraB/mango/releases/tag/v0.1.0

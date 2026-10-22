@@ -2,6 +2,7 @@ import { useSearchParams } from "react-router"
 
 import { CategoriasTab } from "@/components/configuracoes/categorias-tab"
 import { ConexoesTab } from "@/components/configuracoes/conexoes-tab"
+import { McpTab } from "@/components/configuracoes/mcp-tab"
 import { PerfilTab } from "@/components/configuracoes/perfil-tab"
 import { PreferenciasTab } from "@/components/configuracoes/preferencias-tab"
 import { SegurancaTab } from "@/components/configuracoes/seguranca-tab"
@@ -35,6 +36,7 @@ export function ConfiguracoesPage() {
     "perfil",
     "preferencias",
     "categorias",
+    "mcp",
     ...(podeVerSeguranca ? ["seguranca"] : []),
     ...(podeAdministrarInstancia ? ["usuarios", "sistema"] : []),
   ] // precisa espelhar os `TabsTrigger` abaixo
@@ -67,6 +69,7 @@ export function ConfiguracoesPage() {
             <TabsTrigger value="perfil">Perfil</TabsTrigger>
             <TabsTrigger value="preferencias">Preferências</TabsTrigger>
             <TabsTrigger value="categorias">Categorias</TabsTrigger>
+            <TabsTrigger value="mcp">MCP</TabsTrigger>
             {podeVerSeguranca ? (
               <TabsTrigger value="seguranca">Segurança</TabsTrigger>
             ) : null}
@@ -91,6 +94,9 @@ export function ConfiguracoesPage() {
         </TabsContent>
         <TabsContent value="categorias" className="pt-4">
           <CategoriasTab />
+        </TabsContent>
+        <TabsContent value="mcp" className="pt-4">
+          <McpTab />
         </TabsContent>
         {podeVerSeguranca ? (
           <TabsContent value="seguranca" className="pt-4">

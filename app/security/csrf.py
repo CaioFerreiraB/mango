@@ -6,6 +6,10 @@ de terceiros não consegue ler o cookie para forjar o header; combinado com o co
 `SameSite=Lax`, cobre o CSRF sem estado no servidor. Autenticação é separada (cookie de sessão,
 validado em `get_current_user`). Os endpoints de bootstrap (setup/login/recuperação) são isentos:
 acontecem antes de existir sessão.
+
+Requisições com `Authorization: Bearer` (token MCP, docs/mcp.md) também passam: o token não é
+credencial ambiente — o navegador não o anexa sozinho, e com Bearer presente `get_current_user`
+ignora o cookie de sessão. Sem autoridade ambiente, não há o que forjar.
 """
 
 import secrets
@@ -15,6 +19,7 @@ from fastapi import Request, Response
 from fastapi.responses import JSONResponse
 
 from app.config import settings
+from app.security.current_user import bearer
 from app.security.sessions import CSRF_COOKIE, CSRF_HEADER
 
 _METODOS_MUTANTES = {"POST", "PUT", "PATCH", "DELETE"}
@@ -50,6 +55,7 @@ async def csrf_middleware(
         and request.url.path.startswith("/api/")
         and request.url.path not in _ISENTOS
         and not request.url.path.startswith(_PREFIXOS_ISENTOS)
+        and bearer(request) is None
         and not _csrf_valido(request)
     ):
         return JSONResponse(status_code=403, content={"detail": "CSRF token inválido ou ausente"})

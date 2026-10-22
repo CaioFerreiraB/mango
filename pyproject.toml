@@ -1,6 +1,6 @@
 [project]
 name = "mango"
-version = "0.2.0"
+version = "0.3.0"
 description = "Controle financeiro pessoal — backend (FastAPI)"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -17,6 +17,8 @@ dependencies = [
     "pyotp>=2.9",
     "httpx>=0.27",
     "apscheduler>=3.10",
+    "mcp>=2.3,<3",
+    "vl-convert-python>=1.9,<2",
 ]
 
 [dependency-groups]

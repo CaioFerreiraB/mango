@@ -2,6 +2,7 @@
 
 from app.db.base import Base
 from app.models import (  # noqa: F401
+    acesso_mcp,
     assinatura,
     ativo,
     cartao_fatura,

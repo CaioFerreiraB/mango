@@ -293,3 +293,31 @@ def test_dashboard_corte_da_revisao(db, usuario):
 
     # E limpar o corte devolve a contagem cheia.
     assert montar_dashboard(db, usuario.id, *periodo, None).nao_revisadas == 4
+
+
+def test_compra_de_cartao_com_debit_positivo_conta_como_saida(db, usuario):
+    """O Pluggy manda compra de cartão como DEBIT com valor POSITIVO (na conta corrente vem
+    negativo). Somar com sinal fazia o gasto no cartão ABATER as saídas e o gasto da categoria."""
+    db.add(Categoria(pluggy_id="02000000", description="Food"))
+    bank, credit = _contas(db, usuario.id)
+    repo = TransacaoRepository(db, usuario.id)
+    quando = datetime(2026, 3, 10, 15, tzinfo=UTC)
+    _tx(repo, bank, "banco", -15_000, cat="02000000", quando=quando)
+    repo.create(
+        conta_id=credit.id,
+        pluggy_transaction_id="cartao",
+        date=quando,
+        amount_centavos=25_000,
+        currency_code="BRL",
+        type="DEBIT",
+        status="POSTED",
+        categoria_pluggy_id="02000000",
+    )
+    resumo = montar_dashboard(db, usuario.id, date(2026, 3, 1), date(2026, 3, 31), None)
+    assert resumo.saidas_centavos == 40_000
+    assert [(g.categoria_id, g.total_centavos) for g in resumo.gasto_por_categoria] == [
+        ("02000000", 40_000)
+    ]
+    serie = montar_series(db, usuario.id, date(2026, 3, 1), date(2026, 3, 31), "mensal")
+    assert serie.buckets[0].saidas_centavos == 40_000
+    assert serie.buckets[0].por_categoria[0].total_centavos == 40_000

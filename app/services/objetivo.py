@@ -32,7 +32,9 @@ def valores_guardados(db: Session, usuario_id: int) -> dict[int, int]:
             .group_by(tabela.objetivo_id)
         ).all()
         for objetivo_id, total in rows:
-            guardado[objetivo_id] = guardado.get(objetivo_id, 0) + total
+            # int(): no Postgres SUM(BIGINT) volta NUMERIC → Decimal, que a API serializava como
+            # string ("500000") porque o atributo é atribuído sem validação em `_enriquecer`.
+            guardado[objetivo_id] = guardado.get(objetivo_id, 0) + int(total)
     return guardado
 
 
