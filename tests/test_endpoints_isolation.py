@@ -64,3 +64,22 @@ def test_credencial_nao_devolve_segredo(client_factory, usuario_a: Usuario) -> N
     assert "client_secret" not in body
     assert "client_secret_cifrado" not in body
     assert "client_id_cifrado" not in body
+
+
+def test_acesso_mcp_e_por_usuario(client_factory, usuario_a: Usuario, usuario_b: Usuario) -> None:
+    """`/acesso-mcp` não tem id na rota (um acesso por usuário): o isolamento é B nunca ver,
+    revelar, trocar nem apagar o token de A — cada um só alcança o próprio."""
+    client_a, client_b = client_factory(usuario_a), client_factory(usuario_b)
+    assert client_a.patch("/api/acesso-mcp", json={"ativo": True}).status_code == 200
+    token_a = client_a.get("/api/acesso-mcp/token").json()["token"]
+
+    assert client_b.get("/api/acesso-mcp").json()["configurado"] is False
+    assert client_b.get("/api/acesso-mcp/token").status_code == 404
+    assert client_b.post("/api/acesso-mcp/trocar-token").status_code == 404
+    assert client_b.delete("/api/acesso-mcp").status_code == 204  # apaga o (inexistente) de B
+
+    # B ativar o próprio acesso gera outro token e não mexe no de A.
+    client_b.patch("/api/acesso-mcp", json={"ativo": True})
+    assert client_b.get("/api/acesso-mcp/token").json()["token"] != token_a
+    assert client_a.get("/api/acesso-mcp/token").json()["token"] == token_a
+    assert client_a.get("/api/acesso-mcp").json()["ativo"] is True

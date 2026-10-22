@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "mango",
-    "version": "0.1.1"
+    "version": "0.2.0"
   },
   "paths": {
     "/health": {
@@ -3251,6 +3251,7 @@
           "transacao"
         ],
         "summary": "Listar",
+        "description": "Listagem paginada de transações. Todo filtro é opcional e combina por AND com os demais.\n\nTrês pares pedem atenção porque parecem redundantes e não são: `revisada` é o filtro cru da\ncoluna e `pendente_revisao` é o conceito de produto (\"está na fila?\", §4.3); `eh_transferencia`\nalcança toda transferência e `ocultar_pagamento_fatura` só o pagamento de fatura (§4.4), que é\num subconjunto dela; `fim` é o limite escolhido pelo usuário e `ocultar_futuras` é o corte em\nhoje (§4.2) — juntos, prevalece o mais apertado.\n\nOs dois `ocultar_*` nascem DESLIGADOS aqui: quem decide o padrão de exibição é a tela, e o\ndetalhe da fatura precisa da fatura inteira.",
         "operationId": "listar_api_transacoes_get",
         "parameters": [
           {
@@ -5707,10 +5708,223 @@
           }
         }
       }
+    },
+    "/api/acesso-mcp": {
+      "get": {
+        "tags": [
+          "acesso_mcp"
+        ],
+        "summary": "Obter",
+        "operationId": "obter_api_acesso_mcp_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AcessoMcpRead"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "acesso_mcp"
+        ],
+        "summary": "Remover",
+        "operationId": "remover_api_acesso_mcp_delete",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "acesso_mcp"
+        ],
+        "summary": "Atualizar",
+        "description": "Liga/desliga e troca a permissão. A primeira ativação gera o token; desligar o mantém\n(religar volta a aceitar o mesmo token — trocar é ação explícita, `/trocar-token`).",
+        "operationId": "atualizar_api_acesso_mcp_patch",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AcessoMcpUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AcessoMcpRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/acesso-mcp/token": {
+      "get": {
+        "tags": [
+          "acesso_mcp"
+        ],
+        "summary": "Revelar Token",
+        "operationId": "revelar_token_api_acesso_mcp_token_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenMcp"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/acesso-mcp/trocar-token": {
+      "post": {
+        "tags": [
+          "acesso_mcp"
+        ],
+        "summary": "Trocar Token",
+        "description": "Gera um token novo; o anterior deixa de valer na hora (o hash antigo some do banco).",
+        "operationId": "trocar_token_api_acesso_mcp_trocar_token_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenMcp"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
     "schemas": {
+      "AcessoMcpRead": {
+        "properties": {
+          "configurado": {
+            "type": "boolean",
+            "title": "Configurado"
+          },
+          "ativo": {
+            "type": "boolean",
+            "title": "Ativo"
+          },
+          "escopo": {
+            "type": "string",
+            "enum": [
+              "leitura",
+              "escrita"
+            ],
+            "title": "Escopo"
+          },
+          "prefixo": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prefixo"
+          },
+          "token_gerado_em": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Token Gerado Em"
+          },
+          "ultimo_uso_em": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ultimo Uso Em"
+          }
+        },
+        "type": "object",
+        "required": [
+          "configurado",
+          "ativo",
+          "escopo",
+          "prefixo",
+          "token_gerado_em",
+          "ultimo_uso_em"
+        ],
+        "title": "AcessoMcpRead"
+      },
+      "AcessoMcpUpdate": {
+        "properties": {
+          "ativo": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ativo"
+          },
+          "escopo": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "leitura",
+                  "escrita"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Escopo"
+          }
+        },
+        "type": "object",
+        "title": "AcessoMcpUpdate"
+      },
       "AporteManualCreate": {
         "properties": {
           "data": {
@@ -12430,6 +12644,19 @@
           "app_mode"
         ],
         "title": "SetupStatus"
+      },
+      "TokenMcp": {
+        "properties": {
+          "token": {
+            "type": "string",
+            "title": "Token"
+          }
+        },
+        "type": "object",
+        "required": [
+          "token"
+        ],
+        "title": "TokenMcp"
       },
       "TotpConfirmarRequest": {
         "properties": {

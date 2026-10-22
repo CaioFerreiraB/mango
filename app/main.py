@@ -19,6 +19,7 @@ from app.exceptions import (
     UpstreamError,
     ValidationError,
 )
+from app.mcp import ciclo_mcp, endpoint_mcp
 from app.routers import ROUTERS_ABERTOS_A_TODOS_OS_TIPOS, all_routers
 from app.security.csrf import csrf_middleware
 from app.security.current_user import exigir_usuario_completo
@@ -63,7 +64,8 @@ async def lifespan(app: FastAPI):
 
         agendador.iniciar()
     try:
-        yield
+        async with ciclo_mcp():
+            yield
     finally:
         if settings.app_mode == "self_hosted":
             from app.services import agendador
@@ -97,6 +99,9 @@ def health() -> dict[str, str]:
 for _router in all_routers:
     deps = [] if _router in ROUTERS_ABERTOS_A_TODOS_OS_TIPOS else [Depends(exigir_usuario_completo)]
     app.include_router(_router, prefix="/api", dependencies=deps)
+
+# MCP para agentes (docs/mcp.md) — na raiz como /health: é infra de integração, não rota da API.
+app.add_api_route("/mcp", endpoint_mcp, methods=["GET", "POST", "DELETE"], include_in_schema=False)
 
 # Fallback da SPA por último, para não ofuscar a API/infra. No-op sem build (frontend/dist).
 mount_spa(app)

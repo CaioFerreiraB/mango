@@ -13,6 +13,7 @@ from app.repositories.orcamento import OrcamentoMensalRepository
 from app.repositories.pluggy import InstituicaoRepository
 from app.repositories.telegram import ConfigTelegramRepository
 from app.routers import (
+    acesso_mcp,
     admin_usuarios,
     auth,
     categoria,
@@ -138,6 +139,7 @@ _manuais: list[APIRouter] = [
     configuracao.router,  # leitura aberta + escrita só admin (§4.11-otimização)
     usuarios.router,  # busca de usuários da instância (§4.11)
     admin_usuarios.router,  # gestão de usuários da instância — só o dono (§4.11)
+    acesso_mcp.router,  # token de agentes (docs/mcp.md) — só por sessão, nunca pelo próprio token
 ]
 
 # `assinatura_router` (só `/assinaturas/resumo`) vem ANTES do CRUD-factory de `/assinaturas`:
@@ -163,4 +165,5 @@ ROUTERS_ABERTOS_A_TODOS_OS_TIPOS: tuple[APIRouter, ...] = (
     configuracao.router,
     usuarios.router,
     admin_usuarios.router,
+    acesso_mcp.router,  # conta "só divisão" também usa o MCP (para as tools de divisão)
 )
