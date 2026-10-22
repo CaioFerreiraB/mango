@@ -42,9 +42,18 @@ _VALOR_EFETIVO = func.coalesce(
 
 
 def _soma(db: Session, filtros: tuple, tipo: str) -> int:
-    """Soma o valor efetivo (em reais) das transações do tipo dentro dos filtros já montados."""
-    return db.scalar(
-        select(func.coalesce(func.sum(_VALOR_EFETIVO), 0)).where(*filtros, Transacao.type == tipo)
+    """Soma a GRANDEZA do valor efetivo (em reais) das transações do tipo nos filtros já montados.
+
+    Em módulo, linha a linha: o sinal do `amount` não é confiável por tipo — compra de cartão vem
+    DEBIT com valor POSITIVO do Pluggy (na conta corrente vem negativo), e somar com sinal fazia o
+    gasto no cartão ABATER as saídas. Quem diz se é entrada ou saída é o `type`.
+    """
+    return int(
+        db.scalar(
+            select(func.coalesce(func.sum(func.abs(_VALOR_EFETIVO)), 0)).where(
+                *filtros, Transacao.type == tipo
+            )
+        )
     )
 
 
@@ -73,13 +82,13 @@ def _gasto_por_categoria(db: Session, usuario_id: int, filtros: tuple) -> list[G
     """Top-N categorias por gasto no período, pela categoria efetiva (§4.5)."""
     cat_efetiva = expr_categoria_efetiva(usuario_id)
     linhas = db.execute(
-        com_assinatura(select(cat_efetiva, func.sum(-_VALOR_EFETIVO)), usuario_id)
+        com_assinatura(select(cat_efetiva, func.sum(func.abs(_VALOR_EFETIVO))), usuario_id)
         .where(*filtros, Transacao.type == "DEBIT")
         .group_by(cat_efetiva)
-        .order_by(func.sum(-_VALOR_EFETIVO).desc())
+        .order_by(func.sum(func.abs(_VALOR_EFETIVO)).desc())
         .limit(_TOP_CATEGORIAS)
     ).all()
-    return [GastoCategoria(categoria_id=cat, total_centavos=total) for cat, total in linhas]
+    return [GastoCategoria(categoria_id=cat, total_centavos=int(total)) for cat, total in linhas]
 
 
 def _ultimas_transacoes(db: Session, do_usuario) -> list[Transacao]:
@@ -120,7 +129,7 @@ def montar_dashboard(
 
     base = (do_usuario, *no_periodo, real)
     entradas = _soma(db, base, "CREDIT")
-    saidas = -_soma(db, base, "DEBIT")  # débitos são negativos → total de saída positivo
+    saidas = _soma(db, base, "DEBIT")
 
     return DashboardResumo(
         saldo_total_centavos=_saldo_em_contas(db, usuario_id),
@@ -266,11 +275,12 @@ def montar_series(
             dt = dt.replace(tzinfo=UTC)
         chave = _inicio_bucket(dt.astimezone(SP).date(), granularidade)
         bal = buckets.setdefault(chave, {"entradas": 0, "saidas": 0, "cat": {}})
+        # Grandeza pelo `type`, não pelo sinal (ver `_soma`: cartão traz DEBIT positivo).
         if tipo == "CREDIT":
-            bal["entradas"] += valor
+            bal["entradas"] += abs(valor)
         elif tipo == "DEBIT":
-            bal["saidas"] += -valor  # débitos são negativos → saída positiva
-            bal["cat"][cat] = bal["cat"].get(cat, 0) - valor
+            bal["saidas"] += abs(valor)
+            bal["cat"][cat] = bal["cat"].get(cat, 0) + abs(valor)
 
     return DashboardSeries(
         buckets=[

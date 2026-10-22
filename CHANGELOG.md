@@ -10,6 +10,30 @@ ainda está se assentando. Cada versão publicada tem uma imagem correspondente 
 
 ## [Não publicado]
 
+### Adicionado
+
+- **MCP para agentes de IA:** Claude Code, Codex, Open WebUI, VS Code ou um bot no n8n podem
+  consultar e editar seus dados pelo endereço `/mcp`. O que dá para fazer:
+  - listar e buscar transações com todos os filtros da tela;
+  - revisar e categorizar em lote;
+  - ver contas, cartões e faturas;
+  - acompanhar objetivos e orçamentos;
+  - gerenciar assinaturas;
+  - rachar despesas e ver quanto cada pessoa deve.
+
+  Respostas em tabela markdown (ou lista, para chats sem tabela). Gráficos chegam como imagem, com
+  versão interativa nos clientes que suportam. Liga, desliga, permissão (só leitura ou leitura e
+  escrita) e token ficam em **Configurações → MCP**. Configurações do sistema nunca ficam
+  acessíveis por ali. Guia em [docs/mcp.md](docs/mcp.md).
+
+### Corrigido
+
+- **Gasto no cartão abatia as saídas do dashboard.** O banco manda a compra de cartão com o sinal
+  oposto ao da conta corrente, e o dashboard somava com sinal. Por isso saídas, gasto por categoria
+  e a série mensal saíam menores, ou até negativos, para quem usa cartão. Agora vale a grandeza de
+  cada lançamento.
+- **Valor guardado dos objetivos chegava como texto no Postgres** (`"500000"` em vez de número).
+
 ## [0.2.0] — 2026-08-28
 
 ### Adicionado

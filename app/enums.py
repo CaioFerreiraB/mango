@@ -36,6 +36,9 @@ TIPO_MATCH = ("exato", "contem")
 # §5.2 usuario — tipo de conta: acesso completo ou só ao módulo de divisão de contas.
 TIPO_USUARIO = ("completo", "divisao")
 
+# acesso_mcp — o que o token de um agente (MCP) pode fazer: só ler ou também escrever.
+ESCOPO_MCP = ("leitura", "escrita")
+
 # §4.5 categoria — ícone de uma categoria personalizada. Nome do ícone lucide em kebab-case, o
 # mesmo que o frontend usa como chave em `lib/api/categoria-icones.ts` (as duas listas precisam
 # casar; a de lá é a que de fato desenha). Allowlist na fronteira, e NÃO CHECK no banco: crescer o
