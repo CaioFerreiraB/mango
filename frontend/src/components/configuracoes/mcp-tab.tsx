@@ -1,5 +1,5 @@
 import { Check, Copy, Eye, EyeOff, RefreshCw } from "lucide-react"
-import { useState } from "react"
+import { type Dispatch, useState } from "react"
 import { toast } from "sonner"
 
 import {
@@ -206,7 +206,7 @@ function CampoToken({
   acesso: AcessoMcp
   token: string | null
   obterToken: () => Promise<string>
-  aoTrocar: (novo: string) => void
+  aoTrocar: Dispatch<string>
 }) {
   const [visivel, setVisivel] = useState(false)
 
@@ -260,7 +260,7 @@ function CampoToken({
   )
 }
 
-function TrocarToken({ aoTrocar }: { aoTrocar: (novo: string) => void }) {
+function TrocarToken({ aoTrocar }: { aoTrocar: Dispatch<string> }) {
   const trocar = useTrocarTokenMcp()
   return (
     <AlertDialog>
