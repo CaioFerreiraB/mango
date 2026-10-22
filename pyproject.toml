@@ -1,6 +1,6 @@
 [project]
 name = "mango"
-version = "0.2.0"
+version = "0.3.0"
 description = "Controle financeiro pessoal — backend (FastAPI)"
 readme = "README.md"
 requires-python = ">=3.12"
