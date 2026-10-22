@@ -56,7 +56,9 @@
 
   window.addEventListener("message", (ev) => {
     const msg = ev.data;
-    if (!msg || msg.jsonrpc !== "2.0") return;
+    // Só o host (a janela que embute o iframe) fala com o app — outra janela com referência a
+    // ele poderia injetar uma spec arbitrária (expressões Vega) ou forjar o ui/initialize.
+    if (ev.source !== window.parent || !msg || msg.jsonrpc !== "2.0") return;
     if (msg.id === 1 && msg.result) {          // resposta do ui/initialize
       aplicarContexto(msg.result.hostContext);
       enviar({ method: "ui/notifications/initialized", params: {} });

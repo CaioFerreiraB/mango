@@ -128,6 +128,41 @@ def barras_horizontais(titulo: str, itens: list[tuple[str, float]]) -> dict:
     )
 
 
+def _cor(series: list[str]) -> dict:
+    """Cor por série na ordem fixa da paleta (a série segue a entidade, nunca a posição)."""
+    cor = {
+        "field": "serie",
+        "type": "nominal",
+        "sort": series,
+        "title": None,
+        "scale": {"domain": series, "range": CATEGORICAS[: len(series)]},
+    }
+    if len(series) == 1:
+        cor["legend"] = None  # uma série: o título nomeia, sem caixa de legenda
+    return cor
+
+
+def _y_moeda(campo: str = "valor", **extra: Any) -> dict:
+    return {
+        "field": campo,
+        "type": "quantitative",
+        "title": None,
+        "axis": {"format": _MOEDA_EIXO},
+        **extra,
+    }
+
+
+def _x_periodo(**escala: Any) -> dict:
+    eixo = {"field": "periodo", "type": "ordinal", "sort": None, "title": None}
+    return {**eixo, "axis": {"labelAngle": 0}, **({"scale": escala} if escala else {})}
+
+
+def _tooltip_valor(*rotulos: tuple[str, str]) -> list[dict]:
+    return [{"field": c, "title": t} for c, t in rotulos] + [
+        {"field": "valor", "title": "Valor", "format": _MOEDA}
+    ]
+
+
 def barras_agrupadas(titulo: str, dados: list[dict]) -> dict:
     """Poucas séries por período (ex.: entradas × saídas por mês): barras lado a lado.
     `dados` = [{periodo, serie, valor}], `periodo` já rotulado e na ordem de exibição."""
@@ -138,35 +173,32 @@ def barras_agrupadas(titulo: str, dados: list[dict]) -> dict:
         height=280,
         mark={"type": "bar", "stroke": _SUPERFICIE, "strokeWidth": 2},
         encoding={
-            "x": {
-                "field": "periodo",
-                "type": "ordinal",
-                "sort": None,
-                "title": None,
-                "axis": {"labelAngle": 0},
-                "scale": {"paddingInner": 0.45},
-            },
+            "x": _x_periodo(paddingInner=0.45),
             "xOffset": {"field": "serie", "sort": series, "scale": {"paddingInner": 0.06}},
-            "y": {
-                "field": "valor",
-                "type": "quantitative",
-                "title": None,
-                "axis": {"format": _MOEDA_EIXO},
-            },
-            "color": {
-                "field": "serie",
-                "type": "nominal",
-                "sort": series,
-                "title": None,
-                "scale": {"domain": series, "range": CATEGORICAS[: len(series)]},
-            },
-            "tooltip": [
-                {"field": "periodo", "title": "Período"},
-                {"field": "serie", "title": "Série"},
-                {"field": "valor", "title": "Valor", "format": _MOEDA},
-            ],
+            "y": _y_moeda(),
+            "color": _cor(series),
+            "tooltip": _tooltip_valor(("periodo", "Período"), ("serie", "Série")),
         },
     )
+
+
+def _camada_crosshair(series: list[str], chave: dict[str, str]) -> dict:
+    """Regra vertical no ponto mais próximo + tooltip com todas as séries naquela data."""
+    selecao = {"type": "point", "fields": ["data"], "nearest": True}
+    selecao |= {"on": "pointerover", "clear": "pointerout"}
+    data = {"field": "data", "type": "temporal", "title": "Data", "format": "%d/%m/%Y"}
+    valores = [
+        {"field": chave[s], "type": "quantitative", "title": s, "format": _MOEDA} for s in series
+    ]
+    return {
+        "params": [{"name": "hover", "select": selecao}],
+        "mark": {"type": "rule", "color": _BASE, "strokeWidth": 1},
+        "encoding": {
+            "opacity": {"condition": {"param": "hover", "empty": False, "value": 1}, "value": 0},
+            "tooltip": [data, *valores],
+        },
+        "transform": [{"pivot": "k", "value": "valor", "groupby": ["data"]}],
+    }
 
 
 def linhas(titulo: str, dados: list[dict]) -> dict:
@@ -177,113 +209,34 @@ def linhas(titulo: str, dados: list[dict]) -> dict:
     # nome de conta seriam lidos como caminho aninhado pelo Vega-Lite.
     chave = {s: f"s{i}" for i, s in enumerate(series)}
     dados = [{**d, "k": chave[d["serie"]]} for d in dados if d["serie"] in chave]
-    cor = {
-        "field": "serie",
-        "type": "nominal",
-        "sort": series,
-        "title": None,
-        "scale": {"range": CATEGORICAS[: len(series)]},
-    }
-    if len(series) == 1:
-        cor["legend"] = None  # uma série: o título nomeia, sem caixa de legenda
-    x = {
-        "field": "data",
-        "type": "temporal",
-        "title": None,
-        "axis": {"format": "%d/%m", "tickCount": 6},
-    }
-    y = {
-        "field": "valor",
-        "type": "quantitative",
-        "title": None,
-        "axis": {"format": _MOEDA_EIXO},
-        "scale": {"zero": False},
-    }
+    x = {"field": "data", "type": "temporal", "title": None}
+    x["axis"] = {"format": "%d/%m", "tickCount": 6}
+    linha = {"mark": {"type": "line", "interpolate": "monotone"}}
+    linha["encoding"] = {"y": _y_moeda(scale={"zero": False}), "color": _cor(series)}
     return _base(
         titulo,
         dados,
         height=280,
         encoding={"x": x},
-        layer=[
-            {
-                "mark": {"type": "line", "interpolate": "monotone"},
-                "encoding": {"y": y, "color": cor},
-            },
-            {
-                "params": [
-                    {
-                        "name": "hover",
-                        "select": {
-                            "type": "point",
-                            "fields": ["data"],
-                            "nearest": True,
-                            "on": "pointerover",
-                            "clear": "pointerout",
-                        },
-                    }
-                ],
-                "mark": {"type": "rule", "color": _BASE, "strokeWidth": 1},
-                "encoding": {
-                    "opacity": {
-                        "condition": {"param": "hover", "empty": False, "value": 1},
-                        "value": 0,
-                    },
-                    "tooltip": [
-                        {"field": "data", "type": "temporal", "title": "Data", "format": "%d/%m/%Y"}
-                    ]
-                    + [
-                        {"field": chave[s], "type": "quantitative", "title": s, "format": _MOEDA}
-                        for s in series
-                    ],
-                },
-                "transform": [{"pivot": "k", "value": "valor", "groupby": ["data"]}],
-            },
-        ],
+        layer=[linha, _camada_crosshair(series, chave)],
     )
 
 
 def empilhadas(titulo: str, dados: list[dict], series: list[str]) -> dict:
     """Composição por período (ex.: fatura por categoria). `dados` = [{periodo, serie, valor}]
     com `periodo` já como rótulo (dd/mm/aaaa); 2px de superfície entre segmentos."""
+    barra = {"type": "bar", "stroke": _SUPERFICIE, "strokeWidth": 2, "cornerRadiusEnd": 0}
     return _base(
         titulo,
         dados,
         height=300,
-        mark={
-            "type": "bar",
-            "stroke": _SUPERFICIE,
-            "strokeWidth": 2,
-            "cornerRadiusEnd": 0,
-            "width": {"band": 0.45},
-        },
+        mark={**barra, "width": {"band": 0.45}},
         encoding={
-            "x": {
-                "field": "periodo",
-                "type": "ordinal",
-                "sort": None,
-                "title": None,
-                "axis": {"labelAngle": 0},
-            },
-            "y": {
-                "field": "valor",
-                "type": "quantitative",
-                "title": None,
-                "stack": "zero",
-                "axis": {"format": _MOEDA_EIXO},
-            },
-            "color": {
-                "field": "serie",
-                "type": "nominal",
-                "sort": series,
-                "title": None,
-                "scale": {"domain": series, "range": CATEGORICAS[: len(series)]},
-            },
+            "x": _x_periodo(),
+            "y": _y_moeda(stack="zero"),
+            "color": _cor(series) | {"legend": {}},  # empilhado: legenda sempre (é composição)
             "order": {"field": "ordem"},
-            "tooltip": [
-                {"field": "periodo", "title": "Fatura"},
-                {"field": "serie", "title": "Categoria"},
-                {"field": "valor", "title": "Valor", "format": _MOEDA},
-            ],
+            "tooltip": _tooltip_valor(("periodo", "Fatura"), ("serie", "Categoria")),
         },
     )
 
@@ -300,49 +253,24 @@ def orcamento(titulo: str, itens: list[dict]) -> dict:
         }
         for i in itens
     ]
-    y = {"field": "categoria", "type": "nominal", "sort": "-x", "title": None}
     tooltip = [
         {"field": "categoria", "title": "Categoria"},
         {"field": "realizado", "title": "Realizado", "format": _MOEDA},
         {"field": "limite", "title": "Limite", "format": _MOEDA},
         {"field": "rotulo_pct", "title": "Uso"},
     ]
+    realizado = {"mark": {"type": "bar", "color": CATEGORICAS[0], "height": {"band": 0.55}}}
+    realizado["encoding"] = {"x": _y_moeda("realizado"), "tooltip": tooltip}
+    limite = {"mark": {"type": "tick", "color": _TINTA, "thickness": 2, "bandSize": 22}}
+    limite["encoding"] = {"x": {"field": "limite", "type": "quantitative"}, "tooltip": tooltip}
+    rotulo = {"mark": {"type": "text", "align": "left", "dx": 8, "color": _TINTA_2, "fontSize": 11}}
+    rotulo["encoding"] = {
+        "x": {"field": "maximo", "type": "quantitative"},
+        "text": {"field": "rotulo_pct"},
+    }
+    y = {"field": "categoria", "type": "nominal", "sort": "-x", "title": None}
     return _base(
-        titulo,
-        dados,
-        height={"step": 30},
-        encoding={"y": y},
-        layer=[
-            {
-                "mark": {"type": "bar", "color": CATEGORICAS[0], "height": {"band": 0.55}},
-                "encoding": {
-                    "x": {
-                        "field": "realizado",
-                        "type": "quantitative",
-                        "title": None,
-                        "axis": {"format": _MOEDA_EIXO},
-                    },
-                    "tooltip": tooltip,
-                },
-            },
-            {
-                "mark": {"type": "tick", "color": _TINTA, "thickness": 2, "bandSize": 22},
-                "encoding": {"x": {"field": "limite", "type": "quantitative"}, "tooltip": tooltip},
-            },
-            {
-                "mark": {
-                    "type": "text",
-                    "align": "left",
-                    "dx": 8,
-                    "color": _TINTA_2,
-                    "fontSize": 11,
-                },
-                "encoding": {
-                    "x": {"field": "maximo", "type": "quantitative"},
-                    "text": {"field": "rotulo_pct"},
-                },
-            },
-        ],
+        titulo, dados, height={"step": 30}, encoding={"y": y}, layer=[realizado, limite, rotulo]
     )
 
 

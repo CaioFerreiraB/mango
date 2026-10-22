@@ -21,8 +21,8 @@ from app.security.current_user import get_current_user, hash_token
 
 router = APIRouter(prefix="/acesso-mcp", tags=["acesso_mcp"])
 
-_PREFIXO_TOKEN = "mango_"
-_TAM_PREFIXO_VISIVEL = len(_PREFIXO_TOKEN) + 4
+_PREFIXO_MCP = "mango_"
+_TAM_PREFIXO_VISIVEL = len(_PREFIXO_MCP) + 4
 
 
 def _acesso(db: Session, user: Usuario) -> AcessoMcp | None:
@@ -30,7 +30,7 @@ def _acesso(db: Session, user: Usuario) -> AcessoMcp | None:
 
 
 def _novo_token(acesso: AcessoMcp) -> None:
-    token = _PREFIXO_TOKEN + secrets.token_urlsafe(32)
+    token = _PREFIXO_MCP + secrets.token_urlsafe(32)
     acesso.token_hash = hash_token(token)
     acesso.token_cifrado = token
     acesso.token_gerado_em = datetime.now(UTC)

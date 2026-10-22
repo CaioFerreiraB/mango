@@ -28,6 +28,7 @@ import { Switch } from "@/components/ui/switch"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useSetupStatus } from "@/lib/api/auth"
 import {
+  type AcessoMcp,
   revelarTokenMcp,
   useAcessoMcp,
   useAtualizarAcessoMcp,
@@ -72,11 +73,8 @@ function McpLocal({ url }: { url: string }) {
 
 function McpSelfHosted({ url }: { url: string }) {
   const acesso = useAcessoMcp()
-  const atualizar = useAtualizarAcessoMcp()
-  const trocar = useTrocarTokenMcp()
   // Token em claro só na memória da aba, e só depois de Mostrar/Copiar/Trocar.
   const [token, setToken] = useState<string | null>(null)
-  const [visivel, setVisivel] = useState(false)
 
   if (acesso.isLoading || !acesso.data)
     return <Skeleton className="h-40 w-full" />
@@ -87,18 +85,6 @@ function McpSelfHosted({ url }: { url: string }) {
     const t = await revelarTokenMcp()
     setToken(t)
     return t
-  }
-
-  async function alternarVisivel() {
-    if (!visivel) {
-      try {
-        await obterToken()
-      } catch (err) {
-        toast.error((err as Error).message)
-        return
-      }
-    }
-    setVisivel(!visivel)
   }
 
   return (
@@ -114,146 +100,201 @@ function McpSelfHosted({ url }: { url: string }) {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          <label className="flex items-start justify-between gap-4">
-            <span className="flex flex-col gap-0.5">
-              <span className="text-sm font-medium">Ativar acesso via MCP</span>
-              <span className="text-sm text-muted-foreground">
-                Desativado, o token deixa de funcionar na hora; ao reativar, o
-                mesmo token volta a valer.
-              </span>
-            </span>
-            <Switch
-              checked={a.ativo}
-              disabled={atualizar.isPending}
-              onCheckedChange={(ativo) =>
-                atualizar.mutate(
-                  { ativo },
-                  {
-                    onSuccess: () =>
-                      toast.success(
-                        ativo ? "Acesso MCP ativado." : "Acesso MCP desativado."
-                      ),
-                    onError: (err) => toast.error(err.message),
-                  }
-                )
-              }
-            />
-          </label>
-
+          <AtivarMcp ativo={a.ativo} />
           {a.configurado ? (
             <>
-              <div className="space-y-2">
-                <Label>Permissão</Label>
-                <RadioGroup
-                  value={a.escopo}
-                  onValueChange={(v) =>
-                    atualizar.mutate(
-                      { escopo: v as "leitura" | "escrita" },
-                      {
-                        onSuccess: () => toast.success("Permissão atualizada."),
-                        onError: (err) => toast.error(err.message),
-                      }
-                    )
-                  }
-                  className="gap-2"
-                >
-                  <label className="flex items-start gap-2">
-                    <RadioGroupItem value="leitura" className="mt-0.5" />
-                    <span className="text-sm">
-                      <span className="font-medium">Só leitura</span>
-                      <span className="block text-muted-foreground">
-                        Consulta transações, contas, faturas, objetivos e
-                        saldos.
-                      </span>
-                    </span>
-                  </label>
-                  <label className="flex items-start gap-2">
-                    <RadioGroupItem value="escrita" className="mt-0.5" />
-                    <span className="text-sm">
-                      <span className="font-medium">Leitura e escrita</span>
-                      <span className="block text-muted-foreground">
-                        Também revisa e categoriza transações, gerencia
-                        assinaturas e cria divisões de contas.
-                      </span>
-                    </span>
-                  </label>
-                </RadioGroup>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="token-mcp">Token</Label>
-                <div className="flex flex-wrap items-center gap-2">
-                  <code
-                    id="token-mcp"
-                    className="min-w-0 flex-1 truncate rounded-md border bg-muted/50 px-3 py-2 font-mono text-sm"
-                  >
-                    {visivel && token ? token : `${a.prefixo}${TOKEN_OCULTO}`}
-                  </code>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={alternarVisivel}
-                    aria-label={visivel ? "Ocultar token" : "Mostrar token"}
-                  >
-                    {visivel ? (
-                      <EyeOff className="size-4" />
-                    ) : (
-                      <Eye className="size-4" />
-                    )}
-                  </Button>
-                  <BotaoCopiar rotulo="Copiar token" obterTexto={obterToken} />
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Gerado em{" "}
-                  {a.token_gerado_em ? formatDateTime(a.token_gerado_em) : "—"}
-                  {" · "}
-                  {a.ultimo_uso_em
-                    ? `último uso em ${formatDateTime(a.ultimo_uso_em)}`
-                    : "ainda não usado"}
-                </p>
-              </div>
-
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button variant="outline" size="sm">
-                    <RefreshCw className="size-4" aria-hidden /> Trocar token
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Trocar o token?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Um token novo é gerado e o atual para de funcionar na hora
-                      — os agentes configurados com ele vão precisar do novo.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                    <AlertDialogAction
-                      onClick={() =>
-                        trocar.mutate(undefined, {
-                          onSuccess: (novo) => {
-                            setToken(novo)
-                            setVisivel(true)
-                            toast.success("Token trocado.")
-                          },
-                          onError: (err) => toast.error(err.message),
-                        })
-                      }
-                    >
-                      Trocar token
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
+              <PermissaoMcp escopo={a.escopo} />
+              <CampoToken
+                acesso={a}
+                token={token}
+                obterToken={obterToken}
+                aoTrocar={setToken}
+              />
             </>
           ) : null}
-
           <Endereco url={url} />
         </CardContent>
       </Card>
       {a.configurado ? <Snippets url={url} token={obterToken} /> : null}
     </div>
+  )
+}
+
+function AtivarMcp({ ativo }: { ativo: boolean }) {
+  const atualizar = useAtualizarAcessoMcp()
+  return (
+    <label className="flex items-start justify-between gap-4">
+      <span className="flex flex-col gap-0.5">
+        <span className="text-sm font-medium">Ativar acesso via MCP</span>
+        <span className="text-sm text-muted-foreground">
+          Desativado, o token deixa de funcionar na hora; ao reativar, o mesmo
+          token volta a valer.
+        </span>
+      </span>
+      <Switch
+        checked={ativo}
+        disabled={atualizar.isPending}
+        onCheckedChange={(novo) => {
+          atualizar.mutate(
+            { ativo: novo },
+            {
+              onSuccess: () =>
+                toast.success(
+                  novo ? "Acesso MCP ativado." : "Acesso MCP desativado."
+                ),
+              onError: (err) => toast.error(err.message),
+            }
+          )
+        }}
+      />
+    </label>
+  )
+}
+
+const PERMISSOES = [
+  {
+    valor: "leitura",
+    titulo: "Só leitura",
+    descricao: "Consulta transações, contas, faturas, objetivos e saldos.",
+  },
+  {
+    valor: "escrita",
+    titulo: "Leitura e escrita",
+    descricao:
+      "Também revisa e categoriza transações, gerencia assinaturas e cria divisões de contas.",
+  },
+] as const
+
+function PermissaoMcp({ escopo }: { escopo: AcessoMcp["escopo"] }) {
+  const atualizar = useAtualizarAcessoMcp()
+  return (
+    <div className="space-y-2">
+      <Label>Permissão</Label>
+      <RadioGroup
+        value={escopo}
+        onValueChange={(v) => {
+          atualizar.mutate(
+            { escopo: v as AcessoMcp["escopo"] },
+            {
+              onSuccess: () => toast.success("Permissão atualizada."),
+              onError: (err) => toast.error(err.message),
+            }
+          )
+        }}
+        className="gap-2"
+      >
+        {PERMISSOES.map((p) => (
+          <label key={p.valor} className="flex items-start gap-2">
+            <RadioGroupItem value={p.valor} className="mt-0.5" />
+            <span className="text-sm">
+              <span className="font-medium">{p.titulo}</span>
+              <span className="block text-muted-foreground">{p.descricao}</span>
+            </span>
+          </label>
+        ))}
+      </RadioGroup>
+    </div>
+  )
+}
+
+function CampoToken({
+  acesso,
+  token,
+  obterToken,
+  aoTrocar,
+}: {
+  acesso: AcessoMcp
+  token: string | null
+  obterToken: () => Promise<string>
+  aoTrocar: (novo: string) => void
+}) {
+  const [visivel, setVisivel] = useState(false)
+
+  async function alternarVisivel() {
+    if (!visivel) {
+      try {
+        await obterToken()
+      } catch (err) {
+        toast.error((err as Error).message)
+        return
+      }
+    }
+    setVisivel(!visivel)
+  }
+
+  return (
+    <div className="space-y-2">
+      <Label htmlFor="token-mcp">Token</Label>
+      <div className="flex flex-wrap items-center gap-2">
+        <code
+          id="token-mcp"
+          className="min-w-0 flex-1 truncate rounded-md border bg-muted/50 px-3 py-2 font-mono text-sm"
+        >
+          {visivel && token ? token : `${acesso.prefixo}${TOKEN_OCULTO}`}
+        </code>
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={alternarVisivel}
+          aria-label={visivel ? "Ocultar token" : "Mostrar token"}
+        >
+          {visivel ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+        </Button>
+        <BotaoCopiar rotulo="Copiar token" obterTexto={obterToken} />
+      </div>
+      <p className="text-xs text-muted-foreground">
+        Gerado em{" "}
+        {acesso.token_gerado_em ? formatDateTime(acesso.token_gerado_em) : "—"}
+        {" · "}
+        {acesso.ultimo_uso_em
+          ? `último uso em ${formatDateTime(acesso.ultimo_uso_em)}`
+          : "ainda não usado"}
+      </p>
+      <TrocarToken
+        aoTrocar={(novo) => {
+          aoTrocar(novo)
+          setVisivel(true)
+        }}
+      />
+    </div>
+  )
+}
+
+function TrocarToken({ aoTrocar }: { aoTrocar: (novo: string) => void }) {
+  const trocar = useTrocarTokenMcp()
+  return (
+    <AlertDialog>
+      <AlertDialogTrigger asChild>
+        <Button variant="outline" size="sm" className="mt-2">
+          <RefreshCw className="size-4" aria-hidden /> Trocar token
+        </Button>
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Trocar o token?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Um token novo é gerado e o atual para de funcionar na hora — os
+            agentes configurados com ele vão precisar do novo.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={() => {
+              trocar.mutate(undefined, {
+                onSuccess: (novo) => {
+                  aoTrocar(novo)
+                  toast.success("Token trocado.")
+                },
+                onError: (err) => toast.error(err.message),
+              })
+            }}
+          >
+            Trocar token
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   )
 }
 
@@ -268,7 +309,10 @@ function Endereco({ url }: { url: string }) {
         >
           {url}
         </code>
-        <BotaoCopiar rotulo="Copiar endereço" obterTexto={async () => url} />
+        <BotaoCopiar
+          rotulo="Copiar endereço"
+          obterTexto={() => Promise.resolve(url)}
+        />
       </div>
     </div>
   )
@@ -291,7 +335,9 @@ function BotaoCopiar({
         try {
           await navigator.clipboard.writeText(await obterTexto())
           setCopiado(true)
-          setTimeout(() => setCopiado(false), 1500)
+          setTimeout(() => {
+            setCopiado(false)
+          }, 1500)
         } catch (err) {
           toast.error((err as Error).message || "Não foi possível copiar.")
         }

@@ -2,7 +2,7 @@
 
 Dinheiro em pt-BR (`R$ 1.234,56`), datas `dd/mm/aaaa` no fuso SP e tabelas markdown — ou bullets
 (`formato="lista"`) para canais que não renderizam tabela (Telegram, WhatsApp). Funções puras;
-self-check em `python -m app.mcp.formato`.
+testes em `tests/test_mcp_formato.py`.
 """
 
 from datetime import date, datetime
@@ -79,24 +79,3 @@ def paginacao(mostrados: int, total: int, offset: int) -> str:
     fim = offset + mostrados
     rodape = f"_Mostrando {offset + 1 if mostrados else 0}–{fim} de {total}."
     return rodape + (f" Use `offset={fim}` para ver os próximos._" if fim < total else "_")
-
-
-if __name__ == "__main__":
-    assert brl(123456) == "R$ 1.234,56"
-    assert brl(-1200) == "-R$ 12,00"
-    assert brl(5) == "R$ 0,05"
-    assert brl(None) == "—"
-    assert reais_para_centavos(39.9) == 3990
-    assert pct(12.345) == "12,3%"
-    assert data("2026-01-01T02:00:00+00:00") == "31/12/2025"  # dia civil em SP
-    assert data("2026-03-05") == "05/03/2026"
-    assert barra(0.5) == "▓▓▓▓▓░░░░░"
-    assert barra(1.7) == "▓" * 10
-    t = tabela(["A", "B"], [["x|y", None]])
-    assert t.splitlines()[2] == "| x\\|y | — |", t
-    assert tabela(["Nome", "Valor"], [["Ana", "R$ 1,00"]], "lista") == "- **Ana** — Valor: R$ 1,00"
-    assert tabela(["A"], []) == "_Nada encontrado._"
-    assert paginacao(50, 312, 0) == "_Mostrando 1–50 de 312. Use `offset=50` para ver os próximos._"
-    assert paginacao(12, 62, 50) == "_Mostrando 51–62 de 62._"
-    assert paginacao(3, 3, 0) == "_3 no total._"
-    print("formato ok")

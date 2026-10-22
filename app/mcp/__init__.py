@@ -16,7 +16,8 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.db.session import get_db
-from app.mcp.tools import servidor
+from app.mcp import tools  # noqa: F401 — registra as tools no servidor
+from app.mcp.servidor import servidor
 from app.models.usuario import Usuario
 from app.security.current_user import _get_or_create_local_user, bearer, usuario_do_token
 

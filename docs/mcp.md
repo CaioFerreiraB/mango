@@ -164,4 +164,4 @@ cliente MCP ──HTTP (Streamable, Bearer)──► /mcp  (MCPServer do SDK `mc
   - a paleta é a validada pela skill dataviz;
   - o HTML do MCP App fica em `app/mcp/ui/grafico.html`.
 - **Testes:** `tests/test_mcp.py`, ponta a ponta via `/mcp` com auth real, em SQLite e Postgres.
-  Self-check do formatador: `uv run python -m app.mcp.formato`.
+  Formatador: `tests/test_mcp_formato.py`.

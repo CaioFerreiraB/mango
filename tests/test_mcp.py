@@ -418,14 +418,16 @@ def test_cartoes_e_faturas(chamar, db, usuario_a, cenario):
 def test_objetivos_e_vinculo(chamar, db, usuario_a, cenario):
     token = ativar_mcp(db, usuario_a)
     r = chamar(
-        token, "vincular_objetivo", tipo="conta", id=cenario["corrente"].id, objetivo="japão"
+        token, "vincular_objetivo", tipo="conta", item_id=cenario["corrente"].id, objetivo="japão"
     )
     assert not r.get("isError"), texto(r)
     r = chamar(token, "obter_objetivo", objetivo=cenario["objetivo"].id)
     assert "| conta |" in texto(r) and "R$ 5.000,00" in texto(r)
     r = chamar(token, "listar_objetivos")
     assert "50%" in texto(r)
-    r = chamar(token, "vincular_objetivo", tipo="conta", id=cenario["corrente"].id, objetivo=None)
+    r = chamar(
+        token, "vincular_objetivo", tipo="conta", item_id=cenario["corrente"].id, objetivo=None
+    )
     assert "desvinculad" in texto(r)
 
 
@@ -594,3 +596,14 @@ def test_modo_local_sem_token_so_aceita_localhost(cliente, db, monkeypatch):
     )
     origem = {**accept, "Host": "127.0.0.1:8000", "Origin": "https://mal.example"}
     assert cliente.post("/mcp", json=corpo, headers=origem).status_code == 403
+
+
+def test_listar_divisoes_pagina_com_offset(chamar, db, usuario_a, usuario_b):
+    token = ativar_mcp(db, usuario_a)
+    for i in range(3):
+        chamar(token, "criar_divisao", descricao=f"D{i}", valor=10, participantes=[usuario_b.id])
+    r = chamar(token, "listar_divisoes", limite=2)
+    assert "Use `offset=2`" in texto(r)
+    r = chamar(token, "listar_divisoes", limite=2, offset=2)
+    assert len(r["structuredContent"]["itens"]) == 1
+    assert "Mostrando 3–3 de 3" in texto(r)
