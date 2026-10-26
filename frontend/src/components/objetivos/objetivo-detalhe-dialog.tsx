@@ -300,7 +300,7 @@ export function ObjetivoDetalheDialog({
         <DialogHeader>
           <DialogTitle>Objetivo financeiro</DialogTitle>
         </DialogHeader>
-        {objetivo.isError ? (
+        {objetivo.isError && !data ? (
           <Alert variant="destructive">
             <AlertDescription className="flex flex-col items-start gap-2">
               Não foi possível carregar o objetivo.
