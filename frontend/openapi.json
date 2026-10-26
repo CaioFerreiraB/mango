@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "mango",
-    "version": "0.2.0"
+    "version": "0.3.0"
   },
   "paths": {
     "/health": {
@@ -3823,6 +3823,40 @@
                 }
               }
             }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/investimentos/posicao/objetivo": {
+      "patch": {
+        "tags": [
+          "investimento"
+        ],
+        "summary": "Vincular Objetivo Posicao",
+        "operationId": "vincular_objetivo_posicao_api_investimentos_posicao_objetivo_patch",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InvestimentoPosicaoObjetivo"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
           },
           "422": {
             "description": "Validation Error",
@@ -10106,6 +10140,31 @@
           "atualizado_em"
         ],
         "title": "InstituicaoRead"
+      },
+      "InvestimentoPosicaoObjetivo": {
+        "properties": {
+          "objetivo_id": {
+            "type": "integer",
+            "exclusiveMinimum": 0.0,
+            "title": "Objetivo Id"
+          },
+          "investimento_ids": {
+            "items": {
+              "type": "integer",
+              "exclusiveMinimum": 0.0
+            },
+            "type": "array",
+            "maxItems": 200,
+            "minItems": 1,
+            "title": "Investimento Ids"
+          }
+        },
+        "type": "object",
+        "required": [
+          "objetivo_id",
+          "investimento_ids"
+        ],
+        "title": "InvestimentoPosicaoObjetivo"
       },
       "InvestimentoRead": {
         "properties": {

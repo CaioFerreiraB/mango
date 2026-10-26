@@ -13,6 +13,7 @@ import { toast } from "sonner"
 import { AnelProgresso } from "@/components/common/anel-progresso"
 import { Valor } from "@/components/common/valor"
 import { AvatarBanco } from "@/components/contas/avatar-banco"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -28,7 +29,9 @@ import { Progress } from "@/components/ui/progress"
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
@@ -38,16 +41,26 @@ import { ObjetivoFormDialog } from "@/components/objetivos/objetivo-form-dialog"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { useContas, type Conta } from "@/lib/api/contas"
 import { instituicaoEfetiva, useInstituicoes } from "@/lib/api/instituicoes"
-import { useInvestimentos, type Investimento } from "@/lib/api/investimentos"
+import {
+  useCarteiraResumo,
+  useInvestimentos,
+  type Investimento,
+} from "@/lib/api/investimentos"
 import {
   useObjetivo,
   useRemoverObjetivo,
   useVincularConta,
   useVincularInvestimento,
+  useVincularPosicao,
   type ObjetivoDetalhe,
   type ObjetivoVinculo,
 } from "@/lib/api/objetivos"
 import { iconeTipo } from "@/lib/investimento-taxonomia"
+import {
+  MAX_POSICOES_OBJETIVO,
+  posicoesDisponiveis,
+  type PosicaoDisponivel,
+} from "@/lib/objetivo-vinculos"
 import { cn } from "@/lib/utils"
 
 // Subtypes de investimento com ticker próprio (ações, FIIs, ETFs) — mostram o código; os demais
@@ -226,11 +239,14 @@ export function ObjetivoDetalheDialog({
   onClose: () => void
 }) {
   const isMobile = useIsMobile()
-  const { data, isLoading } = useObjetivo(id)
+  const objetivo = useObjetivo(id)
+  const { data } = objetivo
   const contas = useContas()
   const investimentos = useInvestimentos()
+  const carteira = useCarteiraResumo()
   const vincularConta = useVincularConta()
   const vincularInv = useVincularInvestimento()
+  const vincularPosicao = useVincularPosicao()
   const remover = useRemoverObjetivo()
 
   const contasPorId = useMemo(
@@ -247,28 +263,58 @@ export function ObjetivoDetalheDialog({
   const contasLivres = (contas.data ?? []).filter(
     (c) => c.objetivo_id == null && c.type !== "CREDIT"
   )
-  const invsLivres = (investimentos.data ?? []).filter(
-    (i) => i.objetivo_id == null
+  const posicoesLivres = useMemo(
+    () =>
+      posicoesDisponiveis(carteira.data?.posicoes ?? [], investimentosPorId),
+    [carteira.data, investimentosPorId]
   )
+  const vinculando =
+    vincularConta.isPending ||
+    vincularInv.isPending ||
+    vincularPosicao.isPending
 
   function adicionar(valor: string) {
-    const [tipo, idStr] = valor.split(":")
-    const alvoId = Number(idStr)
+    if (vinculando) return
     const onError = (err: Error) => toast.error(err.message)
-    if (tipo === "conta")
-      vincularConta.mutate({ contaId: alvoId, objetivoId: id }, { onError })
-    else
-      vincularInv.mutate(
-        { investimentoId: alvoId, objetivoId: id },
+    if (valor.startsWith("conta:")) {
+      vincularConta.mutate(
+        { contaId: Number(valor.slice(6)), objetivoId: id },
         { onError }
       )
+    } else {
+      const posicao = posicoesLivres.find((p) => `inv:${p.chave}` === valor)
+      if (!posicao) return
+      vincularPosicao.mutate(
+        { investimento_ids: posicao.idsLivres, objetivo_id: id },
+        {
+          onError,
+          onSuccess: () => toast.success("Ativo vinculado ao objetivo."),
+        }
+      )
+    }
   }
 
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
-        {isLoading || !data ? (
-          <Skeleton className="h-64 w-full" />
+        <DialogHeader>
+          <DialogTitle>Objetivo financeiro</DialogTitle>
+        </DialogHeader>
+        {objetivo.isError ? (
+          <Alert variant="destructive">
+            <AlertDescription className="flex flex-col items-start gap-2">
+              Não foi possível carregar o objetivo.
+              <Button variant="outline" onClick={() => void objetivo.refetch()}>
+                Tentar novamente
+              </Button>
+            </AlertDescription>
+          </Alert>
+        ) : !data ? (
+          <Skeleton
+            className="h-64 w-full"
+            role="status"
+            aria-label="Carregando objetivo"
+          />
         ) : (
           <ObjetivoDetalheConteudo
             data={data}
@@ -276,12 +322,30 @@ export function ObjetivoDetalheDialog({
             contasPorId={contasPorId}
             investimentosPorId={investimentosPorId}
             contasLivres={contasLivres}
-            invsLivres={invsLivres}
+            posicoesLivres={posicoesLivres}
+            carregandoVinculos={
+              contas.isPending || investimentos.isPending || carteira.isPending
+            }
+            erroVinculos={
+              contas.isError || investimentos.isError || carteira.isError
+            }
+            vinculando={vinculando}
+            onRecarregarVinculos={() => {
+              void contas.refetch()
+              void investimentos.refetch()
+              void carteira.refetch()
+            }}
             onAdicionar={adicionar}
             onDesvincular={(v) =>
               v.tipo === "conta"
-                ? vincularConta.mutate({ contaId: v.id, objetivoId: null })
-                : vincularInv.mutate({ investimentoId: v.id, objetivoId: null })
+                ? vincularConta.mutate(
+                    { contaId: v.id, objetivoId: null },
+                    { onError: (err) => toast.error(err.message) }
+                  )
+                : vincularInv.mutate(
+                    { investimentoId: v.id, objetivoId: null },
+                    { onError: (err) => toast.error(err.message) }
+                  )
             }
             onRemover={() =>
               remover.mutate(id, {
@@ -306,7 +370,11 @@ function ObjetivoDetalheConteudo({
   contasPorId,
   investimentosPorId,
   contasLivres,
-  invsLivres,
+  posicoesLivres,
+  carregandoVinculos,
+  erroVinculos,
+  vinculando,
+  onRecarregarVinculos,
   onAdicionar,
   onDesvincular,
   onRemover,
@@ -317,7 +385,11 @@ function ObjetivoDetalheConteudo({
   contasPorId: Map<number, Conta>
   investimentosPorId: Map<number, Investimento>
   contasLivres: Conta[]
-  invsLivres: Investimento[]
+  posicoesLivres: PosicaoDisponivel[]
+  carregandoVinculos: boolean
+  erroVinculos: boolean
+  vinculando: boolean
+  onRecarregarVinculos: () => void
   onAdicionar: (valor: string) => void
   onDesvincular: (vinculo: ObjetivoVinculo) => void
   onRemover: () => void
@@ -328,10 +400,6 @@ function ObjetivoDetalheConteudo({
 
   return (
     <>
-      <DialogHeader>
-        <DialogTitle>Objetivo financeiro</DialogTitle>
-      </DialogHeader>
-
       <div className="space-y-4">
         <div className="flex items-center gap-1.5">
           <p className="text-lg font-semibold">{data.titulo}</p>
@@ -440,34 +508,112 @@ function ObjetivoDetalheConteudo({
         </div>
 
         <div className="space-y-2">
-          <div className="flex items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <Label className="text-xs text-muted-foreground">
               Contas e investimentos vinculados
             </Label>
-            {contasLivres.length + invsLivres.length > 0 ? (
-              <Select onValueChange={onAdicionar} value="">
-                <SelectTrigger className="w-auto">
+            {carregandoVinculos ? (
+              <Skeleton
+                className="h-8 w-40"
+                role="status"
+                aria-label="Carregando opções de vínculo"
+              />
+            ) : !erroVinculos &&
+              contasLivres.length + posicoesLivres.length > 0 ? (
+              <Select
+                onValueChange={onAdicionar}
+                value=""
+                disabled={vinculando}
+              >
+                <SelectTrigger
+                  className="w-auto"
+                  aria-label="Vincular conta ou investimento"
+                  aria-busy={vinculando}
+                >
                   <SelectValue
                     placeholder={
-                      isMobile ? "Vincular" : "Vincular conta ou investimento"
+                      vinculando
+                        ? "Vinculando…"
+                        : isMobile
+                          ? "Vincular"
+                          : "Vincular conta ou investimento"
                     }
                   />
                 </SelectTrigger>
-                <SelectContent>
-                  {contasLivres.map((c) => (
-                    <SelectItem key={`conta-${c.id}`} value={`conta:${c.id}`}>
-                      {c.nome ?? "Conta"}
-                    </SelectItem>
-                  ))}
-                  {invsLivres.map((i) => (
-                    <SelectItem key={`inv-${i.id}`} value={`inv:${i.id}`}>
-                      {i.nome ?? "Investimento"}
-                    </SelectItem>
-                  ))}
+                <SelectContent className="max-w-[calc(100vw-2rem)]">
+                  {contasLivres.length > 0 ? (
+                    <SelectGroup>
+                      <SelectLabel>Contas</SelectLabel>
+                      {contasLivres.map((c) => (
+                        <SelectItem
+                          key={`conta-${c.id}`}
+                          value={`conta:${c.id}`}
+                        >
+                          <span className="whitespace-normal">
+                            {c.nome ?? "Conta"}
+                          </span>
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  ) : null}
+                  {posicoesLivres.length > 0 ? (
+                    <SelectGroup>
+                      <SelectLabel>Investimentos</SelectLabel>
+                      {posicoesLivres.map((p) => (
+                        <SelectItem
+                          key={p.chave}
+                          value={`inv:${p.chave}`}
+                          textValue={p.code ?? p.nome ?? "Investimento"}
+                          disabled={p.idsLivres.length > MAX_POSICOES_OBJETIVO}
+                        >
+                          <span className="flex min-w-0 flex-col gap-0.5 whitespace-normal">
+                            <span>{p.code ?? p.nome ?? "Investimento"}</span>
+                            {p.code && p.nome ? (
+                              <span className="text-xs text-muted-foreground">
+                                {p.nome}
+                              </span>
+                            ) : null}
+                            <span className="text-xs text-muted-foreground">
+                              {p.idsLivres.length > MAX_POSICOES_OBJETIVO
+                                ? `Limite de ${MAX_POSICOES_OBJETIVO} posições por vínculo`
+                                : p.idsLivres.length < p.investimento_ids.length
+                                  ? `${p.idsLivres.length} de ${p.investimento_ids.length} posições disponíveis`
+                                  : `${p.idsLivres.length} ${p.idsLivres.length === 1 ? "posição disponível" : "posições disponíveis"}`}
+                            </span>
+                          </span>
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  ) : null}
                 </SelectContent>
               </Select>
             ) : null}
           </div>
+
+          {erroVinculos ? (
+            <Alert variant="destructive">
+              <AlertDescription className="flex flex-col items-start gap-2">
+                Não foi possível carregar as opções de vínculo.
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={onRecarregarVinculos}
+                >
+                  Tentar novamente
+                </Button>
+              </AlertDescription>
+            </Alert>
+          ) : !carregandoVinculos &&
+            contasLivres.length + posicoesLivres.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              Nenhuma conta ou investimento disponível para vincular.
+            </p>
+          ) : null}
+          {vinculando ? (
+            <p role="status" className="sr-only">
+              Vinculando ao objetivo…
+            </p>
+          ) : null}
 
           {data.vinculos.length === 0 ? (
             <p className="text-sm text-muted-foreground">

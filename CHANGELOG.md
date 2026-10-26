@@ -10,6 +10,12 @@ ainda está se assentando. Cada versão publicada tem uma imagem correspondente 
 
 ## [Não publicado]
 
+### Corrigido
+
+- **Vínculo de investimentos em objetivos:** o seletor agora reúne as posições por ativo, como na
+  carteira, e informa quantas estão disponíveis. Selecionar um grupo vincula suas posições livres
+  em uma única operação; um conflito cancela o lote inteiro, sem transferir vínculos existentes.
+
 ## [0.3.0] — 2026-10-21
 
 ### Adicionado
