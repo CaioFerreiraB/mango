@@ -1,34 +1,73 @@
-"""Schemas de `config_telegram` (§4.12)."""
+"""Contratos explícitos: token write-only, identidade nunca editável pelo cliente."""
 
-from datetime import time
+import re
+from datetime import datetime, time
 
-from pydantic import BaseModel, Field
-
-from app.models.telegram import ConfigTelegram
-from app.schemas.auto import read_model
-
-ConfigTelegramRead = read_model(ConfigTelegram)
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
-class ConfigTelegramCreate(BaseModel):
-    chat_id: str | None = Field(default=None, max_length=64)
-    ativo: bool = False
-    notif_nova_transacao: bool = False
-    notif_nao_revisadas: bool = False
-    horario_1: time | None = None
-    horario_2: time | None = None
-    resumo_diario: bool = False
-    resumo_semanal: bool = False
-    dia_semana: int | None = Field(default=None, ge=0, le=6)
+class IdentidadeTelegram(BaseModel):
+    usuario_id: str
+    nome: str | None
+    username: str | None
 
 
-class ConfigTelegramUpdate(BaseModel):
-    chat_id: str | None = Field(default=None, max_length=64)
+class TelegramRead(BaseModel):
+    configurado: bool
+    bot_username: str | None
+    ativo: bool
+    vinculado: bool
+    identidade: IdentidadeTelegram | None
+    candidato: IdentidadeTelegram | None
+    solicitacao_id: str | None
+    vinculo_expira_em: datetime | None
+    notif_nao_revisadas: bool
+    ultimo_envio_em: datetime | None
+    erro: str | None
+    sync_automatico: bool
+    sync_horario: time
+    proxima_rotina: datetime | None
+
+
+class TelegramUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    notif_nao_revisadas: bool
+
+
+class VinculoRead(BaseModel):
+    solicitacao_id: str
+    url: str
+    expira_em: datetime
+
+
+class VinculoConfirmar(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    solicitacao_id: str = Field(min_length=1, max_length=64)
+
+
+class TelegramInstanciaRead(BaseModel):
+    configurado: bool
+    bot_username: str | None
+    ativo: bool
+    erro: str | None
+
+
+class TelegramInstanciaUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    token: str | None = Field(default=None, min_length=1, max_length=256)
     ativo: bool | None = None
-    notif_nova_transacao: bool | None = None
-    notif_nao_revisadas: bool | None = None
-    horario_1: time | None = None
-    horario_2: time | None = None
-    resumo_diario: bool | None = None
-    resumo_semanal: bool | None = None
-    dia_semana: int | None = Field(default=None, ge=0, le=6)
+    confirmar_troca_bot: bool | None = None
+
+    @model_validator(mode="after")
+    def campos_nao_nulos(self):
+        for campo in {"ativo", "confirmar_troca_bot"} & self.model_fields_set:
+            if getattr(self, campo) is None:
+                raise ValueError(f"{campo} não pode ser nulo")
+        return self
+
+    @field_validator("token")
+    @classmethod
+    def token_seguro(cls, valor: str | None) -> str | None:
+        if valor is not None and not re.fullmatch(r"[0-9]+:[A-Za-z0-9_-]+", valor):
+            raise ValueError("token inválido")
+        return valor

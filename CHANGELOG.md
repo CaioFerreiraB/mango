@@ -10,6 +10,20 @@ ainda está se assentando. Cada versão publicada tem uma imagem correspondente 
 
 ## [Não publicado]
 
+### Adicionado
+
+- **Telegram:** bot exclusivo por instalação, token cifrado e vínculo confirmado individualmente
+  em Configurações → Telegram. Relatório opcional com até dez pendências após a rotina diária,
+  com proteção contra reenvio em entregas incertas. Guia em [docs/telegram.md](docs/telegram.md).
+- **Sincronização automática diária:** configuração em Conexões, com horário ajustável (08:00 Brasília por padrão), nos modos
+  local e self-hosted, com recuperação do dia ao abrir e retentativas sem repetir relatórios.
+  Sync e relatórios começam desligados.
+
+### Alterado
+
+- O CRUD `/api/config-telegram` foi substituído pelas operações verificadas `/api/telegram`.
+  IDs antigos exigem nova vinculação; nenhum dado financeiro é alterado pela migração.
+
 ### Corrigido
 
 - **Vínculo de investimentos em objetivos:** o seletor agora reúne as posições por ativo, como na

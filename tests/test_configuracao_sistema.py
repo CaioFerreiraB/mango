@@ -53,3 +53,43 @@ def test_admin_desliga_e_religa_o_toggle(client_factory_sh, usuario_admin):
     resp = admin.patch("/api/configuracao-sistema", json={"otimizar_transacoes_divisao": True})
     assert resp.status_code == 200, resp.text
     assert admin.get("/api/configuracao-sistema").json() == {"otimizar_transacoes_divisao": True}
+
+
+def test_sync_configuravel_em_conexoes_no_modo_local(client_factory, usuario_a):
+    cliente = client_factory(usuario_a)
+    assert cliente.get("/api/sync/configuracao").json() == {
+        "sync_automatico": False,
+        "sync_horario": "08:00:00",
+    }
+    resp = cliente.patch(
+        "/api/sync/configuracao", json={"sync_automatico": True, "sync_horario": "09:15"}
+    )
+    assert resp.status_code == 200, resp.text
+    assert resp.json() == {"sync_automatico": True, "sync_horario": "09:15:00"}
+    assert cliente.get("/api/telegram").json()["sync_horario"] == "09:15:00"
+    for payload in (
+        {"sync_horario": "09:15:30"},
+        {"sync_horario": "09:15+03:00"},
+        {"sync_automatico": None},
+        {"telegram_ativo": True},
+    ):
+        assert cliente.patch("/api/sync/configuracao", json=payload).status_code == 422
+    assert (
+        cliente.patch("/api/telegram/instancia", json={"sync_automatico": False}).status_code == 422
+    )
+    assert (
+        cliente.patch(
+            "/api/telegram/instancia", json={"url_mango": "https://outra.test"}
+        ).status_code
+        == 422
+    )
+
+
+def test_sync_configuracao_exige_admin_self_hosted(client_factory_sh, usuario_a, usuario_admin, db):
+    comum, admin = client_factory_sh(usuario_a), client_factory_sh(usuario_admin)
+    assert comum.get("/api/sync/configuracao").status_code == 200
+    assert comum.patch("/api/sync/configuracao", json={"sync_automatico": True}).status_code == 403
+    assert admin.patch("/api/sync/configuracao", json={"sync_automatico": True}).status_code == 200
+    usuario_a.tipo = "divisao"
+    db.commit()
+    assert comum.get("/api/sync/configuracao").status_code == 403

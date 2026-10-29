@@ -145,3 +145,12 @@ def exigir_usuario_completo(user: Usuario = Depends(get_current_user)) -> Usuari
             status.HTTP_403_FORBIDDEN, "recurso não disponível para este tipo de conta"
         )
     return user
+
+
+def require_admin_ou_local(user: Usuario = Depends(get_current_user)) -> Usuario:
+    """Configurações da instalação disponíveis também ao dono implícito do desktop."""
+    if not user.ativo or user.tipo != "completo":
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "recurso não disponível para esta conta")
+    if settings.app_mode != "local" and not user.is_admin:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "acesso restrito ao administrador")
+    return user

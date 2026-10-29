@@ -13,8 +13,9 @@ from app.db.session import get_db
 from app.exceptions import UpstreamError
 from app.models.usuario import Usuario
 from app.pluggy.client import PluggyError
-from app.schemas.sync import ResumoSyncRead
-from app.security.current_user import get_current_user
+from app.schemas.sync import ConfiguracaoSyncRead, ConfiguracaoSyncUpdate, ResumoSyncRead
+from app.security.current_user import get_current_user, require_admin_ou_local
+from app.services import configuracao
 from app.services.sync import sincronizar_usuario
 
 router = APIRouter(tags=["sync"])
@@ -50,3 +51,17 @@ def sincronizar_item(
     item_id: int, db: Session = Depends(get_db), user: Usuario = Depends(get_current_user)
 ) -> ResumoSyncRead:
     return _sincronizar(db, user.id, item_id)
+
+
+@router.get("/sync/configuracao", response_model=ConfiguracaoSyncRead)
+def obter_configuracao(db: Session = Depends(get_db), user: Usuario = Depends(get_current_user)):
+    return configuracao.obter_sync(db)
+
+
+@router.patch("/sync/configuracao", response_model=ConfiguracaoSyncRead)
+def atualizar_configuracao(
+    payload: ConfiguracaoSyncUpdate,
+    db: Session = Depends(get_db),
+    user: Usuario = Depends(require_admin_ou_local),
+):
+    return configuracao.atualizar_sync(db, payload)
