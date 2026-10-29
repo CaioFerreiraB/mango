@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.repositories.configuracao import ConfiguracaoSistemaRepository
 from app.schemas.configuracao import ConfiguracaoSistemaRead, ConfiguracaoSistemaUpdate
+from app.schemas.sync import ConfiguracaoSyncRead, ConfiguracaoSyncUpdate
 
 
 def obter(db: Session) -> ConfiguracaoSistemaRead:
@@ -24,3 +25,15 @@ def otimizacao_divisao_ativa(db: Session) -> bool:
     """Leitura pontual do toggle, usada por `app/services/divisao.py` sem puxar o schema
     inteiro. `divisao` importa `configuracao`, nunca o contrário (evita ciclo)."""
     return ConfiguracaoSistemaRepository(db).obter().otimizar_transacoes_divisao
+
+
+def obter_sync(db: Session) -> ConfiguracaoSyncRead:
+    return ConfiguracaoSyncRead.model_validate(ConfiguracaoSistemaRepository(db).obter())
+
+
+def atualizar_sync(db: Session, payload: ConfiguracaoSyncUpdate) -> ConfiguracaoSyncRead:
+    config = ConfiguracaoSistemaRepository(db).obter()
+    for campo, valor in payload.model_dump(exclude_unset=True).items():
+        setattr(config, campo, valor)
+    db.commit()
+    return ConfiguracaoSyncRead.model_validate(config)

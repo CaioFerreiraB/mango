@@ -6,10 +6,11 @@ Mesmo servidor atende self-hosted e local (§5.1). No boot aplica migrations + s
 from contextlib import asynccontextmanager
 
 from fastapi import Depends, FastAPI, Request
+from fastapi.exception_handlers import request_validation_exception_handler
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
 from app import __version__
-from app.config import settings
 from app.db.bootstrap import bootstrap
 from app.exceptions import (
     ConflictError,
@@ -56,27 +57,40 @@ async def lifespan(app: FastAPI):
     import threading
 
     threading.Thread(target=_atualizar_fundamentos_fii_boot, daemon=True).start()
-    # Job mensal de materialização de orçamentos + fundamentos só no self-hosted (§4.6); import
-    # tardio p/ o modo local não carregar o apscheduler. No desktop o backstop cobre a
-    # materialização.
-    if settings.app_mode == "self_hosted":
-        from app.services import agendador
+    # Rotina diária nos dois modos; os jobs mensais/snapshots seguem só no self-hosted.
+    from app.services import agendador, rotina_diaria, telegram
 
-        agendador.iniciar()
+    rotina_diaria.recuperar()
+    agendador.iniciar()
+    telegram.iniciar()
     try:
         async with ciclo_mcp():
             yield
     finally:
-        if settings.app_mode == "self_hosted":
-            from app.services import agendador
-
-            agendador.parar()
+        agendador.parar()
+        telegram.parar()
 
 
 app = FastAPI(title="mango", version=__version__, lifespan=lifespan)
 
 # CSRF nas mutações da API (só self-hosted; ver app.security.csrf).
 app.middleware("http")(csrf_middleware)
+
+
+@app.exception_handler(RequestValidationError)
+async def _validation_error_handler(request: Request, exc: RequestValidationError):
+    if request.url.path.startswith("/api/telegram"):
+        # O erro padrão do Pydantic ecoa `input`, que pode conter o token write-only.
+        return JSONResponse(
+            status_code=422,
+            content={
+                "detail": [
+                    {chave: erro[chave] for chave in ("loc", "msg", "type")}
+                    for erro in exc.errors()
+                ]
+            },
+        )
+    return await request_validation_exception_handler(request, exc)
 
 
 @app.exception_handler(DomainError)

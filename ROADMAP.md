@@ -38,14 +38,14 @@ replay).
 
 ## Próximo
 
-### Notificações no Telegram
+### Evolução do Telegram
 
-A configuração já está modelada e persistida; falta a entrega. Bot opcional, configurado no primeiro
-uso, com o passo a passo para capturar o `chat_id` depois do `/start` (o bot não inicia conversa).
+A primeira entrega está implementada em **Não publicado**: bot por instalação, vínculo confirmado
+por usuário e relatório diário após sincronização automática. Guia em [docs/telegram.md](docs/telegram.md).
 
-- Aviso de novas transações reconhecidas, **agregado por sync** — uma mensagem, não uma por transação.
-- Lembrete de transações não revisadas, 2×/dia em horários escolhidos, enquanto houver pendência.
-- Resumo diário e resumo semanal, cada um ativável em separado.
+- Revisar e categorizar transações por botões no Telegram, sempre validando identidade e posse.
+- Conversar com o Mango por LLM: Axon inicialmente, provedores adicionais por adaptadores e MCP.
+- Novos resumos/frequências somente quando houver necessidade; não fazem parte da v1.
 
 ### Endurecimento para exposição pública
 

@@ -13,6 +13,7 @@ export type ResumoSync = components["schemas"]["ResumoSyncRead"]
 
 export const conexoesKeys = {
   credenciais: ["credenciais-pluggy"] as const,
+  sync: ["sync", "configuracao"] as const,
   itens: ["itens-pluggy"] as const,
 }
 
@@ -187,5 +188,40 @@ export function useSincronizarItem() {
       toastResumo(r)
     },
     onError: (e) => toast.error(e.message),
+  })
+}
+
+export function useConfiguracaoSync() {
+  return useQuery({
+    queryKey: conexoesKeys.sync,
+    queryFn: async () => {
+      const { data, error } = await api.GET("/api/sync/configuracao")
+      if (!data || error)
+        throw new Error(
+          mensagemErro(error, "Falha ao carregar a sincronização.")
+        )
+      return data
+    },
+  })
+}
+
+export function useAtualizarConfiguracaoSync() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (
+      body: components["schemas"]["ConfiguracaoSyncUpdate"]
+    ) => {
+      const { data, error } = await api.PATCH("/api/sync/configuracao", {
+        body,
+      })
+      if (!data || error)
+        throw new Error(mensagemErro(error, "Falha ao salvar a sincronização."))
+      return data
+    },
+    onSuccess: () =>
+      Promise.all([
+        qc.invalidateQueries({ queryKey: conexoesKeys.sync }),
+        qc.invalidateQueries({ queryKey: ["telegram", "usuario"] }),
+      ]),
   })
 }

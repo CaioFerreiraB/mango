@@ -4,6 +4,16 @@ import { toast } from "sonner"
 
 import { InstituicaoSelect } from "@/components/contas/instituicao-select"
 import { Button } from "@/components/ui/button"
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
+import {
+  Field,
+  FieldContent,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field"
+import { Switch } from "@/components/ui/switch"
+import { useMe, useSetupStatus } from "@/lib/api/auth"
 import {
   Card,
   CardContent,
@@ -25,6 +35,8 @@ import { Label } from "@/components/ui/label"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
   type Item,
+  useConfiguracaoSync,
+  useAtualizarConfiguracaoSync,
   useCredenciais,
   useCriarCredencial,
   useCriarItem,
@@ -52,8 +64,137 @@ export function ConexoesTab() {
     <div className="space-y-4">
       {credencial ? <CredencialConfigurada /> : <FormCredencial />}
       {credencial ? <ListaItens credencialId={credencial.id} /> : null}
+      <SyncAutomaticoCard />
       <BrapiTokenCard />
     </div>
+  )
+}
+
+function SyncAutomaticoCard() {
+  const config = useConfiguracaoSync()
+  const atualizar = useAtualizarConfiguracaoSync()
+  const me = useMe()
+  const setup = useSetupStatus()
+  const local = setup.data?.app_mode === "local"
+  const podeEditar = local || me.data?.is_admin === true
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">Sincronização automática</CardTitle>
+        <CardDescription>
+          Importa diariamente os dados disponíveis no Pluggy para manter suas
+          contas atualizadas.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        {config.isPending ? (
+          <Skeleton className="h-32" />
+        ) : config.isError || !config.data ? (
+          <Alert variant="destructive">
+            <AlertTitle>Não foi possível carregar a sincronização</AlertTitle>
+            <AlertDescription>
+              <Button variant="outline" onClick={() => config.refetch()}>
+                Tentar novamente
+              </Button>
+            </AlertDescription>
+          </Alert>
+        ) : podeEditar ? (
+          <FieldGroup>
+            <Field orientation="horizontal" data-disabled={atualizar.isPending}>
+              <FieldContent>
+                <FieldLabel htmlFor="pluggy-sync-auto">
+                  Sincronização automática diária
+                </FieldLabel>
+                <FieldDescription id="pluggy-sync-auto-desc">
+                  Ao ativar após o horário, executa a rotina de hoje.{" "}
+                  {local
+                    ? "O Mango precisa estar aberto; se perder o horário, sincroniza ao abrir."
+                    : "Vale para todos os usuários com conexões bancárias."}
+                </FieldDescription>
+              </FieldContent>
+              <Switch
+                id="pluggy-sync-auto"
+                aria-describedby="pluggy-sync-auto-desc"
+                checked={config.data.sync_automatico}
+                disabled={atualizar.isPending}
+                onCheckedChange={(sync_automatico) =>
+                  atualizar.mutate(
+                    { sync_automatico },
+                    { onError: (err) => toast.error(err.message) }
+                  )
+                }
+              />
+            </Field>
+            <HorarioSyncForm
+              horario={config.data.sync_horario}
+              atualizar={atualizar}
+            />
+          </FieldGroup>
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            {config.data.sync_automatico
+              ? `Ativada, diariamente às ${config.data.sync_horario.slice(0, 5)} (Brasília).`
+              : "A sincronização automática está desativada."}{" "}
+            A configuração é gerenciada pelo administrador da instalação.
+          </p>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
+function HorarioSyncForm({
+  horario,
+  atualizar,
+}: {
+  horario: string
+  atualizar: ReturnType<typeof useAtualizarConfiguracaoSync>
+}) {
+  return (
+    <form
+      className="flex flex-col gap-3"
+      onSubmit={(e) => {
+        e.preventDefault()
+        const sync_horario = String(
+          new FormData(e.currentTarget).get("horario")
+        )
+        atualizar.mutate(
+          { sync_horario },
+          {
+            onSuccess: () => toast.success("Horário da sincronização salvo."),
+            onError: (err) => toast.error(err.message),
+          }
+        )
+      }}
+    >
+      <Field data-disabled={atualizar.isPending}>
+        <FieldLabel htmlFor="pluggy-sync-horario">
+          Horário da sincronização diária
+        </FieldLabel>
+        <Input
+          id="pluggy-sync-horario"
+          className="max-w-40"
+          aria-describedby="pluggy-sync-horario-desc"
+          name="horario"
+          type="time"
+          required
+          defaultValue={horario.slice(0, 5)}
+          disabled={atualizar.isPending}
+        />
+        <FieldDescription id="pluggy-sync-horario-desc">
+          Horário de Brasília. A sincronização funciona independentemente do
+          Telegram.
+        </FieldDescription>
+      </Field>
+      <Button
+        className="self-start"
+        type="submit"
+        disabled={atualizar.isPending}
+      >
+        Salvar horário
+      </Button>
+    </form>
   )
 }
 

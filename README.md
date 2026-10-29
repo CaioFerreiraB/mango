@@ -48,6 +48,8 @@ lançamento: é **revisar e confiar** nos números. Feito para **pessoa física 
 ## Recursos
 
 - **Importação automática (Open Finance)** — contas, cartões e investimentos sincronizados via Pluggy.
+- **Telegram** — relatório diário opcional de pendências após o sync automático, com vínculo
+  individual confirmado. [Configurar](docs/telegram.md).
 - **Transações inteligentes** — categorização, detecção automática de transferências entre suas contas
   e marcação de "revisada".
 - **Faturas de cartão** — modelo explícito de competência × caixa, para o gasto no cartão não bagunçar

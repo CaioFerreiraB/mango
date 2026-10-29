@@ -116,3 +116,25 @@ def test_acesso_mcp_e_por_usuario(client_factory, usuario_a: Usuario, usuario_b:
     assert client_b.get("/api/acesso-mcp/token").json()["token"] != token_a
     assert client_a.get("/api/acesso-mcp/token").json()["token"] == token_a
     assert client_a.get("/api/acesso-mcp").json()["ativo"] is True
+
+
+def test_telegram_vinculo_e_preferencia_sao_individuais(client_factory, usuario_a, usuario_b, db):
+    from app.models.configuracao import ConfiguracaoSistema
+    from tests.test_telegram import candidato
+
+    db.add(ConfiguracaoSistema(id=1, telegram_ativo=True, telegram_username="mango_bot"))
+    db.commit()
+    a, b = client_factory(usuario_a), client_factory(usuario_b)
+    solicitacao = a.post("/api/telegram/vinculo").json()
+    candidato(db, solicitacao)
+    confirmar = {"solicitacao_id": solicitacao["solicitacao_id"]}
+    assert b.post("/api/telegram/vinculo/confirmar", json=confirmar).status_code == 409
+    assert b.get("/api/telegram").json()["candidato"] is None
+    assert a.post("/api/telegram/vinculo/confirmar", json=confirmar).status_code == 200
+    assert a.patch("/api/telegram", json={"notif_nao_revisadas": True}).status_code == 200
+    assert b.delete("/api/telegram/vinculo").status_code == 204
+    assert b.patch("/api/telegram", json={"notif_nao_revisadas": True}).status_code == 409
+    assert b.get("/api/telegram").json()["identidade"] is None
+    estado_a = a.get("/api/telegram").json()
+    assert estado_a["identidade"]["usuario_id"] == "456"
+    assert estado_a["notif_nao_revisadas"] is True
