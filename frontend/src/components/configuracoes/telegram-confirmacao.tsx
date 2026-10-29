@@ -1,4 +1,4 @@
-import type { ReactNode, RefObject } from "react"
+import type { ComponentProps, ReactNode, RefObject } from "react"
 
 import {
   AlertDialog,
@@ -23,7 +23,7 @@ export function ConfirmacaoTelegram({
 }: {
   aberto: boolean
   pendente: boolean
-  alterar: (aberto: boolean) => void
+  alterar: NonNullable<ComponentProps<typeof AlertDialog>["onOpenChange"]>
   confirmar: () => void
   foco: RefObject<HTMLElement | null>
   titulo: string
