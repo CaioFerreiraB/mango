@@ -3,8 +3,9 @@ agregados server-side da carteira (§4.9) — o frontend só exibe."""
 
 from datetime import date, datetime
 from decimal import Decimal
+from typing import Annotated
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from app.models.investimento import Investimento, InvestimentoTransacao
 from app.schemas.auto import read_model
@@ -17,6 +18,20 @@ class InvestimentoUpdate(BaseModel):
     objetivo_id: int | None = None
     # Vincular esta compra (posição) a um ativo do usuário (§4.9). None desvincula.
     ativo_id: int | None = None
+
+
+class InvestimentoPosicaoObjetivo(BaseModel):
+    objetivo_id: Annotated[int, Field(gt=0, strict=True)]
+    investimento_ids: list[Annotated[int, Field(gt=0, strict=True)]] = Field(
+        min_length=1, max_length=200
+    )
+
+    @field_validator("investimento_ids")
+    @classmethod
+    def ids_unicos(cls, ids: list[int]) -> list[int]:
+        if len(ids) != len(set(ids)):
+            raise ValueError("investimento_ids deve conter IDs únicos")
+        return ids
 
 
 class AporteManualCreate(BaseModel):

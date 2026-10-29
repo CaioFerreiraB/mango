@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 
 import { api } from "@/lib/api/client"
+import { mensagemErro } from "@/lib/api/erros"
 import type { components } from "@/lib/api/schema"
 
 export type Objetivo = components["schemas"]["ObjetivoRead"]
@@ -102,11 +103,11 @@ export function useVincularConta() {
       })
       if (error) throw new Error("falha ao vincular a conta")
     },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: objetivosKeys.all })
-      qc.invalidateQueries({ queryKey: ["objetivos"] })
-      qc.invalidateQueries({ queryKey: ["contas"] })
-    },
+    onSuccess: () =>
+      Promise.all([
+        qc.invalidateQueries({ queryKey: objetivosKeys.all }),
+        qc.invalidateQueries({ queryKey: ["contas"] }),
+      ]),
   })
 }
 
@@ -131,5 +132,29 @@ export function useVincularInvestimento() {
       qc.invalidateQueries({ queryKey: ["objetivos"] })
       qc.invalidateQueries({ queryKey: ["investimentos"] })
     },
+  })
+}
+
+/** Vincula os integrantes livres de uma posição da carteira em uma operação atômica. */
+export function useVincularPosicao() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (
+      body: components["schemas"]["InvestimentoPosicaoObjetivo"]
+    ) => {
+      const { error } = await api.PATCH("/api/investimentos/posicao/objetivo", {
+        body,
+      })
+      if (error)
+        throw new Error(
+          mensagemErro(error, "Falha ao vincular o investimento.")
+        )
+    },
+    // Também atualiza após conflito: a seleção pode ter mudado em outra sessão.
+    onSettled: () =>
+      Promise.all([
+        qc.invalidateQueries({ queryKey: objetivosKeys.all }),
+        qc.invalidateQueries({ queryKey: ["investimentos"] }),
+      ]),
   })
 }

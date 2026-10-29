@@ -13,10 +13,10 @@ import logging
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 
-from sqlalchemy import select
+from sqlalchemy import or_, select, update
 from sqlalchemy.orm import Session
 
-from app.exceptions import NotFoundError
+from app.exceptions import ConflictError, NotFoundError
 from app.models.fii_fundamento import FiiFundamento
 from app.models.investimento import Investimento, InvestimentoTransacao
 from app.models.investimento_saldo_diario import InvestimentoSaldoDiario
@@ -24,6 +24,7 @@ from app.models.pluggy import Instituicao, ItemPluggy
 from app.models.transacao import Transacao
 from app.repositories.ativo import AtivoRepository
 from app.repositories.investimento import InvestimentoRepository
+from app.repositories.objetivo import ObjetivoRepository
 from app.repositories.transacao import TransacaoRepository
 from app.schemas.investimento import (
     CarteiraAlocacao,
@@ -507,6 +508,37 @@ def _validar_ids(db: Session, usuario_id: int, ids: list[int]) -> list[Investime
             raise NotFoundError("investimento não encontrado")
         invs.append(inv)
     return invs
+
+
+def vincular_objetivo_posicao(
+    db: Session, usuario_id: int, ids: list[int], objetivo_id: int
+) -> None:
+    """Vincula as posições disponíveis em um commit, sem transferir de outro objetivo."""
+    if ObjetivoRepository(db, usuario_id).get(objetivo_id) is None:
+        raise NotFoundError("objetivo não encontrado")
+    _validar_ids(db, usuario_id, ids)
+    try:
+        # A condição é verificada na escrita: cobre mudanças concorrentes após a leitura.
+        alterados = db.scalars(
+            update(Investimento)
+            .where(
+                Investimento.usuario_id == usuario_id,
+                Investimento.id.in_(ids),
+                or_(Investimento.objetivo_id.is_(None), Investimento.objetivo_id == objetivo_id),
+            )
+            .values(objetivo_id=objetivo_id)
+            .returning(Investimento.id)
+            .execution_options(synchronize_session=False)
+        ).all()
+        if set(alterados) != set(ids):
+            raise ConflictError(
+                "Alguma posição já foi vinculada a outro objetivo. "
+                "Atualize a seleção e tente novamente."
+            )
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
 
 
 def movimentos_posicao(db: Session, usuario_id: int, ids: list[int]) -> list[InvestimentoTransacao]:
