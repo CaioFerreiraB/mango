@@ -56,7 +56,7 @@ class TelegramClient:
         if resposta.is_success and corpo.get("ok") is True and "result" in corpo:
             return corpo["result"]
         status = corpo.get("error_code", resposta.status_code)
-        if type(status) is not int:
+        if not isinstance(status, int) or isinstance(status, bool):
             raise TelegramError("envio_incerto" if envio else "resposta_invalida")
         if status == 401:
             raise TelegramError("token_invalido")
@@ -67,7 +67,7 @@ class TelegramClient:
         if status == 429:
             parametros = corpo.get("parameters")
             espera = parametros.get("retry_after", 60) if isinstance(parametros, dict) else 60
-            if type(espera) is not int or espera < 1:
+            if not isinstance(espera, int) or isinstance(espera, bool) or espera < 1:
                 espera = 60
             raise TelegramError("limite_telegram", repetir=True, espera=espera)
         raise TelegramError("envio_incerto" if envio and status >= 500 else "requisicao_rejeitada")

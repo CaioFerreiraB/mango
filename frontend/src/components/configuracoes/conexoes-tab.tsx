@@ -126,50 +126,10 @@ function SyncAutomaticoCard() {
                 }
               />
             </Field>
-            <form
-              className="flex flex-col gap-3"
-              onSubmit={(e) => {
-                e.preventDefault()
-                const sync_horario = String(
-                  new FormData(e.currentTarget).get("horario")
-                )
-                atualizar.mutate(
-                  { sync_horario },
-                  {
-                    onSuccess: () =>
-                      toast.success("Horário da sincronização salvo."),
-                    onError: (err) => toast.error(err.message),
-                  }
-                )
-              }}
-            >
-              <Field data-disabled={atualizar.isPending}>
-                <FieldLabel htmlFor="pluggy-sync-horario">
-                  Horário da sincronização diária
-                </FieldLabel>
-                <Input
-                  id="pluggy-sync-horario"
-                  className="max-w-40"
-                  aria-describedby="pluggy-sync-horario-desc"
-                  name="horario"
-                  type="time"
-                  required
-                  defaultValue={config.data.sync_horario.slice(0, 5)}
-                  disabled={atualizar.isPending}
-                />
-                <FieldDescription id="pluggy-sync-horario-desc">
-                  Horário de Brasília. A sincronização funciona
-                  independentemente do Telegram.
-                </FieldDescription>
-              </Field>
-              <Button
-                className="self-start"
-                type="submit"
-                disabled={atualizar.isPending}
-              >
-                Salvar horário
-              </Button>
-            </form>
+            <HorarioSyncForm
+              horario={config.data.sync_horario}
+              atualizar={atualizar}
+            />
           </FieldGroup>
         ) : (
           <p className="text-sm text-muted-foreground">
@@ -181,6 +141,60 @@ function SyncAutomaticoCard() {
         )}
       </CardContent>
     </Card>
+  )
+}
+
+function HorarioSyncForm({
+  horario,
+  atualizar,
+}: {
+  horario: string
+  atualizar: ReturnType<typeof useAtualizarConfiguracaoSync>
+}) {
+  return (
+    <form
+      className="flex flex-col gap-3"
+      onSubmit={(e) => {
+        e.preventDefault()
+        const sync_horario = String(
+          new FormData(e.currentTarget).get("horario")
+        )
+        atualizar.mutate(
+          { sync_horario },
+          {
+            onSuccess: () => toast.success("Horário da sincronização salvo."),
+            onError: (err) => toast.error(err.message),
+          }
+        )
+      }}
+    >
+      <Field data-disabled={atualizar.isPending}>
+        <FieldLabel htmlFor="pluggy-sync-horario">
+          Horário da sincronização diária
+        </FieldLabel>
+        <Input
+          id="pluggy-sync-horario"
+          className="max-w-40"
+          aria-describedby="pluggy-sync-horario-desc"
+          name="horario"
+          type="time"
+          required
+          defaultValue={horario.slice(0, 5)}
+          disabled={atualizar.isPending}
+        />
+        <FieldDescription id="pluggy-sync-horario-desc">
+          Horário de Brasília. A sincronização funciona independentemente do
+          Telegram.
+        </FieldDescription>
+      </Field>
+      <Button
+        className="self-start"
+        type="submit"
+        disabled={atualizar.isPending}
+      >
+        Salvar horário
+      </Button>
+    </form>
   )
 }
 

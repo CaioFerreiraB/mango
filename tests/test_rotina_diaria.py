@@ -109,6 +109,44 @@ def test_fila_vazia_e_recuperacao_so_dia_atual(rotina, db, session_factory, usua
     assert len(db.scalars(select(ExecucaoDiaria)).all()) == 2
 
 
+@pytest.mark.parametrize(
+    "tipo,valor,sinal", [("DEBIT", 12345, "−"), ("CREDIT", -12345, "+"), ("DEBIT", 0, "")]
+)
+def test_relatorio_sinal_pelo_tipo(rotina, db, usuario_a, tipo, valor, sinal):
+    mod, conta, *_ = rotina
+    _criar_tx(
+        TransacaoRepository(db, usuario_a.id),
+        conta.id,
+        "sinal",
+        date=MOMENTO,
+        type=tipo,
+        amount_centavos=valor,
+    )
+    texto = mod.relatorio(db, usuario_a, MOMENTO)
+    assert f"· {sinal}R$ {'0,00' if valor == 0 else '123,45'}" in texto
+
+
+@pytest.mark.parametrize(
+    "base,botao",
+    [
+        ("http://localhost:5174", False),
+        ("http://127.0.0.2:8000", False),
+        ("http://[::1]:8000", False),
+        ("http://mango.localhost", False),
+        ("https://mango.example", True),
+    ],
+)
+def test_relatorio_omite_botao_loopback(rotina, db, usuario_a, session_factory, base, botao):
+    mod, conta, _, _, enviados = rotina
+    geral = telegram.instancia(db)
+    geral.telegram_url = base
+    db.commit()
+    _criar_tx(TransacaoRepository(db, usuario_a.id), conta.id, "botao", date=MOMENTO)
+    executar(mod, session_factory)
+    assert len(enviados) == 1
+    assert enviados[0][0][2] == (f"{base}/transacoes?pendente=true" if botao else None)
+
+
 def test_erro_sync_nao_envia_e_retenta_sem_duplicar(
     rotina, session_factory, usuario_a, monkeypatch
 ):

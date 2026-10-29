@@ -4,16 +4,6 @@ import { toast } from "sonner"
 import { Link } from "react-router"
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -27,10 +17,8 @@ import {
   Field,
   FieldContent,
   FieldDescription,
-  FieldGroup,
   FieldLabel,
 } from "@/components/ui/field"
-import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Switch } from "@/components/ui/switch"
@@ -40,11 +28,12 @@ import {
   useAcaoTelegram,
   useTelegram,
   useTelegramInstancia,
-  type InstanciaUpdate,
-  type TelegramInstancia,
+  type Telegram,
   type Vinculo,
 } from "@/lib/api/telegram"
 import { formatDateTime } from "@/lib/format"
+import { ConfirmacaoTelegram } from "./telegram-confirmacao"
+import { TelegramInstanciaForm } from "./telegram-instancia"
 
 export function TelegramTab() {
   const me = useMe()
@@ -78,7 +67,6 @@ export function TelegramTab() {
     )
 
   const identidade = dados.identidade
-  const candidato = dados.candidato
   const linkAtual =
     link?.solicitacao_id === dados.solicitacao_id ? link : undefined
   return (
@@ -139,12 +127,17 @@ export function TelegramTab() {
               ref={vincularRef}
               variant={dados.vinculado ? "outline" : "default"}
               disabled={!dados.ativo || acao.isPending}
-              onClick={() =>
+              onClick={() => {
                 acao.mutate(
                   { tipo: "vincular" },
-                  { onSuccess: (novo) => setLink(novo), onError: falhou }
+                  {
+                    onSuccess: (novo) => {
+                      setLink(novo)
+                    },
+                    onError: falhou,
+                  }
                 )
-              }
+              }}
             >
               {dados.solicitacao_id
                 ? "Gerar novo link"
@@ -157,85 +150,50 @@ export function TelegramTab() {
                 <Button
                   variant="outline"
                   disabled={!dados.ativo || acao.isPending}
-                  onClick={() =>
+                  onClick={() => {
                     acao.mutate(
                       { tipo: "testar" },
                       {
-                        onSuccess: () =>
-                          toast.success("Mensagem de teste enviada."),
+                        onSuccess: () => {
+                          toast.success("Mensagem de teste enviada.")
+                        },
                         onError: falhou,
                       }
                     )
-                  }
+                  }}
                 >
                   Enviar teste
                 </Button>
                 <Button
                   variant="ghost"
                   disabled={acao.isPending}
-                  onClick={() => setDesvincular(true)}
+                  onClick={() => {
+                    setDesvincular(true)
+                  }}
                 >
                   Desvincular
                 </Button>
               </>
             ) : null}
           </div>
-          {dados.solicitacao_id ? (
-            <div className="flex flex-col gap-3" aria-live="polite">
-              <Separator />
-              {candidato ? (
-                <>
-                  <p className="text-sm">
-                    Foi você?{" "}
-                    <strong>{candidato.nome || "Usuário Telegram"}</strong>
-                    {candidato.username ? ` (@${candidato.username})` : ""} · ID{" "}
-                    {candidato.usuario_id}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    Confirme apenas se esta é a sua conta. Nenhum dado
-                    financeiro foi enviado.
-                  </p>
-                  <Button
-                    className="self-start"
-                    disabled={acao.isPending || !dados.ativo}
-                    onClick={() =>
-                      acao.mutate(
-                        {
-                          tipo: "confirmar",
-                          solicitacaoId: dados.solicitacao_id!,
-                        },
-                        {
-                          onSuccess: () => {
-                            setLink(undefined)
-                            toast.success("Telegram vinculado.")
-                          },
-                          onError: falhou,
-                        }
-                      )
-                    }
-                  >
-                    Confirmar minha conta
-                  </Button>
-                </>
-              ) : (
-                <>
-                  {linkAtual ? (
-                    <Button className="self-start" variant="outline" asChild>
-                      <a href={linkAtual.url} target="_blank" rel="noreferrer">
-                        Abrir Telegram <ExternalLink data-icon="inline-end" />
-                      </a>
-                    </Button>
-                  ) : null}
-                  <p className="text-sm text-muted-foreground">
-                    {linkAtual
-                      ? "Toque em Iniciar no Telegram e volte aqui para confirmar."
-                      : "Aguardando o início no Telegram. Se não tiver o link, gere um novo."}{" "}
-                    Válido até {formatDateTime(dados.vinculo_expira_em!)}.
-                  </p>
-                </>
-              )}
-            </div>
-          ) : null}
+          <SolicitacaoVinculo
+            dados={dados}
+            link={linkAtual}
+            pendente={acao.isPending}
+            confirmar={() => {
+              if (!dados.solicitacao_id) return
+              acao.mutate(
+                { tipo: "confirmar", solicitacaoId: dados.solicitacao_id },
+                {
+                  onSuccess: () => {
+                    setLink(undefined)
+                    toast.success("Telegram vinculado.")
+                  },
+                  onError: falhou,
+                }
+              )
+            }}
+          />
           <Separator />
           <Field orientation="horizontal" data-disabled={!dados.vinculado}>
             <FieldContent>
@@ -256,9 +214,9 @@ export function TelegramTab() {
                 acao.isPending ||
                 (!dados.ativo && !dados.notif_nao_revisadas)
               }
-              onCheckedChange={(ativo) =>
+              onCheckedChange={(ativo) => {
                 acao.mutate({ tipo: "preferencia", ativo }, { onError: falhou })
-              }
+              }}
             />
           </Field>
           <div className="flex flex-col gap-1 text-sm text-muted-foreground">
@@ -312,291 +270,113 @@ export function TelegramTab() {
             </AlertDescription>
           </Alert>
         ) : (
-          <InstanciaForm config={instancia.data} />
+          <TelegramInstanciaForm config={instancia.data} />
         )
       ) : null}
-      <AlertDialog
-        open={desvincular}
-        onOpenChange={(aberto) => {
-          if (!acao.isPending) setDesvincular(aberto)
+      <ConfirmacaoTelegram
+        aberto={desvincular}
+        pendente={acao.isPending}
+        alterar={setDesvincular}
+        foco={vincularRef}
+        titulo="Desvincular Telegram?"
+        acao="Desvincular"
+        confirmar={() => {
+          acao.mutate(
+            { tipo: "desvincular" },
+            {
+              onSuccess: () => {
+                setLink(undefined)
+                setDesvincular(false)
+                toast.success("Telegram desvinculado.")
+              },
+              onError: falhou,
+            }
+          )
         }}
       >
-        <AlertDialogContent
-          onCloseAutoFocus={(e) => {
-            e.preventDefault()
-            vincularRef.current?.focus()
-          }}
-        >
-          <AlertDialogHeader>
-            <AlertDialogTitle>Desvincular Telegram?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Seu relatório será desativado e os envios pendentes serão
-              cancelados.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={acao.isPending}>
-              Cancelar
-            </AlertDialogCancel>
-            <AlertDialogAction
-              disabled={acao.isPending}
-              onClick={(e) => {
-                e.preventDefault()
-                acao.mutate(
-                  { tipo: "desvincular" },
-                  {
-                    onSuccess: () => {
-                      setLink(undefined)
-                      setDesvincular(false)
-                      toast.success("Telegram desvinculado.")
-                    },
-                    onError: falhou,
-                  }
-                )
-              }}
-            >
-              Desvincular
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        Seu relatório será desativado e os envios pendentes serão cancelados.
+      </ConfirmacaoTelegram>
     </div>
   )
 }
 
-function InstanciaForm({ config }: { config: TelegramInstancia }) {
-  const acao = useAcaoTelegram()
-  const [token, setToken] = useState("")
-  const [troca, setTroca] = useState<InstanciaUpdate>()
-  const [remover, setRemover] = useState(false)
-  const tokenRef = useRef<HTMLInputElement>(null)
-  function falhou(err: Error) {
-    toast.error(err.message)
-  }
-  function salvar(dados: InstanciaUpdate) {
-    acao.mutate(
-      { tipo: "instancia", dados },
-      {
-        onSuccess: () => {
-          if (dados.token) setToken("")
-          setTroca(undefined)
-          toast.success("Configuração salva.")
-        },
-        onError: (err) => {
-          if (err.cause === 409 && err.message.startsWith("outro bot:"))
-            setTroca(dados)
-          else falhou(err)
-        },
-      }
-    )
-  }
+function SolicitacaoVinculo({
+  dados,
+  link,
+  pendente,
+  confirmar,
+}: {
+  dados: Telegram
+  link?: Vinculo
+  pendente: boolean
+  confirmar: () => void
+}) {
+  if (!dados.solicitacao_id) return null
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Bot desta instalação</CardTitle>
-        <CardDescription>
-          Um bot exclusivo para todos os usuários, com vínculos e relatórios
-          individuais.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-5" aria-busy={acao.isPending}>
-        <p className="text-sm text-muted-foreground">
-          Crie um bot no{" "}
-          <a
-            className="underline underline-offset-4"
-            href="https://t.me/BotFather"
-            target="_blank"
-            rel="noreferrer"
-          >
-            BotFather
-          </a>{" "}
-          com /newbot e cole o token. Use um bot sem webhook, exclusivo para
-          esta instalação.
-        </p>
-        <p className="text-sm">
-          {config.configurado
-            ? `Bot configurado: @${config.bot_username}`
-            : "Nenhum token salvo."}
-        </p>
-        {config.erro ? (
-          <Alert variant="destructive">
-            <AlertDescription>
-              {errosTelegram[config.erro] ?? "Falha na conexão do bot."}
-            </AlertDescription>
-          </Alert>
-        ) : null}
-        <form
-          className="flex flex-col gap-4"
-          onSubmit={(e) => {
-            e.preventDefault()
-            salvar({ token })
-          }}
-        >
-          <FieldGroup>
-            <Field>
-              <FieldLabel htmlFor="telegram-token">
-                {config.configurado ? "Novo token" : "Token do bot"}
-              </FieldLabel>
-              <Input
-                ref={tokenRef}
-                id="telegram-token"
-                maxLength={256}
-                aria-describedby="telegram-token-desc"
-                type="password"
-                autoComplete="off"
-                spellCheck={false}
-                value={token}
-                onChange={(e) => setToken(e.target.value)}
-                disabled={acao.isPending}
-              />
-              <FieldDescription id="telegram-token-desc">
-                Guardado cifrado. O Mango nunca exibe o token salvo.
-              </FieldDescription>
-            </Field>
-          </FieldGroup>
-          <Button
-            type="submit"
-            className="self-start"
-            disabled={acao.isPending || !token}
-          >
-            {acao.isPending ? "Salvando…" : "Salvar e validar token"}
-          </Button>
-        </form>
-        <p className="text-sm text-muted-foreground">
-          O botão “Revisar no Mango” usa automaticamente o endereço desta
-          instalação.
-        </p>
-        <Separator />
-        <FieldGroup>
-          <Field orientation="horizontal" data-disabled={!config.configurado}>
-            <FieldContent>
-              <FieldLabel htmlFor="telegram-ativo">
-                Ativar integração Telegram
-              </FieldLabel>
-              <FieldDescription id="telegram-ativo-desc">
-                Permite vincular contas e entregar relatórios.
-              </FieldDescription>
-            </FieldContent>
-            <Switch
-              id="telegram-ativo"
-              aria-describedby="telegram-ativo-desc"
-              checked={config.ativo}
-              disabled={!config.configurado || acao.isPending}
-              onCheckedChange={(ativo) => salvar({ ativo })}
-            />
-          </Field>
-        </FieldGroup>
-        {config.configurado ? (
-          <div className="flex flex-wrap gap-2">
-            <Button
-              variant="outline"
-              disabled={acao.isPending}
-              onClick={() =>
-                acao.mutate(
-                  { tipo: "testar-instancia" },
-                  {
-                    onSuccess: () =>
-                      toast.success("Token válido e bot disponível."),
-                    onError: falhou,
-                  }
-                )
-              }
-            >
-              Validar conexão do bot
-            </Button>
-            <Button
-              variant="ghost"
-              disabled={acao.isPending}
-              onClick={() => setRemover(true)}
-            >
-              Remover bot
-            </Button>
-          </div>
-        ) : null}
-        <AlertDialog
-          open={!!troca}
-          onOpenChange={(aberto) => {
-            if (!aberto && !acao.isPending) setTroca(undefined)
-          }}
-        >
-          <AlertDialogContent
-            onCloseAutoFocus={(e) => {
-              e.preventDefault()
-              tokenRef.current?.focus()
-            }}
-          >
-            <AlertDialogHeader>
-              <AlertDialogTitle>
-                Substituir o bot da instalação?
-              </AlertDialogTitle>
-              <AlertDialogDescription>
-                Todos os vínculos serão removidos e os usuários precisarão
-                vincular o Telegram novamente. Os relatórios pendentes serão
-                cancelados.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel disabled={acao.isPending}>
-                Cancelar
-              </AlertDialogCancel>
-              <AlertDialogAction
-                disabled={acao.isPending}
-                onClick={(e) => {
-                  e.preventDefault()
-                  if (troca) salvar({ ...troca, confirmar_troca_bot: true })
-                }}
-              >
-                Substituir bot
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-        <AlertDialog
-          open={remover}
-          onOpenChange={(aberto) => {
-            if (!acao.isPending) setRemover(aberto)
-          }}
-        >
-          <AlertDialogContent
-            onCloseAutoFocus={(e) => {
-              e.preventDefault()
-              tokenRef.current?.focus()
-            }}
-          >
-            <AlertDialogHeader>
-              <AlertDialogTitle>Remover o bot?</AlertDialogTitle>
-              <AlertDialogDescription>
-                O token e todos os vínculos serão removidos. A sincronização
-                automática continuará com a configuração atual.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel disabled={acao.isPending}>
-                Cancelar
-              </AlertDialogCancel>
-              <AlertDialogAction
-                disabled={acao.isPending}
-                onClick={(e) => {
-                  e.preventDefault()
-                  acao.mutate(
-                    { tipo: "remover-instancia" },
-                    {
-                      onSuccess: () => {
-                        setToken("")
-                        setRemover(false)
-                        toast.success("Bot removido.")
-                      },
-                      onError: falhou,
-                    }
-                  )
-                }}
-              >
-                Remover bot
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      </CardContent>
-    </Card>
+    <div className="flex flex-col gap-3" aria-live="polite">
+      <Separator />
+      {dados.candidato ? (
+        <CandidatoVinculo
+          candidato={dados.candidato}
+          confirmar={confirmar}
+          desativado={pendente || !dados.ativo}
+        />
+      ) : (
+        <AbrirVinculo link={link} expira={dados.vinculo_expira_em} />
+      )}
+    </div>
+  )
+}
+
+function CandidatoVinculo({
+  candidato,
+  confirmar,
+  desativado,
+}: {
+  candidato: NonNullable<Telegram["candidato"]>
+  confirmar: () => void
+  desativado: boolean
+}) {
+  return (
+    <>
+      <p className="text-sm">
+        Foi você? <strong>{candidato.nome || "Usuário Telegram"}</strong>
+        {candidato.username ? ` (@${candidato.username})` : ""} · ID{" "}
+        {candidato.usuario_id}
+      </p>
+      <p className="text-sm text-muted-foreground">
+        Confirme apenas se esta é a sua conta. Nenhum dado financeiro foi
+        enviado.
+      </p>
+      <Button className="self-start" disabled={desativado} onClick={confirmar}>
+        Confirmar minha conta
+      </Button>
+    </>
+  )
+}
+
+function AbrirVinculo({
+  link,
+  expira,
+}: {
+  link?: Vinculo
+  expira?: string | null
+}) {
+  return (
+    <>
+      {link ? (
+        <Button className="self-start" variant="outline" asChild>
+          <a href={link.url} target="_blank" rel="noreferrer">
+            Abrir Telegram <ExternalLink data-icon="inline-end" />
+          </a>
+        </Button>
+      ) : null}
+      <p className="text-sm text-muted-foreground">
+        {link
+          ? "Toque em Iniciar no Telegram e volte aqui para confirmar."
+          : "Aguardando o início no Telegram. Se não tiver o link, gere um novo."}{" "}
+        {expira ? `Válido até ${formatDateTime(expira)}.` : ""}
+      </p>
+    </>
   )
 }

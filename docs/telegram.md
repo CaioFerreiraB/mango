@@ -17,7 +17,8 @@ O administrador:
 
 O botão **Revisar no Mango** usa automaticamente o endereço com que a instalação foi acessada ao
 salvar, ativar ou validar o bot. Não é necessário informar uma URL; a origem do navegador mantém
-o endereço público mesmo quando a API fica atrás de um proxy.
+o endereço público mesmo quando a API fica atrás de um proxy. Em endereços de loopback
+(`localhost`, `127.0.0.1` ou `::1`), o relatório é enviado sem o botão.
 
 **Validar conexão do bot** testa o token salvo sem enviar dados financeiros. Tokens são cifrados
 em repouso e nunca exibidos pela API. Trocar o token do mesmo bot preserva vínculos; trocar de bot
@@ -50,7 +51,8 @@ estar ligada a uma conta Mango por instalação. IDs do CRUD antigo precisam de 
 
 Após o sync completo, o bot envia a quantidade e até dez transações mais recentes, com data,
 descrição e valor. O resumo respeita a data de corte de revisão e oculta lançamentos futuros e
-pagamentos de fatura, como a lista padrão. Sem pendências, não há mensagem.
+pagamentos de fatura, como a lista padrão. Débitos têm sinal negativo e créditos positivo, inclusive
+quando o banco envia compras de cartão com valor positivo. Sem pendências, não há mensagem.
 
 A sincronização importa os dados disponíveis no Pluggy; não força uma nova coleta no banco.
 Sync manual não dispara mensagens adicionais. Desativar Telegram não desativa o sync automático.

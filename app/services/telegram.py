@@ -87,27 +87,12 @@ def ler(db: Session, usuario_id: int) -> TelegramRead:
         if valido and config.candidato_id
         else None
     )
-    proxima = None
     ultima = db.scalar(
         select(ExecucaoDiaria)
         .where(ExecucaoDiaria.usuario_id == usuario_id)
         .order_by(ExecucaoDiaria.data.desc())
         .limit(1)
     )
-    if geral.sync_automatico:
-        hoje = momento.astimezone(SP).date()
-        proxima = datetime.combine(hoje, geral.sync_horario, SP)
-        execucao = db.scalar(
-            select(ExecucaoDiaria).where(
-                ExecucaoDiaria.usuario_id == usuario_id, ExecucaoDiaria.data == hoje
-            )
-        )
-        if execucao and execucao.sync_status in {"concluido", "falhou"}:
-            proxima += timedelta(days=1)
-        elif execucao and execucao.proxima_tentativa:
-            proxima = _aware(execucao.proxima_tentativa)
-        elif proxima < momento:
-            proxima = momento  # vencida: próxima passagem do verificador (até um minuto)
     return TelegramRead(
         configurado=bool(geral.telegram_token_cifrado),
         bot_username=geral.telegram_username,
@@ -122,8 +107,27 @@ def ler(db: Session, usuario_id: int) -> TelegramRead:
         erro=config.erro or geral.telegram_erro or (ultima.erro if ultima else None),
         sync_automatico=geral.sync_automatico,
         sync_horario=geral.sync_horario,
-        proxima_rotina=proxima,
+        proxima_rotina=_proxima_rotina(db, usuario_id, geral, momento),
     )
+
+
+def _proxima_rotina(
+    db: Session, usuario_id: int, geral: ConfiguracaoSistema, momento: datetime
+) -> datetime | None:
+    if not geral.sync_automatico:
+        return None
+    hoje = momento.astimezone(SP).date()
+    proxima = datetime.combine(hoje, geral.sync_horario, SP)
+    execucao = db.scalar(
+        select(ExecucaoDiaria).where(
+            ExecucaoDiaria.usuario_id == usuario_id, ExecucaoDiaria.data == hoje
+        )
+    )
+    if execucao and execucao.sync_status in {"concluido", "falhou"}:
+        return proxima + timedelta(days=1)
+    if execucao and execucao.proxima_tentativa:
+        return _aware(execucao.proxima_tentativa)
+    return max(proxima, momento)  # vencida: próxima passagem do verificador (até um minuto)
 
 
 def cancelar_pendentes(db: Session, usuario_id: int | None = None) -> None:
@@ -232,9 +236,11 @@ def processar_update(db: Session, evento: dict) -> None:
     identificador = pessoa.get("id")
     if (
         chat.get("type") != "private"
-        or type(identificador) is not int
+        or not isinstance(identificador, int)
+        or isinstance(identificador, bool)
         or not 0 < identificador < 2**63
-        or type(chat.get("id")) is not int
+        or not isinstance(chat.get("id"), int)
+        or isinstance(chat.get("id"), bool)
         or chat.get("id") != identificador
         or pessoa.get("is_bot")
     ):
@@ -362,7 +368,8 @@ def _polling() -> None:
                         for evento in eventos:
                             if (
                                 not isinstance(evento, dict)
-                                or type(evento.get("update_id")) is not int
+                                or not isinstance(evento.get("update_id"), int)
+                                or isinstance(evento.get("update_id"), bool)
                                 or not 0 <= evento["update_id"] < 2**63 - 1
                             ):
                                 continue

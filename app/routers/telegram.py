@@ -1,6 +1,6 @@
 """Operações Telegram por sessão; o token MCP não alcança estas rotas."""
 
-from urllib.parse import urlsplit
+from urllib.parse import urlsplit, urlunsplit
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
@@ -49,7 +49,7 @@ def _origem_instalacao(request: Request) -> str:
             raise ValueError
     except ValueError:
         raise HTTPException(422, "não foi possível identificar o endereço da instalação") from None
-    return f"{url.scheme}://{url.netloc}"
+    return urlunsplit((url.scheme, url.netloc, "", "", ""))
 
 
 @router.get("", response_model=TelegramRead)

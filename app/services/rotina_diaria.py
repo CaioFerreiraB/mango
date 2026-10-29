@@ -1,8 +1,10 @@
 """Sync diário seguido de relatório; controle durável, sem fila/serviço externo."""
 
+import ipaddress
 import logging
 import threading
 from datetime import datetime, timedelta
+from urllib.parse import urlsplit
 
 from sqlalchemy import select
 
@@ -66,7 +68,7 @@ def relatorio(db, usuario: Usuario, momento: datetime) -> str | None:
         valor = transacao.amount_in_account_currency_centavos
         if valor is None:
             valor = transacao.amount_centavos
-        sinal = "−" if valor < 0 else "+" if valor > 0 else ""
+        sinal = {"DEBIT": "−", "CREDIT": "+"}.get(transacao.type, "") if valor else ""
         reais, centavos = divmod(abs(valor), 100)
         moeda = f"{reais:,}".replace(",", ".") + f",{centavos:02d}"
         data = _aware(transacao.date).astimezone(SP).strftime("%d/%m")
@@ -79,6 +81,39 @@ def relatorio(db, usuario: Usuario, momento: datetime) -> str | None:
         ]
     )
     return "\n".join(linhas)
+
+
+def _url_do_botao(base: str | None) -> str | None:
+    if not base:
+        return None
+    host = (urlsplit(base).hostname or "").rstrip(".")
+    if host == "localhost" or host.endswith(".localhost"):
+        return None
+    try:
+        if ipaddress.ip_address(host).is_loopback:
+            return None
+    except ValueError:
+        pass  # domínio da instalação
+    return f"{base}/transacoes?pendente=true"
+
+
+def _falha_envio(db, geral, config, registro, momento, exc: TelegramError) -> None:
+    registro.erro = exc.codigo
+    registro.proxima_tentativa = None
+    if exc.codigo == "envio_incerto":
+        registro.envio_status = "incerto"
+    elif exc.repetir and registro.tentativas_envio < 3:
+        registro.envio_status = "pendente"
+        registro.proxima_tentativa = momento + timedelta(seconds=exc.espera)
+    else:
+        registro.envio_status = "falhou"
+    telegram.registrar_erro(db, geral, config, exc)
+    logger.warning(
+        "rotina usuario=%s data=%s etapa=telegram codigo=%s",
+        registro.usuario_id,
+        registro.data,
+        exc.codigo,
+    )
 
 
 def _enviar(db, usuario_id: int, registro: ExecucaoDiaria, momento: datetime) -> None:
@@ -115,27 +150,9 @@ def _enviar(db, usuario_id: int, registro: ExecucaoDiaria, momento: datetime) ->
         db.commit()
         try:
             with TelegramClient(geral.telegram_token_cifrado) as cliente:
-                url = (
-                    f"{geral.telegram_url}/transacoes?pendente=true" if geral.telegram_url else None
-                )
-                cliente.send_message(config.chat_id, texto, url)
+                cliente.send_message(config.chat_id, texto, _url_do_botao(geral.telegram_url))
         except TelegramError as exc:
-            registro.erro = exc.codigo
-            registro.proxima_tentativa = None
-            if exc.codigo == "envio_incerto":
-                registro.envio_status = "incerto"
-            elif exc.repetir and registro.tentativas_envio < 3:
-                registro.envio_status = "pendente"
-                registro.proxima_tentativa = momento + timedelta(seconds=exc.espera)
-            else:
-                registro.envio_status = "falhou"
-            telegram.registrar_erro(db, geral, config, exc)
-            logger.warning(
-                "rotina usuario=%s data=%s etapa=telegram codigo=%s",
-                usuario_id,
-                registro.data,
-                exc.codigo,
-            )
+            _falha_envio(db, geral, config, registro, momento, exc)
             return
         registro.envio_status, registro.erro, registro.proxima_tentativa = "enviado", None, None
         config.ultimo_envio_em, config.erro = momento, None
@@ -151,6 +168,85 @@ def executar(*, session_factory=SessionLocal, momento: datetime | None = None) -
         _em_execucao.release()
 
 
+def _usuarios_elegiveis(db) -> list[int]:
+    consulta = select(Usuario.id).where(
+        Usuario.ativo.is_(True),
+        Usuario.tipo == "completo",
+        select(CredencialPluggy.id).where(CredencialPluggy.usuario_id == Usuario.id).exists(),
+        select(ItemPluggy.id).where(ItemPluggy.usuario_id == Usuario.id).exists(),
+    )
+    if settings.app_mode == "local":
+        # Mesmo usuário implícito da autenticação; um backup multiusuário não envia por todos.
+        local_id = db.scalar(select(Usuario.id).order_by(Usuario.id).limit(1))
+        consulta = consulta.where(Usuario.id == local_id)
+    return list(db.scalars(consulta))
+
+
+def _sincronizar(db, registro: ExecucaoDiaria, momento: datetime) -> None:
+    registro.sync_status = "executando"
+    registro.tentativas_sync += 1
+    registro.proxima_tentativa = None
+    db.commit()
+    try:
+        sincronizar_usuario(db, registro.usuario_id)
+        # Sync-de-todos pode pular itens pelo throttle. Só aceitar os recentes.
+        db.expire_all()
+        itens = db.scalars(
+            select(ItemPluggy).where(ItemPluggy.usuario_id == registro.usuario_id)
+        ).all()
+        limite = momento - timedelta(minutes=settings.sync_min_intervalo_min)
+        if any(it.ultimo_sync_em is None or _aware(it.ultimo_sync_em) < limite for it in itens):
+            raise ConflictError("sync incompleto")
+    except (PluggyError, ConflictError, RateLimitError):
+        db.rollback()
+        registro.sync_status = "pendente" if registro.tentativas_sync < 3 else "falhou"
+        registro.erro = "sync_indisponivel"
+        if registro.tentativas_sync < 3:
+            registro.proxima_tentativa = momento + timedelta(
+                minutes=5 if registro.tentativas_sync == 1 else 15
+            )
+        else:
+            registro.envio_status = "ignorado"
+    else:
+        registro.sync_status, registro.erro, registro.proxima_tentativa = "concluido", None, None
+    db.commit()
+
+
+def _execucao_usuario(db, usuario_id: int, momento: datetime, fixo: bool) -> None:
+    registro = db.scalar(
+        select(ExecucaoDiaria).where(
+            ExecucaoDiaria.usuario_id == usuario_id,
+            ExecucaoDiaria.data == momento.astimezone(SP).date(),
+        )
+    )
+    if registro is None:
+        registro = ExecucaoDiaria(usuario_id=usuario_id, data=momento.astimezone(SP).date())
+        db.add(registro)
+        db.commit()
+    if registro.proxima_tentativa and _aware(registro.proxima_tentativa) > momento:
+        return
+    if registro.sync_status == "pendente":
+        _sincronizar(db, registro, momento)
+    if registro.sync_status == "concluido" and registro.envio_status == "pendente":
+        _enviar(db, usuario_id, registro, momento if fixo else telegram.agora())
+
+
+def _falha_execucao(db, usuario_id, hoje) -> None:
+    # O sync pode ter commits parciais. Marca falha e segue os demais usuários.
+    logger.error("rotina usuario=%s data=%s etapa=execucao codigo=erro_interno", usuario_id, hoje)
+    registro = db.scalar(
+        select(ExecucaoDiaria).where(
+            ExecucaoDiaria.usuario_id == usuario_id, ExecucaoDiaria.data == hoje
+        )
+    )
+    if registro:
+        if registro.envio_status == "enviando":
+            registro.envio_status, registro.erro = "incerto", "envio_incerto"
+        else:
+            registro.sync_status, registro.erro = "falhou", "erro_interno"
+        db.commit()
+
+
 def _executar(session_factory, momento: datetime | None) -> None:
     referencia = momento or telegram.agora()
     hoje = referencia.astimezone(SP).date()
@@ -158,17 +254,7 @@ def _executar(session_factory, momento: datetime | None) -> None:
         geral = telegram.instancia(db)
         if not geral.sync_automatico or referencia.astimezone(SP).time() < geral.sync_horario:
             return
-        consulta = select(Usuario.id).where(
-            Usuario.ativo.is_(True),
-            Usuario.tipo == "completo",
-            select(CredencialPluggy.id).where(CredencialPluggy.usuario_id == Usuario.id).exists(),
-            select(ItemPluggy.id).where(ItemPluggy.usuario_id == Usuario.id).exists(),
-        )
-        if settings.app_mode == "local":
-            # Mesmo usuário implícito da autenticação; um backup multiusuário não envia por todos.
-            local_id = db.scalar(select(Usuario.id).order_by(Usuario.id).limit(1))
-            consulta = consulta.where(Usuario.id == local_id)
-        usuarios = list(db.scalars(consulta))
+        usuarios = _usuarios_elegiveis(db)
     for usuario_id in usuarios:
         agora = momento or telegram.agora()
         if agora.astimezone(SP).date() != hoje:
@@ -177,71 +263,7 @@ def _executar(session_factory, momento: datetime | None) -> None:
             with session_factory() as db:
                 if not telegram.instancia(db).sync_automatico:
                     break
-                registro = db.scalar(
-                    select(ExecucaoDiaria).where(
-                        ExecucaoDiaria.usuario_id == usuario_id, ExecucaoDiaria.data == hoje
-                    )
-                )
-                if registro is None:
-                    registro = ExecucaoDiaria(usuario_id=usuario_id, data=hoje)
-                    db.add(registro)
-                    db.commit()
-                if registro.proxima_tentativa and _aware(registro.proxima_tentativa) > agora:
-                    continue
-                if registro.sync_status == "pendente":
-                    registro.sync_status = "executando"
-                    registro.tentativas_sync += 1
-                    registro.proxima_tentativa = None
-                    db.commit()
-                    try:
-                        sincronizar_usuario(db, usuario_id)
-                        # Sync-de-todos pode pular itens pelo throttle. Só aceitar os recentes.
-                        db.expire_all()
-                        itens = db.scalars(
-                            select(ItemPluggy).where(ItemPluggy.usuario_id == usuario_id)
-                        ).all()
-                        limite = agora - timedelta(minutes=settings.sync_min_intervalo_min)
-                        if any(
-                            it.ultimo_sync_em is None or _aware(it.ultimo_sync_em) < limite
-                            for it in itens
-                        ):
-                            raise ConflictError("sync incompleto")
-                    except (PluggyError, ConflictError, RateLimitError):
-                        db.rollback()
-                        registro.sync_status = (
-                            "pendente" if registro.tentativas_sync < 3 else "falhou"
-                        )
-                        registro.erro = "sync_indisponivel"
-                        if registro.tentativas_sync < 3:
-                            registro.proxima_tentativa = agora + timedelta(
-                                minutes=5 if registro.tentativas_sync == 1 else 15
-                            )
-                        else:
-                            registro.envio_status = "ignorado"
-                        db.commit()
-                        continue
-                    registro.sync_status, registro.erro, registro.proxima_tentativa = (
-                        "concluido",
-                        None,
-                        None,
-                    )
-                    db.commit()
-                if registro.sync_status == "concluido" and registro.envio_status == "pendente":
-                    _enviar(db, usuario_id, registro, momento or telegram.agora())
+                _execucao_usuario(db, usuario_id, agora, momento is not None)
         except Exception:
-            # O sync pode ter commits parciais. Marca falha e segue os demais usuários.
-            logger.error(
-                "rotina usuario=%s data=%s etapa=execucao codigo=erro_interno", usuario_id, hoje
-            )
             with session_factory() as db:
-                registro = db.scalar(
-                    select(ExecucaoDiaria).where(
-                        ExecucaoDiaria.usuario_id == usuario_id, ExecucaoDiaria.data == hoje
-                    )
-                )
-                if registro:
-                    if registro.envio_status == "enviando":
-                        registro.envio_status, registro.erro = "incerto", "envio_incerto"
-                    else:
-                        registro.sync_status, registro.erro = "falhou", "erro_interno"
-                    db.commit()
+                _falha_execucao(db, usuario_id, hoje)
