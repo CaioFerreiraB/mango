@@ -119,6 +119,13 @@ def _checar_rota_do_token(request: Request, acesso: AcessoMcp) -> None:
 
 
 def get_current_user(request: Request, db: Session = Depends(get_db)) -> Usuario:
+    token = bearer(request)
+    if token and token.startswith("mgi_"):
+        from app.services.integracao_auth import autorizar_rota, resolver
+
+        usuario, cred = resolver(db, token)
+        autorizar_rota(request, cred, usuario)
+        return usuario
     if settings.app_mode == "local":
         return _get_or_create_local_user(db)
     token = bearer(request)

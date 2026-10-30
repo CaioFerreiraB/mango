@@ -52,8 +52,16 @@ function estadoInicial() {
 /** Wizard de criação de uma divisão de despesa (§4.11) — primeiro fluxo multi-passo do app (os
  *  demais dialogs de orçamento/objetivo são formulário único). Um só `Dialog`, corpo e rodapé
  *  trocam por passo; nada é salvo até "Salvar divisão" no passo final. */
-export function NovaDivisaoWizard({ trigger }: { trigger: React.ReactNode }) {
-  const [aberto, setAberto] = useState(false)
+export function NovaDivisaoWizard({
+  trigger,
+  initialOpen = false,
+  onClose,
+}: {
+  trigger: React.ReactNode
+  initialOpen?: boolean
+  onClose?: () => void
+}) {
+  const [aberto, setAberto] = useState(initialOpen)
   const [form, setForm] = useState(estadoInicial())
   const me = useMe()
   const categorias = useCategorias()
@@ -61,7 +69,10 @@ export function NovaDivisaoWizard({ trigger }: { trigger: React.ReactNode }) {
 
   function fechar(v: boolean) {
     setAberto(v)
-    if (!v) setForm(estadoInicial())
+    if (!v) {
+      setForm(estadoInicial())
+      onClose?.()
+    }
   }
 
   const meuId = me.data?.id ?? null
@@ -127,7 +138,7 @@ export function NovaDivisaoWizard({ trigger }: { trigger: React.ReactNode }) {
   return (
     <Dialog open={aberto} onOpenChange={fechar}>
       <DialogTrigger asChild>{trigger}</DialogTrigger>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Nova divisão de conta</DialogTitle>
           <p className="text-xs text-muted-foreground">

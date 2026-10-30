@@ -21,6 +21,7 @@ from datetime import date, datetime
 from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
+from app.db.atomic import commit
 from app.models.categoria import RegraCategorizacao
 from app.models.transacao import Transacao
 from app.services.texto import normalizar_texto
@@ -145,5 +146,5 @@ def aplicar_regras_categorizacao(db: Session, usuario_id: int, *, desde: date | 
     if total:
         # Um único commit: `repo.update()` num laço daria um commit por transação (o padrão que
         # `assinatura_match.revincular_assinatura` usa e que não queremos repetir em escala).
-        db.commit()
+        commit(db)
     return total

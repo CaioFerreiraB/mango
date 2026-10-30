@@ -1,3 +1,4 @@
+import { useRef } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 
 import { api } from "@/lib/api/client"
@@ -82,15 +83,25 @@ export function useDivisao(id: number | null) {
 }
 
 export function useCriarDivisao() {
+  const tentativa = useRef({ corpo: "", chave: "" })
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (body: DivisaoDespesaCreate): Promise<DivisaoDespesa> => {
-      const { data, error } = await api.POST("/api/divisoes-despesa", { body })
+      const corpo = JSON.stringify(body)
+      if (tentativa.current.corpo !== corpo)
+        tentativa.current = { corpo, chave: crypto.randomUUID() }
+      const { data, error } = await api.POST("/api/divisoes-despesa", {
+        body,
+        params: { header: { "idempotency-key": tentativa.current.chave } },
+      })
       if (error || !data)
         throw new Error(mensagemErro(error, "falha ao criar a divisão"))
       return data
     },
-    onSuccess: () => invalidar(qc),
+    onSuccess: () => {
+      tentativa.current = { corpo: "", chave: "" }
+      invalidar(qc)
+    },
   })
 }
 

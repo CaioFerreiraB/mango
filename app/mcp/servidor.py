@@ -16,7 +16,18 @@ from app import __version__
 from app.mcp import formato as f
 from app.mcp.api import api, categorias, contas, nome_conta, resolver_nome
 
-servidor = MCPServer(
+
+class MangoMCPServer(MCPServer):
+    async def call_tool(self, name, arguments, context=None):
+        authorization = (context.headers or {}).get("authorization", "") if context else ""
+        if authorization.startswith("Bearer mgi_"):
+            from app.services.ia_tools import despachar
+
+            return await despachar(self, name, arguments, context)
+        return await super().call_tool(name, arguments, context)
+
+
+servidor = MangoMCPServer(
     name="mango",
     title="mango — finanças pessoais",
     version=__version__,

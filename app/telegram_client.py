@@ -90,19 +90,50 @@ class TelegramClient:
 
     def updates(self, offset: int) -> list[dict]:
         result = self._request(
-            "getUpdates", {"offset": offset, "timeout": 25, "allowed_updates": ["message"]}
+            "getUpdates",
+            {"offset": offset, "timeout": 25, "allowed_updates": ["message", "callback_query"]},
         )
         if not isinstance(result, list):
             raise TelegramError("resposta_invalida")
         return result
 
-    def send_message(self, chat_id: str, texto: str, url: str | None = None) -> int:
+    def send_message(
+        self,
+        chat_id: str,
+        texto: str,
+        url: str | None = None,
+        *,
+        web_app: bool = False,
+        botoes: list | None = None,
+    ) -> int:
         dados = {"chat_id": chat_id, "text": texto, "link_preview_options": {"is_disabled": True}}
         if url:
             dados["reply_markup"] = {
-                "inline_keyboard": [[{"text": "Revisar no Mango", "url": url}]]
+                "inline_keyboard": [
+                    [
+                        {
+                            "text": "Revisar transações" if web_app else "Revisar no Mango",
+                            **({"web_app": {"url": url}} if web_app else {"url": url}),
+                        }
+                    ]
+                ]
             }
+        if botoes:
+            dados["reply_markup"] = {"inline_keyboard": botoes}
         result = self._request("sendMessage", dados, envio=True)
         if not isinstance(result, dict) or not isinstance(result.get("message_id"), int):
             raise TelegramError("envio_incerto")
         return result["message_id"]
+
+    def menu(self, url: str | None) -> None:
+        self._request(
+            "setChatMenuButton",
+            {
+                "menu_button": {"type": "web_app", "text": "Abrir Mango", "web_app": {"url": url}}
+                if url
+                else {"type": "default"}
+            },
+        )
+
+    def callback(self, callback_id: str) -> None:
+        self._request("answerCallbackQuery", {"callback_query_id": callback_id})

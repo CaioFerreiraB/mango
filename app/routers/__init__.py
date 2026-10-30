@@ -24,6 +24,7 @@ from app.routers import (
     divisao,
     fonte_de_renda,
     indicadores,
+    integracao,
     investimento,
     item,
     objetivo,
@@ -31,6 +32,7 @@ from app.routers import (
     perfil,
     pluggy,
     regra_categorizacao,
+    revisao,
     setup,
     sync,
     telegram,
@@ -121,6 +123,7 @@ _manuais: list[APIRouter] = [
     orcamento.router,
     objetivo.router,  # CRUD + leitura enriquecida (valor guardado/progresso)
     transacao.router,
+    revisao.router,
     investimento.router,
     indicadores.router,  # dados de mercado p/ comparação da carteira (§4.9)
     categoria.router,
@@ -130,6 +133,7 @@ _manuais: list[APIRouter] = [
     usuarios.router,  # busca de usuários da instância (§4.11)
     admin_usuarios.router,  # gestão de usuários da instância — só o dono (§4.11)
     telegram.router,
+    integracao.router,
     acesso_mcp.router,  # token de agentes (docs/mcp.md) — só por sessão, nunca pelo próprio token
 ]
 
@@ -149,6 +153,8 @@ all_routers: list[APIRouter] = [assinatura_router.router, *_crud, *_readonly, *_
 # identidade (`in` sobre uma tupla já usa `is`/`==`, sem precisar de hash).
 ROUTERS_ABERTOS_A_TODOS_OS_TIPOS: tuple[APIRouter, ...] = (
     setup.router,
+    integracao.router,
+    telegram.router,
     auth.router,
     convite.router,
     perfil.router,

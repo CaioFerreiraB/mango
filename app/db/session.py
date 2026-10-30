@@ -2,6 +2,7 @@
 
 from collections.abc import Iterator
 
+from fastapi import Request
 from sqlalchemy import create_engine, event
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session, sessionmaker
@@ -31,8 +32,12 @@ engine = create_db_engine(settings.database_url)
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False, future=True)
 
 
-def get_db() -> Iterator[Session]:
+def get_db(request: Request) -> Iterator[Session]:
     """Dependency do FastAPI: abre uma Session por request e fecha no fim."""
+    interno = request.scope.get("mango_db")
+    if interno is not None:
+        yield interno
+        return
     db = SessionLocal()
     try:
         yield db

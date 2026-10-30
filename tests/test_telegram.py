@@ -159,7 +159,8 @@ def test_permissoes_e_crud_legado(client_factory_sh, usuario_a, usuario_admin, d
     assert telegram_ok == []
     usuario_a.tipo = "divisao"
     db.commit()
-    assert a.get("/api/telegram").status_code == 403
+    assert a.get("/api/telegram").status_code == 200
+    assert a.patch("/api/telegram", json={"notif_nao_revisadas": True}).status_code == 409
     assert admin.post("/api/config-telegram", json={"chat_id": "456"}).status_code in {404, 405}
 
 

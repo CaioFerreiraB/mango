@@ -1,3 +1,4 @@
+import { IaTab } from "@/components/configuracoes/ia-tab"
 import { useSearchParams } from "react-router"
 
 import { CategoriasTab } from "@/components/configuracoes/categorias-tab"
@@ -33,7 +34,8 @@ export function ConfiguracoesPage() {
   // página fica só com a faixa de abas. Links de configuração são compartilháveis, então o estado
   // é alcançável; cair no padrão é o comportamento que não confunde.
   const abasVisiveis = [
-    ...(podeVerConexoes ? ["conexoes", "telegram"] : []),
+    ...(podeVerConexoes ? ["conexoes", "ia"] : []),
+    "telegram",
     "perfil",
     "preferencias",
     "categorias",
@@ -67,8 +69,9 @@ export function ConfiguracoesPage() {
             {podeVerConexoes ? (
               <TabsTrigger value="conexoes">Conexões</TabsTrigger>
             ) : null}
+            <TabsTrigger value="telegram">Telegram</TabsTrigger>
             {podeVerConexoes ? (
-              <TabsTrigger value="telegram">Telegram</TabsTrigger>
+              <TabsTrigger value="ia">Inteligência artificial</TabsTrigger>
             ) : null}
             <TabsTrigger value="perfil">Perfil</TabsTrigger>
             <TabsTrigger value="preferencias">Preferências</TabsTrigger>
@@ -90,9 +93,12 @@ export function ConfiguracoesPage() {
             <ConexoesTab />
           </TabsContent>
         ) : null}
+        <TabsContent value="telegram" className="pt-4">
+          <TelegramTab />
+        </TabsContent>
         {podeVerConexoes ? (
-          <TabsContent value="telegram" className="pt-4">
-            <TelegramTab />
+          <TabsContent value="ia" className="pt-4">
+            <IaTab />
           </TabsContent>
         ) : null}
         <TabsContent value="perfil" className="pt-4">

@@ -13,6 +13,7 @@ from typing import Literal
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
+from app.db.atomic import commit
 from app.db.session import get_db
 from app.models.assinatura import Assinatura
 from app.models.investimento import InvestimentoTransacao
@@ -222,7 +223,7 @@ def _propagar_para_parcelas(repo: TransacaoRepository, obj: Transacao) -> int:
         irma.categoria_override_id = obj.categoria_override_id
         irma.categoria_ajustada_usuario = True
     if irmas:
-        repo.db.commit()  # um commit para o grupo inteiro, não um por parcela
+        commit(repo.db)  # um commit para o grupo inteiro, não um por parcela
     return len(irmas)
 
 
@@ -233,4 +234,4 @@ def _aprender_alias(db: Session, assinatura: Assinatura, transacao: Transacao) -
     if not nome or normalizar_nome(nome) in existentes:
         return
     assinatura.nomes_transacao = [*assinatura.nomes_transacao, nome]  # reatribui → ORM detecta
-    db.commit()
+    commit(db)

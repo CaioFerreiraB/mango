@@ -1,3 +1,9 @@
+import {
+  MiniappLayout,
+  MiniappEntrada,
+  MiniappSplit,
+} from "@/routes/telegram/page"
+import { MiniappRevisao } from "@/routes/telegram/revisao"
 import { createBrowserRouter, Navigate } from "react-router"
 
 import { RequireAuth, RequireSetup } from "@/components/auth/require-auth"
@@ -29,6 +35,16 @@ import { TransacoesPage } from "@/routes/transacoes/page"
 // no self-hosted → /login).
 // O `handle.title` de cada rota alimenta o breadcrumb do header (ver app-header.tsx).
 export const router = createBrowserRouter([
+  {
+    path: "/telegram",
+    element: <MiniappLayout />,
+    children: [
+      { index: true, element: <MiniappEntrada /> },
+      { path: "revisao", element: <MiniappRevisao /> },
+      { path: "split", element: <MiniappSplit /> },
+      { path: "divisoes", element: <DivisoesPage /> },
+    ],
+  },
   { path: "/setup", element: <SetupPage /> },
   {
     element: <RequireSetup />,

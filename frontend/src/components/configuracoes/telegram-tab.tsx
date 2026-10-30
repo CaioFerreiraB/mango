@@ -1,3 +1,4 @@
+import { MiniappConfigForm } from "./ia-tab"
 import { useRef, useState } from "react"
 import { ExternalLink } from "lucide-react"
 import { toast } from "sonner"
@@ -80,8 +81,7 @@ export function TelegramTab() {
             </Badge>
           </div>
           <CardDescription>
-            Receba um resumo das transações que precisam de revisão após a
-            sincronização diária.
+            Acesse as funções do Mango pelo seu Telegram.
           </CardDescription>
         </CardHeader>
         <CardContent
@@ -194,67 +194,77 @@ export function TelegramTab() {
               )
             }}
           />
-          <Separator />
-          <Field orientation="horizontal" data-disabled={!dados.vinculado}>
-            <FieldContent>
-              <FieldLabel htmlFor="telegram-relatorio">
-                Receber relatório diário de pendências
-              </FieldLabel>
-              <FieldDescription id="telegram-relatorio-desc">
-                Quantidade e até dez transações, com data, descrição e valor,
-                enviadas ao Telegram. Sem pendências, nenhuma mensagem.
-              </FieldDescription>
-            </FieldContent>
-            <Switch
-              id="telegram-relatorio"
-              aria-describedby="telegram-relatorio-desc"
-              checked={dados.notif_nao_revisadas}
-              disabled={
-                !dados.vinculado ||
-                acao.isPending ||
-                (!dados.ativo && !dados.notif_nao_revisadas)
-              }
-              onCheckedChange={(ativo) => {
-                acao.mutate({ tipo: "preferencia", ativo }, { onError: falhou })
-              }}
-            />
-          </Field>
-          <div className="flex flex-col gap-1 text-sm text-muted-foreground">
-            <p>
-              {dados.sync_automatico
-                ? `Sincronização diária às ${dados.sync_horario.slice(0, 5)} (Brasília).`
-                : "A sincronização automática está desativada."}
-            </p>
-            <Link
-              className="self-start underline underline-offset-4"
-              to="/configuracoes?aba=conexoes"
-            >
-              Ver configuração da sincronização em Conexões
-            </Link>
-            {dados.proxima_rotina ? (
-              <p>
-                Próxima rotina prevista: {formatDateTime(dados.proxima_rotina)}.
-              </p>
-            ) : null}
-            {dados.ultimo_envio_em ? (
-              <p>
-                Último relatório enviado:{" "}
-                {formatDateTime(dados.ultimo_envio_em)}.
-              </p>
-            ) : null}
-            {local ? (
-              <p>
-                O Mango precisa estar aberto. Se perder o horário, a rotina do
-                dia acontece ao abrir.
-              </p>
-            ) : null}
-            <p>
-              O resumo oculta lançamentos futuros e pagamentos de fatura e
-              respeita sua data de início da revisão.
-            </p>
-          </div>
+          {me.data?.tipo === "completo" ? (
+            <>
+              <Separator />
+              <Field orientation="horizontal" data-disabled={!dados.vinculado}>
+                <FieldContent>
+                  <FieldLabel htmlFor="telegram-relatorio">
+                    Receber relatório diário de pendências
+                  </FieldLabel>
+                  <FieldDescription id="telegram-relatorio-desc">
+                    Quantidade e até dez transações, com data, descrição e
+                    valor, enviadas ao Telegram. Sem pendências, nenhuma
+                    mensagem.
+                  </FieldDescription>
+                </FieldContent>
+                <Switch
+                  id="telegram-relatorio"
+                  aria-describedby="telegram-relatorio-desc"
+                  checked={dados.notif_nao_revisadas}
+                  disabled={
+                    !dados.vinculado ||
+                    acao.isPending ||
+                    (!dados.ativo && !dados.notif_nao_revisadas)
+                  }
+                  onCheckedChange={(ativo) => {
+                    acao.mutate(
+                      { tipo: "preferencia", ativo },
+                      { onError: falhou }
+                    )
+                  }}
+                />
+              </Field>
+              <div className="flex flex-col gap-1 text-sm text-muted-foreground">
+                <p>
+                  {dados.sync_automatico
+                    ? `Sincronização diária às ${dados.sync_horario.slice(0, 5)} (Brasília).`
+                    : "A sincronização automática está desativada."}
+                </p>
+                <Link
+                  className="self-start underline underline-offset-4"
+                  to="/configuracoes?aba=conexoes"
+                >
+                  Ver configuração da sincronização em Conexões
+                </Link>
+                {dados.proxima_rotina ? (
+                  <p>
+                    Próxima rotina prevista:{" "}
+                    {formatDateTime(dados.proxima_rotina)}.
+                  </p>
+                ) : null}
+                {dados.ultimo_envio_em ? (
+                  <p>
+                    Último relatório enviado:{" "}
+                    {formatDateTime(dados.ultimo_envio_em)}.
+                  </p>
+                ) : null}
+                {local ? (
+                  <p>
+                    O Mango precisa estar aberto. Se perder o horário, a rotina
+                    do dia acontece ao abrir.
+                  </p>
+                ) : null}
+                <p>
+                  O resumo oculta lançamentos futuros e pagamentos de fatura e
+                  respeita sua data de início da revisão.
+                </p>
+              </div>
+            </>
+          ) : null}
         </CardContent>
       </Card>
+      {administra && !local ? <MiniappConfigForm /> : null}
       {administra ? (
         instancia.isPending ? (
           <Skeleton className="h-48" />

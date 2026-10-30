@@ -12,6 +12,15 @@ ainda está se assentando. Cada versão publicada tem uma imagem correspondente 
 
 ### Adicionado
 
+- **Telegram v2:** miniapp HTTPS com revisão de transações, rascunhos por sessão e assistente de
+  divisão de contas; comandos independentes de IA e processamento durável dos updates.
+- **Inteligência artificial no Telegram:** provedores Axon e OpenAI-compatible, credenciais
+  administrativas cifradas, consentimento individual, histórico de sete dias e limites de uso.
+  Axon recebe autorização MCP temporária por execução, isolada por usuário. Exclusões, lotes
+  e efeitos propagados exigem confirmação no Mango.
+- **Revisão atômica:** prévia de efeitos, detecção de conflitos e idempotência para revisões,
+  assinaturas/regras contextuais e criação de divisões. IA e miniapp começam desligados.
+
 - **Telegram:** bot exclusivo por instalação, token cifrado e vínculo confirmado individualmente
   em Configurações → Telegram. Relatório opcional com até dez pendências após a rotina diária,
   com proteção contra reenvio em entregas incertas. Guia em [docs/telegram.md](docs/telegram.md).

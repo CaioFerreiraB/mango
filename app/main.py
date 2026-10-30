@@ -79,7 +79,7 @@ app.middleware("http")(csrf_middleware)
 
 @app.exception_handler(RequestValidationError)
 async def _validation_error_handler(request: Request, exc: RequestValidationError):
-    if request.url.path.startswith("/api/telegram"):
+    if request.url.path.startswith(("/api/telegram", "/api/ia")):
         # O erro padrão do Pydantic ecoa `input`, que pode conter o token write-only.
         return JSONResponse(
             status_code=422,

@@ -150,7 +150,15 @@ def _enviar(db, usuario_id: int, registro: ExecucaoDiaria, momento: datetime) ->
         db.commit()
         try:
             with TelegramClient(geral.telegram_token_cifrado) as cliente:
-                cliente.send_message(config.chat_id, texto, _url_do_botao(geral.telegram_url))
+                from app.services.integracao_auth import configuracao
+
+                extra = configuracao(db)
+                if extra.miniapp_ativo and extra.url and settings.app_mode == "self_hosted":
+                    cliente.send_message(
+                        config.chat_id, texto, extra.url + "/telegram/revisao", web_app=True
+                    )
+                else:
+                    cliente.send_message(config.chat_id, texto, _url_do_botao(geral.telegram_url))
         except TelegramError as exc:
             _falha_envio(db, geral, config, registro, momento, exc)
             return
