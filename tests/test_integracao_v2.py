@@ -318,7 +318,11 @@ def test_axon_headers_historico_cifrado_e_cota_independente(db, usuario_a, monke
 
     async def requisitar(config, metodo, caminho, **kwargs):
         chamadas.append((metodo, caminho, kwargs))
+        assert config.endpoint == "https://axon.test/private/v1"
         if caminho == "/models":
+            # Uma alteração administrativa entre chamadas não troca o destinatário da execução.
+            c.endpoint = "https://outro.test/private/v1"
+            db.commit()
             return {
                 "data": [
                     {
@@ -458,3 +462,98 @@ def test_start_sem_vinculo_orienta_sem_dados(db, usuario_a, monkeypatch):
     assert enviar.call_args.args[0] == "999"
     assert "Vincular Telegram" in enviar.call_args.args[1]
     assert not db.scalar(select(TrabalhoTelegram).where(TrabalhoTelegram.update_id == "900"))
+
+
+def test_versao_datetime_independe_do_dialeto_e_offset():
+    from datetime import timedelta, timezone
+
+    utc = datetime(2026, 10, 29, 12, 30, tzinfo=UTC)
+    assert operacoes.versao({"data": utc}) == operacoes.versao({"data": utc.replace(tzinfo=None)})
+    assert operacoes.versao({"data": utc}) == operacoes.versao(
+        {"data": utc.astimezone(timezone(timedelta(hours=-3)))}
+    )
+
+
+def test_troca_conexao_exige_novo_consentimento(db, usuario_a, monkeypatch):
+    from app.models.integracao import CredencialIntegracao, PreferenciaIa
+    from app.routers.integracao import salvar
+    from app.schemas.integracao import ConfigIaUpdate
+
+    vincular(db, usuario_a)
+    c = integracao_auth.configuracao(db)
+    c.provedor, c.endpoint, c.modelo = "openai_compatible", "https://antigo.test/v1", "modelo"
+    p = PreferenciaIa(usuario_id=usuario_a.id, ativa=True)
+    db.add(p)
+    job = TrabalhoTelegram(
+        usuario_id=usuario_a.id,
+        bot_id="123",
+        update_id="consentimento",
+        chat_id=str(usuario_a.id),
+        status="executando",
+        evento="{}",
+    )
+    db.add(job)
+    db.commit()
+    integracao_auth.emitir(db, usuario_a.id, "delegada", job.id)
+    monkeypatch.setattr(provedor_ia, "validar_endpoint", lambda x: x)
+    salvar(
+        ConfigIaUpdate(
+            provedor={
+                "tipo": "openai_compatible",
+                "endpoint": "https://novo.test/v1",
+                "modelo": "modelo",
+                "chave": "fake",
+            }
+        ),
+        db,
+        usuario_a,
+    )
+    db.refresh(p)
+    assert not p.ativa
+    assert all(t.revogada for t in db.scalars(select(CredencialIntegracao)))
+
+
+def test_revisao_concorrente_aplica_uma_vez(db, usuario_a, session_factory, monkeypatch):
+    from concurrent.futures import ThreadPoolExecutor
+    from threading import Barrier, Lock
+
+    from app.schemas.revisao import RevisaoPreparar
+    from app.schemas.transacao import TransacaoUpdate
+
+    t = transacao(db, usuario_a)
+    uid = usuario_a.id
+    previa = operacoes.preparar_revisao(
+        db,
+        uid,
+        RevisaoPreparar(
+            transacao_id=t.id,
+            versao=operacoes.versao_transacao(t),
+            alteracoes=TransacaoUpdate(observacoes="salvo uma vez"),
+        ),
+    )
+    original = operacoes.executar_revisao
+    chamadas = []
+    lock = Lock()
+    ready = Barrier(2)
+
+    def executar(*args):
+        with lock:
+            chamadas.append(True)
+        return original(*args)
+
+    monkeypatch.setattr(operacoes, "executar_revisao", executar)
+    db.rollback()
+
+    def aplicar():
+        with session_factory() as s:
+            # Dois callbacks podem ter lido a mesma proposta pendente antes do lock.
+            op = s.get(OperacaoIntegracao, previa["operacao_id"])
+            assert op.status == "pendente"
+            ready.wait(timeout=10)
+            return operacoes.aplicar_revisao(s, uid, op.id)
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        futures = [pool.submit(aplicar) for _ in range(2)]
+        resultados = [f.result(timeout=20) for f in futures]
+    assert resultados[0] == resultados[1]
+    assert len(chamadas) == 1

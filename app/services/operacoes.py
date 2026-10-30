@@ -5,7 +5,7 @@ import json
 import secrets
 from datetime import UTC, datetime, timedelta
 
-from sqlalchemy import inspect, select
+from sqlalchemy import inspect, select, update
 from sqlalchemy.orm import Session
 
 from app.db.atomic import atomica
@@ -20,7 +20,29 @@ from app.security.current_user import _aware
 
 
 def serializar(obj) -> str:
-    return json.dumps(obj, ensure_ascii=False, sort_keys=True, default=str)
+    def normalizar(valor):
+        if isinstance(valor, datetime):
+            return _aware(valor).astimezone(UTC).isoformat()
+        return str(valor)
+
+    return json.dumps(obj, ensure_ascii=False, sort_keys=True, default=normalizar)
+
+
+def bloquear_operacao(db: Session, usuario_id: int, operacao_id: str):
+    # SELECT FOR UPDATE não bloqueia no SQLite. A escrita adquire o lock antes da leitura,
+    # e o refresh evita reutilizar a proposta pendente já carregada pelo callback.
+    db.execute(
+        update(OperacaoIntegracao)
+        .where(OperacaoIntegracao.id == operacao_id, OperacaoIntegracao.usuario_id == usuario_id)
+        .values(status=OperacaoIntegracao.status)
+        .execution_options(synchronize_session=False)
+    )
+    return db.scalar(
+        select(OperacaoIntegracao)
+        .where(OperacaoIntegracao.id == operacao_id, OperacaoIntegracao.usuario_id == usuario_id)
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    )
 
 
 def estado(db: Session, usuario_id: int) -> dict:
@@ -125,13 +147,7 @@ def preparar_revisao(db: Session, usuario_id: int, payload: RevisaoPreparar):
 
 def aplicar_revisao(db: Session, usuario_id: int, operacao_id: str):
     with atomica(db):
-        op = db.scalar(
-            select(OperacaoIntegracao)
-            .where(
-                OperacaoIntegracao.id == operacao_id, OperacaoIntegracao.usuario_id == usuario_id
-            )
-            .with_for_update()
-        )
+        op = bloquear_operacao(db, usuario_id, operacao_id)
         if not op or op.tipo != "revisao":
             raise NotFoundError("operação não encontrada")
         if op.status == "concluida":

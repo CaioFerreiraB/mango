@@ -30,6 +30,11 @@ async def conversar(db, trabalho, token):
     p = db.scalar(select(PreferenciaIa).where(PreferenciaIa.usuario_id == trabalho.usuario_id))
     if not c.ia_ativa or not c.validado or not p or not p.ativa:
         return "Ative a conversa em Configurações → Inteligência artificial no Mango."
+    # A execução conserva a conexão consentida mesmo se o admin alterar a configuração
+    # durante um commit/await; o objeto transitório não é recarregado pela sessão.
+    c = ConfigIntegracao(
+        **{col.key: getattr(c, col.key) for col in ConfigIntegracao.__table__.columns}
+    )
     # Um processo por bot; lock local também serializa a reserva no SQLite.
     with _cota:
         db.scalar(select(ConfigIntegracao).where(ConfigIntegracao.id == 1).with_for_update())
