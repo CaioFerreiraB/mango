@@ -4,13 +4,13 @@ from datetime import UTC, datetime, timedelta
 from urllib.parse import urlsplit
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.db.session import get_db
 from app.exceptions import ValidationError
-from app.models.integracao import PreferenciaIa
+from app.models.integracao import CredencialIntegracao, PreferenciaIa
 from app.models.telegram import ConfigTelegram
 from app.models.usuario import Usuario
 from app.schemas.integracao import (
@@ -70,6 +70,13 @@ def salvar(
     )
     if mudou:
         c.validado = False
+        # Consentimento vale para a conexão apresentada ao usuário, não para um novo destino.
+        db.execute(update(PreferenciaIa).values(ativa=False))
+        db.execute(
+            update(CredencialIntegracao)
+            .where(CredencialIntegracao.tipo == "delegada")
+            .values(revogada=True)
+        )
         if c.endpoint != endpoint or c.provedor != payload.provedor.tipo:
             c.chave = None
         c.modelo = modelo
@@ -83,10 +90,6 @@ def salvar(
     db.commit()
     if not c.ia_ativa:
         # Sessões do miniapp permanecem válidas: revogação aqui só atinge execuções de IA.
-        from sqlalchemy import update
-
-        from app.models.integracao import CredencialIntegracao
-
         db.execute(
             update(CredencialIntegracao)
             .where(CredencialIntegracao.tipo == "delegada")
@@ -127,10 +130,6 @@ def atualizar_preferencia(
     p.ativa = payload.ativa
     db.commit()
     if not p.ativa:
-        from sqlalchemy import update
-
-        from app.models.integracao import CredencialIntegracao
-
         db.execute(
             update(CredencialIntegracao)
             .where(

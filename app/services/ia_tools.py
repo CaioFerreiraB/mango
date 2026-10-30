@@ -17,7 +17,7 @@ from app.mcp.api import _tool_db
 from app.models.integracao import OperacaoIntegracao
 from app.security.current_user import _aware
 from app.services.integracao_auth import resolver
-from app.services.operacoes import serializar, versao
+from app.services.operacoes import bloquear_operacao, serializar, versao
 
 LEITURAS = frozenset(
     {
@@ -198,11 +198,7 @@ async def despachar(server, nome, args, ctx):
 
 async def aplicar(server, db, user_id, op_id, token):
     with atomica(db):
-        op = db.scalar(
-            select(OperacaoIntegracao)
-            .where(OperacaoIntegracao.id == op_id, OperacaoIntegracao.usuario_id == user_id)
-            .with_for_update()
-        )
+        op = bloquear_operacao(db, user_id, op_id)
         if not op or op.tipo != "ia" or op.status not in {"pendente", "preparando", "concluida"}:
             raise ToolError("operação indisponível")
         if op.status == "concluida":
