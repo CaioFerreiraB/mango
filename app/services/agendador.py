@@ -1,11 +1,6 @@
-"""Agendador do job mensal de materialização de orçamentos (§4.6, decisão #3).
+"""Rotina diária nos dois modos; orçamentos, saldos e fundamentos no self-hosted.
 
-Só faz sentido no **self-hosted** (container longevo). No desktop o app quase nunca está
-aberto no virar do mês; lá a correção vem do backstop (materialização na leitura do consumo
-e no fim do sync) — aqui só antecipamos a criação das linhas do mês no dia 1.
-
-O job é idempotente (`materializar_mes` nunca sobrescreve), então mesmo que rode duas vezes
-(ex.: dois workers) não duplica nem estraga dados.
+O desktop recupera a rotina diária ao abrir; demais jobs mantêm seus backstops existentes.
 """
 
 from __future__ import annotations
@@ -16,6 +11,7 @@ from datetime import datetime
 from apscheduler.schedulers.background import BackgroundScheduler
 from sqlalchemy import select
 
+from app.config import settings
 from app.db.session import SessionLocal
 from app.models.conta import Conta
 from app.models.investimento import Investimento
@@ -70,6 +66,20 @@ def iniciar() -> None:
     if _scheduler is not None:
         return
     _scheduler = BackgroundScheduler(timezone=SP)
+    from app.services.rotina_diaria import executar
+
+    _scheduler.add_job(
+        executar,
+        trigger="interval",
+        minutes=1,
+        id="rotina_diaria",
+        max_instances=1,
+        coalesce=True,
+        next_run_time=datetime.now(SP),
+    )
+    if settings.app_mode == "local":
+        _scheduler.start()
+        return
     # Dia 1 de cada mês, 00:05 (SP). `misfire_grace_time` cobre um atraso de boot no virar do mês.
     _scheduler.add_job(
         materializar_mes_corrente_todos,
@@ -101,7 +111,7 @@ def iniciar() -> None:
         id="fundamentos_fii",
     )
     _scheduler.start()
-    logger.info("agendador de orçamentos iniciado")
+    logger.info("agendador iniciado")
 
 
 def parar() -> None:

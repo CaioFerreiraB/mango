@@ -9,6 +9,7 @@ Só o criador pode editar/excluir (`obter_como_criador`); quitar/reabrir é mais
 from sqlalchemy import delete, or_, select
 from sqlalchemy.orm import Session
 
+from app.db.atomic import commit
 from app.models.divisao import DivisaoDespesa, DivisaoParticipante
 
 EscopoDivisao = str  # "todas" | "minhas" | "comigo" | "arquivadas" (validado no schema/router)
@@ -91,4 +92,4 @@ class DivisaoDespesaRepository:
 
     def remover(self, despesa: DivisaoDespesa) -> None:
         self.db.delete(despesa)
-        self.db.commit()
+        commit(self.db)

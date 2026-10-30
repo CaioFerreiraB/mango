@@ -10,6 +10,37 @@ ainda está se assentando. Cada versão publicada tem uma imagem correspondente 
 
 ## [Não publicado]
 
+## [0.4.0] — 2026-10-29
+
+### Adicionado
+
+- **Telegram v2:** miniapp HTTPS com revisão de transações, rascunhos por sessão e assistente de
+  divisão de contas; comandos independentes de IA e processamento durável dos updates.
+- **Inteligência artificial no Telegram:** provedores Axon e OpenAI-compatible, credenciais
+  administrativas cifradas, consentimento individual, histórico de sete dias e limites de uso.
+  Axon recebe autorização MCP temporária por execução, isolada por usuário. Exclusões, lotes
+  e efeitos propagados exigem confirmação no Mango.
+- **Revisão atômica:** prévia de efeitos, detecção de conflitos e idempotência para revisões,
+  assinaturas/regras contextuais e criação de divisões. IA e miniapp começam desligados.
+
+- **Telegram:** bot exclusivo por instalação, token cifrado e vínculo confirmado individualmente
+  em Configurações → Telegram. Relatório opcional com até dez pendências após a rotina diária,
+  com proteção contra reenvio em entregas incertas. Guia em [docs/telegram.md](docs/telegram.md).
+- **Sincronização automática diária:** configuração em Conexões, com horário ajustável (08:00 Brasília por padrão), nos modos
+  local e self-hosted, com recuperação do dia ao abrir e retentativas sem repetir relatórios.
+  Sync e relatórios começam desligados.
+
+### Alterado
+
+- O CRUD `/api/config-telegram` foi substituído pelas operações verificadas `/api/telegram`.
+  IDs antigos exigem nova vinculação; nenhum dado financeiro é alterado pela migração.
+
+### Corrigido
+
+- **Vínculo de investimentos em objetivos:** o seletor agora reúne as posições por ativo, como na
+  carteira, e informa quantas estão disponíveis. Selecionar um grupo vincula suas posições livres
+  em uma única operação; um conflito cancela o lote inteiro, sem transferir vínculos existentes.
+
 ## [0.3.0] — 2026-10-21
 
 ### Adicionado
@@ -161,7 +192,8 @@ Primeira versão publicada. Imagem única servindo API e interface, instalável 
 - Os endpoints de autenticação ainda não têm rate-limiting nem lockout. Ver **Problemas conhecidos**
   em [ROADMAP.md](ROADMAP.md) antes de expor a instância à internet aberta.
 
-[Não publicado]: https://github.com/CaioFerreiraB/mango/compare/v0.3.0...HEAD
+[Não publicado]: https://github.com/CaioFerreiraB/mango/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/CaioFerreiraB/mango/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/CaioFerreiraB/mango/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/CaioFerreiraB/mango/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/CaioFerreiraB/mango/compare/v0.1.0...v0.1.1

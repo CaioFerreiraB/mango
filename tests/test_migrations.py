@@ -159,3 +159,68 @@ def test_usuario_totp_login_habilitado_backfill(migration_url: str) -> None:
         assert valores == {"com2fa@mango.test": True, "sem2fa@mango.test": False}
 
     eng.dispose()
+
+
+def test_telegram_legado_exige_novo_vinculo(migration_url: str) -> None:
+    """IDs arbitrários/duplicados são apagados; dados financeiros ficam intactos."""
+    eng = create_db_engine(migration_url)
+    Base.metadata.drop_all(eng)
+    with eng.begin() as conn:
+        conn.execute(text("DROP TABLE IF EXISTS alembic_version"))
+    cfg = _alembic_config(migration_url)
+    command.upgrade(cfg, "fdf48cbfd18b")
+    with eng.begin() as conn:
+        for i in (1, 2):
+            conn.execute(
+                text(
+                    "INSERT INTO usuario (id, nome, email, tipo, ativo, is_admin, "
+                    "totp_login_habilitado) "
+                    "VALUES (:id, 'Pessoa', :email, 'completo', true, false, false)"
+                ),
+                {"id": i, "email": f"migracao-{i}@mango.test"},
+            )
+            conn.execute(
+                text(
+                    "INSERT INTO config_telegram (usuario_id, chat_id, ativo, "
+                    "notif_nova_transacao, "
+                    "notif_nao_revisadas, resumo_diario, resumo_semanal) "
+                    "VALUES (:id, '456', true, false, true, false, false)"
+                ),
+                {"id": i},
+            )
+        conn.execute(
+            text(
+                "INSERT INTO fonte_de_renda (usuario_id, nome, tipo, valor_estimado_centavos, "
+                "recorrencia) VALUES (1, 'Salário', 'fixa', 123456, 'mensal')"
+            )
+        )
+    command.upgrade(cfg, "head")
+    with eng.connect() as conn:
+        rows = conn.execute(
+            text(
+                "SELECT chat_id, ativo, notif_nao_revisadas, telegram_usuario_id "
+                "FROM config_telegram"
+            )
+        ).all()
+        assert len(rows) == 2
+        assert all(
+            r.chat_id is None
+            and not r.ativo
+            and not r.notif_nao_revisadas
+            and r.telegram_usuario_id is None
+            for r in rows
+        )
+        assert (
+            conn.execute(
+                text("SELECT valor_estimado_centavos FROM fonte_de_renda WHERE usuario_id = 1")
+            ).scalar_one()
+            == 123456
+        )
+        config = conn.execute(
+            text("SELECT telegram_ativo, sync_automatico, sync_horario FROM configuracao_sistema")
+        ).one()
+        assert not config.telegram_ativo and not config.sync_automatico
+        assert str(config.sync_horario).startswith("08:00")
+    command.downgrade(cfg, "fdf48cbfd18b")
+    command.upgrade(cfg, "head")
+    eng.dispose()

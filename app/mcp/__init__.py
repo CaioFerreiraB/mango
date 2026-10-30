@@ -46,6 +46,14 @@ def _host_local(request: Request) -> bool:
 
 
 def usuario_mcp(request: Request, db: Session = Depends(get_db)) -> Usuario:
+    token = bearer(request)
+    if token and token.startswith("mgi_"):
+        from app.services.integracao_auth import resolver
+
+        usuario, cred = resolver(db, token)
+        if cred.tipo != "delegada":
+            raise HTTPException(403, "sessão do miniapp não acessa MCP")
+        return usuario
     if settings.app_mode == "local":
         # Sem login no modo local: só a própria máquina fala com o MCP. Host/Origin locais barram
         # um site qualquer que tente alcançar o localhost pelo navegador (DNS rebinding).

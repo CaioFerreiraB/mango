@@ -3,7 +3,7 @@ de rateio/saldo mora em `app/services/divisao.py`). Rotas estáticas (`/resumo`,
 vêm antes de `/{despesa_id}`, mesmo cuidado de `app/routers/orcamento.py`.
 """
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
@@ -34,9 +34,14 @@ def listar(
 @router.post("", response_model=DivisaoDespesaRead, status_code=status.HTTP_201_CREATED)
 def criar(
     payload: DivisaoDespesaCreate,
+    idempotency_key: str | None = Header(default=None, min_length=16, max_length=128),
     db: Session = Depends(get_db),
     user: Usuario = Depends(get_current_user),
 ):
+    if idempotency_key:
+        from app.services.operacoes import criar_divisao_idempotente
+
+        return criar_divisao_idempotente(db, user.id, payload, idempotency_key)
     return divisao_service.criar(db, user.id, payload)
 
 

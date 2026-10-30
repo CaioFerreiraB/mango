@@ -11,7 +11,6 @@ from app.repositories.ativo import AtivoRepository
 from app.repositories.fatura import FaturaRepository
 from app.repositories.orcamento import OrcamentoMensalRepository
 from app.repositories.pluggy import InstituicaoRepository
-from app.repositories.telegram import ConfigTelegramRepository
 from app.routers import (
     acesso_mcp,
     admin_usuarios,
@@ -25,6 +24,7 @@ from app.routers import (
     divisao,
     fonte_de_renda,
     indicadores,
+    integracao,
     investimento,
     item,
     objetivo,
@@ -32,8 +32,10 @@ from app.routers import (
     perfil,
     pluggy,
     regra_categorizacao,
+    revisao,
     setup,
     sync,
+    telegram,
     transacao,
     usuarios,
 )
@@ -44,7 +46,6 @@ from app.routers.factory import make_crud_router, make_readonly_router
 from app.schemas import assinatura
 from app.schemas import ativo as ativo_schemas
 from app.schemas import orcamento as orcamento_schemas
-from app.schemas import telegram as telegram_schemas
 from app.schemas.cartao_fatura import FaturaRead
 from app.schemas.pluggy import InstituicaoRead
 from app.services.assinatura_match import revincular_assinatura
@@ -76,15 +77,6 @@ _crud = [
         read_schema=assinatura.AssinaturaRead,
         nome="assinatura",
         after_update=_revincular_ao_editar_aliases,
-    ),
-    make_crud_router(
-        prefix="/config-telegram",
-        tag="config_telegram",
-        repo_cls=ConfigTelegramRepository,
-        create_schema=telegram_schemas.ConfigTelegramCreate,
-        update_schema=telegram_schemas.ConfigTelegramUpdate,
-        read_schema=telegram_schemas.ConfigTelegramRead,
-        nome="config",
     ),
     make_crud_router(
         prefix="/orcamentos-mensais",
@@ -131,6 +123,7 @@ _manuais: list[APIRouter] = [
     orcamento.router,
     objetivo.router,  # CRUD + leitura enriquecida (valor guardado/progresso)
     transacao.router,
+    revisao.router,
     investimento.router,
     indicadores.router,  # dados de mercado p/ comparação da carteira (§4.9)
     categoria.router,
@@ -139,6 +132,8 @@ _manuais: list[APIRouter] = [
     configuracao.router,  # leitura aberta + escrita só admin (§4.11-otimização)
     usuarios.router,  # busca de usuários da instância (§4.11)
     admin_usuarios.router,  # gestão de usuários da instância — só o dono (§4.11)
+    telegram.router,
+    integracao.router,
     acesso_mcp.router,  # token de agentes (docs/mcp.md) — só por sessão, nunca pelo próprio token
 ]
 
@@ -158,6 +153,8 @@ all_routers: list[APIRouter] = [assinatura_router.router, *_crud, *_readonly, *_
 # identidade (`in` sobre uma tupla já usa `is`/`==`, sem precisar de hash).
 ROUTERS_ABERTOS_A_TODOS_OS_TIPOS: tuple[APIRouter, ...] = (
     setup.router,
+    integracao.router,
+    telegram.router,
     auth.router,
     convite.router,
     perfil.router,

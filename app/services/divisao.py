@@ -12,6 +12,7 @@ from datetime import UTC, datetime
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.db.atomic import commit
 from app.exceptions import NotFoundError, ValidationError
 from app.models.categoria import Categoria
 from app.models.convite import ConviteUsuario
@@ -145,7 +146,7 @@ def criar(db: Session, usuario_id: int, payload: DivisaoDespesaCreate) -> Divisa
         ids_validados,
     )
     repo.definir_participantes(despesa.id, linhas)
-    db.commit()
+    commit(db)
     db.refresh(despesa)
     return enriquecer(db, usuario_id, despesa)
 
@@ -174,7 +175,7 @@ def atualizar(
     repo.atualizar(despesa, **campos)
     linhas = _rateio(valor_total_centavos, modo_divisao, pago_por_usuario_id, ids_validados)
     repo.definir_participantes(despesa.id, linhas)
-    db.commit()
+    commit(db)
     db.refresh(despesa)
     return enriquecer(db, usuario_id, despesa)
 
@@ -196,7 +197,7 @@ def marcar_quitada(
     if despesa is None:
         raise NotFoundError("despesa não encontrada")
     despesa.quitada = quitada
-    db.commit()
+    commit(db)
     db.refresh(despesa)
     return enriquecer(db, usuario_id, despesa)
 

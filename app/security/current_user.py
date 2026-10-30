@@ -119,6 +119,13 @@ def _checar_rota_do_token(request: Request, acesso: AcessoMcp) -> None:
 
 
 def get_current_user(request: Request, db: Session = Depends(get_db)) -> Usuario:
+    token = bearer(request)
+    if token and token.startswith("mgi_"):
+        from app.services.integracao_auth import autorizar_rota, resolver
+
+        usuario, cred = resolver(db, token)
+        autorizar_rota(request, cred, usuario)
+        return usuario
     if settings.app_mode == "local":
         return _get_or_create_local_user(db)
     token = bearer(request)
@@ -144,4 +151,13 @@ def exigir_usuario_completo(user: Usuario = Depends(get_current_user)) -> Usuari
         raise HTTPException(
             status.HTTP_403_FORBIDDEN, "recurso não disponível para este tipo de conta"
         )
+    return user
+
+
+def require_admin_ou_local(user: Usuario = Depends(get_current_user)) -> Usuario:
+    """Configurações da instalação disponíveis também ao dono implícito do desktop."""
+    if not user.ativo or user.tipo != "completo":
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "recurso não disponível para esta conta")
+    if settings.app_mode != "local" and not user.is_admin:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "acesso restrito ao administrador")
     return user

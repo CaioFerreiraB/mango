@@ -1,3 +1,4 @@
+import { IaTab } from "@/components/configuracoes/ia-tab"
 import { useSearchParams } from "react-router"
 
 import { CategoriasTab } from "@/components/configuracoes/categorias-tab"
@@ -7,6 +8,7 @@ import { PerfilTab } from "@/components/configuracoes/perfil-tab"
 import { PreferenciasTab } from "@/components/configuracoes/preferencias-tab"
 import { SegurancaTab } from "@/components/configuracoes/seguranca-tab"
 import { SistemaTab } from "@/components/configuracoes/sistema-tab"
+import { TelegramTab } from "@/components/configuracoes/telegram-tab"
 import { UsuariosTab } from "@/components/configuracoes/usuarios-tab"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useMe, useSetupStatus } from "@/lib/api/auth"
@@ -32,7 +34,8 @@ export function ConfiguracoesPage() {
   // página fica só com a faixa de abas. Links de configuração são compartilháveis, então o estado
   // é alcançável; cair no padrão é o comportamento que não confunde.
   const abasVisiveis = [
-    ...(podeVerConexoes ? ["conexoes"] : []),
+    ...(podeVerConexoes ? ["conexoes", "ia"] : []),
+    "telegram",
     "perfil",
     "preferencias",
     "categorias",
@@ -66,6 +69,10 @@ export function ConfiguracoesPage() {
             {podeVerConexoes ? (
               <TabsTrigger value="conexoes">Conexões</TabsTrigger>
             ) : null}
+            <TabsTrigger value="telegram">Telegram</TabsTrigger>
+            {podeVerConexoes ? (
+              <TabsTrigger value="ia">Inteligência artificial</TabsTrigger>
+            ) : null}
             <TabsTrigger value="perfil">Perfil</TabsTrigger>
             <TabsTrigger value="preferencias">Preferências</TabsTrigger>
             <TabsTrigger value="categorias">Categorias</TabsTrigger>
@@ -84,6 +91,14 @@ export function ConfiguracoesPage() {
         {podeVerConexoes ? (
           <TabsContent value="conexoes" className="pt-4">
             <ConexoesTab />
+          </TabsContent>
+        ) : null}
+        <TabsContent value="telegram" className="pt-4">
+          <TelegramTab />
+        </TabsContent>
+        {podeVerConexoes ? (
+          <TabsContent value="ia" className="pt-4">
+            <IaTab />
           </TabsContent>
         ) : null}
         <TabsContent value="perfil" className="pt-4">

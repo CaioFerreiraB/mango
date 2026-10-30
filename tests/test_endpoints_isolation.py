@@ -4,7 +4,9 @@ import pytest
 from sqlalchemy.orm import Session
 
 from app.models.categoria import Categoria
+from app.models.investimento import Investimento
 from app.models.usuario import Usuario
+from tests.helpers import criar_conta
 
 # Id da taxonomia global usado pela regra de categorização (o payload de CASOS é estático).
 CATEGORIA_GLOBAL = "99999999"
@@ -66,6 +68,37 @@ def test_credencial_nao_devolve_segredo(client_factory, usuario_a: Usuario) -> N
     assert "client_id_cifrado" not in body
 
 
+def test_b_nao_vincula_investimento_de_a_a_objetivo(
+    client_factory, db: Session, usuario_a: Usuario, usuario_b: Usuario
+) -> None:
+    conta = criar_conta(db, usuario_a.id, "conta-isolamento-vinculo")
+    investimento = Investimento(
+        usuario_id=usuario_a.id,
+        item_id=conta.item_id,
+        pluggy_investment_id="investimento-isolamento-vinculo",
+        type="FIXED_INCOME",
+        saldo_centavos=10_000,
+    )
+    db.add(investimento)
+    db.commit()
+    client_a, client_b = client_factory(usuario_a), client_factory(usuario_b)
+    objetivo_a = client_a.post(
+        "/api/objetivos", json={"titulo": "Meta A", "valor_alvo_centavos": 100_000}
+    ).json()["id"]
+    objetivo_b = client_b.post(
+        "/api/objetivos", json={"titulo": "Meta B", "valor_alvo_centavos": 100_000}
+    ).json()["id"]
+
+    for objetivo_id in (objetivo_a, objetivo_b):
+        resposta = client_b.patch(
+            "/api/investimentos/posicao/objetivo",
+            json={"objetivo_id": objetivo_id, "investimento_ids": [investimento.id]},
+        )
+        assert resposta.status_code == 404, resposta.text
+    db.refresh(investimento)
+    assert investimento.objetivo_id is None
+
+
 def test_acesso_mcp_e_por_usuario(client_factory, usuario_a: Usuario, usuario_b: Usuario) -> None:
     """`/acesso-mcp` não tem id na rota (um acesso por usuário): o isolamento é B nunca ver,
     revelar, trocar nem apagar o token de A — cada um só alcança o próprio."""
@@ -83,3 +116,25 @@ def test_acesso_mcp_e_por_usuario(client_factory, usuario_a: Usuario, usuario_b:
     assert client_b.get("/api/acesso-mcp/token").json()["token"] != token_a
     assert client_a.get("/api/acesso-mcp/token").json()["token"] == token_a
     assert client_a.get("/api/acesso-mcp").json()["ativo"] is True
+
+
+def test_telegram_vinculo_e_preferencia_sao_individuais(client_factory, usuario_a, usuario_b, db):
+    from app.models.configuracao import ConfiguracaoSistema
+    from tests.test_telegram import candidato
+
+    db.add(ConfiguracaoSistema(id=1, telegram_ativo=True, telegram_username="mango_bot"))
+    db.commit()
+    a, b = client_factory(usuario_a), client_factory(usuario_b)
+    solicitacao = a.post("/api/telegram/vinculo").json()
+    candidato(db, solicitacao)
+    confirmar = {"solicitacao_id": solicitacao["solicitacao_id"]}
+    assert b.post("/api/telegram/vinculo/confirmar", json=confirmar).status_code == 409
+    assert b.get("/api/telegram").json()["candidato"] is None
+    assert a.post("/api/telegram/vinculo/confirmar", json=confirmar).status_code == 200
+    assert a.patch("/api/telegram", json={"notif_nao_revisadas": True}).status_code == 200
+    assert b.delete("/api/telegram/vinculo").status_code == 204
+    assert b.patch("/api/telegram", json={"notif_nao_revisadas": True}).status_code == 409
+    assert b.get("/api/telegram").json()["identidade"] is None
+    estado_a = a.get("/api/telegram").json()
+    assert estado_a["identidade"]["usuario_id"] == "456"
+    assert estado_a["notif_nao_revisadas"] is True

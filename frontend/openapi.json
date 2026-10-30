@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "mango",
-    "version": "0.2.0"
+    "version": "0.3.0"
   },
   "paths": {
     "/health": {
@@ -427,195 +427,6 @@
         ],
         "summary": "Remover",
         "operationId": "remover_api_assinaturas__item_id__delete",
-        "parameters": [
-          {
-            "name": "item_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "title": "Item Id"
-            }
-          }
-        ],
-        "responses": {
-          "204": {
-            "description": "Successful Response"
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/config-telegram": {
-      "get": {
-        "tags": [
-          "config_telegram"
-        ],
-        "summary": "Listar",
-        "operationId": "listar_api_config_telegram_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/ConfigTelegramRead"
-                  },
-                  "type": "array",
-                  "title": "Response Listar Api Config Telegram Get"
-                }
-              }
-            }
-          }
-        }
-      },
-      "post": {
-        "tags": [
-          "config_telegram"
-        ],
-        "summary": "Criar",
-        "operationId": "criar_api_config_telegram_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ConfigTelegramCreate"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "201": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ConfigTelegramRead"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/config-telegram/{item_id}": {
-      "get": {
-        "tags": [
-          "config_telegram"
-        ],
-        "summary": "Obter",
-        "operationId": "obter_api_config_telegram__item_id__get",
-        "parameters": [
-          {
-            "name": "item_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "title": "Item Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ConfigTelegramRead"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
-      "patch": {
-        "tags": [
-          "config_telegram"
-        ],
-        "summary": "Atualizar",
-        "operationId": "atualizar_api_config_telegram__item_id__patch",
-        "parameters": [
-          {
-            "name": "item_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "title": "Item Id"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ConfigTelegramUpdate"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ConfigTelegramRead"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
-      "delete": {
-        "tags": [
-          "config_telegram"
-        ],
-        "summary": "Remover",
-        "operationId": "remover_api_config_telegram__item_id__delete",
         "parameters": [
           {
             "name": "item_id",
@@ -2606,6 +2417,66 @@
         }
       }
     },
+    "/api/sync/configuracao": {
+      "get": {
+        "tags": [
+          "sync"
+        ],
+        "summary": "Obter Configuracao",
+        "operationId": "obter_configuracao_api_sync_configuracao_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfiguracaoSyncRead"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "sync"
+        ],
+        "summary": "Atualizar Configuracao",
+        "operationId": "atualizar_configuracao_api_sync_configuracao_patch",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfiguracaoSyncUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfiguracaoSyncRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/dashboard": {
       "get": {
         "tags": [
@@ -3685,6 +3556,180 @@
         }
       }
     },
+    "/api/revisao": {
+      "get": {
+        "tags": [
+          "revisao"
+        ],
+        "summary": "Fila",
+        "operationId": "fila_api_revisao_get",
+        "parameters": [
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RevisaoFila"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/revisao/preparar": {
+      "post": {
+        "tags": [
+          "revisao"
+        ],
+        "summary": "Preparar",
+        "operationId": "preparar_api_revisao_preparar_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RevisaoPreparar"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RevisaoPrevia"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/revisao/aplicar": {
+      "post": {
+        "tags": [
+          "revisao"
+        ],
+        "summary": "Aplicar",
+        "operationId": "aplicar_api_revisao_aplicar_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OperacaoAplicar"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RevisaoItem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/revisao/{transacao_id}": {
+      "get": {
+        "tags": [
+          "revisao"
+        ],
+        "summary": "Item",
+        "operationId": "item_api_revisao__transacao_id__get",
+        "parameters": [
+          {
+            "name": "transacao_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Transacao Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RevisaoItem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/investimentos": {
       "get": {
         "tags": [
@@ -3823,6 +3868,40 @@
                 }
               }
             }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/investimentos/posicao/objetivo": {
+      "patch": {
+        "tags": [
+          "investimento"
+        ],
+        "summary": "Vincular Objetivo Posicao",
+        "operationId": "vincular_objetivo_posicao_api_investimentos_posicao_objetivo_patch",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InvestimentoPosicaoObjetivo"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
           },
           "422": {
             "description": "Validation Error",
@@ -5035,6 +5114,26 @@
         ],
         "summary": "Criar",
         "operationId": "criar_api_divisoes_despesa_post",
+        "parameters": [
+          {
+            "name": "idempotency-key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 16,
+                  "maxLength": 128
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -5695,6 +5794,489 @@
         "responses": {
           "204": {
             "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/telegram": {
+      "get": {
+        "tags": [
+          "telegram"
+        ],
+        "summary": "Obter",
+        "operationId": "obter_api_telegram_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TelegramRead"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "telegram"
+        ],
+        "summary": "Atualizar",
+        "operationId": "atualizar_api_telegram_patch",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TelegramUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TelegramRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/telegram/vinculo": {
+      "post": {
+        "tags": [
+          "telegram"
+        ],
+        "summary": "Criar Vinculo",
+        "operationId": "criar_vinculo_api_telegram_vinculo_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VinculoRead"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "telegram"
+        ],
+        "summary": "Desvincular",
+        "operationId": "desvincular_api_telegram_vinculo_delete",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          }
+        }
+      }
+    },
+    "/api/telegram/vinculo/confirmar": {
+      "post": {
+        "tags": [
+          "telegram"
+        ],
+        "summary": "Confirmar",
+        "operationId": "confirmar_api_telegram_vinculo_confirmar_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VinculoConfirmar"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TelegramRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/telegram/testar": {
+      "post": {
+        "tags": [
+          "telegram"
+        ],
+        "summary": "Testar",
+        "operationId": "testar_api_telegram_testar_post",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          }
+        }
+      }
+    },
+    "/api/telegram/instancia": {
+      "get": {
+        "tags": [
+          "telegram"
+        ],
+        "summary": "Obter Instancia",
+        "operationId": "obter_instancia_api_telegram_instancia_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TelegramInstanciaRead"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "telegram"
+        ],
+        "summary": "Remover Instancia",
+        "operationId": "remover_instancia_api_telegram_instancia_delete",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "telegram"
+        ],
+        "summary": "Atualizar Instancia",
+        "operationId": "atualizar_instancia_api_telegram_instancia_patch",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TelegramInstanciaUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TelegramInstanciaRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/telegram/instancia/testar": {
+      "post": {
+        "tags": [
+          "telegram"
+        ],
+        "summary": "Testar Instancia",
+        "operationId": "testar_instancia_api_telegram_instancia_testar_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TelegramInstanciaRead"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ia/instancia": {
+      "get": {
+        "tags": [
+          "integracao"
+        ],
+        "summary": "Obter",
+        "operationId": "obter_api_ia_instancia_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfigIaRead"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "integracao"
+        ],
+        "summary": "Salvar",
+        "operationId": "salvar_api_ia_instancia_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfigIaUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfigIaRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ia/instancia/testar": {
+      "post": {
+        "tags": [
+          "integracao"
+        ],
+        "summary": "Testar",
+        "operationId": "testar_api_ia_instancia_testar_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfigIaRead"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ia/preferencias": {
+      "get": {
+        "tags": [
+          "integracao"
+        ],
+        "summary": "Preferencia",
+        "operationId": "preferencia_api_ia_preferencias_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PreferenciaIaRead"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "integracao"
+        ],
+        "summary": "Atualizar Preferencia",
+        "operationId": "atualizar_preferencia_api_ia_preferencias_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PreferenciaIaUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PreferenciaIaRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/telegram/miniapp/config": {
+      "get": {
+        "tags": [
+          "integracao"
+        ],
+        "summary": "Miniapp Config",
+        "operationId": "miniapp_config_api_telegram_miniapp_config_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MiniappConfig"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "integracao"
+        ],
+        "summary": "Miniapp Salvar",
+        "operationId": "miniapp_salvar_api_telegram_miniapp_config_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MiniappConfig"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MiniappConfig"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/telegram/miniapp/sessao": {
+      "post": {
+        "tags": [
+          "integracao"
+        ],
+        "summary": "Login",
+        "operationId": "login_api_telegram_miniapp_sessao_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MiniappLogin"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MiniappSessao"
+                }
+              }
+            }
           },
           "422": {
             "description": "Validation Error",
@@ -7725,93 +8307,17 @@
         "title": "CategoriaUpdate",
         "description": "`nome` e `icone` só valem para personalizada; `ativa` vale para as duas (é estado por\nusuário)."
       },
-      "ConfigTelegramCreate": {
+      "ConfigIaRead": {
         "properties": {
-          "chat_id": {
-            "anyOf": [
-              {
-                "type": "string",
-                "maxLength": 64
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Chat Id"
-          },
-          "ativo": {
+          "ativa": {
             "type": "boolean",
-            "title": "Ativo",
-            "default": false
+            "title": "Ativa"
           },
-          "notif_nova_transacao": {
-            "type": "boolean",
-            "title": "Notif Nova Transacao",
-            "default": false
+          "provedor": {
+            "type": "string",
+            "title": "Provedor"
           },
-          "notif_nao_revisadas": {
-            "type": "boolean",
-            "title": "Notif Nao Revisadas",
-            "default": false
-          },
-          "horario_1": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Horario 1"
-          },
-          "horario_2": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Horario 2"
-          },
-          "resumo_diario": {
-            "type": "boolean",
-            "title": "Resumo Diario",
-            "default": false
-          },
-          "resumo_semanal": {
-            "type": "boolean",
-            "title": "Resumo Semanal",
-            "default": false
-          },
-          "dia_semana": {
-            "anyOf": [
-              {
-                "type": "integer",
-                "maximum": 6.0,
-                "minimum": 0.0
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Dia Semana"
-          }
-        },
-        "type": "object",
-        "title": "ConfigTelegramCreate"
-      },
-      "ConfigTelegramRead": {
-        "properties": {
-          "id": {
-            "type": "integer",
-            "title": "Id"
-          },
-          "chat_id": {
+          "endpoint": {
             "anyOf": [
               {
                 "type": "string"
@@ -7820,201 +8326,96 @@
                 "type": "null"
               }
             ],
-            "title": "Chat Id"
+            "title": "Endpoint"
           },
-          "ativo": {
-            "type": "boolean",
-            "title": "Ativo"
-          },
-          "notif_nova_transacao": {
-            "type": "boolean",
-            "title": "Notif Nova Transacao"
-          },
-          "notif_nao_revisadas": {
-            "type": "boolean",
-            "title": "Notif Nao Revisadas"
-          },
-          "horario_1": {
+          "modelo": {
             "anyOf": [
               {
-                "type": "string",
-                "format": "time"
+                "type": "string"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Horario 1"
+            "title": "Modelo"
           },
-          "horario_2": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Horario 2"
-          },
-          "resumo_diario": {
+          "configurada": {
             "type": "boolean",
-            "title": "Resumo Diario"
+            "title": "Configurada"
           },
-          "resumo_semanal": {
+          "validada": {
             "type": "boolean",
-            "title": "Resumo Semanal"
+            "title": "Validada"
           },
-          "dia_semana": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Dia Semana"
-          },
-          "usuario_id": {
+          "limite_usuario": {
             "type": "integer",
-            "title": "Usuario Id"
+            "title": "Limite Usuario"
           },
-          "criado_em": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Criado Em"
-          },
-          "atualizado_em": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Atualizado Em"
+          "limite_instancia": {
+            "type": "integer",
+            "title": "Limite Instancia"
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
-          "id",
-          "ativo",
-          "notif_nova_transacao",
-          "notif_nao_revisadas",
-          "resumo_diario",
-          "resumo_semanal",
-          "usuario_id",
-          "criado_em",
-          "atualizado_em"
+          "ativa",
+          "provedor",
+          "endpoint",
+          "modelo",
+          "configurada",
+          "validada",
+          "limite_usuario",
+          "limite_instancia"
         ],
-        "title": "ConfigTelegramRead"
+        "title": "ConfigIaRead"
       },
-      "ConfigTelegramUpdate": {
+      "ConfigIaUpdate": {
         "properties": {
-          "chat_id": {
-            "anyOf": [
-              {
-                "type": "string",
-                "maxLength": 64
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Chat Id"
+          "ativa": {
+            "type": "boolean",
+            "title": "Ativa",
+            "default": false
           },
-          "ativo": {
-            "anyOf": [
+          "provedor": {
+            "oneOf": [
               {
-                "type": "boolean"
+                "$ref": "#/components/schemas/ProvedorAxon"
               },
               {
-                "type": "null"
+                "$ref": "#/components/schemas/ProvedorOpenai"
               }
             ],
-            "title": "Ativo"
+            "title": "Provedor",
+            "discriminator": {
+              "propertyName": "tipo",
+              "mapping": {
+                "axon": "#/components/schemas/ProvedorAxon",
+                "openai_compatible": "#/components/schemas/ProvedorOpenai"
+              }
+            }
           },
-          "notif_nova_transacao": {
-            "anyOf": [
-              {
-                "type": "boolean"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Notif Nova Transacao"
+          "limite_usuario": {
+            "type": "integer",
+            "maximum": 10000.0,
+            "minimum": 1.0,
+            "title": "Limite Usuario",
+            "default": 50
           },
-          "notif_nao_revisadas": {
-            "anyOf": [
-              {
-                "type": "boolean"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Notif Nao Revisadas"
-          },
-          "horario_1": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Horario 1"
-          },
-          "horario_2": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Horario 2"
-          },
-          "resumo_diario": {
-            "anyOf": [
-              {
-                "type": "boolean"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Resumo Diario"
-          },
-          "resumo_semanal": {
-            "anyOf": [
-              {
-                "type": "boolean"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Resumo Semanal"
-          },
-          "dia_semana": {
-            "anyOf": [
-              {
-                "type": "integer",
-                "maximum": 6.0,
-                "minimum": 0.0
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Dia Semana"
+          "limite_instancia": {
+            "type": "integer",
+            "maximum": 100000.0,
+            "minimum": 1.0,
+            "title": "Limite Instancia",
+            "default": 500
           }
         },
+        "additionalProperties": false,
         "type": "object",
-        "title": "ConfigTelegramUpdate"
+        "required": [
+          "provedor"
+        ],
+        "title": "ConfigIaUpdate"
       },
       "ConfiguracaoSistemaRead": {
         "properties": {
@@ -8041,6 +8442,55 @@
           "otimizar_transacoes_divisao"
         ],
         "title": "ConfiguracaoSistemaUpdate"
+      },
+      "ConfiguracaoSyncRead": {
+        "properties": {
+          "sync_automatico": {
+            "type": "boolean",
+            "title": "Sync Automatico"
+          },
+          "sync_horario": {
+            "type": "string",
+            "format": "time",
+            "title": "Sync Horario"
+          }
+        },
+        "type": "object",
+        "required": [
+          "sync_automatico",
+          "sync_horario"
+        ],
+        "title": "ConfiguracaoSyncRead"
+      },
+      "ConfiguracaoSyncUpdate": {
+        "properties": {
+          "sync_automatico": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sync Automatico"
+          },
+          "sync_horario": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sync Horario"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "ConfiguracaoSyncUpdate"
       },
       "ConfirmarConviteRequest": {
         "properties": {
@@ -9934,6 +10384,43 @@
         "type": "object",
         "title": "HTTPValidationError"
       },
+      "IdentidadeTelegram": {
+        "properties": {
+          "usuario_id": {
+            "type": "string",
+            "title": "Usuario Id"
+          },
+          "nome": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nome"
+          },
+          "username": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Username"
+          }
+        },
+        "type": "object",
+        "required": [
+          "usuario_id",
+          "nome",
+          "username"
+        ],
+        "title": "IdentidadeTelegram"
+      },
       "IndicadorInfo": {
         "properties": {
           "codigo": {
@@ -10106,6 +10593,31 @@
           "atualizado_em"
         ],
         "title": "InstituicaoRead"
+      },
+      "InvestimentoPosicaoObjetivo": {
+        "properties": {
+          "objetivo_id": {
+            "type": "integer",
+            "exclusiveMinimum": 0.0,
+            "title": "Objetivo Id"
+          },
+          "investimento_ids": {
+            "items": {
+              "type": "integer",
+              "exclusiveMinimum": 0.0
+            },
+            "type": "array",
+            "maxItems": 200,
+            "minItems": 1,
+            "title": "Investimento Ids"
+          }
+        },
+        "type": "object",
+        "required": [
+          "objetivo_id",
+          "investimento_ids"
+        ],
+        "title": "InvestimentoPosicaoObjetivo"
       },
       "InvestimentoRead": {
         "properties": {
@@ -11103,6 +11615,65 @@
         ],
         "title": "MeRead"
       },
+      "MiniappConfig": {
+        "properties": {
+          "ativo": {
+            "type": "boolean",
+            "title": "Ativo",
+            "default": false
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 1024
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "MiniappConfig"
+      },
+      "MiniappLogin": {
+        "properties": {
+          "init_data": {
+            "type": "string",
+            "maxLength": 16384,
+            "minLength": 1,
+            "title": "Init Data"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "init_data"
+        ],
+        "title": "MiniappLogin"
+      },
+      "MiniappSessao": {
+        "properties": {
+          "token": {
+            "type": "string",
+            "title": "Token"
+          },
+          "expira_em": {
+            "type": "string",
+            "title": "Expira Em"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "token",
+          "expira_em"
+        ],
+        "title": "MiniappSessao"
+      },
       "MudarTipoRequest": {
         "properties": {
           "tipo": {
@@ -11411,6 +11982,22 @@
         ],
         "title": "ObjetivoVinculo",
         "description": "Uma conta ou investimento vinculado ao objetivo (para a UI de vínculo)."
+      },
+      "OperacaoAplicar": {
+        "properties": {
+          "operacao_id": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Operacao Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "operacao_id"
+        ],
+        "title": "OperacaoAplicar"
       },
       "OrcamentoConsumoItem": {
         "properties": {
@@ -12170,6 +12757,119 @@
         ],
         "title": "PluggyCredenciais"
       },
+      "PreferenciaIaRead": {
+        "properties": {
+          "ativa": {
+            "type": "boolean",
+            "title": "Ativa"
+          },
+          "disponivel": {
+            "type": "boolean",
+            "title": "Disponivel"
+          },
+          "provedor": {
+            "type": "string",
+            "title": "Provedor"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "ativa",
+          "disponivel",
+          "provedor"
+        ],
+        "title": "PreferenciaIaRead"
+      },
+      "PreferenciaIaUpdate": {
+        "properties": {
+          "ativa": {
+            "type": "boolean",
+            "title": "Ativa"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "ativa"
+        ],
+        "title": "PreferenciaIaUpdate"
+      },
+      "ProvedorAxon": {
+        "properties": {
+          "tipo": {
+            "type": "string",
+            "const": "axon",
+            "title": "Tipo"
+          },
+          "endpoint": {
+            "type": "string",
+            "maxLength": 1024,
+            "title": "Endpoint"
+          },
+          "chave": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 4096,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chave"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "tipo",
+          "endpoint"
+        ],
+        "title": "ProvedorAxon"
+      },
+      "ProvedorOpenai": {
+        "properties": {
+          "tipo": {
+            "type": "string",
+            "const": "openai_compatible",
+            "title": "Tipo"
+          },
+          "endpoint": {
+            "type": "string",
+            "maxLength": 1024,
+            "title": "Endpoint"
+          },
+          "chave": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 4096,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chave"
+          },
+          "modelo": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Modelo"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "tipo",
+          "endpoint",
+          "modelo"
+        ],
+        "title": "ProvedorOpenai"
+      },
       "ProventosFII": {
         "properties": {
           "investimento_id": {
@@ -12443,6 +13143,546 @@
         ],
         "title": "ResumoSyncRead"
       },
+      "RevisaoFila": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/RevisaoItem"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "cursor": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cursor"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "items",
+          "total",
+          "cursor"
+        ],
+        "title": "RevisaoFila"
+      },
+      "RevisaoItem": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "conta_id": {
+            "type": "integer",
+            "title": "Conta Id"
+          },
+          "pluggy_transaction_id": {
+            "type": "string",
+            "title": "Pluggy Transaction Id"
+          },
+          "date": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Date"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "description_raw": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description Raw"
+          },
+          "amount_centavos": {
+            "type": "integer",
+            "title": "Amount Centavos"
+          },
+          "amount_in_account_currency_centavos": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount In Account Currency Centavos"
+          },
+          "currency_code": {
+            "type": "string",
+            "title": "Currency Code"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "balance_centavos": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Balance Centavos"
+          },
+          "categoria_pluggy_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Categoria Pluggy Id"
+          },
+          "categoria_override_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Categoria Override Id"
+          },
+          "categoria_ajustada_usuario": {
+            "type": "boolean",
+            "title": "Categoria Ajustada Usuario"
+          },
+          "categoria_regra_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Categoria Regra Id"
+          },
+          "merchant_cnpj": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Merchant Cnpj"
+          },
+          "merchant_cnae": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Merchant Cnae"
+          },
+          "merchant_nome": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Merchant Nome"
+          },
+          "merchant_categoria": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Merchant Categoria"
+          },
+          "operation_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Operation Type"
+          },
+          "provider_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider Code"
+          },
+          "provider_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider Id"
+          },
+          "ordem": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ordem"
+          },
+          "bill_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bill Id"
+          },
+          "installment_number": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Installment Number"
+          },
+          "total_installments": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Installments"
+          },
+          "total_amount_centavos": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Amount Centavos"
+          },
+          "payee_mcc": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payee Mcc"
+          },
+          "eh_transferencia": {
+            "type": "boolean",
+            "title": "Eh Transferencia"
+          },
+          "revisada": {
+            "type": "boolean",
+            "title": "Revisada"
+          },
+          "descricao_usuario": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Descricao Usuario"
+          },
+          "observacoes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Observacoes"
+          },
+          "contraparte_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contraparte Id"
+          },
+          "transferencia_origem": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Transferencia Origem"
+          },
+          "assinatura_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assinatura Id"
+          },
+          "nao_e_assinatura": {
+            "type": "boolean",
+            "title": "Nao E Assinatura"
+          },
+          "investimento_transacao_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Investimento Transacao Id"
+          },
+          "pluggy_criado_em": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pluggy Criado Em"
+          },
+          "pluggy_atualizado_em": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pluggy Atualizado Em"
+          },
+          "usuario_id": {
+            "type": "integer",
+            "title": "Usuario Id"
+          },
+          "criado_em": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Criado Em"
+          },
+          "atualizado_em": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Atualizado Em"
+          },
+          "categoria_efetiva_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Categoria Efetiva Id"
+          },
+          "categoria_origem": {
+            "type": "string",
+            "enum": [
+              "assinatura",
+              "manual",
+              "regra",
+              "banco",
+              "desconhecida"
+            ],
+            "title": "Categoria Origem",
+            "default": "desconhecida"
+          },
+          "parcelas_atualizadas": {
+            "type": "integer",
+            "title": "Parcelas Atualizadas",
+            "default": 0
+          },
+          "versao": {
+            "type": "string",
+            "title": "Versao"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "conta_id",
+          "pluggy_transaction_id",
+          "date",
+          "amount_centavos",
+          "currency_code",
+          "type",
+          "status",
+          "categoria_ajustada_usuario",
+          "eh_transferencia",
+          "revisada",
+          "nao_e_assinatura",
+          "usuario_id",
+          "criado_em",
+          "atualizado_em",
+          "versao"
+        ],
+        "title": "RevisaoItem"
+      },
+      "RevisaoPreparar": {
+        "properties": {
+          "transacao_id": {
+            "type": "integer",
+            "title": "Transacao Id"
+          },
+          "versao": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 64,
+            "title": "Versao"
+          },
+          "alteracoes": {
+            "$ref": "#/components/schemas/TransacaoUpdate"
+          },
+          "assinatura": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AssinaturaCreate"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "regra": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RegraCategorizacaoCreate"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "transacao_id",
+          "versao",
+          "alteracoes"
+        ],
+        "title": "RevisaoPreparar"
+      },
+      "RevisaoPrevia": {
+        "properties": {
+          "operacao_id": {
+            "type": "string",
+            "title": "Operacao Id"
+          },
+          "transacoes_afetadas": {
+            "type": "integer",
+            "title": "Transacoes Afetadas"
+          },
+          "exige_confirmacao": {
+            "type": "boolean",
+            "title": "Exige Confirmacao"
+          },
+          "efeitos": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Efeitos"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "operacao_id",
+          "transacoes_afetadas",
+          "exige_confirmacao",
+          "efeitos"
+        ],
+        "title": "RevisaoPrevia"
+      },
       "SaldoDiarioPonto": {
         "properties": {
           "data": {
@@ -12644,6 +13884,240 @@
           "app_mode"
         ],
         "title": "SetupStatus"
+      },
+      "TelegramInstanciaRead": {
+        "properties": {
+          "configurado": {
+            "type": "boolean",
+            "title": "Configurado"
+          },
+          "bot_username": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bot Username"
+          },
+          "ativo": {
+            "type": "boolean",
+            "title": "Ativo"
+          },
+          "erro": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Erro"
+          }
+        },
+        "type": "object",
+        "required": [
+          "configurado",
+          "bot_username",
+          "ativo",
+          "erro"
+        ],
+        "title": "TelegramInstanciaRead"
+      },
+      "TelegramInstanciaUpdate": {
+        "properties": {
+          "token": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 256,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Token"
+          },
+          "ativo": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ativo"
+          },
+          "confirmar_troca_bot": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confirmar Troca Bot"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "TelegramInstanciaUpdate"
+      },
+      "TelegramRead": {
+        "properties": {
+          "configurado": {
+            "type": "boolean",
+            "title": "Configurado"
+          },
+          "bot_username": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bot Username"
+          },
+          "ativo": {
+            "type": "boolean",
+            "title": "Ativo"
+          },
+          "vinculado": {
+            "type": "boolean",
+            "title": "Vinculado"
+          },
+          "identidade": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/IdentidadeTelegram"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "candidato": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/IdentidadeTelegram"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "solicitacao_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Solicitacao Id"
+          },
+          "vinculo_expira_em": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vinculo Expira Em"
+          },
+          "notif_nao_revisadas": {
+            "type": "boolean",
+            "title": "Notif Nao Revisadas"
+          },
+          "ultimo_envio_em": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ultimo Envio Em"
+          },
+          "erro": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Erro"
+          },
+          "sync_automatico": {
+            "type": "boolean",
+            "title": "Sync Automatico"
+          },
+          "sync_horario": {
+            "type": "string",
+            "format": "time",
+            "title": "Sync Horario"
+          },
+          "proxima_rotina": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Proxima Rotina"
+          }
+        },
+        "type": "object",
+        "required": [
+          "configurado",
+          "bot_username",
+          "ativo",
+          "vinculado",
+          "identidade",
+          "candidato",
+          "solicitacao_id",
+          "vinculo_expira_em",
+          "notif_nao_revisadas",
+          "ultimo_envio_em",
+          "erro",
+          "sync_automatico",
+          "sync_horario",
+          "proxima_rotina"
+        ],
+        "title": "TelegramRead"
+      },
+      "TelegramUpdate": {
+        "properties": {
+          "notif_nao_revisadas": {
+            "type": "boolean",
+            "title": "Notif Nao Revisadas"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "notif_nao_revisadas"
+        ],
+        "title": "TelegramUpdate"
       },
       "TokenMcp": {
         "properties": {
@@ -13422,6 +14896,46 @@
           "type"
         ],
         "title": "ValidationError"
+      },
+      "VinculoConfirmar": {
+        "properties": {
+          "solicitacao_id": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Solicitacao Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "solicitacao_id"
+        ],
+        "title": "VinculoConfirmar"
+      },
+      "VinculoRead": {
+        "properties": {
+          "solicitacao_id": {
+            "type": "string",
+            "title": "Solicitacao Id"
+          },
+          "url": {
+            "type": "string",
+            "title": "Url"
+          },
+          "expira_em": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Expira Em"
+          }
+        },
+        "type": "object",
+        "required": [
+          "solicitacao_id",
+          "url",
+          "expira_em"
+        ],
+        "title": "VinculoRead"
       },
       "VisaoGeralInvestimentos": {
         "properties": {

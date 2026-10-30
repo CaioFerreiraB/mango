@@ -23,6 +23,7 @@ from app.schemas.investimento import (
     CarteiraSerie,
     CotaSeriePonto,
     FundamentosFII,
+    InvestimentoPosicaoObjetivo,
     InvestimentoRead,
     InvestimentoTransacaoRead,
     InvestimentoUpdate,
@@ -86,6 +87,17 @@ def serie(
 # --- posição (grupo de investimento_ids do drawer) ------------------------------------
 # Rotas fixas `/posicao/*` antes de `/{investimento_id}`. `ids` vem do cliente → cada id é
 # validado (posse) no serviço; id de outro usuário/inexistente vira 404 (barra IDOR, S3).
+
+
+@router.patch("/posicao/objetivo", status_code=status.HTTP_204_NO_CONTENT)
+def vincular_objetivo_posicao(
+    payload: InvestimentoPosicaoObjetivo,
+    db: Session = Depends(get_db),
+    user: Usuario = Depends(get_current_user),
+) -> None:
+    carteira_service.vincular_objetivo_posicao(
+        db, user.id, payload.investimento_ids, payload.objetivo_id
+    )
 
 
 @router.get("/posicao/transacoes", response_model=list[InvestimentoTransacaoRead])

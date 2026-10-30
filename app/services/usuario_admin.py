@@ -60,6 +60,9 @@ def desativar(db: Session, admin: Usuario, usuario_id: int) -> UsuarioAdminRead:
     db.commit()
     db.refresh(usuario)
     revogar_todas(db, usuario.id)  # derruba sessões vivas na hora, não espera o próximo 401
+    from app.services.telegram_conversa import cancelar
+
+    cancelar(db, usuario.id, None)
     return _para_admin_read(usuario)
 
 
@@ -74,6 +77,9 @@ def mudar_tipo(db: Session, admin: Usuario, usuario_id: int, tipo: str) -> Usuar
     usuario.tipo = tipo
     db.commit()
     db.refresh(usuario)
+    from app.services.telegram_conversa import cancelar
+
+    cancelar(db, usuario.id, None)
     if rebaixando:
         revogar_todas(db, usuario.id)  # perde acesso a módulos que a sessão atual pode ter aberto
     return _para_admin_read(usuario)

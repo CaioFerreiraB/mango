@@ -6,11 +6,14 @@ Erro HTTP vira `ToolError`, que chega ao agente como `isError` com a mensagem do
 """
 
 import unicodedata
+from contextvars import ContextVar
 from typing import Any
 
 import httpx
 from mcp.server.mcpserver import Context
 from mcp.server.mcpserver.exceptions import ToolError
+
+_tool_db: ContextVar = ContextVar("mango_tool_db", default=None)
 
 
 async def api(
@@ -23,7 +26,13 @@ async def api(
     if autorizacao:
         headers["authorization"] = autorizacao
     params = {k: v for k, v in (params or {}).items() if v is not None}
-    transporte = httpx.ASGITransport(app=app)
+
+    async def interno(scope, receive, send):
+        if _tool_db.get() is not None:
+            scope = {**scope, "mango_db": _tool_db.get()}
+        await app(scope, receive, send)
+
+    transporte = httpx.ASGITransport(app=interno)
     async with httpx.AsyncClient(transport=transporte, base_url="http://mango") as cliente:
         resposta = await cliente.request(
             metodo, "/api" + caminho, params=params, json=corpo, headers=headers
