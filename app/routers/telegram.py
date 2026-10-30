@@ -24,7 +24,7 @@ router = APIRouter(prefix="/telegram", tags=["telegram"])
 
 
 def _usuario(user: Usuario = Depends(get_current_user)) -> Usuario:
-    if not user.ativo or user.tipo != "completo":
+    if not user.ativo:
         raise HTTPException(403, "recurso não disponível para esta conta")
     return user
 

@@ -13,6 +13,7 @@ from app.models import (  # noqa: F401
     divisao,
     fii_fundamento,
     fonte_de_renda,
+    integracao,
     investimento,
     investimento_saldo_diario,
     objetivo,

@@ -10,6 +10,7 @@ taxonomia do Pluggy) com linha do usuário (categoria personalizada), e aplica o
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.db.atomic import commit
 from app.db.base import Base
 
 
@@ -37,17 +38,17 @@ class UserScopedRepository[ModelT: Base]:
     def create(self, **fields) -> ModelT:
         obj = self.model(**{self.scope_column: self.usuario_id}, **fields)
         self.db.add(obj)
-        self.db.commit()
+        commit(self.db)
         self.db.refresh(obj)
         return obj
 
     def update(self, obj: ModelT, **fields) -> ModelT:
         for key, value in fields.items():
             setattr(obj, key, value)
-        self.db.commit()
+        commit(self.db)
         self.db.refresh(obj)
         return obj
 
     def delete(self, obj: ModelT) -> None:
         self.db.delete(obj)
-        self.db.commit()
+        commit(self.db)

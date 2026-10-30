@@ -165,3 +165,22 @@ cliente MCP ──HTTP (Streamable, Bearer)──► /mcp  (MCPServer do SDK `mc
   - o HTML do MCP App fica em `app/mcp/ui/grafico.html`.
 - **Testes:** `tests/test_mcp.py`, ponta a ponta via `/mcp` com auth real, em SQLite e Postgres.
   Formatador: `tests/test_mcp_formato.py`.
+
+## Identidade delegada para IA do Telegram
+
+Além dos tokens MCP externos, o MCP aceita credenciais opacas `mgi_` emitidas por execução da
+integração Telegram. Esses tokens são separados, ficam apenas como hash no banco, expiram em cinco
+minutos e são revogados ao terminar/cancelar. Revalidam usuário ativo, tipo de conta, bot, vínculo e
+trabalho a cada chamada. Uma sessão `mgi_` de miniapp não autentica no MCP.
+
+Para credenciais delegadas, as tools de escrita passam pela política de propostas do Mango:
+simulação transacional, snapshot dos registros, confirmação humana quando exigida, aplicação
+atômica e recibo. A API HTTP direta não aceita escritas com o token delegado. Somente o loopback
+interno das ferramentas pode executá-las após a autorização. Tokens MCP externos mantêm o
+comportamento e os escopos existentes.
+
+O Axon recebe a chave de serviço pelo `Authorization` e a autorização temporária por
+`X-Axon-MCP-Authorization`. Seu MCP deve usar `auth.type: delegated`, sem credencial estática.
+Consulte [a preparação operacional](telegram.md#preparar-o-axon). O provedor genérico executa as
+mesmas tools em processo e aplica a mesma política; argumentos e conteúdo retornado nunca mudam
+identidade nem confirmam propostas.

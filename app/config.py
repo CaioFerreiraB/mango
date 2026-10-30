@@ -77,6 +77,9 @@ class Settings(BaseSettings):
     assinatura_min_ocorrencias: int = 3
     assinatura_tolerancia_valor: float = 0.15
 
+    # Hosts privados de IA só são permitidos por decisão explícita do operador.
+    ia_hosts_privados: str = ""
+
     @property
     def is_sqlite(self) -> bool:
         return self.database_url.startswith("sqlite")

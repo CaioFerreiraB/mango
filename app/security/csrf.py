@@ -26,6 +26,7 @@ _METODOS_MUTANTES = {"POST", "PUT", "PATCH", "DELETE"}
 # Isentos: bootstrap sem sessão ainda (caminhos completos, com o prefixo /api).
 _ISENTOS = {
     "/api/setup",
+    "/api/telegram/miniapp/sessao",
     "/api/setup/confirmar",
     "/api/auth/login",
     "/api/auth/recuperar-senha",

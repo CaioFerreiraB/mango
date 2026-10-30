@@ -183,7 +183,10 @@ def atualizar_instancia(
         if mudou and not payload.confirmar_troca_bot:
             raise ConflictError("outro bot: confirme a troca; todos precisarão vincular novamente")
         if mudou:
+            from app.services.telegram_conversa import cancelar
+
             for individual in db.scalars(select(ConfigTelegram)).all():
+                cancelar(db, individual.usuario_id, None)
                 _desvincular(individual)
             cancelar_pendentes(db)
             config.telegram_offset = 0
@@ -195,6 +198,12 @@ def atualizar_instancia(
     config.telegram_url = origem
     if not config.telegram_ativo:
         cancelar_pendentes(db)
+        from app.services.integracao_auth import revogar
+        from app.services.telegram_conversa import cancelar
+
+        for individual in db.scalars(select(ConfigTelegram)).all():
+            cancelar(db, individual.usuario_id, None)
+        revogar(db)
     db.commit()
     return ler_instancia(config)
 
@@ -203,7 +212,10 @@ def remover_instancia(db: Session) -> None:
     config = instancia(db)
     config.telegram_token_cifrado = config.telegram_bot_id = config.telegram_username = None
     config.telegram_ativo, config.telegram_offset, config.telegram_erro = False, 0, None
+    from app.services.telegram_conversa import cancelar
+
     for individual in db.scalars(select(ConfigTelegram)).all():
+        cancelar(db, individual.usuario_id, None)
         _desvincular(individual)
     cancelar_pendentes(db)
     db.commit()
@@ -227,6 +239,9 @@ def criar_vinculo(db: Session, usuario_id: int) -> VinculoRead:
 
 def processar_update(db: Session, evento: dict) -> None:
     """Entrada não confiável do Telegram; nenhuma identidade vem do cliente Mango."""
+    from app.services.telegram_conversa import receber
+
+    receber(db, evento)
     mensagem = evento.get("message")
     if not isinstance(mensagem, dict):
         return
@@ -246,6 +261,25 @@ def processar_update(db: Session, evento: dict) -> None:
     ):
         return
     comando, _, segredo = texto.partition(" ")
+    if comando.split("@")[0] in {"/start", "/ajuda"} and not segredo:
+        vinculado = db.scalar(
+            select(ConfigTelegram.id).where(
+                ConfigTelegram.telegram_usuario_id == str(identificador),
+                ConfigTelegram.ativo.is_(True),
+            )
+        )
+        geral = instancia(db)
+        if not vinculado and geral.telegram_ativo and geral.telegram_token_cifrado:
+            try:
+                with TelegramClient(geral.telegram_token_cifrado) as cliente:
+                    cliente.send_message(
+                        str(identificador),
+                        "Para começar, abra Configurações → Telegram no seu Mango, "
+                        "escolha Vincular Telegram e confirme sua identidade lá.",
+                    )
+            except TelegramError:
+                logger.warning("orientação inicial Telegram não entregue")
+        return
     if comando.split("@")[0] != "/start" or not segredo or len(segredo) > 64:
         return
     config = db.scalar(
@@ -258,7 +292,7 @@ def processar_update(db: Session, evento: dict) -> None:
     ):
         return
     usuario = db.get(Usuario, config.usuario_id)
-    if usuario is None or not usuario.ativo or usuario.tipo != "completo":
+    if usuario is None or not usuario.ativo:
         return
     config.candidato_id = str(identificador)
     config.candidato_nome = " ".join(str(pessoa.get("first_name") or "").split())[:255]
@@ -277,6 +311,9 @@ def confirmar_vinculo(db: Session, usuario_id: int, solicitacao_id: str) -> Tele
         or _aware(config.vinculo_expira_em) <= agora()
     ):
         raise ConflictError("solicitação inválida ou expirada; inicie a vinculação novamente")
+    from app.services.telegram_conversa import cancelar
+
+    cancelar(db, usuario_id, None)
     config.telegram_usuario_id = config.chat_id = config.candidato_id
     config.telegram_nome, config.telegram_username = (
         config.candidato_nome,
@@ -294,12 +331,17 @@ def confirmar_vinculo(db: Session, usuario_id: int, solicitacao_id: str) -> Tele
 
 
 def desvincular(db: Session, usuario_id: int) -> None:
+    from app.services.telegram_conversa import cancelar
+
+    cancelar(db, usuario_id, None)
     _desvincular(config_usuario(db, usuario_id))
     cancelar_pendentes(db, usuario_id)
     db.commit()
 
 
 def preferencia(db: Session, usuario_id: int, habilitar: bool) -> TelegramRead:
+    if habilitar and db.get(Usuario, usuario_id).tipo != "completo":
+        raise ConflictError("relatório disponível somente para contas completas")
     config = config_usuario(db, usuario_id)
     if habilitar and not (config.ativo and config.telegram_usuario_id):
         raise ConflictError("vincule seu Telegram primeiro")
@@ -398,6 +440,9 @@ def iniciar() -> None:
     global _thread
     if _thread is not None and _thread.is_alive():
         return
+    from app.services import telegram_conversa
+
+    telegram_conversa.iniciar()
     _parar.clear()
     _thread = threading.Thread(target=_polling, name="mango-telegram", daemon=True)
     _thread.start()
@@ -405,6 +450,9 @@ def iniciar() -> None:
 
 def parar() -> None:
     global _thread
+    from app.services import telegram_conversa
+
+    telegram_conversa.parar()
     _parar.set()
     if _thread is not None:
         _thread.join(timeout=40)

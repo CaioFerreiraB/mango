@@ -13,6 +13,11 @@ export const api = createClient<paths>({
   baseUrl: import.meta.env.VITE_API_BASE_URL ?? "",
 })
 
+let miniappToken: string | null = null
+export function sessaoMiniapp(token: string | null) {
+  miniappToken = token
+}
+
 const MUTACOES = new Set(["POST", "PUT", "PATCH", "DELETE"])
 
 function csrfCookie(): string | undefined {
@@ -28,6 +33,10 @@ function csrfCookie(): string | undefined {
  */
 api.use({
   onRequest({ request }) {
+    if (miniappToken) {
+      request.headers.set("Authorization", `Bearer ${miniappToken}`)
+      return new Request(request, { credentials: "omit" })
+    }
     if (MUTACOES.has(request.method)) {
       const token = csrfCookie()
       if (token) request.headers.set("X-CSRF-Token", decodeURIComponent(token))

@@ -34,7 +34,7 @@ _VALOR_EFETIVO = func.coalesce(
 )
 
 # Ordenação (allowlist — nunca interpolar nome de coluna, S4). Por valor usa o efetivo em reais.
-ORDENACAO = {"date": Transacao.date, "amount_centavos": _VALOR_EFETIVO}
+ORDENACAO = {"id": Transacao.id, "date": Transacao.date, "amount_centavos": _VALOR_EFETIVO}
 
 
 def _escape_like(termo: str) -> str:
@@ -70,9 +70,12 @@ class TransacaoRepository(UserScopedRepository[Transacao]):
         descendente: bool = True,
         limit: int = 50,
         offset: int = 0,
+        antes_id: int | None = None,
     ) -> tuple[list[Transacao], int]:
         """Listagem filtrada + paginada, sempre dentro do escopo do usuário (S3/S4)."""
         filtros = [self._scope() == self.usuario_id]
+        if antes_id is not None:
+            filtros.append(Transacao.id < antes_id)
         if inicio is not None:
             filtros.append(Transacao.date >= inicio)
         if fim is not None:
