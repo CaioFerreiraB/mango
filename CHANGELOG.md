@@ -10,6 +10,8 @@ ainda está se assentando. Cada versão publicada tem uma imagem correspondente 
 
 ## [Não publicado]
 
+## [0.4.0] — 2026-10-29
+
 ### Adicionado
 
 - **Telegram v2:** miniapp HTTPS com revisão de transações, rascunhos por sessão e assistente de
@@ -190,7 +192,8 @@ Primeira versão publicada. Imagem única servindo API e interface, instalável 
 - Os endpoints de autenticação ainda não têm rate-limiting nem lockout. Ver **Problemas conhecidos**
   em [ROADMAP.md](ROADMAP.md) antes de expor a instância à internet aberta.
 
-[Não publicado]: https://github.com/CaioFerreiraB/mango/compare/v0.3.0...HEAD
+[Não publicado]: https://github.com/CaioFerreiraB/mango/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/CaioFerreiraB/mango/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/CaioFerreiraB/mango/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/CaioFerreiraB/mango/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/CaioFerreiraB/mango/compare/v0.1.0...v0.1.1

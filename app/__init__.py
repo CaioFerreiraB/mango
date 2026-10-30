@@ -2,4 +2,4 @@
 
 # Fonte única da versão do projeto. Mantida em sincronia com `pyproject.toml` e
 # `frontend/package.json` pelo alvo `make release v=X.Y.Z` — não editar à mão.
-__version__ = "0.3.0"
+__version__ = "0.4.0"
