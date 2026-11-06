@@ -124,15 +124,8 @@ def _enviar(db, usuario_id: int, registro: ExecucaoDiaria, momento: datetime) ->
         config = db.scalar(select(ConfigTelegram).where(ConfigTelegram.usuario_id == usuario_id))
         if (
             registro.envio_status != "pendente"
-            or not usuario
-            or not usuario.ativo
-            or usuario.tipo != "completo"
-            or not geral.telegram_ativo
-            or not config
-            or not config.ativo
+            or not telegram.pronto(geral, config, usuario)
             or not config.notif_nao_revisadas
-            or not config.chat_id
-            or not config.telegram_usuario_id
             or registro.data != momento.astimezone(SP).date()
         ):
             if registro.envio_status == "pendente":

@@ -16,6 +16,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import { Switch } from "@/components/ui/switch"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { useIconeCategoria } from "@/lib/api/categoria-icones"
 import { useMapaCategorias } from "@/lib/api/categorias"
@@ -29,7 +30,12 @@ import {
 
 type Tipo = "despesa" | "receita"
 
-type Nova = { categoriaId: string; tipo: Tipo; valor: number }
+type Nova = {
+  categoriaId: string
+  tipo: Tipo
+  valor: number
+  notificar: boolean
+}
 
 const SECOES: { tipo: Tipo; titulo: string }[] = [
   { tipo: "despesa", titulo: "Despesas" },
@@ -56,6 +62,8 @@ export function EditarMesDialog({
 }) {
   const [aberto, setAberto] = useState(false)
   const [edits, setEdits] = useState<Record<number, number>>({}) // orcamento_mensal_id -> centavos
+  // orcamento_mensal_id -> aviso no Telegram (só despesa)
+  const [notifEdits, setNotifEdits] = useState<Record<number, boolean>>({})
   const [novas, setNovas] = useState<Record<Tipo, Nova[]>>({
     despesa: [],
     receita: [],
@@ -75,6 +83,7 @@ export function EditarMesDialog({
     setAberto(novoAberto)
     if (novoAberto) {
       setEdits({})
+      setNotifEdits({})
       setNovas({ despesa: [], receita: [] })
       setErros({})
     }
@@ -83,7 +92,7 @@ export function EditarMesDialog({
   function adicionarCategoria(tipo: Tipo, categoriaId: string) {
     setNovas((prev) => ({
       ...prev,
-      [tipo]: [...prev[tipo], { categoriaId, tipo, valor: 0 }],
+      [tipo]: [...prev[tipo], { categoriaId, tipo, valor: 0, notificar: true }],
     }))
   }
 
@@ -92,6 +101,19 @@ export function EditarMesDialog({
       ...prev,
       [tipo]: prev[tipo].map((n) =>
         n.categoriaId === categoriaId ? { ...n, valor } : n
+      ),
+    }))
+  }
+
+  function mudarNotificarNova(
+    tipo: Tipo,
+    categoriaId: string,
+    notificar: boolean
+  ) {
+    setNovas((prev) => ({
+      ...prev,
+      [tipo]: prev[tipo].map((n) =>
+        n.categoriaId === categoriaId ? { ...n, notificar } : n
       ),
     }))
   }
@@ -150,6 +172,19 @@ export function EditarMesDialog({
       }
     }
 
+    for (const [idStr, notificar] of Object.entries(notifEdits)) {
+      const id = Number(idStr)
+      const item = itens.find((i) => i.orcamento_mensal_id === id)
+      if (item && notificar === item.notificar) continue
+      try {
+        await atualizarMensal.mutateAsync({ id, notificar })
+        sucessos++
+      } catch (err) {
+        novosErros[idStr] =
+          err instanceof Error ? err.message : "falha ao salvar"
+      }
+    }
+
     for (const { tipo } of SECOES) {
       for (const nova of novas[tipo]) {
         const chave = `novo:${tipo}:${nova.categoriaId}`
@@ -160,6 +195,7 @@ export function EditarMesDialog({
             limite_padrao_centavos: nova.valor,
             recorrente: false, // pontual: restrito a este mês, não repete nos seguintes
             ativo: true,
+            notificar: nova.notificar,
           })
           await criarLimiteMensal.mutateAsync({
             orcamento_id: orc.id,
@@ -169,6 +205,7 @@ export function EditarMesDialog({
             mes,
             limite_centavos: nova.valor,
             editado_manualmente: true,
+            notificar: nova.notificar,
           })
           sucessos++
         } catch (err) {
@@ -195,6 +232,7 @@ export function EditarMesDialog({
 
   const houveMudancas =
     Object.keys(edits).length > 0 ||
+    Object.keys(notifEdits).length > 0 ||
     novas.despesa.length > 0 ||
     novas.receita.length > 0
 
@@ -212,7 +250,8 @@ export function EditarMesDialog({
           <DialogTitle>Orçamento do mês</DialogTitle>
           <DialogDescription>
             Vale só pra este mês — o orçamento padrão não muda (edite-o em
-            "Configurar orçamento padrão").
+            "Configurar orçamento padrão"). Nas despesas, o interruptor avisa no
+            Telegram ao atingir o % definido em Preferências.
           </DialogDescription>
         </DialogHeader>
         <div className="max-h-[60vh] space-y-6 overflow-y-auto pr-1">
@@ -288,6 +327,22 @@ export function EditarMesDialog({
                             className="w-28 shrink-0 sm:w-32"
                             aria-label={`Limite de ${nome}`}
                           />
+                          {tipo === "despesa" ? (
+                            <Switch
+                              checked={
+                                notifEdits[item.orcamento_mensal_id] ??
+                                item.notificar
+                              }
+                              onCheckedChange={(v) =>
+                                setNotifEdits((prev) => ({
+                                  ...prev,
+                                  [item.orcamento_mensal_id]: v,
+                                }))
+                              }
+                              aria-label={`Avisar no Telegram ao atingir o % de ${nome}`}
+                              title="Avisar no Telegram"
+                            />
+                          ) : null}
                           <Button
                             variant="ghost"
                             size="icon"
@@ -326,6 +381,16 @@ export function EditarMesDialog({
                             className="w-28 shrink-0 sm:w-32"
                             aria-label={`Valor de ${nome}`}
                           />
+                          {tipo === "despesa" ? (
+                            <Switch
+                              checked={nova.notificar}
+                              onCheckedChange={(v) =>
+                                mudarNotificarNova(tipo, nova.categoriaId, v)
+                              }
+                              aria-label={`Avisar no Telegram ao atingir o % de ${nome}`}
+                              title="Avisar no Telegram"
+                            />
+                          ) : null}
                           <Button
                             variant="ghost"
                             size="icon"

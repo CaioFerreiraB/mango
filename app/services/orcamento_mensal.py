@@ -50,6 +50,7 @@ def materializar_mes(db: Session, usuario_id: int, ano: int, mes: int) -> int:
                 mes=mes,
                 limite_centavos=orc.limite_padrao_centavos,
                 editado_manualmente=False,
+                notificar=orc.notificar,
             )
         )
         criados += 1

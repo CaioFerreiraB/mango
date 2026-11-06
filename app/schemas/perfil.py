@@ -22,6 +22,7 @@ class PerfilRead(ORMModel):
     ocupacao: str | None
     accent: Accent | None
     avatar: int | None
+    orcamento_alerta_pct: int  # % do orçamento da categoria que dispara o aviso no Telegram
     # Corte da fila de revisão (§4.3): null = sem corte, todo o histórico pede revisão.
     revisao_desde: date | None
     # Booleano derivado (o token brapi nunca é devolvido — §5.5).
@@ -41,6 +42,9 @@ class PerfilUpdate(BaseModel):
     accent: Accent | None = None
     avatar: int | None = Field(default=None, ge=1, le=4)
     revisao_desde: date | None = None
+    # `int` (não `int | None`): a coluna é NOT NULL, então `null` explícito vira 422 na fronteira
+    # em vez de IntegrityError no commit. O default None só marca "não enviado" (exclude_unset).
+    orcamento_alerta_pct: int = Field(default=None, ge=1, le=100)
 
     @field_validator("email")
     @classmethod

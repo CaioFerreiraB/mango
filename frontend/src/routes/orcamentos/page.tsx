@@ -1,11 +1,14 @@
 import {
   ChevronLeft,
   ChevronRight,
+  CircleDashed,
   PiggyBank,
   Settings2,
   Wand2,
+  X,
+  type LucideIcon,
 } from "lucide-react"
-import { createElement, useState } from "react"
+import { createElement, useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
 
 import { AnelProgresso } from "@/components/common/anel-progresso"
@@ -13,6 +16,7 @@ import { EmptyState } from "@/components/common/empty-state"
 import { Valor } from "@/components/common/valor"
 import { ConfigurarOrcamentoPadraoDialog } from "@/components/orcamentos/configurar-orcamento-padrao-dialog"
 import { EditarMesDialog } from "@/components/orcamentos/editar-mes-dialog"
+import { TransacoesTabela } from "@/components/transacoes/transacoes-tabela"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
@@ -31,9 +35,12 @@ import { useMapaCategorias } from "@/lib/api/categorias"
 import {
   useConsumoOrcamentos,
   useMaterializarMes,
+  useTransacoesDoOrcamento,
+  type AlvoDrilldown,
   type OrcamentoConsumoItem,
 } from "@/lib/api/orcamentos"
 import { formatMesAno, hojeISO } from "@/lib/format"
+import { cn } from "@/lib/utils"
 
 // Escala de "calor" do consumo — a cor nunca é o único sinal (o % e a barra também informam).
 // Só se aplica à despesa: receita não tem conceito de "estourar".
@@ -51,6 +58,8 @@ export function OrcamentosPage() {
   const mesAtual = Number(hoje.slice(5, 7))
   const [ano, setAno] = useState(anoAtual)
   const [mes, setMes] = useState(mesAtual)
+  // Linha cujas transações estão abertas (uma por vez na página); fecha ao trocar de mês.
+  const [alvo, setAlvo] = useState<AlvoDrilldown | null>(null)
   const consumo = useConsumoOrcamentos(ano, mes)
   const noMesAtual = ano === anoAtual && mes === mesAtual
   const mesEhPassado = ano < anoAtual || (ano === anoAtual && mes < mesAtual)
@@ -59,6 +68,7 @@ export function OrcamentosPage() {
     const total = ano * 12 + (mes - 1) + delta
     setAno(Math.floor(total / 12))
     setMes((total % 12) + 1)
+    setAlvo(null)
   }
 
   const rotuloMes = formatMesAno(`${ano}-${String(mes).padStart(2, "0")}-01`)
@@ -68,6 +78,7 @@ export function OrcamentosPage() {
   const visiveis = itens.filter((i) => !i.suprimido)
   const despesas = visiveis.filter((i) => i.tipo === "despesa")
   const receitas = visiveis.filter((i) => i.tipo === "receita")
+  const secao = { ano, mes, rotuloMes, alvo, onAlvo: setAlvo }
 
   return (
     <div className="space-y-6">
@@ -155,8 +166,20 @@ export function OrcamentosPage() {
         )
       ) : (
         <div className="space-y-8">
-          <SecaoOrcamento tipo="despesa" titulo="Despesas" itens={despesas} />
-          <SecaoOrcamento tipo="receita" titulo="Receitas" itens={receitas} />
+          <SecaoOrcamento
+            tipo="despesa"
+            titulo="Despesas"
+            itens={despesas}
+            naoPlanejado={consumo.data?.nao_planejado_despesa_centavos ?? 0}
+            {...secao}
+          />
+          <SecaoOrcamento
+            tipo="receita"
+            titulo="Receitas"
+            itens={receitas}
+            naoPlanejado={consumo.data?.nao_planejado_receita_centavos ?? 0}
+            {...secao}
+          />
           <ConfigurarOrcamentoPadraoDialog
             trigger={
               <Button variant="outline" className="w-full sm:hidden">
@@ -193,23 +216,71 @@ function AplicarPadraoBotao({ ano, mes }: { ano: number; mes: number }) {
   )
 }
 
+/** Linha da Visão Geral — uma categoria orçada ou o "Não planejado" (`categoriaId: null`, sem
+ *  limite: orçado/restante "—" e % sempre 100). */
+type LinhaVisao = {
+  key: string
+  categoriaId: string | null
+  nome: string
+  icone: LucideIcon
+  limite: number | null
+  realizado: number
+  percentual: number
+  cor: string
+}
+
 function SecaoOrcamento({
   tipo,
   titulo,
   itens,
+  naoPlanejado,
+  ano,
+  mes,
+  rotuloMes,
+  alvo,
+  onAlvo,
 }: {
   tipo: "despesa" | "receita"
   titulo: string
   itens: OrcamentoConsumoItem[]
+  naoPlanejado: number
+  ano: number
+  mes: number
+  rotuloMes: string
+  alvo: AlvoDrilldown | null
+  onAlvo: (alvo: AlvoDrilldown | null) => void
 }) {
   const nomes = useMapaCategorias()
   const iconeCategoria = useIconeCategoria()
   const isMobile = useIsMobile()
-  if (itens.length === 0) return null
+  if (itens.length === 0 && naoPlanejado === 0) return null
 
   const despesa = tipo === "despesa"
+  const linhas: LinhaVisao[] = itens.map((item) => ({
+    key: String(item.orcamento_mensal_id),
+    categoriaId: item.categoria_id,
+    nome: nomes.get(item.categoria_id) ?? item.categoria_id,
+    icone: iconeCategoria(item.categoria_id),
+    limite: item.limite_centavos,
+    realizado: item.realizado_centavos,
+    percentual: item.percentual,
+    cor: despesa ? corAlerta(item.alerta_atingido) : "bg-primary",
+  }))
+  if (naoPlanejado > 0)
+    linhas.push({
+      key: "nao-planejado",
+      categoriaId: null,
+      nome: "Não planejado",
+      icone: CircleDashed,
+      limite: null,
+      realizado: naoPlanejado,
+      percentual: 100, // sem orçado: por definição tudo está "fora" do planejado
+      cor: "bg-muted-foreground",
+    })
+
   const totalOrcado = itens.reduce((acc, i) => acc + i.limite_centavos, 0)
-  const totalRealizado = itens.reduce((acc, i) => acc + i.realizado_centavos, 0)
+  // O não planejado entra no realizado: o resumo reflete tudo o que saiu/entrou no mês.
+  const totalRealizado = linhas.reduce((acc, l) => acc + l.realizado, 0)
   const restanteTotal = totalOrcado - totalRealizado
   const percentualTotal =
     totalOrcado > 0
@@ -217,6 +288,17 @@ function SecaoOrcamento({
       : totalRealizado > 0
         ? 100
         : 0
+
+  const abertaKey =
+    alvo?.tipo === tipo
+      ? (linhas.find((l) => l.categoriaId === alvo.categoriaId)?.key ?? null)
+      : null
+  const aberta = linhas.find((l) => l.key === abertaKey) ?? null
+  function alternar(linha: LinhaVisao) {
+    onAlvo(
+      linha.key === abertaKey ? null : { tipo, categoriaId: linha.categoriaId }
+    )
+  }
 
   return (
     <section className="space-y-3">
@@ -266,47 +348,56 @@ function SecaoOrcamento({
 
       {isMobile ? (
         <div className="divide-y rounded-lg border">
-          {itens.map((item) => {
-            const nome = nomes.get(item.categoria_id) ?? item.categoria_id
-            return (
-              <div
-                key={item.orcamento_mensal_id}
-                className="flex items-center gap-3 p-3"
-              >
-                {createElement(iconeCategoria(item.categoria_id), {
-                  className: "size-4 shrink-0 text-muted-foreground",
-                  "aria-hidden": true,
-                })}
-                <div className="min-w-0 flex-1 space-y-1.5">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="truncate text-sm font-medium">{nome}</span>
-                    <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
-                      {item.percentual}%
-                    </span>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    <Valor
-                      centavos={item.realizado_centavos}
-                      neutro
-                      className="text-xs font-normal"
-                    />{" "}
-                    de{" "}
-                    <Valor
-                      centavos={item.limite_centavos}
-                      neutro
-                      className="text-xs font-normal"
-                    />
-                  </p>
-                  <Progress
-                    value={Math.min(item.percentual, 100)}
-                    indicatorClassName={
-                      despesa ? corAlerta(item.alerta_atingido) : "bg-primary"
-                    }
-                  />
-                </div>
-              </div>
-            )
-          })}
+          {linhas.map((linha) => (
+            <button
+              key={linha.key}
+              type="button"
+              onClick={() => alternar(linha)}
+              aria-expanded={linha.key === abertaKey}
+              className={cn(
+                "flex w-full items-center gap-3 p-3 text-left outline-none focus-visible:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring",
+                linha.key === abertaKey && "bg-muted/60"
+              )}
+            >
+              {createElement(linha.icone, {
+                className: "size-4 shrink-0 text-muted-foreground",
+                "aria-hidden": true,
+              })}
+              <span className="min-w-0 flex-1 space-y-1.5">
+                <span className="flex items-center justify-between gap-2">
+                  <span className="truncate text-sm font-medium">
+                    {linha.nome}
+                  </span>
+                  <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
+                    {linha.percentual}%
+                  </span>
+                </span>
+                <span className="block text-xs text-muted-foreground">
+                  <Valor
+                    centavos={linha.realizado}
+                    neutro
+                    className="text-xs font-normal"
+                  />{" "}
+                  {linha.limite === null ? (
+                    "fora do orçamento"
+                  ) : (
+                    <>
+                      de{" "}
+                      <Valor
+                        centavos={linha.limite}
+                        neutro
+                        className="text-xs font-normal"
+                      />
+                    </>
+                  )}
+                </span>
+                <Progress
+                  value={Math.min(linha.percentual, 100)}
+                  indicatorClassName={linha.cor}
+                />
+              </span>
+            </button>
+          ))}
         </div>
       ) : (
         <div className="overflow-x-auto rounded-lg border">
@@ -325,45 +416,66 @@ function SecaoOrcamento({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {itens.map((item) => {
-                const nome = nomes.get(item.categoria_id) ?? item.categoria_id
-                const restante = item.limite_centavos - item.realizado_centavos
+              {linhas.map((linha) => {
+                const restante =
+                  linha.limite === null ? null : linha.limite - linha.realizado
                 return (
-                  <TableRow key={item.orcamento_mensal_id}>
+                  <TableRow
+                    key={linha.key}
+                    onClick={() => alternar(linha)}
+                    data-state={
+                      linha.key === abertaKey ? "selected" : undefined
+                    }
+                    className="cursor-pointer"
+                  >
                     <TableCell>
-                      <span className="flex items-center gap-2">
-                        {createElement(iconeCategoria(item.categoria_id), {
+                      {/* O botão é o alvo acessível (teclado/leitor de tela); o clique na linha
+                          inteira é só conveniência de mouse. */}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          alternar(linha)
+                        }}
+                        aria-expanded={linha.key === abertaKey}
+                        className="flex max-w-full items-center gap-2 rounded-sm text-left outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      >
+                        {createElement(linha.icone, {
                           className: "size-4 shrink-0 text-muted-foreground",
                           "aria-hidden": true,
                         })}
-                        <span className="truncate">{nome}</span>
-                      </span>
+                        <span className="truncate">{linha.nome}</span>
+                      </button>
                     </TableCell>
                     <TableCell className="text-right">
-                      <Valor centavos={item.limite_centavos} neutro />
+                      {linha.limite === null ? (
+                        <SemValor />
+                      ) : (
+                        <Valor centavos={linha.limite} neutro />
+                      )}
                     </TableCell>
                     <TableCell className="text-right">
-                      <Valor centavos={item.realizado_centavos} neutro />
+                      <Valor centavos={linha.realizado} neutro />
                     </TableCell>
                     <TableCell className="text-right">
-                      <Valor
-                        centavos={despesa ? restante : Math.abs(restante)}
-                        absoluto={despesa}
-                      />
+                      {restante === null ? (
+                        <SemValor />
+                      ) : (
+                        <Valor
+                          centavos={despesa ? restante : Math.abs(restante)}
+                          absoluto={despesa}
+                        />
+                      )}
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <Progress
-                          value={Math.min(item.percentual, 100)}
-                          indicatorClassName={
-                            despesa
-                              ? corAlerta(item.alerta_atingido)
-                              : "bg-primary"
-                          }
+                          value={Math.min(linha.percentual, 100)}
+                          indicatorClassName={linha.cor}
                           className="w-16"
                         />
                         <span className="text-xs text-muted-foreground tabular-nums">
-                          {item.percentual}%
+                          {linha.percentual}%
                         </span>
                       </div>
                     </TableCell>
@@ -373,6 +485,79 @@ function SecaoOrcamento({
             </TableBody>
           </Table>
         </div>
+      )}
+
+      {aberta && alvo && (
+        <PainelTransacoes
+          ano={ano}
+          mes={mes}
+          alvo={alvo}
+          titulo={`${aberta.nome} · ${rotuloMes}`}
+          onFechar={() => onAlvo(null)}
+        />
+      )}
+    </section>
+  )
+}
+
+function SemValor() {
+  return (
+    <span className="text-muted-foreground" aria-label="sem orçado">
+      —
+    </span>
+  )
+}
+
+/** Transações da linha aberta, logo abaixo da tabela da seção — mesma tabela/drawer da tela de
+ *  Transações (recategorizar aqui já atualiza o consumo). */
+function PainelTransacoes({
+  ano,
+  mes,
+  alvo,
+  titulo,
+  onFechar,
+}: {
+  ano: number
+  mes: number
+  alvo: AlvoDrilldown
+  titulo: string
+  onFechar: () => void
+}) {
+  const transacoes = useTransacoesDoOrcamento(ano, mes, alvo)
+  const ref = useRef<HTMLElement>(null)
+  // Traz o painel pra vista ao abrir/trocar de linha — numa tabela longa ele nasceria fora da tela.
+  useEffect(() => {
+    ref.current?.scrollIntoView({ block: "nearest" })
+  }, [alvo.tipo, alvo.categoriaId])
+
+  return (
+    <section
+      ref={ref}
+      aria-label={`Transações de ${titulo}`}
+      className="space-y-3 rounded-lg border p-3 sm:p-4"
+    >
+      <div className="flex items-center justify-between gap-2">
+        <h3 className="text-sm font-semibold">
+          <span className="text-muted-foreground">Transações · </span>
+          {titulo}
+        </h3>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onFechar}
+          aria-label="Fechar transações"
+        >
+          <X className="size-4" />
+        </Button>
+      </div>
+      {transacoes.isError ? (
+        <EmptyState title="Não foi possível carregar as transações" />
+      ) : transacoes.isLoading ? (
+        <Skeleton className="h-24 w-full" />
+      ) : (transacoes.data ?? []).length === 0 ? (
+        <EmptyState title="Nenhuma transação nesta categoria no mês" />
+      ) : (
+        <TransacoesTabela items={transacoes.data!} />
       )}
     </section>
   )

@@ -421,3 +421,135 @@ def test_orcamento_isolamento(
     assert b.patch(f"/api/orcamentos/{oid}", json={"limite_padrao_centavos": 5}).status_code == 404
     assert b.delete(f"/api/orcamentos/{oid}").status_code == 404
     assert len(a.get("/api/orcamentos").json()) == 1
+
+
+def test_consumo_soma_cartao_e_conta_sem_anular(db: Session, usuario_a: Usuario) -> None:
+    """Compra de cartão vem DEBIT com amount POSITIVO e débito em conta vem negativo: na mesma
+    categoria, os dois somam (abs por linha) — antes se anulavam (abs do total)."""
+    _semear_categorias(db)
+    OrcamentoRepository(db, usuario_a.id).create(
+        categoria_id=FILHO_1, tipo="despesa", limite_padrao_centavos=10_000, ordem=0
+    )
+    conta = criar_conta(db, usuario_a.id, "acc-misto")
+    _tx(db, usuario_a.id, conta, "conta-debito", -3_000, FILHO_1)
+    TransacaoRepository(db, usuario_a.id).create(
+        conta_id=conta.id,
+        pluggy_transaction_id="cartao-compra",
+        date=datetime(2026, 6, 15, 12, tzinfo=UTC),
+        amount_centavos=5_000,
+        currency_code="BRL",
+        type="DEBIT",
+        status="POSTED",
+        categoria_pluggy_id=FILHO_1,
+        eh_transferencia=False,
+    )
+    materializar_mes(db, usuario_a.id, 2026, 6)
+    (item,) = consumo_do_mes(db, usuario_a.id, 2026, 6).itens
+    assert item.realizado_centavos == 8_000
+
+
+def _cenario_nao_planejado(db: Session, usuario_a: Usuario, usuario_b: Usuario):
+    from app.models.categoria import CATEGORIA_PAGAMENTO_FATURA
+
+    _semear_categorias(db)
+    db.add(Categoria(pluggy_id=CATEGORIA_PAGAMENTO_FATURA, description="Pagamento de fatura"))
+    db.commit()
+    OrcamentoRepository(db, usuario_a.id).create(
+        categoria_id=FILHO_1, tipo="despesa", limite_padrao_centavos=10_000, ordem=0
+    )
+    conta = criar_conta(db, usuario_a.id, "acc-np")
+    _tx(db, usuario_a.id, conta, "coberta", -1_000, FILHO_1)
+    _tx(db, usuario_a.id, conta, "fora", -2_000, FILHO_2)
+    _tx(db, usuario_a.id, conta, "sem-cat", -300, None)
+    _tx(db, usuario_a.id, conta, "fatura", -5_000, CATEGORIA_PAGAMENTO_FATURA)
+    _tx(db, usuario_a.id, conta, "transf", -700, FILHO_2, eh=True)
+    _tx(db, usuario_a.id, conta, "receita-fora", 4_000, FILHO_2)
+    # Outro usuário na mesma categoria não planejada: nunca entra na conta de A.
+    _tx(db, usuario_b.id, criar_conta(db, usuario_b.id, "acc-np-b"), "b", -9_999, FILHO_2)
+    materializar_mes(db, usuario_a.id, 2026, 6)
+
+
+def test_consumo_nao_planejado(db: Session, usuario_a: Usuario, usuario_b: Usuario) -> None:
+    """Fora do orçamento = categoria sem linha + sem categoria; pagamento de fatura e
+    transferência ficam de fora; receita tem o seu próprio não planejado."""
+    _cenario_nao_planejado(db, usuario_a, usuario_b)
+    consumo = consumo_do_mes(db, usuario_a.id, 2026, 6)
+    assert consumo.nao_planejado_despesa_centavos == 2_300
+    assert consumo.nao_planejado_receita_centavos == 4_000
+
+    # Categoria suprimida no mês deixa de estar no orçamento → o gasto dela vira não planejado.
+    (linha,) = _linhas_mensais(db, usuario_a.id)
+    linha.suprimido = True
+    db.commit()
+    assert consumo_do_mes(db, usuario_a.id, 2026, 6).nao_planejado_despesa_centavos == 3_300
+
+
+def test_consumo_nao_planejado_respeita_subarvore(db: Session, usuario_a: Usuario) -> None:
+    """Orçamento no pai cobre os filhos: gasto num filho não é não planejado."""
+    _semear_categorias(db)
+    OrcamentoRepository(db, usuario_a.id).create(
+        categoria_id=PAI, tipo="despesa", limite_padrao_centavos=10_000, ordem=0
+    )
+    _tx(db, usuario_a.id, criar_conta(db, usuario_a.id, "acc-sub"), "f2", -2_000, FILHO_2)
+    materializar_mes(db, usuario_a.id, 2026, 6)
+    assert consumo_do_mes(db, usuario_a.id, 2026, 6).nao_planejado_despesa_centavos == 0
+
+
+def test_drilldown_soma_o_realizado(
+    client_factory, db: Session, usuario_a: Usuario, usuario_b: Usuario
+) -> None:
+    _cenario_nao_planejado(db, usuario_a, usuario_b)
+    client = client_factory(usuario_a)
+    base = "/api/orcamentos/consumo/transacoes?ano=2026&mes=6"
+
+    def soma(resp) -> tuple[int, set[str]]:
+        assert resp.status_code == 200, resp.text
+        itens = resp.json()["items"]
+        return sum(abs(t["amount_centavos"]) for t in itens), {
+            t["pluggy_transaction_id"] for t in itens
+        }
+
+    assert soma(client.get(f"{base}&tipo=despesa&categoria_id={FILHO_1}")) == (1_000, {"coberta"})
+    # Pai também traz os filhos (mesma subárvore do consumo).
+    assert soma(client.get(f"{base}&tipo=despesa&categoria_id={PAI}"))[0] == 3_000
+    assert soma(client.get(f"{base}&tipo=despesa&nao_planejado=true")) == (
+        2_300,
+        {"fora", "sem-cat"},
+    )
+    assert soma(client.get(f"{base}&tipo=receita&nao_planejado=true")) == (
+        4_000,
+        {"receita-fora"},
+    )
+    # Exatamente um entre categoria_id e nao_planejado.
+    assert client.get(f"{base}&tipo=despesa").status_code == 422
+    assert (
+        client.get(f"{base}&tipo=despesa&categoria_id={FILHO_1}&nao_planejado=true").status_code
+        == 422
+    )
+
+
+def test_notificar_padrao_propaga_ao_mes_corrente(
+    client_factory, db: Session, usuario_a: Usuario
+) -> None:
+    """Desligar o aviso no padrão vale já para o mês corrente; meses passados ficam como estão."""
+    _semear_categorias(db)
+    client = client_factory(usuario_a)
+    orc = client.post(
+        "/api/orcamentos",
+        json={"categoria_id": FILHO_1, "tipo": "despesa", "limite_padrao_centavos": 100},
+    ).json()
+    assert orc["notificar"] is True
+    hoje = hoje_sp()
+    materializar_mes(db, usuario_a.id, hoje.year, hoje.month)
+    materializar_mes(db, usuario_a.id, 2019, 3)
+
+    resp = client.patch(f"/api/orcamentos/{orc['id']}", json={"notificar": False})
+    assert resp.status_code == 200 and resp.json()["notificar"] is False
+    db.expire_all()
+    por_mes = {(m.ano, m.mes): m.notificar for m in _linhas_mensais(db, usuario_a.id)}
+    assert por_mes == {(hoje.year, hoje.month): False, (2019, 3): True}
+
+    # E o mês sozinho pode religar via "Editar mês".
+    (atual,) = [m for m in _linhas_mensais(db, usuario_a.id) if m.ano == hoje.year]
+    resp = client.patch(f"/api/orcamentos-mensais/{atual.id}", json={"notificar": True})
+    assert resp.status_code == 200 and resp.json()["notificar"] is True
