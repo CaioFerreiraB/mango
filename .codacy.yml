@@ -9,8 +9,15 @@ engines:
     enabled: true
   bandit:
     enabled: true
+  # ESLint já roda no CI com a config do projeto (frontend/eslint.config.js). Na Codacy cada major
+  # é um motor próprio — desligar só `eslint` deixava o ESLint8 ativo, sem resolução de tipos
+  # (falsos positivos como "'any' overrides" em tipos locais).
   eslint:
-    enabled: false # já roda no CI com a config do projeto (frontend/eslint.config.js)
+    enabled: false
+  eslint-8:
+    enabled: false
+  eslint-9:
+    enabled: false
   pmd:
     enabled: false
 

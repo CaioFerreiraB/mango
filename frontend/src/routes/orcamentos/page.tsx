@@ -308,196 +308,27 @@ function SecaoOrcamento({
     <section className="space-y-3">
       <h2 className="text-base font-semibold">{titulo}</h2>
 
-      <Card>
-        <CardContent className="flex flex-wrap items-center justify-between gap-6 py-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:gap-8">
-            <div>
-              <p className="text-sm text-muted-foreground">
-                {despesa ? "Total orçado" : "Meta total"}
-              </p>
-              <p className="text-lg font-semibold">
-                <Valor centavos={totalOrcado} neutro />
-              </p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">
-                {despesa ? "Gasto até agora" : "Recebido até agora"}
-              </p>
-              <p className="text-lg font-semibold">
-                <Valor centavos={totalRealizado} neutro />
-              </p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">
-                {despesa ? "Restante" : "Restante pra meta"}
-              </p>
-              <p className="text-lg font-semibold">
-                {/* Nunca mostra "-": despesa mantém a cor do sinal real (vermelho se estourou),
-                    só sem o sinal de menos no texto; receita usa o valor já em módulo — bater
-                    ou passar da meta é notícia boa, nunca um alerta. */}
-                <Valor
-                  centavos={despesa ? restanteTotal : Math.abs(restanteTotal)}
-                  absoluto={despesa}
-                />
-              </p>
-            </div>
-          </div>
-          <AnelProgresso
-            pct={percentualTotal}
-            tamanho={96}
-            rotulo={despesa ? "utilizado" : "recebido"}
-          />
-        </CardContent>
-      </Card>
+      <ResumoSecao
+        despesa={despesa}
+        totalOrcado={totalOrcado}
+        totalRealizado={totalRealizado}
+        restanteTotal={restanteTotal}
+        percentualTotal={percentualTotal}
+      />
 
       {isMobile ? (
-        <div className="divide-y rounded-lg border">
-          {linhas.map((linha) => (
-            <div
-              key={linha.key}
-              className={cn(
-                "space-y-1.5 p-3",
-                linha.key === abertaKey && "bg-muted/60"
-              )}
-            >
-              <button
-                type="button"
-                onClick={() => {
-                  alternar(linha)
-                }}
-                aria-expanded={linha.key === abertaKey}
-                className="flex w-full items-center gap-3 rounded-sm text-left outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                {createElement(linha.icone, {
-                  className: "size-4 shrink-0 text-muted-foreground",
-                  "aria-hidden": true,
-                })}
-                <span className="min-w-0 flex-1 space-y-1.5">
-                  <span className="flex items-center justify-between gap-2">
-                    <span className="truncate text-sm font-medium">
-                      {linha.nome}
-                    </span>
-                    <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
-                      {linha.percentual}%
-                    </span>
-                  </span>
-                  <span className="block text-xs text-muted-foreground">
-                    <Valor
-                      centavos={linha.realizado}
-                      neutro
-                      className="text-xs font-normal"
-                    />{" "}
-                    {linha.limite === null ? (
-                      "fora do orçamento"
-                    ) : (
-                      <>
-                        de{" "}
-                        <Valor
-                          centavos={linha.limite}
-                          neutro
-                          className="text-xs font-normal"
-                        />
-                      </>
-                    )}
-                  </span>
-                </span>
-              </button>
-              {/* Fora do botão: <div role=progressbar> dentro de <button> é HTML inválido. */}
-              <div className="pl-7">
-                <Progress
-                  value={Math.min(linha.percentual, 100)}
-                  indicatorClassName={linha.cor}
-                />
-              </div>
-            </div>
-          ))}
-        </div>
+        <ListaMobile
+          linhas={linhas}
+          abertaKey={abertaKey}
+          onAlternar={alternar}
+        />
       ) : (
-        <div className="overflow-x-auto rounded-lg border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Categoria</TableHead>
-                <TableHead className="text-right">
-                  {despesa ? "Orçado" : "Meta"}
-                </TableHead>
-                <TableHead className="text-right">
-                  {despesa ? "Gasto" : "Recebido"}
-                </TableHead>
-                <TableHead className="text-right">Restante</TableHead>
-                <TableHead className="w-36">%</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {linhas.map((linha) => {
-                const restante =
-                  linha.limite === null ? null : linha.limite - linha.realizado
-                return (
-                  <TableRow
-                    key={linha.key}
-                    onClick={() => alternar(linha)}
-                    data-state={
-                      linha.key === abertaKey ? "selected" : undefined
-                    }
-                    className="cursor-pointer"
-                  >
-                    <TableCell>
-                      {/* O botão é o alvo acessível (teclado/leitor de tela); o clique na linha
-                          inteira é só conveniência de mouse. */}
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          alternar(linha)
-                        }}
-                        aria-expanded={linha.key === abertaKey}
-                        className="flex max-w-full items-center gap-2 rounded-sm text-left outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                      >
-                        {createElement(linha.icone, {
-                          className: "size-4 shrink-0 text-muted-foreground",
-                          "aria-hidden": true,
-                        })}
-                        <span className="truncate">{linha.nome}</span>
-                      </button>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {linha.limite === null ? (
-                        <SemValor />
-                      ) : (
-                        <Valor centavos={linha.limite} neutro />
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Valor centavos={linha.realizado} neutro />
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {restante === null ? (
-                        <SemValor />
-                      ) : (
-                        <Valor
-                          centavos={despesa ? restante : Math.abs(restante)}
-                          absoluto={despesa}
-                        />
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Progress
-                          value={Math.min(linha.percentual, 100)}
-                          indicatorClassName={linha.cor}
-                          className="w-16"
-                        />
-                        <span className="text-xs text-muted-foreground tabular-nums">
-                          {linha.percentual}%
-                        </span>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                )
-              })}
-            </TableBody>
-          </Table>
-        </div>
+        <TabelaLinhas
+          despesa={despesa}
+          linhas={linhas}
+          abertaKey={abertaKey}
+          onAlternar={alternar}
+        />
       )}
 
       {aberta && alvo && (
@@ -512,6 +343,266 @@ function SecaoOrcamento({
         />
       )}
     </section>
+  )
+}
+
+type PropsLinhas = {
+  linhas: LinhaVisao[]
+  abertaKey: string | null
+  onAlternar: (linha: LinhaVisao) => void
+}
+
+function ResumoSecao({
+  despesa,
+  totalOrcado,
+  totalRealizado,
+  restanteTotal,
+  percentualTotal,
+}: {
+  despesa: boolean
+  totalOrcado: number
+  totalRealizado: number
+  restanteTotal: number
+  percentualTotal: number
+}) {
+  return (
+    <Card>
+      <CardContent className="flex flex-wrap items-center justify-between gap-6 py-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:gap-8">
+          <div>
+            <p className="text-sm text-muted-foreground">
+              {despesa ? "Total orçado" : "Meta total"}
+            </p>
+            <p className="text-lg font-semibold">
+              <Valor centavos={totalOrcado} neutro />
+            </p>
+          </div>
+          <div>
+            <p className="text-sm text-muted-foreground">
+              {despesa ? "Gasto até agora" : "Recebido até agora"}
+            </p>
+            <p className="text-lg font-semibold">
+              <Valor centavos={totalRealizado} neutro />
+            </p>
+          </div>
+          <div>
+            <p className="text-sm text-muted-foreground">
+              {despesa ? "Restante" : "Restante pra meta"}
+            </p>
+            <p className="text-lg font-semibold">
+              {/* Nunca mostra "-": despesa mantém a cor do sinal real (vermelho se estourou),
+                  só sem o sinal de menos no texto; receita usa o valor já em módulo — bater
+                  ou passar da meta é notícia boa, nunca um alerta. */}
+              <Valor
+                centavos={despesa ? restanteTotal : Math.abs(restanteTotal)}
+                absoluto={despesa}
+              />
+            </p>
+          </div>
+        </div>
+        <AnelProgresso
+          pct={percentualTotal}
+          tamanho={96}
+          rotulo={despesa ? "utilizado" : "recebido"}
+        />
+      </CardContent>
+    </Card>
+  )
+}
+
+function ListaMobile({ linhas, abertaKey, onAlternar }: PropsLinhas) {
+  return (
+    <div className="divide-y rounded-lg border">
+      {linhas.map((linha) => (
+        <ItemMobile
+          key={linha.key}
+          linha={linha}
+          aberta={linha.key === abertaKey}
+          onAlternar={onAlternar}
+        />
+      ))}
+    </div>
+  )
+}
+
+function ItemMobile({
+  linha,
+  aberta,
+  onAlternar,
+}: {
+  linha: LinhaVisao
+  aberta: boolean
+  onAlternar: (linha: LinhaVisao) => void
+}) {
+  return (
+    <div className={cn("space-y-1.5 p-3", aberta && "bg-muted/60")}>
+      <button
+        type="button"
+        onClick={() => {
+          onAlternar(linha)
+        }}
+        aria-expanded={aberta}
+        className="flex w-full items-center gap-3 rounded-sm text-left outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        {createElement(linha.icone, {
+          className: "size-4 shrink-0 text-muted-foreground",
+          "aria-hidden": true,
+        })}
+        <span className="min-w-0 flex-1 space-y-1.5">
+          <span className="flex items-center justify-between gap-2">
+            <span className="truncate text-sm font-medium">{linha.nome}</span>
+            <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
+              {linha.percentual}%
+            </span>
+          </span>
+          <RealizadoDeLimite linha={linha} />
+        </span>
+      </button>
+      {/* Fora do botão: <div role=progressbar> dentro de <button> é HTML inválido. */}
+      <div className="pl-7">
+        <Progress
+          value={Math.min(linha.percentual, 100)}
+          indicatorClassName={linha.cor}
+        />
+      </div>
+    </div>
+  )
+}
+
+function RealizadoDeLimite({ linha }: { linha: LinhaVisao }) {
+  return (
+    <span className="block text-xs text-muted-foreground">
+      <Valor
+        centavos={linha.realizado}
+        neutro
+        className="text-xs font-normal"
+      />{" "}
+      {linha.limite === null ? (
+        "fora do orçamento"
+      ) : (
+        <>
+          de{" "}
+          <Valor
+            centavos={linha.limite}
+            neutro
+            className="text-xs font-normal"
+          />
+        </>
+      )}
+    </span>
+  )
+}
+
+function TabelaLinhas({
+  despesa,
+  linhas,
+  abertaKey,
+  onAlternar,
+}: PropsLinhas & { despesa: boolean }) {
+  return (
+    <div className="overflow-x-auto rounded-lg border">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Categoria</TableHead>
+            <TableHead className="text-right">
+              {despesa ? "Orçado" : "Meta"}
+            </TableHead>
+            <TableHead className="text-right">
+              {despesa ? "Gasto" : "Recebido"}
+            </TableHead>
+            <TableHead className="text-right">Restante</TableHead>
+            <TableHead className="w-36">%</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {linhas.map((linha) => (
+            <LinhaTabela
+              key={linha.key}
+              despesa={despesa}
+              linha={linha}
+              aberta={linha.key === abertaKey}
+              onAlternar={onAlternar}
+            />
+          ))}
+        </TableBody>
+      </Table>
+    </div>
+  )
+}
+
+function LinhaTabela({
+  despesa,
+  linha,
+  aberta,
+  onAlternar,
+}: {
+  despesa: boolean
+  linha: LinhaVisao
+  aberta: boolean
+  onAlternar: (linha: LinhaVisao) => void
+}) {
+  const restante = linha.limite === null ? null : linha.limite - linha.realizado
+  return (
+    <TableRow
+      onClick={() => {
+        onAlternar(linha)
+      }}
+      data-state={aberta ? "selected" : undefined}
+      className="cursor-pointer"
+    >
+      <TableCell>
+        {/* O botão é o alvo acessível (teclado/leitor de tela); o clique na linha
+            inteira é só conveniência de mouse. */}
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation()
+            onAlternar(linha)
+          }}
+          aria-expanded={aberta}
+          className="flex max-w-full items-center gap-2 rounded-sm text-left outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          {createElement(linha.icone, {
+            className: "size-4 shrink-0 text-muted-foreground",
+            "aria-hidden": true,
+          })}
+          <span className="truncate">{linha.nome}</span>
+        </button>
+      </TableCell>
+      <TableCell className="text-right">
+        {linha.limite === null ? (
+          <SemValor />
+        ) : (
+          <Valor centavos={linha.limite} neutro />
+        )}
+      </TableCell>
+      <TableCell className="text-right">
+        <Valor centavos={linha.realizado} neutro />
+      </TableCell>
+      <TableCell className="text-right">
+        {restante === null ? (
+          <SemValor />
+        ) : (
+          <Valor
+            centavos={despesa ? restante : Math.abs(restante)}
+            absoluto={despesa}
+          />
+        )}
+      </TableCell>
+      <TableCell>
+        <div className="flex items-center gap-2">
+          <Progress
+            value={Math.min(linha.percentual, 100)}
+            indicatorClassName={linha.cor}
+            className="w-16"
+          />
+          <span className="text-xs text-muted-foreground tabular-nums">
+            {linha.percentual}%
+          </span>
+        </div>
+      </TableCell>
+    </TableRow>
   )
 }
 
