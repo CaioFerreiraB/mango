@@ -42,6 +42,23 @@ def instancia(db: Session) -> ConfiguracaoSistema:
     return ConfiguracaoSistemaRepository(db).obter()
 
 
+def pronto(
+    geral: ConfiguracaoSistema, config: ConfigTelegram | None, usuario: Usuario | None
+) -> bool:
+    """Instância ativa + usuário completo com vínculo confirmado — apto a receber mensagem.
+    Não olha preferência de notificação: cada envio checa a sua."""
+    return bool(
+        usuario
+        and usuario.ativo
+        and usuario.tipo == "completo"
+        and geral.telegram_ativo
+        and config
+        and config.ativo
+        and config.chat_id
+        and config.telegram_usuario_id
+    )
+
+
 def config_usuario(db: Session, usuario_id: int) -> ConfigTelegram:
     config = db.scalar(select(ConfigTelegram).where(ConfigTelegram.usuario_id == usuario_id))
     if config is None:

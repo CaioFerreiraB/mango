@@ -1,20 +1,25 @@
 """Router de orçamento — CRUD com a regra #20 (no service). `orcamento_mensal` é CRUD puro."""
 
+from typing import Literal
+
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
 from app.models.usuario import Usuario
 from app.repositories.orcamento import OrcamentoRepository
+from app.routers.transacao import _read as ler_transacao
 from app.schemas.orcamento import (
     OrcamentoConsumoRead,
     OrcamentoCreate,
     OrcamentoRead,
     OrcamentoUpdate,
 )
+from app.schemas.transacao import TransacaoListagem
 from app.security.current_user import get_current_user
 from app.services import orcamento as orcamento_service
 from app.services import orcamento_consumo
+from app.services.categoria_resolucao import carregar_contexto
 from app.services.orcamento_mensal import materializar_mes
 
 router = APIRouter(prefix="/orcamentos", tags=["orcamento"])
@@ -50,6 +55,28 @@ def consumo(
 ):
     """Consumo e alertas (50/75/90/100%) dos orçamentos do mês (§4.6)."""
     return orcamento_consumo.consumo_do_mes(db, user.id, ano, mes)
+
+
+@router.get("/consumo/transacoes", response_model=TransacaoListagem)
+def consumo_transacoes(
+    ano: int = Query(ge=2000, le=2100),
+    mes: int = Query(ge=1, le=12),
+    tipo: Literal["despesa", "receita"] = Query(),
+    categoria_id: str | None = Query(None, min_length=1, max_length=16),
+    nao_planejado: bool = Query(False),
+    db: Session = Depends(get_db),
+    user: Usuario = Depends(get_current_user),
+):
+    """Transações que compõem uma linha do consumo do mês: a categoria (com subcategorias) ou,
+    com `nao_planejado=true`, tudo do tipo que ficou fora do orçamento. Soma = realizado."""
+    if (categoria_id is None) == (not nao_planejado):
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            "informe exatamente um entre categoria_id e nao_planejado=true",
+        )
+    itens = orcamento_consumo.transacoes_do_item(db, user.id, ano, mes, tipo, categoria_id)
+    ctx = carregar_contexto(db, user.id)
+    return TransacaoListagem(items=[ler_transacao(t, ctx) for t in itens], total=len(itens))
 
 
 # Declarado antes de `/{orcamento_id}` pelo mesmo motivo de `/consumo`.

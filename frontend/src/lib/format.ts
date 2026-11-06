@@ -50,8 +50,14 @@ const dateTimeFmt = new Intl.DateTimeFormat("pt-BR", {
   timeStyle: "short",
 })
 
+// `yyyy-mm-dd` puro é data CIVIL: `new Date("2026-11-01")` seria meia-noite UTC = 31/10 21h em SP,
+// e todo formatador abaixo (fuso SP) exibiria o dia/mês anterior. Meio-dia UTC nunca vira o dia.
+const SO_DATA = /^\d{4}-\d{2}-\d{2}$/
+
 function toDate(value: string | number | Date): Date {
-  return value instanceof Date ? value : new Date(value)
+  if (value instanceof Date) return value
+  if (typeof value === "string" && SO_DATA.test(value)) return parseISO(value)
+  return new Date(value)
 }
 
 /** Data ISO/epoch → `30 de jun. de 2026` (America/Sao_Paulo). */

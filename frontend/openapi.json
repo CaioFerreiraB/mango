@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "mango",
-    "version": "0.3.0"
+    "version": "0.4.0"
   },
   "paths": {
     "/health": {
@@ -2729,6 +2729,103 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/OrcamentoConsumoRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/orcamentos/consumo/transacoes": {
+      "get": {
+        "tags": [
+          "orcamento"
+        ],
+        "summary": "Consumo Transacoes",
+        "description": "Transações que compõem uma linha do consumo do mês: a categoria (com subcategorias) ou,\ncom `nao_planejado=true`, tudo do tipo que ficou fora do orçamento. Soma = realizado.",
+        "operationId": "consumo_transacoes_api_orcamentos_consumo_transacoes_get",
+        "parameters": [
+          {
+            "name": "ano",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "maximum": 2100,
+              "minimum": 2000,
+              "title": "Ano"
+            }
+          },
+          {
+            "name": "mes",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "maximum": 12,
+              "minimum": 1,
+              "title": "Mes"
+            }
+          },
+          {
+            "name": "tipo",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "enum": [
+                "despesa",
+                "receita"
+              ],
+              "type": "string",
+              "title": "Tipo"
+            }
+          },
+          {
+            "name": "categoria_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 16
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Categoria Id"
+            }
+          },
+          {
+            "name": "nao_planejado",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Nao Planejado"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransacaoListagem"
                 }
               }
             }
@@ -12029,6 +12126,10 @@
             "type": "boolean",
             "title": "Suprimido"
           },
+          "notificar": {
+            "type": "boolean",
+            "title": "Notificar"
+          },
           "limite_centavos": {
             "type": "integer",
             "title": "Limite Centavos"
@@ -12061,6 +12162,7 @@
           "tipo",
           "recorrente",
           "suprimido",
+          "notificar",
           "limite_centavos",
           "realizado_centavos",
           "percentual",
@@ -12085,6 +12187,16 @@
             },
             "type": "array",
             "title": "Itens"
+          },
+          "nao_planejado_despesa_centavos": {
+            "type": "integer",
+            "title": "Nao Planejado Despesa Centavos",
+            "default": 0
+          },
+          "nao_planejado_receita_centavos": {
+            "type": "integer",
+            "title": "Nao Planejado Receita Centavos",
+            "default": 0
           }
         },
         "type": "object",
@@ -12124,6 +12236,11 @@
           "ativo": {
             "type": "boolean",
             "title": "Ativo",
+            "default": true
+          },
+          "notificar": {
+            "type": "boolean",
+            "title": "Notificar",
             "default": true
           }
         },
@@ -12176,6 +12293,11 @@
             "type": "boolean",
             "title": "Editado Manualmente",
             "default": false
+          },
+          "notificar": {
+            "type": "boolean",
+            "title": "Notificar",
+            "default": true
           }
         },
         "type": "object",
@@ -12227,6 +12349,22 @@
             "type": "boolean",
             "title": "Suprimido"
           },
+          "notificar": {
+            "type": "boolean",
+            "title": "Notificar"
+          },
+          "alerta_enviado_em": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Alerta Enviado Em"
+          },
           "usuario_id": {
             "type": "integer",
             "title": "Usuario Id"
@@ -12253,6 +12391,7 @@
           "limite_centavos",
           "editado_manualmente",
           "suprimido",
+          "notificar",
           "usuario_id",
           "criado_em",
           "atualizado_em"
@@ -12294,6 +12433,17 @@
               }
             ],
             "title": "Suprimido"
+          },
+          "notificar": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notificar"
           }
         },
         "type": "object",
@@ -12329,6 +12479,10 @@
             "type": "integer",
             "title": "Ordem"
           },
+          "notificar": {
+            "type": "boolean",
+            "title": "Notificar"
+          },
           "usuario_id": {
             "type": "integer",
             "title": "Usuario Id"
@@ -12353,6 +12507,7 @@
           "recorrente",
           "ativo",
           "ordem",
+          "notificar",
           "usuario_id",
           "criado_em",
           "atualizado_em"
@@ -12405,6 +12560,17 @@
               }
             ],
             "title": "Ordem"
+          },
+          "notificar": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notificar"
           }
         },
         "type": "object",
@@ -12499,6 +12665,10 @@
             ],
             "title": "Avatar"
           },
+          "orcamento_alerta_pct": {
+            "type": "integer",
+            "title": "Orcamento Alerta Pct"
+          },
           "revisao_desde": {
             "anyOf": [
               {
@@ -12535,6 +12705,7 @@
           "ocupacao",
           "accent",
           "avatar",
+          "orcamento_alerta_pct",
           "revisao_desde",
           "brapi_token_configurado",
           "totp_configurado",
@@ -12659,6 +12830,12 @@
               }
             ],
             "title": "Revisao Desde"
+          },
+          "orcamento_alerta_pct": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 1.0,
+            "title": "Orcamento Alerta Pct"
           }
         },
         "type": "object",

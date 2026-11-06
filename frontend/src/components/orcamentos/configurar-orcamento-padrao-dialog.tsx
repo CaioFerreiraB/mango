@@ -30,6 +30,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import { Switch } from "@/components/ui/switch"
 import { useIconeCategoria } from "@/lib/api/categoria-icones"
 import {
   nomeCategoria,
@@ -52,6 +53,7 @@ type Linha = {
   categoriaId: string
   valor: number // centavos
   ordem: number
+  notificar: boolean // aviso no Telegram ao atingir o % das Preferências (só despesa)
 }
 
 const SECOES: { tipo: Tipo; titulo: string; vazio: string }[] = [
@@ -79,6 +81,7 @@ function linhasIniciais(orcamentos: Orcamento[], tipo: Tipo): Linha[] {
         categoriaId: o.categoria_id,
         valor: o.limite_padrao_centavos,
         ordem: o.ordem,
+        notificar: o.notificar,
       }))
   )
 }
@@ -125,12 +128,27 @@ export function ConfigurarOrcamentoPadraoDialog({
     }))
   }
 
+  function mudarNotificar(tipo: Tipo, categoriaId: string, notificar: boolean) {
+    setLinhas((prev) => ({
+      ...prev,
+      [tipo]: prev[tipo].map((l) =>
+        l.categoriaId === categoriaId ? { ...l, notificar } : l
+      ),
+    }))
+  }
+
   function adicionarCategoria(tipo: Tipo, categoriaId: string) {
     setLinhas((prev) => ({
       ...prev,
       [tipo]: [
         ...prev[tipo],
-        { orcamentoId: null, categoriaId, valor: 0, ordem: prev[tipo].length },
+        {
+          orcamentoId: null,
+          categoriaId,
+          valor: 0,
+          ordem: prev[tipo].length,
+          notificar: true,
+        },
       ],
     }))
   }
@@ -189,6 +207,7 @@ export function ConfigurarOrcamentoPadraoDialog({
               limite_padrao_centavos: linha.valor,
               recorrente: true,
               ativo: true,
+              notificar: linha.notificar,
             })
             if (criado.ordem !== linha.ordem) {
               await atualizar.mutateAsync({ id: criado.id, ordem: linha.ordem })
@@ -196,8 +215,11 @@ export function ConfigurarOrcamentoPadraoDialog({
             sucessos++
           } else {
             const existente = original.get(linha.orcamentoId)
-            const patch: { limite_padrao_centavos?: number; ordem?: number } =
-              {}
+            const patch: {
+              limite_padrao_centavos?: number
+              ordem?: number
+              notificar?: boolean
+            } = {}
             if (
               !existente ||
               linha.valor !== existente.limite_padrao_centavos
@@ -206,6 +228,9 @@ export function ConfigurarOrcamentoPadraoDialog({
             }
             if (!existente || linha.ordem !== existente.ordem) {
               patch.ordem = linha.ordem
+            }
+            if (!existente || linha.notificar !== existente.notificar) {
+              patch.notificar = linha.notificar
             }
             if (Object.keys(patch).length > 0) {
               await atualizar.mutateAsync({ id: linha.orcamentoId, ...patch })
@@ -242,7 +267,8 @@ export function ConfigurarOrcamentoPadraoDialog({
         if (
           !existente ||
           linha.valor !== existente.limite_padrao_centavos ||
-          linha.ordem !== existente.ordem
+          linha.ordem !== existente.ordem ||
+          linha.notificar !== existente.notificar
         ) {
           return true
         }
@@ -269,8 +295,9 @@ export function ConfigurarOrcamentoPadraoDialog({
         <DialogHeader>
           <DialogTitle>Orçamento padrão</DialogTitle>
           <DialogDescription>
-            Vale a partir do próximo mês materializado — o mês atual não muda
-            automaticamente (use "Editar mês" pra isso).
+            Os valores valem a partir do próximo mês materializado — o mês atual
+            não muda automaticamente (use "Editar mês" pra isso). O aviso no
+            Telegram vale já para o mês atual.
           </DialogDescription>
         </DialogHeader>
         <div className="max-h-[60vh] space-y-6 overflow-y-auto pr-1">
@@ -286,6 +313,13 @@ export function ConfigurarOrcamentoPadraoDialog({
               erros={erros}
               onMudarValor={(categoriaId, v) =>
                 mudarValor(tipo, categoriaId, v)
+              }
+              onMudarNotificar={
+                tipo === "despesa"
+                  ? (categoriaId, v) => {
+                      mudarNotificar(tipo, categoriaId, v)
+                    }
+                  : undefined
               }
               onRemover={(linha) => removerLinha(tipo, linha)}
               onAdicionar={(categoriaId) =>
@@ -323,6 +357,7 @@ function SecaoTipo({
   excluir,
   erros,
   onMudarValor,
+  onMudarNotificar,
   onRemover,
   onAdicionar,
   onArrastarFim,
@@ -335,6 +370,8 @@ function SecaoTipo({
   excluir: string[]
   erros: Record<string, string>
   onMudarValor: (categoriaId: string, centavos: number) => void
+  /** Só despesa: receita não tem aviso de estouro. */
+  onMudarNotificar?: (categoriaId: string, notificar: boolean) => void
   onRemover: (linha: Linha) => void
   onAdicionar: (categoriaId: string) => void
   onArrastarFim: (event: DragEndEvent) => void
@@ -347,6 +384,12 @@ function SecaoTipo({
   return (
     <section className="space-y-2">
       <h3 className="text-sm font-semibold">{titulo}</h3>
+      {onMudarNotificar && linhas.length > 0 ? (
+        <p className="text-xs text-muted-foreground">
+          O interruptor ao lado do valor avisa no Telegram quando a categoria
+          atingir o % definido em Configurações → Preferências.
+        </p>
+      ) : null}
       {linhas.length === 0 ? (
         <p className="text-sm text-muted-foreground">{vazio}</p>
       ) : (
@@ -370,6 +413,12 @@ function SecaoTipo({
                     nome={nomeCategoria(categoria)}
                     erro={erros[`${tipo}:${linha.categoriaId}`]}
                     onMudarValor={(v) => onMudarValor(linha.categoriaId, v)}
+                    onMudarNotificar={
+                      onMudarNotificar &&
+                      ((v) => {
+                        onMudarNotificar(linha.categoriaId, v)
+                      })
+                    }
                     onRemover={() => onRemover(linha)}
                   />
                 )
@@ -393,12 +442,14 @@ function LinhaArrastavel({
   nome,
   erro,
   onMudarValor,
+  onMudarNotificar,
   onRemover,
 }: {
   linha: Linha
   nome: string
   erro: string | undefined
   onMudarValor: (centavos: number) => void
+  onMudarNotificar?: (notificar: boolean) => void
   onRemover: () => void
 }) {
   const iconeCategoria = useIconeCategoria()
@@ -441,6 +492,14 @@ function LinhaArrastavel({
           className="w-28 shrink-0 sm:w-32"
           aria-label={`Valor de ${nome}`}
         />
+        {onMudarNotificar ? (
+          <Switch
+            checked={linha.notificar}
+            onCheckedChange={onMudarNotificar}
+            aria-label={`Avisar no Telegram ao atingir o % de ${nome}`}
+            title="Avisar no Telegram"
+          />
+        ) : null}
         <Button
           variant="ghost"
           size="icon"

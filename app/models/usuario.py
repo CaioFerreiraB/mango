@@ -2,7 +2,16 @@
 
 from datetime import date, datetime
 
-from sqlalchemy import BigInteger, Boolean, Date, DateTime, ForeignKey, String
+from sqlalchemy import (
+    BigInteger,
+    Boolean,
+    CheckConstraint,
+    Date,
+    DateTime,
+    ForeignKey,
+    Integer,
+    String,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -13,7 +22,10 @@ from app.models.types import EncryptedStr
 
 class Usuario(TimestampMixin, Base):
     __tablename__ = "usuario"
-    __table_args__ = (check_in("tipo", TIPO_USUARIO, "tipo"),)
+    __table_args__ = (
+        check_in("tipo", TIPO_USUARIO, "tipo"),
+        CheckConstraint("orcamento_alerta_pct BETWEEN 1 AND 100", name="orcamento_alerta_pct"),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
     nome: Mapped[str] = mapped_column(String(255), nullable=False)
@@ -44,6 +56,9 @@ class Usuario(TimestampMixin, Base):
     # Preferências do sistema — null = padrões do frontend (violeta / avatar 1).
     accent: Mapped[str | None] = mapped_column(String(20))
     avatar: Mapped[int | None] = mapped_column()
+    # % do orçamento de uma categoria (despesa) que dispara o aviso no Telegram — o switch por
+    # categoria é `orcamento[_mensal].notificar` (ver `app/services/orcamento_alerta.py`).
+    orcamento_alerta_pct: Mapped[int] = mapped_column(Integer, nullable=False, default=80)
 
     # Data de corte da revisão (§4.3): transação ANTES dela tem a revisão **ignorada** — não é
     # marcada como revisada, só sai da fila. O Pluggy traz o histórico inteiro ao conectar a conta,

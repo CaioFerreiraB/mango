@@ -50,6 +50,7 @@ from app.repositories.transacao import TransacaoRepository
 from app.services.assinatura_match import aplicar_match_assinaturas
 from app.services.ativo_agrupamento import agrupar_renda_fixa
 from app.services.categoria_regras import aplicar_regras_categorizacao
+from app.services.orcamento_alerta import verificar_e_avisar
 from app.services.orcamento_mensal import materializar_mes
 from app.services.periodo import SP
 from app.services.saldo_diario import registrar_snapshot, registrar_snapshot_investimento
@@ -200,6 +201,11 @@ def sincronizar_usuario(
         except Exception:
             db.rollback()
             logger.exception("pós-processamento do sync falhou (orçamentos)")
+        try:
+            verificar_e_avisar(db, usuario_id)  # aviso de orçamento no Telegram (por % atingido)
+        except Exception:
+            db.rollback()
+            logger.exception("pós-processamento do sync falhou (alerta de orçamento)")
     return resumo
 
 
