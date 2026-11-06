@@ -134,38 +134,40 @@ export function OrcamentosPage() {
             <Skeleton key={i} className="h-24 w-full" />
           ))}
         </div>
-      ) : visiveis.length === 0 ? (
-        mesEhPassado ? (
-          <EmptyState
-            icon={PiggyBank}
-            title="Nenhum orçamento neste mês"
-            description="Meses passados não recebem orçamento automaticamente. Aplique o orçamento padrão a este mês, ou configure um orçamento específico só pra ele."
-          >
-            <div className="flex flex-wrap justify-center gap-2">
-              <AplicarPadraoBotao ano={ano} mes={mes} />
-              <EditarMesDialog
-                itens={itens}
-                ano={ano}
-                mes={mes}
-                trigger={
-                  <Button variant="outline">
-                    <Settings2 className="size-4" /> Configurar orçamento do mês
-                  </Button>
-                }
-              />
-            </div>
-          </EmptyState>
-        ) : (
-          <EmptyState
-            icon={PiggyBank}
-            title="Nenhum orçamento neste mês"
-            description="Defina um orçamento padrão pra que ele passe a valer todo mês, a partir de agora."
-          >
-            <ConfigurarOrcamentoPadraoDialog />
-          </EmptyState>
-        )
       ) : (
         <div className="space-y-8">
+          {visiveis.length > 0 ? null : mesEhPassado ? (
+            <EmptyState
+              icon={PiggyBank}
+              title="Nenhum orçamento neste mês"
+              description="Meses passados não recebem orçamento automaticamente. Aplique o orçamento padrão a este mês, ou configure um orçamento específico só pra ele."
+            >
+              <div className="flex flex-wrap justify-center gap-2">
+                <AplicarPadraoBotao ano={ano} mes={mes} />
+                <EditarMesDialog
+                  itens={itens}
+                  ano={ano}
+                  mes={mes}
+                  trigger={
+                    <Button variant="outline">
+                      <Settings2 className="size-4" /> Configurar orçamento do
+                      mês
+                    </Button>
+                  }
+                />
+              </div>
+            </EmptyState>
+          ) : (
+            <EmptyState
+              icon={PiggyBank}
+              title="Nenhum orçamento neste mês"
+              description="Defina um orçamento padrão pra que ele passe a valer todo mês, a partir de agora."
+            >
+              <ConfigurarOrcamentoPadraoDialog />
+            </EmptyState>
+          )}
+          {/* Sem linha visível ainda pode haver gasto/receita fora do orçamento: a seção
+              aparece só com o "Não planejado" (SecaoOrcamento devolve null se não houver). */}
           <SecaoOrcamento
             tipo="despesa"
             titulo="Despesas"
@@ -180,13 +182,15 @@ export function OrcamentosPage() {
             naoPlanejado={consumo.data?.nao_planejado_receita_centavos ?? 0}
             {...secao}
           />
-          <ConfigurarOrcamentoPadraoDialog
-            trigger={
-              <Button variant="outline" className="w-full sm:hidden">
-                <Settings2 className="size-4" /> Configurar orçamento padrão
-              </Button>
-            }
-          />
+          {visiveis.length === 0 ? null : (
+            <ConfigurarOrcamentoPadraoDialog
+              trigger={
+                <Button variant="outline" className="w-full sm:hidden">
+                  <Settings2 className="size-4" /> Configurar orçamento padrão
+                </Button>
+              }
+            />
+          )}
         </div>
       )}
     </div>
@@ -349,54 +353,63 @@ function SecaoOrcamento({
       {isMobile ? (
         <div className="divide-y rounded-lg border">
           {linhas.map((linha) => (
-            <button
+            <div
               key={linha.key}
-              type="button"
-              onClick={() => alternar(linha)}
-              aria-expanded={linha.key === abertaKey}
               className={cn(
-                "flex w-full items-center gap-3 p-3 text-left outline-none focus-visible:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring",
+                "space-y-1.5 p-3",
                 linha.key === abertaKey && "bg-muted/60"
               )}
             >
-              {createElement(linha.icone, {
-                className: "size-4 shrink-0 text-muted-foreground",
-                "aria-hidden": true,
-              })}
-              <span className="min-w-0 flex-1 space-y-1.5">
-                <span className="flex items-center justify-between gap-2">
-                  <span className="truncate text-sm font-medium">
-                    {linha.nome}
+              <button
+                type="button"
+                onClick={() => {
+                  alternar(linha)
+                }}
+                aria-expanded={linha.key === abertaKey}
+                className="flex w-full items-center gap-3 rounded-sm text-left outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                {createElement(linha.icone, {
+                  className: "size-4 shrink-0 text-muted-foreground",
+                  "aria-hidden": true,
+                })}
+                <span className="min-w-0 flex-1 space-y-1.5">
+                  <span className="flex items-center justify-between gap-2">
+                    <span className="truncate text-sm font-medium">
+                      {linha.nome}
+                    </span>
+                    <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
+                      {linha.percentual}%
+                    </span>
                   </span>
-                  <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
-                    {linha.percentual}%
+                  <span className="block text-xs text-muted-foreground">
+                    <Valor
+                      centavos={linha.realizado}
+                      neutro
+                      className="text-xs font-normal"
+                    />{" "}
+                    {linha.limite === null ? (
+                      "fora do orçamento"
+                    ) : (
+                      <>
+                        de{" "}
+                        <Valor
+                          centavos={linha.limite}
+                          neutro
+                          className="text-xs font-normal"
+                        />
+                      </>
+                    )}
                   </span>
                 </span>
-                <span className="block text-xs text-muted-foreground">
-                  <Valor
-                    centavos={linha.realizado}
-                    neutro
-                    className="text-xs font-normal"
-                  />{" "}
-                  {linha.limite === null ? (
-                    "fora do orçamento"
-                  ) : (
-                    <>
-                      de{" "}
-                      <Valor
-                        centavos={linha.limite}
-                        neutro
-                        className="text-xs font-normal"
-                      />
-                    </>
-                  )}
-                </span>
+              </button>
+              {/* Fora do botão: <div role=progressbar> dentro de <button> é HTML inválido. */}
+              <div className="pl-7">
                 <Progress
                   value={Math.min(linha.percentual, 100)}
                   indicatorClassName={linha.cor}
                 />
-              </span>
-            </button>
+              </div>
+            </div>
           ))}
         </div>
       ) : (
@@ -493,7 +506,9 @@ function SecaoOrcamento({
           mes={mes}
           alvo={alvo}
           titulo={`${aberta.nome} · ${rotuloMes}`}
-          onFechar={() => onAlvo(null)}
+          onFechar={() => {
+            onAlvo(null)
+          }}
         />
       )}
     </section>
@@ -554,10 +569,10 @@ function PainelTransacoes({
         <EmptyState title="Não foi possível carregar as transações" />
       ) : transacoes.isLoading ? (
         <Skeleton className="h-24 w-full" />
-      ) : (transacoes.data ?? []).length === 0 ? (
+      ) : !transacoes.data?.length ? (
         <EmptyState title="Nenhuma transação nesta categoria no mês" />
       ) : (
-        <TransacoesTabela items={transacoes.data!} />
+        <TransacoesTabela items={transacoes.data} />
       )}
     </section>
   )

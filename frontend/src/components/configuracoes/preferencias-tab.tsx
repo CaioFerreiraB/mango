@@ -256,6 +256,12 @@ function AlertaOrcamentoCard({ perfil }: { perfil: Perfil }) {
   const atualizar = useAtualizarPerfil()
   const salvo = perfil.orcamento_alerta_pct
   const [valor, setValor] = useState(String(salvo))
+  // Perfil recarregado (outra aba/mutação): acompanha o salvo, salvo se houver edição pendente.
+  const [salvoAnterior, setSalvoAnterior] = useState(salvo)
+  if (salvo !== salvoAnterior) {
+    setSalvoAnterior(salvo)
+    if (valor === String(salvoAnterior)) setValor(String(salvo))
+  }
   const numero = Number(valor)
   const valido =
     valor !== "" && Number.isInteger(numero) && numero >= 1 && numero <= 100
@@ -299,7 +305,9 @@ function AlertaOrcamentoCard({ perfil }: { perfil: Perfil }) {
             value={valor}
             aria-invalid={!valido}
             aria-describedby={valido ? undefined : "orcamento-alerta-pct-erro"}
-            onChange={(e) => setValor(e.target.value)}
+            onChange={(e) => {
+              setValor(e.target.value)
+            }}
             onBlur={gravar}
             onKeyDown={(e) => {
               if (e.key === "Enter") e.currentTarget.blur()

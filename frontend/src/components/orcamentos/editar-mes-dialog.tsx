@@ -333,12 +333,12 @@ export function EditarMesDialog({
                                 notifEdits[item.orcamento_mensal_id] ??
                                 item.notificar
                               }
-                              onCheckedChange={(v) =>
+                              onCheckedChange={(v) => {
                                 setNotifEdits((prev) => ({
                                   ...prev,
                                   [item.orcamento_mensal_id]: v,
                                 }))
-                              }
+                              }}
                               aria-label={`Avisar no Telegram ao atingir o % de ${nome}`}
                               title="Avisar no Telegram"
                             />
@@ -384,9 +384,9 @@ export function EditarMesDialog({
                           {tipo === "despesa" ? (
                             <Switch
                               checked={nova.notificar}
-                              onCheckedChange={(v) =>
+                              onCheckedChange={(v) => {
                                 mudarNotificarNova(tipo, nova.categoriaId, v)
-                              }
+                              }}
                               aria-label={`Avisar no Telegram ao atingir o % de ${nome}`}
                               title="Avisar no Telegram"
                             />

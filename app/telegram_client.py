@@ -71,17 +71,14 @@ def _html(texto: str) -> str:
         guardados.append(trecho)
         return f"\x00{len(guardados) - 1}\x00"
 
+    def pre(conteudo: str) -> str:
+        return guardar(f"<pre>{html.escape(conteudo, quote=False)}</pre>")
+
     texto = texto.replace("\x00", "")  # \x00 marca os trechos guardados
-    s = _TABELA.sub(
-        lambda m: guardar(f"<pre>{html.escape(_tabela(m[0]), quote=False)}</pre>"), texto
-    )
+    # Bloco de código primeiro: o que está dentro dele (inclusive tabela) fica literal.
+    s = re.sub(r"```[^\n]*\n?(.*?)```", lambda m: pre(m[1].strip("\n")), texto, flags=re.S)
+    s = _TABELA.sub(lambda m: pre(_tabela(m[0])), s)
     s = html.escape(s, quote=False)
-    s = re.sub(
-        r"```[^\n]*\n?(.*?)```",
-        lambda m: guardar(f"<pre>{m[1].strip(chr(10))}</pre>"),
-        s,
-        flags=re.S,
-    )
     s = re.sub(r"`([^`\n]+)`", lambda m: guardar(f"<code>{m[1]}</code>"), s)
     linhas: list[str] = []
     citacao: list[str] = []

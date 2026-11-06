@@ -316,7 +316,9 @@ export function ConfigurarOrcamentoPadraoDialog({
               }
               onMudarNotificar={
                 tipo === "despesa"
-                  ? (categoriaId, v) => mudarNotificar(tipo, categoriaId, v)
+                  ? (categoriaId, v) => {
+                      mudarNotificar(tipo, categoriaId, v)
+                    }
                   : undefined
               }
               onRemover={(linha) => removerLinha(tipo, linha)}
@@ -413,7 +415,9 @@ function SecaoTipo({
                     onMudarValor={(v) => onMudarValor(linha.categoriaId, v)}
                     onMudarNotificar={
                       onMudarNotificar &&
-                      ((v) => onMudarNotificar(linha.categoriaId, v))
+                      ((v) => {
+                        onMudarNotificar(linha.categoriaId, v)
+                      })
                     }
                     onRemover={() => onRemover(linha)}
                   />

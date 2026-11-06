@@ -76,14 +76,7 @@ def verificar_e_avisar(db: Session, usuario_id: int) -> int:
             linha.alerta_enviado_em = momento
         db.commit()
 
-        nomes = {
-            cid: traduzido or original
-            for cid, traduzido, original in db.execute(
-                select(
-                    Categoria.pluggy_id, Categoria.description_translated, Categoria.description
-                ).where(Categoria.pluggy_id.in_({ln.categoria_id for ln in linhas}))
-            ).all()
-        }
+        nomes = _nomes(db, {ln.categoria_id for ln in linhas})
         texto = _mensagem(usuario.orcamento_alerta_pct, hoje.month, linhas, cruzou, nomes)
         try:
             with TelegramClient(geral.telegram_token_cifrado) as cliente:
@@ -98,6 +91,17 @@ def verificar_e_avisar(db: Session, usuario_id: int) -> int:
             logger.warning("alerta de orçamento usuario=%s codigo=%s", usuario_id, exc.codigo)
             return 0
         return len(linhas)
+
+
+def _nomes(db: Session, categoria_ids: set[str]) -> dict[str, str]:
+    return {
+        cid: traduzido or original
+        for cid, traduzido, original in db.execute(
+            select(
+                Categoria.pluggy_id, Categoria.description_translated, Categoria.description
+            ).where(Categoria.pluggy_id.in_(categoria_ids))
+        ).all()
+    }
 
 
 def _mensagem(

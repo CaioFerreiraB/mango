@@ -105,6 +105,8 @@ def test_token_redigido_dos_logs_e_botao_opcional(caplog):
             "<pre>Cat       Valor\nA&amp;B     R$ 5,00\nLazer  R$ 10,00</pre>",
         ),
         ("a | b sem separador", "a | b sem separador"),
+        ("```\n| a | b |\n|---|---|\n| 1 | 2 |\n```", "<pre>| a | b |\n|---|---|\n| 1 | 2 |</pre>"),
+        ("[site](https://x.com/?a=1&b=2)", '<a href="https://x.com/?a=1&amp;b=2">site</a>'),
         ("\x000\x00 **ok**", "0 <b>ok</b>"),
     ],
 )
