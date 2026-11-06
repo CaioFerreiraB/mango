@@ -19,6 +19,9 @@ ainda está se assentando. Cada versão publicada tem uma imagem correspondente 
 
 ### Corrigido
 
+- **Telegram:** mensagens saem formatadas (negrito, itálico, listas, código, links, citações,
+  spoiler e tabelas alinhadas) em vez de exibir o Markdown cru (`**`); se o Telegram recusar a
+  formatação, a mensagem é reenviada como texto puro.
 - **Orçamentos:** o mês corrente não virava no fuso de Brasília (data interpretada em UTC no
   navegador).
 

@@ -56,7 +56,7 @@ def relatorio(db, usuario: Usuario, momento: datetime) -> str | None:
     if not total:
         return None
     plural = "transação" if total == 1 else "transações"
-    linhas = ["Mango · revisão pendente", f"{total} {plural} para revisar", ""]
+    linhas = ["**Mango · revisão pendente**", f"{total} {plural} para revisar", ""]
     for transacao in itens:
         descricao = (
             transacao.descricao_usuario

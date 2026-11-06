@@ -108,7 +108,7 @@ def _mensagem(
     nomes: dict[str, str],
 ) -> str:
     partes = [
-        "Mango · orçamento",
+        "**Mango · orçamento**",
         f"Categorias que passaram de {pct}% em {_MESES[mes - 1]}:",
         "",
     ]

@@ -1,5 +1,6 @@
 """Bot API via httpx. Falhas sanitizadas; envio ambíguo nunca é repetido aqui."""
 
+import html
 import logging
 import re
 
@@ -18,6 +19,96 @@ class _RedigirToken(logging.Filter):
 
 for _nome in ("httpx", "httpcore.http11", "httpcore.http2", "httpcore.connection"):
     logging.getLogger(_nome).addFilter(_RedigirToken())
+
+
+_INLINE = [
+    (re.compile(r"\*\*(?=\S)(.+?)(?<=\S)\*\*"), r"<b>\1</b>"),
+    (re.compile(r"(?<!\w)__(?=\S)(.+?)(?<=\S)__(?!\w)"), r"<b>\1</b>"),
+    (re.compile(r"~~(?=\S)(.+?)(?<=\S)~~"), r"<s>\1</s>"),
+    (re.compile(r"\|\|(?=\S)(.+?)(?<=\S)\|\|"), r"<tg-spoiler>\1</tg-spoiler>"),
+    # Sem colar em palavra: não pega `snake_case` nem "PAG*LOJA" de descrição de cartão.
+    (re.compile(r"(?<![\w*])\*(?=[^\s*])(.+?)(?<=[^\s*])\*(?![\w*])"), r"<i>\1</i>"),
+    (re.compile(r"(?<!\w)_(?=\S)(.+?)(?<=\S)_(?!\w)"), r"<i>\1</i>"),
+    (re.compile(r"\[([^\]\n]+)\]\((https?://[^\s)\"]+)\)"), r'<a href="\2">\1</a>'),
+]
+
+
+_TABELA = re.compile(
+    r"(?m)^[ \t]*\|.*\|[ \t]*\n[ \t]*\|[ \t:|-]*-[ \t:|-]*\|[ \t]*(?:\n[ \t]*\|.*\|[ \t]*)*"
+)
+_NUMERO = re.compile(r"[-+]?(R\$\s*)?[-+]?[\d.,]+\s*%?")
+
+
+def _tabela(bloco: str) -> str:
+    """Tabela Markdown → texto monoespaçado alinhado (o Telegram não tem tabela)."""
+    linhas = [ln.strip().strip("|") for ln in bloco.split("\n")]
+    del linhas[1]  # separador |---|
+    celulas = [[re.sub(r"\*\*|__|`", "", c).strip() for c in ln.split("|")] for ln in linhas]
+    n = max(map(len, celulas))
+    celulas = [c + [""] * (n - len(c)) for c in celulas]
+    largura = [max(len(c[i]) for c in celulas) for i in range(n)]
+    numerica = [all(_NUMERO.fullmatch(c[i]) for c in celulas[1:] if c[i]) for i in range(n)]
+    return "\n".join(
+        "  ".join(
+            c.rjust(largura[i]) if i and numerica[i] else c.ljust(largura[i])
+            for i, c in enumerate(linha)
+        ).rstrip()
+        for linha in celulas
+    )
+
+
+def _html(texto: str) -> str:
+    """Markdown simples (o que o LLM escreve) → HTML do Telegram.
+
+    Escapa tudo antes: texto de banco/LLM é dado. Só pares casados viram tag, então um trecho
+    fatiado nunca gera HTML desbalanceado. Tabela → `<pre>` alinhado; `> citação` (recolhível
+    acima de 3 linhas); `||spoiler||`. ponytail: subconjunto (sem aninhamento de lista); se o
+    LLM passar a usar mais, trocar por uma lib de Markdown→Telegram.
+    """
+    guardados: list[str] = []
+
+    def guardar(trecho: str) -> str:
+        guardados.append(trecho)
+        return f"\x00{len(guardados) - 1}\x00"
+
+    texto = texto.replace("\x00", "")  # \x00 marca os trechos guardados
+    s = _TABELA.sub(
+        lambda m: guardar(f"<pre>{html.escape(_tabela(m[0]), quote=False)}</pre>"), texto
+    )
+    s = html.escape(s, quote=False)
+    s = re.sub(
+        r"```[^\n]*\n?(.*?)```",
+        lambda m: guardar(f"<pre>{m[1].strip(chr(10))}</pre>"),
+        s,
+        flags=re.S,
+    )
+    s = re.sub(r"`([^`\n]+)`", lambda m: guardar(f"<code>{m[1]}</code>"), s)
+    linhas: list[str] = []
+    citacao: list[str] = []
+
+    def fechar_citacao():
+        if citacao:
+            tag = "blockquote expandable" if len(citacao) > 3 else "blockquote"
+            linhas.append(f"<{tag}>" + "\n".join(citacao) + "</blockquote>")
+            citacao.clear()
+
+    for linha in s.split("\n"):
+        if m := re.match(r"\s{0,3}&gt;\s?(.*)$", linha):
+            citacao.append(m[1])
+            continue
+        fechar_citacao()
+        if m := re.match(r"\s{0,3}#{1,6}\s+(.+?)\s*#*\s*$", linha):
+            linha = f"**{m[1]}**" if not m[1].startswith("**") else m[1]
+        elif m := re.match(r"(\s*)[-*+]\s+(.*)$", linha):
+            linha = f"{m[1]}• {m[2]}"
+        elif re.fullmatch(r"\s*([-*_])(\s*\1){2,}\s*", linha):
+            linha = ""
+        linhas.append(linha)
+    fechar_citacao()
+    s = "\n".join(linhas)
+    for padrao, troca in _INLINE:
+        s = padrao.sub(troca, s)
+    return re.sub(r"\x00(\d+)\x00", lambda m: guardados[int(m[1])], s)
 
 
 class TelegramError(Exception):
@@ -106,7 +197,12 @@ class TelegramClient:
         web_app: bool = False,
         botoes: list | None = None,
     ) -> int:
-        dados = {"chat_id": chat_id, "text": texto, "link_preview_options": {"is_disabled": True}}
+        dados = {
+            "chat_id": chat_id,
+            "text": _html(texto),
+            "parse_mode": "HTML",
+            "link_preview_options": {"is_disabled": True},
+        }
         if url:
             dados["reply_markup"] = {
                 "inline_keyboard": [
@@ -120,7 +216,16 @@ class TelegramClient:
             }
         if botoes:
             dados["reply_markup"] = {"inline_keyboard": botoes}
-        result = self._request("sendMessage", dados, envio=True)
+        try:
+            result = self._request("sendMessage", dados, envio=True)
+        except TelegramError as exc:
+            # 400 = certamente não entregue (sem risco de duplicar): HTML recusado não pode
+            # custar a mensagem → reenvia uma vez como texto puro.
+            if exc.codigo != "requisicao_rejeitada":
+                raise
+            dados["text"] = texto
+            del dados["parse_mode"]
+            result = self._request("sendMessage", dados, envio=True)
         if not isinstance(result, dict) or not isinstance(result.get("message_id"), int):
             raise TelegramError("envio_incerto")
         return result["message_id"]
