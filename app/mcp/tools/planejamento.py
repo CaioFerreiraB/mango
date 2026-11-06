@@ -231,6 +231,10 @@ async def listar_orcamentos(
         ]
         for i in itens
     ]
+    # Gasto/recebido em categorias fora do orçamento do mês — sem limite, então sem uso/alerta.
+    for tipo in ("despesa", "receita"):
+        if valor := consumo.get(f"nao_planejado_{tipo}_centavos"):
+            linhas.append(["Não planejado", tipo, "—", f.brl(valor), None, None])
     colunas = ["Categoria", "Tipo", "Limite", "Realizado", "Uso", "Alerta"]
     md = juntar(f"## Orçamentos — {mes:02d}/{ano}", f.tabela(colunas, linhas, formato))
     return ok(md, consumo)

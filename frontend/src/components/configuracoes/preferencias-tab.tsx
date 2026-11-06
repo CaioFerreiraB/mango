@@ -163,6 +163,7 @@ function PreferenciasForm({ perfil }: { perfil: Perfil }) {
       </Card>
 
       <RevisaoCorteCard perfil={perfil} />
+      <AlertaOrcamentoCard perfil={perfil} />
     </div>
   )
 }
@@ -243,6 +244,83 @@ function RevisaoCorteCard({ perfil }: { perfil: Perfil }) {
               Limpar
             </Button>
           ) : null}
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+/** % do orçamento de uma categoria que dispara o aviso no Telegram. Quais categorias avisam é o
+ *  interruptor de cada uma na configuração do orçamento (padrão ou do mês). Grava no blur/Enter. */
+function AlertaOrcamentoCard({ perfil }: { perfil: Perfil }) {
+  const atualizar = useAtualizarPerfil()
+  const salvo = perfil.orcamento_alerta_pct
+  const [valor, setValor] = useState(String(salvo))
+  // Perfil recarregado (outra aba/mutação): acompanha o salvo, salvo se houver edição pendente.
+  const [salvoAnterior, setSalvoAnterior] = useState(salvo)
+  if (salvo !== salvoAnterior) {
+    setSalvoAnterior(salvo)
+    if (valor === String(salvoAnterior)) setValor(String(salvo))
+  }
+  const numero = Number(valor)
+  const valido =
+    valor !== "" && Number.isInteger(numero) && numero >= 1 && numero <= 100
+
+  function gravar() {
+    if (!valido || numero === salvo) return
+    atualizar.mutate(
+      { orcamento_alerta_pct: numero },
+      {
+        onSuccess: () => toast.success("Percentual do aviso atualizado."),
+        onError: (err) => {
+          setValor(String(salvo))
+          toast.error(err.message)
+        },
+      }
+    )
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">Aviso de orçamento</CardTitle>
+        <CardDescription>
+          Envia uma mensagem no Telegram quando o gasto do mês de uma categoria
+          atinge este percentual do orçado — uma vez por categoria a cada mês.
+          Escolha quais categorias avisam no interruptor de cada uma, na
+          configuração do orçamento.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="orcamento-alerta-pct">Avisar ao atingir (%)</Label>
+          <Input
+            id="orcamento-alerta-pct"
+            type="number"
+            inputMode="numeric"
+            min={1}
+            max={100}
+            step={1}
+            className="w-28"
+            value={valor}
+            aria-invalid={!valido}
+            aria-describedby={valido ? undefined : "orcamento-alerta-pct-erro"}
+            onChange={(e) => {
+              setValor(e.target.value)
+            }}
+            onBlur={gravar}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") e.currentTarget.blur()
+            }}
+          />
+          {valido ? null : (
+            <p
+              id="orcamento-alerta-pct-erro"
+              className="text-xs text-destructive"
+            >
+              Use um número inteiro de 1 a 100.
+            </p>
+          )}
         </div>
       </CardContent>
     </Card>

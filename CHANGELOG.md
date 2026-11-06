@@ -10,6 +10,21 @@ ainda está se assentando. Cada versão publicada tem uma imagem correspondente 
 
 ## [Não publicado]
 
+### Adicionado
+
+- **Orçamentos:** linha "Não planejado" com o gasto em categorias sem orçamento no mês e
+  transações de cada linha direto na tabela.
+- **Aviso de orçamento no Telegram:** ao passar de um percentual configurável (Preferências),
+  no máximo um aviso por categoria por mês, com opção de desligar por categoria.
+
+### Corrigido
+
+- **Telegram:** mensagens saem formatadas (negrito, itálico, listas, código, links, citações,
+  spoiler e tabelas alinhadas) em vez de exibir o Markdown cru (`**`); se o Telegram recusar a
+  formatação, a mensagem é reenviada como texto puro.
+- **Orçamentos:** o mês corrente não virava no fuso de Brasília (data interpretada em UTC no
+  navegador).
+
 ## [0.4.0] — 2026-10-29
 
 ### Adicionado

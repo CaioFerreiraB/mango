@@ -6,13 +6,14 @@ definidos). Sempre escopado por `tipo` — uma árvore de despesa e uma de recei
 de forma independente (§4.6 + receitas).
 """
 
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select, update
 from sqlalchemy.orm import Session
 
 from app.exceptions import ConflictError, NotFoundError, ValidationError
 from app.models.categoria import Categoria
-from app.models.orcamento import Orcamento
+from app.models.orcamento import Orcamento, OrcamentoMensal
 from app.repositories.orcamento import OrcamentoRepository
+from app.services.periodo import hoje_sp
 
 
 def _orcamentos_dos_filhos(db: Session, usuario_id: int, pai_id: str, tipo: str) -> dict[str, int]:
@@ -92,4 +93,21 @@ def atualizar(db: Session, usuario_id: int, orcamento_id: int, dados: dict) -> O
         raise NotFoundError("orçamento não encontrado")
     novo_limite = dados.get("limite_padrao_centavos", orc.limite_padrao_centavos)
     _validar_regra_20(db, usuario_id, orc.categoria_id, orc.tipo, novo_limite)
+    if "notificar" in dados and dados["notificar"] is not None:
+        # Diferente do limite (que só vale dos próximos meses), o switch do aviso no padrão vale
+        # já para o mês corrente — senão ligar o aviso hoje só teria efeito no mês que vem. Quem
+        # quiser outro valor só neste mês ajusta depois em "Editar mês".
+        hoje = hoje_sp()
+        db.execute(
+            update(OrcamentoMensal)
+            .where(
+                OrcamentoMensal.usuario_id == usuario_id,
+                OrcamentoMensal.orcamento_id == orc.id,
+                or_(
+                    OrcamentoMensal.ano > hoje.year,
+                    (OrcamentoMensal.ano == hoje.year) & (OrcamentoMensal.mes >= hoje.month),
+                ),
+            )
+            .values(notificar=dados["notificar"])
+        )
     return repo.update(orc, **dados)

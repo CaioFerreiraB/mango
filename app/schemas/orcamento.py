@@ -19,6 +19,7 @@ class OrcamentoCreate(BaseModel):
     limite_padrao_centavos: int = Field(ge=0)
     recorrente: bool = True
     ativo: bool = True
+    notificar: bool = True  # aviso no Telegram ao cruzar o % das Preferências (só despesa)
     # `ordem` não entra aqui de propósito: toda criação sempre anexa ao fim da lista do tipo
     # (o service atribui) — reordenar só existe via PATCH, depois de criado.
 
@@ -28,6 +29,7 @@ class OrcamentoUpdate(BaseModel):
     recorrente: bool | None = None
     ativo: bool | None = None
     ordem: int | None = None
+    notificar: bool | None = None  # propaga ao mês corrente em diante (service `orcamento`)
     # `tipo` é imutável após criado — mudar o tipo de um orçamento é, na prática, orçar outra
     # coisa (a base de cálculo do consumo muda de DEBIT pra CREDIT).
 
@@ -40,6 +42,7 @@ class OrcamentoMensalCreate(BaseModel):
     mes: int = Field(ge=1, le=12)
     limite_centavos: int = Field(ge=0)
     editado_manualmente: bool = False
+    notificar: bool = True
 
 
 class OrcamentoMensalUpdate(BaseModel):
@@ -48,6 +51,7 @@ class OrcamentoMensalUpdate(BaseModel):
     # Remover/restaurar uma categoria só deste mês (sem mexer no orçamento padrão) — ver
     # `OrcamentoMensal.suprimido`.
     suprimido: bool | None = None
+    notificar: bool | None = None  # aviso no Telegram só deste mês
 
 
 class OrcamentoConsumoItem(BaseModel):
@@ -64,6 +68,7 @@ class OrcamentoConsumoItem(BaseModel):
     tipo: Tipo
     recorrente: bool  # do orçamento padrão (True) ou pontual, só deste mês (False)
     suprimido: bool
+    notificar: bool  # aviso no Telegram ao cruzar `usuario.orcamento_alerta_pct`
     limite_centavos: int
     realizado_centavos: int  # despesa: gasto no período; receita: recebido no período
     percentual: int
@@ -74,3 +79,7 @@ class OrcamentoConsumoRead(BaseModel):
     ano: int
     mes: int
     itens: list[OrcamentoConsumoItem]
+    # Realizado em categorias fora do orçamento do mês (inclui sem categoria; ver
+    # `app.services.orcamento_consumo`). Sem limite: a UI mostra "—" no orçado e 100%.
+    nao_planejado_despesa_centavos: int = 0
+    nao_planejado_receita_centavos: int = 0

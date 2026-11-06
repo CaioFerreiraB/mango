@@ -5,7 +5,17 @@ escopada por `tipo` — uma árvore de despesa e uma de receita são orçadas in
 `orcamento_mensal` é materializado de `orcamento` e editável por mês (base dos alertas).
 """
 
-from sqlalchemy import BigInteger, Boolean, ForeignKey, Integer, String, UniqueConstraint
+from datetime import datetime
+
+from sqlalchemy import (
+    BigInteger,
+    Boolean,
+    DateTime,
+    ForeignKey,
+    Integer,
+    String,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
@@ -31,6 +41,9 @@ class Orcamento(UserOwnedMixin, TimestampMixin, Base):
     # Ordem de exibição dentro do tipo (arrastar-para-reordenar no modal padrão) — sempre
     # atribuída pelo servidor (nunca aceita do cliente na criação, só editável via PATCH).
     ordem: Mapped[int] = mapped_column(Integer, nullable=False)
+    # Aviso no Telegram ao cruzar `usuario.orcamento_alerta_pct` — copiado para cada mês na
+    # materialização (e propagado ao mês corrente em diante quando muda no PATCH).
+    notificar: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
 
 
 class OrcamentoMensal(UserOwnedMixin, TimestampMixin, Base):
@@ -59,3 +72,7 @@ class OrcamentoMensal(UserOwnedMixin, TimestampMixin, Base):
     # a linha continua existindo (protege contra a materialização recriá-la) mas some da Visão
     # Geral. Fica restrita a este (ano, mes); o mês seguinte materializa uma linha nova, normal.
     suprimido: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    notificar: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    # Deduplica o aviso do Telegram: no máximo um por categoria por mês (gravado ANTES do envio —
+    # crash no meio vira "não enviado", nunca reenvio em loop).
+    alerta_enviado_em: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

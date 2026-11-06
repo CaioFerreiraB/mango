@@ -11,6 +11,17 @@ engines:
     enabled: true
   eslint:
     enabled: false # já roda no CI com a config do projeto (frontend/eslint.config.js)
+  # Na Codacy cada major do ESLint é um motor próprio, e `enabled` aqui não liga/desliga motor
+  # (isso é só pela UI) — o que vale é exclude_paths. Sem isso o ESLint8 roda sem resolução de
+  # tipos e gera falsos positivos ("'any' overrides" em tipo local, params de assinatura "unused").
+  eslint-8:
+    exclude_paths: ["frontend/**"]
+  eslint-9:
+    exclude_paths: ["frontend/**"]
+  # O parser TS do Lizard erra a fronteira de função em JSX (componente de ~50 linhas medido com
+  # 297; helper curto com 144). Complexidade de .py/.ts segue valendo.
+  lizard:
+    exclude_paths: ["frontend/**/*.tsx"]
   pmd:
     enabled: false
 

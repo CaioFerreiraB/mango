@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 
 import { api } from "@/lib/api/client"
 import type { components } from "@/lib/api/schema"
+import type { Transacao } from "@/lib/api/transacoes"
 
 export type Orcamento = components["schemas"]["OrcamentoRead"]
 export type OrcamentoCreate = components["schemas"]["OrcamentoCreate"]
@@ -29,6 +30,43 @@ export function useConsumoOrcamentos(ano: number, mes: number) {
       if (error || !data)
         throw new Error("falha ao carregar o consumo dos orçamentos")
       return data
+    },
+  })
+}
+
+/** Linha da Visão Geral cujas transações o usuário abriu: uma categoria orçada ou o
+ *  "Não planejado" (`categoriaId: null`) daquele tipo. */
+export type AlvoDrilldown = {
+  tipo: "despesa" | "receita"
+  categoriaId: string | null
+}
+
+/** Transações que compõem uma linha do consumo do mês — mesmo recorte do servidor, então somam
+ *  o realizado exibido. Chave sob `orcamentos` → invalidada junto com o consumo (inclusive ao
+ *  recategorizar uma transação no drawer). */
+export function useTransacoesDoOrcamento(
+  ano: number,
+  mes: number,
+  alvo: AlvoDrilldown | null
+) {
+  return useQuery({
+    queryKey: ["orcamentos", "consumo", ano, mes, "transacoes", alvo],
+    enabled: alvo !== null,
+    queryFn: async (): Promise<Transacao[]> => {
+      const { tipo, categoriaId } = alvo!
+      const { data, error } = await api.GET(
+        "/api/orcamentos/consumo/transacoes",
+        {
+          params: {
+            query:
+              categoriaId === null
+                ? { ano, mes, tipo, nao_planejado: true }
+                : { ano, mes, tipo, categoria_id: categoriaId },
+          },
+        }
+      )
+      if (error || !data) throw new Error("falha ao carregar as transações")
+      return data.items
     },
   })
 }
@@ -71,6 +109,7 @@ export function useAtualizarOrcamentoPadrao() {
       id: number
       limite_padrao_centavos?: number
       ordem?: number
+      notificar?: boolean
     }): Promise<Orcamento> => {
       const { id, ...body } = args
       const { data, error } = await api.PATCH(
@@ -96,18 +135,21 @@ export function useAtualizarLimiteMensal() {
       id: number
       limite_centavos?: number
       suprimido?: boolean
+      notificar?: boolean
     }) => {
-      const { id, limite_centavos, suprimido } = args
+      const { id, limite_centavos, suprimido, notificar } = args
       const body: {
         limite_centavos?: number
         editado_manualmente?: boolean
         suprimido?: boolean
+        notificar?: boolean
       } = {}
       if (limite_centavos !== undefined) {
         body.limite_centavos = limite_centavos
         body.editado_manualmente = true
       }
       if (suprimido !== undefined) body.suprimido = suprimido
+      if (notificar !== undefined) body.notificar = notificar
       const { data, error } = await api.PATCH(
         "/api/orcamentos-mensais/{item_id}",
         {
