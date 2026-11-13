@@ -561,4 +561,6 @@ def test_expenses_objeto_de_taxas_vira_soma():
     assert _despesas_centavos(taxas) == 1_795
     assert _despesas_centavos({"incomeTax": None}) is None
     assert _despesas_centavos(2.5) == 250
+    # soma em Decimal: em float 0.1+0.7+0.005 = 0.8049999… e arredondaria p/ 80
+    assert _despesas_centavos({"a": 0.1, "b": 0.7, "c": 0.005}) == 81
     assert _despesas_centavos(None) is None

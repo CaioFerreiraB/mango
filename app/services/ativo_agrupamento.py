@@ -10,8 +10,10 @@ Chave dividida em vários ativos (o usuário separou à mão — caso das caixin
 chegam todas como "CDB - NU FINANCEIRA…", uma posição por aporte, sem o nome da caixinha): a
 compra nova vai p/ o ativo de um aporte "recorrente" igual (mesma taxa, mesmo valor aplicado, mesmo
 dia do mês — o depósito agendado), senão p/ a "caixa de entrada" (ativo com o nome cru do Pluggy,
-recriado se preciso) p/ o usuário classificar. ponytail: recorrência é heurística; aporte avulso
-sempre cai na caixa de entrada — o teto é o split manual.
+recriado se preciso) p/ o usuário classificar. A caixa de entrada vazia (todas as compras movidas)
+também conta como split; apagá-la faz a chave voltar a se comportar como um grupo renomeado.
+ponytail: recorrência é heurística; aporte avulso sempre cai na caixa de entrada — o teto é o split
+manual.
 """
 
 from __future__ import annotations
@@ -66,14 +68,17 @@ def agrupar_renda_fixa(db: Session, usuario_id: int) -> None:
         if chave is None:
             continue  # sem ISIN nem nome → fica avulso (mostrado como ativo próprio no resumo)
         ids = por_chave.get(chave, set())
-        if len(ids) == 1:
-            ativo_id = next(iter(ids))
+        nome = inv.nome or "Renda fixa"
+        # Caixa de entrada = ativo com o nome cru, mesmo vazio: se o usuário moveu TODAS as compras
+        # para uma caixinha, ela continua existindo e sinaliza o split (≠ só renomear o grupo).
+        entrada = next((i for i in sorted(nomes) if nomes[i] == nome), None)
+        if len(ids) == 1 and entrada in (None, *ids):
+            ativo_id = next(iter(ids))  # chave num ativo só (inclusive renomeado inteiro)
         else:
             rec = _recorrencia(inv)
             ativo_id = recorrentes.get((chave, rec)) if rec is not None else None
             if ativo_id is None:
-                nome = inv.nome or "Renda fixa"
-                ativo_id = next((i for i in sorted(ids) if nomes.get(i) == nome), None)
+                ativo_id = entrada
                 if ativo_id is None:
                     ativo_id = repo.create(nome=nome).id
                     nomes[ativo_id] = nome

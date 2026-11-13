@@ -62,7 +62,7 @@ function RenomearForm({
   onFechar: () => void
 }) {
   const renomear = useRenomearAtivo()
-  const [nome, setNome] = useState(nomeAtivo(ativo.nome) ?? "")
+  const [nome, setNome] = useState(ativo.nome ?? "")
   return (
     <form
       onSubmit={(e) => {

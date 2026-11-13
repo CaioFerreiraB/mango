@@ -87,8 +87,8 @@ def _despesas_centavos(valor: object) -> int | None:
     (`incomeTax`, `iof`, `custodyFee`… — assim vem o RDB/caixinha do Nubank). Objeto → soma do que
     houver, o que fecha com o Pluggy: `netAmount = amount − Σ expenses`."""
     if isinstance(valor, dict):
-        partes = [v for v in valor.values() if isinstance(v, int | float)]
-        return reais_para_centavos(sum(partes)) if partes else None
+        partes = [Decimal(str(v)) for v in valor.values() if isinstance(v, int | float)]
+        return reais_para_centavos(sum(partes)) if partes else None  # soma em Decimal, sem float
     return reais_para_centavos(valor)
 
 

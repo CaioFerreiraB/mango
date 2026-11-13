@@ -309,7 +309,9 @@ export function useVincularAtivo() {
       investimentoIds: number[]
       ativoId: number | null
     }): Promise<void> => {
-      const resultados = await Promise.all(
+      // allSettled: a mutação só termina (e o onSettled invalida) depois de TODOS os PATCHes — um
+      // erro de transporte no Promise.all deixaria os demais em voo depois do refetch.
+      const resultados = await Promise.allSettled(
         args.investimentoIds.map((id) =>
           api.PATCH("/api/investimentos/{investimento_id}", {
             params: { path: { investimento_id: id } },
@@ -317,9 +319,14 @@ export function useVincularAtivo() {
           })
         )
       )
-      const falha = resultados.find((r) => r.error || !r.data)
-      if (falha)
-        throw new Error(mensagemErro(falha.error, "falha ao vincular ao ativo"))
+      for (const r of resultados) {
+        if (r.status === "rejected")
+          throw new Error("falha ao vincular ao ativo", { cause: r.reason })
+        if (r.value.error || !r.value.data)
+          throw new Error(
+            mensagemErro(r.value.error, "falha ao vincular ao ativo")
+          )
+      }
     },
     onSuccess: (_, args) => {
       const n = args.investimentoIds.length

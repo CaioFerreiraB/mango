@@ -645,6 +645,56 @@ def test_agrupa_caixinhas_separadas_por_recorrencia_e_caixa_de_entrada(db, usuar
     assert len(db.scalars(select(Ativo).where(Ativo.usuario_id == usuario.id)).all()) == 3
 
 
+def test_caixinha_unica_com_caixa_de_entrada_vazia_nao_absorve_avulso(db, usuario, conexao):
+    nome = "CDB - NU FINANCEIRA S.A."
+
+    def aporte(pid: str, dia: datetime, valor: int) -> Investimento:
+        return _criar_investimento(
+            db,
+            usuario.id,
+            conexao.id,
+            pid,
+            nome=nome,
+            purchase_date=dia,
+            amount_original_centavos=valor,
+            rate=Decimal("100"),
+        )
+
+    mensal = aporte("nu-1", datetime(2026, 9, 1, 3, tzinfo=UTC), 50_000)
+    agrupar_renda_fixa(db, usuario.id)
+    db.refresh(mensal)
+    entrada_id = mensal.ativo_id
+
+    # move TODAS as compras p/ uma caixinha → a caixa de entrada fica vazia, mas continua existindo
+    caixinha = Ativo(usuario_id=usuario.id, nome="Viagem")
+    db.add(caixinha)
+    db.commit()
+    mensal.ativo_id = caixinha.id
+    db.commit()
+
+    recorrente = aporte("nu-2", datetime(2026, 10, 1, 3, tzinfo=UTC), 50_000)
+    avulso = aporte("nu-3", datetime(2026, 10, 9, 3, tzinfo=UTC), 7_000)
+    agrupar_renda_fixa(db, usuario.id)
+    db.refresh(recorrente)
+    db.refresh(avulso)
+    assert recorrente.ativo_id == caixinha.id
+    assert avulso.ativo_id == entrada_id  # caixa de entrada vazia reaproveitada, não a caixinha
+
+
+def test_grupo_renomeado_inteiro_continua_recebendo_compras(db, usuario, conexao):
+    a1 = _criar_investimento(db, usuario.id, conexao.id, "ts-1", isin="BRX", nome="Tesouro Selic")
+    agrupar_renda_fixa(db, usuario.id)
+    db.refresh(a1)
+    db.get(Ativo, a1.ativo_id).nome = "Reserva"  # renomeou o grupo; sem ativo com o nome cru
+    db.commit()
+
+    a2 = _criar_investimento(db, usuario.id, conexao.id, "ts-2", isin="BRX", nome="Tesouro Selic")
+    agrupar_renda_fixa(db, usuario.id)
+    db.refresh(a2)
+    assert a2.ativo_id == a1.ativo_id
+    assert len(db.scalars(select(Ativo).where(Ativo.usuario_id == usuario.id)).all()) == 1
+
+
 def test_resync_preserva_ativo_id(db, usuario, conexao):
     sincronizar_usuario(db, usuario.id)
     repo = InvestimentoRepository(db, usuario.id)

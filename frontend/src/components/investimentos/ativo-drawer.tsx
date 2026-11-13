@@ -255,7 +255,8 @@ function CorpoAtivo({
   const fund = usePosicaoFundamentos(p.investimento_ids, ehFII).data
   // Extras do título (taxa/indexador/vencimento/IR) não vêm na linha agregada — leem dos
   // investimentos da posição (compras do mesmo papel). Cacheado; só a renda fixa consome.
-  const investimentosData = useInvestimentos().data
+  const investimentosQuery = useInvestimentos()
+  const investimentosData = investimentosQuery.data
   const invsPosicao = useMemo(
     () =>
       investimentosData?.filter((i) => p.investimento_ids.includes(i.id)) ?? [],
@@ -412,7 +413,12 @@ function CorpoAtivo({
           </TabsContent>
           {ehRendaFixa ? (
             <TabsContent value="compras" className="mt-0">
-              <ComprasRF posicao={p} invs={invsPosicao} />
+              <ComprasRF
+                posicao={p}
+                invs={invsPosicao}
+                erro={investimentosQuery.isError && !investimentosData}
+                onTentarNovamente={() => investimentosQuery.refetch()}
+              />
             </TabsContent>
           ) : null}
           {!ehRendaFixa ? (
@@ -3128,9 +3134,13 @@ function AlocacaoDonut({ alocacao }: { alocacao: FundamentosFIIAlocacao[] }) {
 function ComprasRF({
   posicao: p,
   invs,
+  erro,
+  onTentarNovamente,
 }: {
   posicao: CarteiraPosicao
   invs: Investimento[]
+  erro: boolean
+  onTentarNovamente: () => void
 }) {
   const [verResgatadas, setVerResgatadas] = useState(false)
   const [selecao, setSelecao] = useState<Set<number>>(new Set())
@@ -3170,6 +3180,19 @@ function ComprasRF({
       return n
     })
 
+  if (erro)
+    return (
+      <EmptyState
+        icon={AlertTriangle}
+        title="Não foi possível carregar as compras"
+        description="A carteira carregou, mas a lista de aplicações falhou."
+      >
+        <Button variant="outline" size="sm" onClick={onTentarNovamente}>
+          Tentar novamente
+        </Button>
+      </EmptyState>
+    )
+  // posição sempre tem ≥1 compra: lista vazia sem erro = ainda carregando
   if (invs.length === 0) return <Skeleton className="h-40 w-full" />
   return (
     <div className="space-y-3">
