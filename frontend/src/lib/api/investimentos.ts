@@ -299,29 +299,35 @@ export function useRenomearAtivo() {
   })
 }
 
-/** Vincula uma compra (posição) a um ativo — `ativoId=null` desvincula (vira avulsa). */
+/** Vincula compras (posições) a um ativo — `ativoId=null` desvincula (viram avulsas).
+ *  ponytail: 1 PATCH por compra em paralelo (dezenas no máximo — aportes de caixinha); se passar
+ *  disso, um endpoint em lote. Falha parcial: o refetch mostra o que moveu. */
 export function useVincularAtivo() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (args: {
-      investimentoId: number
+      investimentoIds: number[]
       ativoId: number | null
-    }): Promise<Investimento> => {
-      const { data, error } = await api.PATCH(
-        "/api/investimentos/{investimento_id}",
-        {
-          params: { path: { investimento_id: args.investimentoId } },
-          body: { ativo_id: args.ativoId },
-        }
+    }): Promise<void> => {
+      const resultados = await Promise.all(
+        args.investimentoIds.map((id) =>
+          api.PATCH("/api/investimentos/{investimento_id}", {
+            params: { path: { investimento_id: id } },
+            body: { ativo_id: args.ativoId },
+          })
+        )
       )
-      if (error || !data)
-        throw new Error(mensagemErro(error, "falha ao vincular ao ativo"))
-      return data
+      const falha = resultados.find((r) => r.error || !r.data)
+      if (falha)
+        throw new Error(mensagemErro(falha.error, "falha ao vincular ao ativo"))
     },
-    onSuccess: () => {
+    onSuccess: (_, args) => {
+      const n = args.investimentoIds.length
+      toast.success(n === 1 ? "Compra movida." : `${n} compras movidas.`)
+    },
+    onSettled: () => {
       qc.invalidateQueries({ queryKey: investimentosKeys.resumo })
       qc.invalidateQueries({ queryKey: ativosKeys.all })
-      toast.success("Compra vinculada ao ativo.")
     },
     onError: (e) => toast.error(e.message),
   })

@@ -590,6 +590,61 @@ def test_agrupa_renda_fixa_por_isin_e_soma_resultado(db, usuario, conexao, clien
     assert b.ativo_id == manual.id
 
 
+def test_agrupa_caixinhas_separadas_por_recorrencia_e_caixa_de_entrada(db, usuario, conexao):
+    # Caixinhas do Nubank: todas "CDB - NU FINANCEIRA…", uma posição por aporte, sem ISIN.
+    nome = "CDB - NU FINANCEIRA S.A."
+
+    def aporte(pid: str, dia: datetime, valor: int, rate: str = "100") -> Investimento:
+        return _criar_investimento(
+            db,
+            usuario.id,
+            conexao.id,
+            pid,
+            nome=nome,
+            purchase_date=dia,
+            amount_original_centavos=valor,
+            rate=Decimal(rate),
+        )
+
+    mensal = aporte("nu-1", datetime(2026, 9, 1, 3, tzinfo=UTC), 50_000)
+    avulso = aporte("nu-2", datetime(2026, 9, 14, 3, tzinfo=UTC), 180_000)
+    agrupar_renda_fixa(db, usuario.id)
+    db.refresh(mensal)
+    db.refresh(avulso)
+    entrada_id = mensal.ativo_id
+    assert entrada_id is not None and avulso.ativo_id == entrada_id  # chave única → 1 ativo
+
+    # usuário separa: o aporte mensal vai p/ "Viagem" e renomeia a caixa de entrada p/ "Reserva"
+    viagem = Ativo(usuario_id=usuario.id, nome="Viagem")
+    db.add(viagem)
+    db.commit()
+    mensal.ativo_id = viagem.id
+    db.get(Ativo, entrada_id).nome = "Reserva"
+    db.commit()
+
+    proximo_mensal = aporte("nu-3", datetime(2026, 10, 1, 3, tzinfo=UTC), 50_000)
+    outra_taxa = aporte("nu-4", datetime(2026, 10, 1, 3, tzinfo=UTC), 50_000, rate="120")
+    novo_avulso = aporte("nu-5", datetime(2026, 10, 9, 3, tzinfo=UTC), 7_000)
+    agrupar_renda_fixa(db, usuario.id)
+    for inv in (proximo_mensal, outra_taxa, novo_avulso):
+        db.refresh(inv)
+    # recorrência (mesma taxa+valor+dia) segue a caixinha do aporte anterior
+    assert proximo_mensal.ativo_id == viagem.id
+    # sem recorrência → caixa de entrada com o nome cru (recriada, já que "Reserva" foi renomeada)
+    assert outra_taxa.ativo_id == novo_avulso.ativo_id
+    entrada = db.get(Ativo, novo_avulso.ativo_id)
+    assert entrada.nome == nome and entrada.id not in (viagem.id, entrada_id)
+
+    # a caixa de entrada existente é reaproveitada (não cria outra) e o manual é preservado
+    mais_um = aporte("nu-6", datetime(2026, 11, 20, 3, tzinfo=UTC), 1_000)
+    agrupar_renda_fixa(db, usuario.id)
+    db.refresh(mais_um)
+    db.refresh(mensal)
+    assert mais_um.ativo_id == entrada.id
+    assert mensal.ativo_id == viagem.id
+    assert len(db.scalars(select(Ativo).where(Ativo.usuario_id == usuario.id)).all()) == 3
+
+
 def test_resync_preserva_ativo_id(db, usuario, conexao):
     sincronizar_usuario(db, usuario.id)
     repo = InvestimentoRepository(db, usuario.id)

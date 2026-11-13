@@ -53,6 +53,7 @@ import {
   fmtPct,
   fmtQtd,
   ICONE_TIPO,
+  nomeAtivo,
   pctTexto,
   rotuloChave,
   rotuloClasse,
@@ -152,7 +153,9 @@ export function CarteiraPage() {
   })
   const [pagina, setPagina] = useState(1)
   const [porPagina, setPorPagina] = useState(10)
-  const [selecionada, setSelecionada] = useState<CarteiraPosicao | null>(null)
+  // Guarda a chave, não a linha: a posição aberta acompanha o refetch (ex.: compras movidas de
+  // ativo na aba Compras) e o drawer fecha se o ativo deixar de existir.
+  const [chaveAberta, setChaveAberta] = useState<string | null>(null)
 
   const posicoes = useMemo(() => resumo.data?.posicoes ?? [], [resumo.data])
 
@@ -486,7 +489,7 @@ export function CarteiraPage() {
                   <PosicaoLinha
                     key={p.chave}
                     posicao={p}
-                    onAbrir={() => setSelecionada(p)}
+                    onAbrir={() => setChaveAberta(p.chave)}
                   />
                 ))
               )}
@@ -546,8 +549,8 @@ export function CarteiraPage() {
       </Card>
 
       <AtivoDrawer
-        posicao={selecionada}
-        onOpenChange={(aberto) => !aberto && setSelecionada(null)}
+        posicao={posicoes.find((p) => p.chave === chaveAberta) ?? null}
+        onOpenChange={(aberto) => !aberto && setChaveAberta(null)}
       />
     </div>
   )
@@ -681,12 +684,13 @@ function PosicaoLinha({
   onAbrir: () => void
 }) {
   const Icone = ICONE_TIPO[p.subtype ?? p.type] ?? Coins
+  const nome = nomeAtivo(p.nome)
   return (
     <TableRow
       onClick={onAbrir}
       tabIndex={0}
       role="button"
-      aria-label={`Abrir ${p.code ?? p.nome ?? "ativo"}`}
+      aria-label={`Abrir ${p.code ?? nome ?? "ativo"}`}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault()
@@ -704,9 +708,9 @@ function PosicaoLinha({
             <Icone className="size-4" />
           </span>
           <div className="min-w-0">
-            <p className="truncate font-medium">{p.code ?? p.nome ?? "—"}</p>
-            {p.code && p.nome ? (
-              <p className="truncate text-xs text-muted-foreground">{p.nome}</p>
+            <p className="truncate font-medium">{p.code ?? nome ?? "—"}</p>
+            {p.code && nome ? (
+              <p className="truncate text-xs text-muted-foreground">{nome}</p>
             ) : null}
           </div>
         </div>

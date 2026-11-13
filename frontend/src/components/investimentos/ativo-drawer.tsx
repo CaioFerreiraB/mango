@@ -8,6 +8,7 @@ import {
   ChartLine,
   Clock,
   Hash,
+  FolderInput,
   Info,
   Landmark,
   Layers,
@@ -42,6 +43,11 @@ import { EmptyState } from "@/components/common/empty-state"
 import { Valor } from "@/components/common/valor"
 import { eixoBRL, linhaTooltip } from "@/components/dashboard/chart-helpers"
 import { PeriodoPicker } from "@/components/dashboard/periodo-picker"
+import {
+  MoverAtivoDialog,
+  RenomearAtivoDialog,
+  type ComprasParaMover,
+} from "@/components/investimentos/ativo-rf-dialogs"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -79,6 +85,7 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
@@ -152,6 +159,7 @@ import {
   MOVIMENTO_LABEL,
   pctTexto,
   rotuloClasse,
+  nomeAtivo,
   rotuloIndexador,
   rotuloTipo,
 } from "@/lib/investimento-taxonomia"
@@ -280,7 +288,7 @@ function CorpoAtivo({
           <div className="min-w-0 flex-1">
             <DrawerTitle className="flex flex-wrap items-center gap-2 text-lg">
               {ehRendaFixa
-                ? (p.nome ?? p.code ?? "Título")
+                ? (nomeAtivo(p.nome) ?? p.code ?? "Título")
                 : (p.code ?? p.nome ?? "Ativo")}
               {ehFII || ehRendaFixa ? null : (
                 <Badge variant="secondary">{classeRF}</Badge>
@@ -356,6 +364,9 @@ function CorpoAtivo({
               <TabsTrigger value="performance">Performance</TabsTrigger>
             ) : null}
             <TabsTrigger value="movimentacoes">Movimentações</TabsTrigger>
+            {ehRendaFixa ? (
+              <TabsTrigger value="compras">Compras</TabsTrigger>
+            ) : null}
             {/* Renda fixa não paga dividendos e não tem fundamentos de mercado — sem essas abas. */}
             {!ehRendaFixa ? (
               <TabsTrigger value="dividendos">Dividendos</TabsTrigger>
@@ -399,6 +410,11 @@ function CorpoAtivo({
               <MovimentacoesTab ids={p.investimento_ids} />
             )}
           </TabsContent>
+          {ehRendaFixa ? (
+            <TabsContent value="compras" className="mt-0">
+              <ComprasRF posicao={p} invs={invsPosicao} />
+            </TabsContent>
+          ) : null}
           {!ehRendaFixa ? (
             <TabsContent value="dividendos" className="mt-0">
               {ehFII ? (
@@ -3104,6 +3120,174 @@ function AlocacaoDonut({ alocacao }: { alocacao: FundamentosFIIAlocacao[] }) {
 }
 
 /** Insights: dados do fundo para apoiar a análise. O mango não faz recomendações de investimento. */
+// --- compras de renda fixa (separar caixinhas) ---------------------------------------------------
+
+/** Compras (posições Pluggy) agrupadas neste ativo, com seleção p/ mover a outro ativo. É como o
+ *  usuário separa as caixinhas do Nubank: o Pluggy manda cada aporte como "CDB - NU FINANCEIRA…"
+ *  sem o nome da caixinha, então a separação é manual (o sync segue aportes recorrentes). */
+function ComprasRF({
+  posicao: p,
+  invs,
+}: {
+  posicao: CarteiraPosicao
+  invs: Investimento[]
+}) {
+  const [verResgatadas, setVerResgatadas] = useState(false)
+  const [selecao, setSelecao] = useState<Set<number>>(new Set())
+  const [mover, setMover] = useState<ComprasParaMover | null>(null)
+  const [renomear, setRenomear] = useState(false)
+  // chave `rf-{ativo_id}`; `rf-avulsa-{id}` = compra sem ativo (não renomeável)
+  const ativoId = /^rf-(\d+)$/.exec(p.chave)?.[1]
+  // Destinos do "Mover": ativos com compras do mesmo papel cru (as outras caixinhas) + ativos ainda
+  // vazios (recém-criados) — sem o próprio ativo nem Tesouros/outros CDBs, que só poluiriam a lista.
+  const rendaFixa = useCarteiraResumo().data?.renda_fixa ?? []
+  const nomeCru = invs[0]?.nome
+  const comCompras = new Set(rendaFixa.map((a) => a.ativo_id))
+  const mesmaFamilia = new Set(
+    rendaFixa
+      .filter((a) => a.posicoes.some((x) => x.nome === nomeCru))
+      .map((a) => a.ativo_id)
+  )
+  const destinoValido = (id: number) =>
+    id !== Number(ativoId) && (mesmaFamilia.has(id) || !comCompras.has(id))
+  const resgatada = (i: Investimento) =>
+    i.status === "TOTAL_WITHDRAWAL" ||
+    (i.amount_centavos ?? i.saldo_centavos) <= 0
+  const nResgatadas = invs.filter(resgatada).length
+  const visiveis = invs
+    .filter((i) => verResgatadas || !resgatada(i))
+    .sort((a, b) =>
+      (b.purchase_date ?? "").localeCompare(a.purchase_date ?? "")
+    )
+  const ids = visiveis.map((i) => i.id)
+  const marcadas = ids.filter((id) => selecao.has(id))
+  const todas = ids.length > 0 && marcadas.length === ids.length
+  const alternar = (id: number) =>
+    setSelecao((s) => {
+      const n = new Set(s)
+      if (n.has(id)) n.delete(id)
+      else n.add(id)
+      return n
+    })
+
+  if (invs.length === 0) return <Skeleton className="h-40 w-full" />
+  return (
+    <div className="space-y-3">
+      <p className="text-sm text-muted-foreground">
+        Cada aplicação vira uma compra. Selecione as que são da mesma caixinha e
+        mova para um ativo com o nome dela.
+      </p>
+      <div className="flex flex-wrap items-center gap-2">
+        <label className="flex items-center gap-2 text-sm">
+          <Checkbox
+            checked={
+              todas ? true : marcadas.length > 0 ? "indeterminate" : false
+            }
+            onCheckedChange={(c) => setSelecao(new Set(c === true ? ids : []))}
+            aria-label="Selecionar todas as compras"
+          />
+          {marcadas.length > 0
+            ? `${marcadas.length} selecionada${marcadas.length === 1 ? "" : "s"}`
+            : "Selecionar todas"}
+        </label>
+        <div className="ml-auto flex gap-2">
+          {ativoId ? (
+            <Button variant="ghost" size="sm" onClick={() => setRenomear(true)}>
+              <Pencil className="size-4" aria-hidden />
+              Renomear
+            </Button>
+          ) : null}
+          <Button
+            size="sm"
+            disabled={marcadas.length === 0}
+            onClick={() =>
+              setMover({
+                ids: marcadas,
+                titulo: nomeAtivo(p.nome) ?? "Renda fixa",
+              })
+            }
+          >
+            <FolderInput className="size-4" aria-hidden />
+            Mover
+          </Button>
+        </div>
+      </div>
+
+      <ul className="divide-y rounded-lg border">
+        {visiveis.map((i) => {
+          const atual = i.amount_centavos ?? i.saldo_centavos
+          const taxa = rotuloIndexador(i.rate_type, i.rate)
+          return (
+            <li key={i.id}>
+              <label className="flex cursor-pointer items-center gap-3 px-3 py-2.5 hover:bg-muted/50">
+                <Checkbox
+                  checked={selecao.has(i.id)}
+                  onCheckedChange={() => alternar(i.id)}
+                  aria-label={`Selecionar compra de ${i.purchase_date ? formatDate(i.purchase_date) : "data desconhecida"}`}
+                />
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium tabular-nums">
+                    {i.purchase_date ? formatDate(i.purchase_date) : "Sem data"}
+                    {resgatada(i) ? (
+                      <Badge variant="secondary" className="ml-2 font-normal">
+                        Resgatada
+                      </Badge>
+                    ) : null}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {[
+                      taxa,
+                      i.due_date ? `vence ${formatDate(i.due_date)}` : null,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <Valor centavos={atual} neutro className="text-sm" />
+                  {i.amount_original_centavos != null ? (
+                    <p className="text-xs text-muted-foreground tabular-nums">
+                      aplicado {formatBRL(i.amount_original_centavos)}
+                    </p>
+                  ) : null}
+                </div>
+              </label>
+            </li>
+          )
+        })}
+      </ul>
+
+      {nResgatadas > 0 ? (
+        <Button
+          variant="link"
+          size="sm"
+          className="px-0"
+          onClick={() => setVerResgatadas((v) => !v)}
+        >
+          {verResgatadas
+            ? "Ocultar resgatadas"
+            : `Mostrar ${nResgatadas} resgatada${nResgatadas === 1 ? "" : "s"}`}
+        </Button>
+      ) : null}
+
+      <MoverAtivoDialog
+        compras={mover}
+        onFechar={() => setMover(null)}
+        onMovido={() => setSelecao(new Set())}
+        mostrar={destinoValido}
+      />
+      <RenomearAtivoDialog
+        ativo={
+          renomear && ativoId
+            ? { ativo_id: Number(ativoId), nome: p.nome }
+            : null
+        }
+        onFechar={() => setRenomear(false)}
+      />
+    </div>
+  )
+}
+
 function InsightsTab() {
   return (
     <div className="space-y-3">
