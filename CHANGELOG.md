@@ -10,6 +10,34 @@ ainda está se assentando. Cada versão publicada tem uma imagem correspondente 
 
 ## [Não publicado]
 
+## [0.7.0] — 2026-11-13
+
+### Adicionado
+
+- **Assistente com IA dentro do Mango:** botão no canto superior direito da topbar. No desktop abre
+  um painel à direita (a página continua usável) que pode ser expandido; no celular o chat ocupa a
+  tela toda, numa topbar nova. Respostas em streaming com o Axon, várias conversas (histórico
+  cifrado por sete dias), parar, gerar de novo e copiar. Alterações sugeridas pela IA aparecem num
+  card para você aplicar ou descartar — a única exceção, como no Telegram, é a ordem exata "marque a
+  transação N como revisada", aplicada na hora. Usa o mesmo provedor, consentimento e cota diária da
+  conversa pelo Telegram.
+- **Separar caixinhas do Nubank:** aba **Compras** no painel de renda fixa da Carteira — selecione
+  aplicações e mova para um ativo com o nome da caixinha. O Pluggy manda cada aporte como "CDB - NU
+  FINANCEIRA…" sem o nome da caixinha, então a separação é manual; depois dela, aportes recorrentes
+  (mesma taxa, valor e dia do mês) seguem sozinhos para a caixinha certa, e os demais caem numa
+  "caixa de entrada" para classificar.
+- **Alterar credencial do Pluggy** em Configurações → Conexões: troque o clientSecret (girado no
+  Pluggy) sem recriar as conexões; a credencial é testada ao salvar.
+
+### Alterado
+
+- Renda fixa bancária aparece com nome curto ("CDB · Nu Financeira") em vez da razão social inteira.
+
+### Corrigido
+
+- Sync de investimentos falhava quando o Pluggy mandava as taxas de um movimento (`expenses`) como
+  objeto — caso das caixinhas/RDB do Nubank.
+
 ## [0.6.0] — 2026-11-13
 
 ### Adicionado
@@ -228,7 +256,8 @@ Primeira versão publicada. Imagem única servindo API e interface, instalável 
 - Os endpoints de autenticação ainda não têm rate-limiting nem lockout. Ver **Problemas conhecidos**
   em [ROADMAP.md](ROADMAP.md) antes de expor a instância à internet aberta.
 
-[Não publicado]: https://github.com/CaioFerreiraB/mango/compare/v0.6.0...HEAD
+[Não publicado]: https://github.com/CaioFerreiraB/mango/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/CaioFerreiraB/mango/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/CaioFerreiraB/mango/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/CaioFerreiraB/mango/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/CaioFerreiraB/mango/compare/v0.3.0...v0.4.0

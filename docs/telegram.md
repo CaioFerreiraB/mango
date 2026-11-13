@@ -110,8 +110,9 @@ Esses comandos funcionam com a IA desligada. Somente conversas privadas e mensag
 Em **Configurações → Inteligência artificial**, o administrador escolhe **Axon** ou **API
 OpenAI-compatible**. Salve endpoint/chave, teste a conexão e depois ative. O provedor genérico
 exige o nome do modelo e suporte a tool calling; está disponível também no desktop. Cada pessoa
-ativa separadamente a conversa, após ver qual provedor receberá seus dados. A interface de
-conversa fica exclusivamente no Telegram.
+ativa separadamente a conversa, após ver qual provedor receberá seus dados. O mesmo consentimento
+vale para o Telegram e para o assistente dentro do Mango (botão no canto superior direito). Os
+históricos dos dois canais são separados; a cota diária é única.
 
 Padrões: 50 mensagens por pessoa/dia e 500 por instalação/dia, em America/Sao_Paulo; histórico
 cifrado de sete dias, contexto das últimas vinte interações completas, seis rodadas de ferramentas

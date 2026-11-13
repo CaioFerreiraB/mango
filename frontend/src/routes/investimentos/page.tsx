@@ -16,6 +16,10 @@ import { Link } from "react-router"
 import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts"
 
 import { PeriodoPicker } from "@/components/dashboard/periodo-picker"
+import {
+  MoverAtivoDialog,
+  RenomearAtivoDialog,
+} from "@/components/investimentos/ativo-rf-dialogs"
 import { EmptyState } from "@/components/common/empty-state"
 import { Valor } from "@/components/common/valor"
 import { SyncButton } from "@/components/sync-button"
@@ -42,7 +46,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import {
@@ -56,15 +59,11 @@ import {
 import { useMe } from "@/lib/api/auth"
 import { useIndicadores, useIndicadoresSerie } from "@/lib/api/indicadores"
 import {
-  useAtivos,
   useCarteiraResumo,
   useCarteiraSerie,
-  useCriarAtivo,
   useInvestimento,
   useInvestimentoTransacoes,
   useProventosFII,
-  useRenomearAtivo,
-  useVincularAtivo,
   type CarteiraAtivoRF,
   type CarteiraAtivoRV,
   type CarteiraItem,
@@ -525,7 +524,14 @@ function RendaFixaSection({
         ativo={renomear}
         onFechar={() => setRenomear(null)}
       />
-      <MoverAtivoDialog posicao={mover} onFechar={() => setMover(null)} />
+      <MoverAtivoDialog
+        compras={
+          mover
+            ? { ids: [mover.id], titulo: mover.nome ?? mover.code ?? "" }
+            : null
+        }
+        onFechar={() => setMover(null)}
+      />
     </Card>
   )
 }
@@ -614,177 +620,6 @@ function AtivoRFItem({
         ))}
       </div>
     </details>
-  )
-}
-
-function RenomearAtivoDialog({
-  ativo,
-  onFechar,
-}: {
-  ativo: CarteiraAtivoRF | null
-  onFechar: () => void
-}) {
-  return (
-    <Dialog open={ativo != null} onOpenChange={(a) => !a && onFechar()}>
-      <DialogContent className="sm:max-w-sm">
-        <DialogHeader>
-          <DialogTitle>Renomear ativo</DialogTitle>
-          <DialogDescription>
-            Um nome que agrupe as compras deste papel.
-          </DialogDescription>
-        </DialogHeader>
-        {/* key remonta com estado fresco a cada ativo (evita setState em efeito) */}
-        {ativo?.ativo_id != null ? (
-          <RenomearForm
-            key={ativo.ativo_id}
-            ativo={ativo}
-            onFechar={onFechar}
-          />
-        ) : null}
-      </DialogContent>
-    </Dialog>
-  )
-}
-
-function RenomearForm({
-  ativo,
-  onFechar,
-}: {
-  ativo: CarteiraAtivoRF
-  onFechar: () => void
-}) {
-  const renomear = useRenomearAtivo()
-  const [nome, setNome] = useState(ativo.nome ?? "")
-  return (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault()
-        const limpo = nome.trim()
-        if (ativo.ativo_id != null && limpo)
-          renomear.mutate(
-            { id: ativo.ativo_id, nome: limpo },
-            { onSuccess: onFechar }
-          )
-      }}
-      className="flex gap-2"
-    >
-      <Input
-        value={nome}
-        onChange={(e) => setNome(e.target.value)}
-        autoFocus
-        maxLength={255}
-        placeholder="Ex.: Tesouro Selic 2028"
-      />
-      <Button type="submit" disabled={!nome.trim() || renomear.isPending}>
-        Salvar
-      </Button>
-    </form>
-  )
-}
-
-function MoverAtivoDialog({
-  posicao,
-  onFechar,
-}: {
-  posicao: CarteiraItem | null
-  onFechar: () => void
-}) {
-  return (
-    <Dialog open={posicao != null} onOpenChange={(a) => !a && onFechar()}>
-      <DialogContent className="flex max-h-[calc(100dvh-2rem)] flex-col gap-0 sm:max-w-sm">
-        <DialogHeader className="shrink-0 pb-3">
-          <DialogTitle>Mover compra</DialogTitle>
-          <DialogDescription className="truncate">
-            {posicao?.nome ?? posicao?.code ?? ""}
-          </DialogDescription>
-        </DialogHeader>
-        {posicao != null ? (
-          <MoverConteudo
-            key={posicao.id}
-            posicao={posicao}
-            onFechar={onFechar}
-          />
-        ) : null}
-      </DialogContent>
-    </Dialog>
-  )
-}
-
-function MoverConteudo({
-  posicao,
-  onFechar,
-}: {
-  posicao: CarteiraItem
-  onFechar: () => void
-}) {
-  const ativos = useAtivos()
-  const vincular = useVincularAtivo()
-  const criar = useCriarAtivo()
-  const [novo, setNovo] = useState("")
-
-  const mover = (ativoId: number | null) =>
-    vincular.mutate(
-      { investimentoId: posicao.id, ativoId },
-      { onSuccess: onFechar }
-    )
-  const criarEMover = () => {
-    const nome = novo.trim()
-    if (!nome) return
-    criar.mutate(nome, {
-      onSuccess: (a) =>
-        vincular.mutate(
-          { investimentoId: posicao.id, ativoId: a.id },
-          { onSuccess: onFechar }
-        ),
-    })
-  }
-  return (
-    <>
-      <div className="min-h-0 space-y-1 overflow-y-auto">
-        {(ativos.data ?? []).map((a) => (
-          <button
-            key={a.id}
-            type="button"
-            onClick={() => mover(a.id)}
-            className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm transition-colors hover:bg-muted/60"
-          >
-            <Landmark
-              className="size-4 shrink-0 text-muted-foreground"
-              aria-hidden
-            />
-            <span className="truncate">{a.nome}</span>
-          </button>
-        ))}
-        <button
-          type="button"
-          onClick={() => mover(null)}
-          className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm text-muted-foreground transition-colors hover:bg-muted/60"
-        >
-          Deixar sem ativo (avulsa)
-        </button>
-      </div>
-      <form
-        onSubmit={(e) => {
-          e.preventDefault()
-          criarEMover()
-        }}
-        className="mt-3 flex shrink-0 gap-2 border-t pt-3"
-      >
-        <Input
-          value={novo}
-          onChange={(e) => setNovo(e.target.value)}
-          maxLength={255}
-          placeholder="Criar novo ativo…"
-        />
-        <Button
-          type="submit"
-          variant="secondary"
-          disabled={!novo.trim() || criar.isPending || vincular.isPending}
-        >
-          Criar
-        </Button>
-      </form>
-    </>
   )
 }
 

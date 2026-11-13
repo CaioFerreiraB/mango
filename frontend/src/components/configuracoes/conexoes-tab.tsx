@@ -38,6 +38,7 @@ import {
   useConfiguracaoSync,
   useAtualizarConfiguracaoSync,
   useCredenciais,
+  useAtualizarCredencial,
   useCriarCredencial,
   useCriarItem,
   useItens,
@@ -62,7 +63,11 @@ export function ConexoesTab() {
 
   return (
     <div className="space-y-4">
-      {credencial ? <CredencialConfigurada /> : <FormCredencial />}
+      {credencial ? (
+        <CredencialConfigurada credencialId={credencial.id} />
+      ) : (
+        <FormCredencial />
+      )}
       {credencial ? <ListaItens credencialId={credencial.id} /> : null}
       <SyncAutomaticoCard />
       <BrapiTokenCard />
@@ -356,37 +361,136 @@ function FormCredencial() {
   )
 }
 
-function CredencialConfigurada() {
+function CredencialConfigurada({ credencialId }: { credencialId: number }) {
   const testar = useTestarCredencial()
+  const testarAgora = () =>
+    testar.mutate(undefined, {
+      onSuccess: (valida) =>
+        valida
+          ? toast.success("Credencial válida.")
+          : toast.error(
+              "Credencial inválida — verifique clientId/clientSecret."
+            ),
+      onError: () => toast.error("Não foi possível testar agora."),
+    })
   return (
     <Card>
-      <CardHeader className="flex-row items-center justify-between">
+      <CardHeader className="flex-row flex-wrap items-center justify-between gap-2">
         <div>
           <CardTitle className="text-base">Credencial do Pluggy</CardTitle>
           <CardDescription>
             Configurada. O segredo fica cifrado no servidor.
           </CardDescription>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={testar.isPending}
-          onClick={() =>
-            testar.mutate(undefined, {
-              onSuccess: (valida) =>
-                valida
-                  ? toast.success("Credencial válida.")
-                  : toast.error(
-                      "Credencial inválida — verifique clientId/clientSecret."
-                    ),
-              onError: () => toast.error("Não foi possível testar agora."),
-            })
-          }
-        >
-          Testar credencial
-        </Button>
+        <div className="flex gap-2">
+          <AlterarCredencialDialog
+            credencialId={credencialId}
+            onSalvo={testarAgora}
+          />
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={testar.isPending}
+            onClick={testarAgora}
+          >
+            Testar credencial
+          </Button>
+        </div>
       </CardHeader>
     </Card>
+  )
+}
+
+/** Troca o secret (girado no Pluggy) sem recriar a credencial — os itens continuam ligados a ela.
+ *  clientId em branco = mantém o atual (o servidor nunca o devolve, então não dá p/ pré-preencher). */
+function AlterarCredencialDialog({
+  credencialId,
+  onSalvo,
+}: {
+  credencialId: number
+  onSalvo: () => void
+}) {
+  const atualizar = useAtualizarCredencial()
+  const [aberto, setAberto] = useState(false)
+  const [clientId, setClientId] = useState("")
+  const [clientSecret, setClientSecret] = useState("")
+  const fechar = (a: boolean) => {
+    setAberto(a)
+    if (!a) {
+      setClientId("")
+      setClientSecret("")
+    }
+  }
+  return (
+    <Dialog open={aberto} onOpenChange={fechar}>
+      <DialogTrigger asChild>
+        <Button variant="outline" size="sm">
+          Alterar credencial
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Alterar credencial do Pluggy</DialogTitle>
+          <DialogDescription>
+            Use quando gerar um novo clientSecret no Pluggy. As conexões
+            continuam valendo enquanto o app do Pluggy for o mesmo — trocar de
+            app (outro clientId) exige reconectar os bancos.
+          </DialogDescription>
+        </DialogHeader>
+        <form
+          className="flex flex-col gap-3"
+          onSubmit={(e) => {
+            e.preventDefault()
+            const id = clientId.trim()
+            atualizar.mutate(
+              {
+                id: credencialId,
+                client_secret: clientSecret,
+                ...(id ? { client_id: id } : {}),
+              },
+              {
+                onSuccess: () => {
+                  toast.success("Credencial atualizada.")
+                  fechar(false)
+                  onSalvo()
+                },
+                onError: (err) => toast.error(err.message),
+              }
+            )
+          }}
+        >
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="alterar_client_id">clientId</Label>
+            <Input
+              id="alterar_client_id"
+              value={clientId}
+              onChange={(e) => setClientId(e.target.value)}
+              placeholder="Em branco mantém o atual"
+              autoComplete="off"
+            />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="alterar_client_secret">Novo clientSecret</Label>
+            <Input
+              id="alterar_client_secret"
+              type="password"
+              value={clientSecret}
+              onChange={(e) => setClientSecret(e.target.value)}
+              autoComplete="new-password"
+              required
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              type="submit"
+              disabled={!clientSecret || atualizar.isPending}
+            >
+              Salvar e testar
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   )
 }
 

@@ -13,11 +13,22 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.config import settings
-from app.models.integracao import ConfigIntegracao, CredencialIntegracao, TrabalhoTelegram
+from app.models.integracao import (
+    ConfigIntegracao,
+    CredencialIntegracao,
+    MensagemIa,
+    PreferenciaIa,
+    TrabalhoTelegram,
+)
 from app.models.telegram import ConfigTelegram
 from app.models.usuario import Usuario
 from app.security.current_user import _aware, hash_token
 from app.services.telegram import instancia
+
+# Chat no app: `web` = uma execução (conta na cota); `web_confirma` = aplicar proposta clicada.
+TIPOS_WEB = ("web", "web_confirma")
+# Ações do Telegram (cancelar, desligar bot/miniapp) não derrubam execuções do chat no app.
+TIPOS_TELEGRAM = ("delegada", "miniapp")
 
 
 def configuracao(db: Session) -> ConfigIntegracao:
@@ -64,11 +75,20 @@ def validar_init_data(raw: str, token: str) -> str:
         raise HTTPException(401, "autenticação Telegram inválida ou expirada") from None
 
 
-def emitir(db: Session, usuario_id: int, tipo: str, trabalho_id: int | None = None) -> str:
-    geral = instancia(db)
-    vinculo = db.scalar(select(ConfigTelegram).where(ConfigTelegram.usuario_id == usuario_id))
-    if not geral.telegram_ativo or not vinculo or not vinculo.ativo:
-        raise HTTPException(401, "vínculo Telegram indisponível")
+def emitir(
+    db: Session,
+    usuario_id: int,
+    tipo: str,
+    trabalho_id: int | None = None,
+    mensagem_id: int | None = None,
+) -> str:
+    bot_id = telegram_id = None
+    if tipo not in TIPOS_WEB:
+        geral = instancia(db)
+        vinculo = db.scalar(select(ConfigTelegram).where(ConfigTelegram.usuario_id == usuario_id))
+        if not geral.telegram_ativo or not vinculo or not vinculo.ativo:
+            raise HTTPException(401, "vínculo Telegram indisponível")
+        bot_id, telegram_id = geral.telegram_bot_id, vinculo.telegram_usuario_id
     token = "mgi_" + secrets.token_urlsafe(32)
     db.add(
         CredencialIntegracao(
@@ -76,9 +96,10 @@ def emitir(db: Session, usuario_id: int, tipo: str, trabalho_id: int | None = No
             usuario_id=usuario_id,
             tipo=tipo,
             escopo=db.get(Usuario, usuario_id).tipo,
-            bot_id=geral.telegram_bot_id,
-            telegram_id=vinculo.telegram_usuario_id,
+            bot_id=bot_id,
+            telegram_id=telegram_id,
             trabalho_id=trabalho_id,
+            mensagem_id=mensagem_id,
             expira_em=datetime.now(UTC) + timedelta(minutes=60 if tipo == "miniapp" else 5),
         )
     )
@@ -90,6 +111,8 @@ def resolver(db: Session, token: str) -> tuple[Usuario, CredencialIntegracao]:
     cred = db.get(CredencialIntegracao, hash_token(token), populate_existing=True)
     if not cred or cred.revogada or _aware(cred.expira_em) <= datetime.now(UTC):
         raise HTTPException(401, "credencial de integração inválida ou expirada")
+    if cred.tipo in TIPOS_WEB:
+        return _resolver_web(db, cred), cred
     geral = instancia(db)
     vinculo = db.scalar(select(ConfigTelegram).where(ConfigTelegram.usuario_id == cred.usuario_id))
     usuario = db.get(Usuario, cred.usuario_id)
@@ -120,12 +143,47 @@ def resolver(db: Session, token: str) -> tuple[Usuario, CredencialIntegracao]:
     return usuario, cred
 
 
-def revogar(db: Session, usuario_id: int | None = None, trabalho_id: int | None = None) -> None:
+def _resolver_web(db: Session, cred: CredencialIntegracao) -> Usuario:
+    """Chat no app: sem Telegram; desligar IA ou consentimento corta a execução na hora."""
+    usuario = db.get(Usuario, cred.usuario_id)
+    c = configuracao(db)
+    pref = db.scalar(select(PreferenciaIa).where(PreferenciaIa.usuario_id == cred.usuario_id))
+    if (
+        not usuario
+        or not usuario.ativo
+        or usuario.tipo != cred.escopo
+        or usuario.tipo != "completo"
+        or cred.mensagem_id is None
+        or not db.scalar(
+            select(MensagemIa.id).where(
+                MensagemIa.id == cred.mensagem_id, MensagemIa.usuario_id == cred.usuario_id
+            )
+        )
+        or not c.ia_ativa
+        or not c.validado
+        or not pref
+        or not pref.ativa
+    ):
+        raise HTTPException(401, "integração revogada")
+    return usuario
+
+
+def revogar(
+    db: Session,
+    usuario_id: int | None = None,
+    trabalho_id: int | None = None,
+    tipos: tuple[str, ...] | None = None,
+    token: str | None = None,
+) -> None:
     stmt = update(CredencialIntegracao)
+    if token is not None:
+        stmt = stmt.where(CredencialIntegracao.token_hash == hash_token(token))
     if usuario_id is not None:
         stmt = stmt.where(CredencialIntegracao.usuario_id == usuario_id)
     if trabalho_id is not None:
         stmt = stmt.where(CredencialIntegracao.trabalho_id == trabalho_id)
+    if tipos is not None:
+        stmt = stmt.where(CredencialIntegracao.tipo.in_(tipos))
     db.execute(stmt.values(revogada=True))
     db.commit()
 
@@ -134,7 +192,11 @@ def autorizar_rota(request: Request, cred: CredencialIntegracao, usuario: Usuari
     from app.security.current_user import _ROTAS_TOKEN
 
     caminho, metodo = request.url.path, request.method
-    if cred.tipo == "delegada" and metodo != "GET" and request.scope.get("mango_db") is None:
+    if (
+        cred.tipo in {"delegada", *TIPOS_WEB}
+        and metodo != "GET"
+        and request.scope.get("mango_db") is None
+    ):
         raise HTTPException(403, "escritas de IA passam pela política de ferramentas")
     rotas = dict(_ROTAS_TOKEN)
     if cred.tipo == "miniapp":

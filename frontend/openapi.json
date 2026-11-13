@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "mango",
-    "version": "0.5.0"
+    "version": "0.6.0"
   },
   "paths": {
     "/health": {
@@ -6409,6 +6409,284 @@
         }
       }
     },
+    "/api/ia/conversas": {
+      "get": {
+        "tags": [
+          "chat"
+        ],
+        "summary": "Listar",
+        "operationId": "listar_api_ia_conversas_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ConversaIaResumo"
+                  },
+                  "type": "array",
+                  "title": "Response Listar Api Ia Conversas Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ia/conversas/{conversa_id}": {
+      "get": {
+        "tags": [
+          "chat"
+        ],
+        "summary": "Obter",
+        "operationId": "obter_api_ia_conversas__conversa_id__get",
+        "parameters": [
+          {
+            "name": "conversa_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Conversa Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversaIaRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "chat"
+        ],
+        "summary": "Renomear",
+        "operationId": "renomear_api_ia_conversas__conversa_id__patch",
+        "parameters": [
+          {
+            "name": "conversa_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Conversa Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConversaIaUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversaIaResumo"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "chat"
+        ],
+        "summary": "Excluir",
+        "operationId": "excluir_api_ia_conversas__conversa_id__delete",
+        "parameters": [
+          {
+            "name": "conversa_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Conversa Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ia/mensagens": {
+      "post": {
+        "tags": [
+          "chat"
+        ],
+        "summary": "Enviar",
+        "operationId": "enviar_api_ia_mensagens_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MensagemIaCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "text/event-stream": {}
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ia/execucao/parar": {
+      "post": {
+        "tags": [
+          "chat"
+        ],
+        "summary": "Parar",
+        "operationId": "parar_api_ia_execucao_parar_post",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          }
+        }
+      }
+    },
+    "/api/ia/operacoes/{operacao_id}/confirmar": {
+      "post": {
+        "tags": [
+          "chat"
+        ],
+        "summary": "Confirmar",
+        "operationId": "confirmar_api_ia_operacoes__operacao_id__confirmar_post",
+        "parameters": [
+          {
+            "name": "operacao_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Operacao Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResultadoProposta"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ia/operacoes/{operacao_id}/cancelar": {
+      "post": {
+        "tags": [
+          "chat"
+        ],
+        "summary": "Cancelar",
+        "operationId": "cancelar_api_ia_operacoes__operacao_id__cancelar_post",
+        "parameters": [
+          {
+            "name": "operacao_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Operacao Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/acesso-mcp": {
       "get": {
         "tags": [
@@ -9333,6 +9611,96 @@
         "title": "ContaUpdate",
         "description": "Update estreito (§4 crud.md): o usuário só altera o vínculo com objetivo.\n\n`objetivo_id=None` desvincula. Campos importados do Pluggy não são editáveis aqui."
       },
+      "ConversaIaRead": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "titulo": {
+            "type": "string",
+            "title": "Titulo"
+          },
+          "atualizado_em": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Atualizado Em"
+          },
+          "mensagens": {
+            "items": {
+              "$ref": "#/components/schemas/MensagemIaRead"
+            },
+            "type": "array",
+            "title": "Mensagens"
+          },
+          "proposta": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PropostaIa"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "executando": {
+            "type": "boolean",
+            "title": "Executando"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "titulo",
+          "atualizado_em",
+          "mensagens",
+          "proposta",
+          "executando"
+        ],
+        "title": "ConversaIaRead"
+      },
+      "ConversaIaResumo": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "titulo": {
+            "type": "string",
+            "title": "Titulo"
+          },
+          "atualizado_em": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Atualizado Em"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "titulo",
+          "atualizado_em"
+        ],
+        "title": "ConversaIaResumo"
+      },
+      "ConversaIaUpdate": {
+        "properties": {
+          "titulo": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Titulo"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "titulo"
+        ],
+        "title": "ConversaIaUpdate"
+      },
       "ConvidarPessoaRead": {
         "properties": {
           "usuario_id": {
@@ -11733,6 +12101,90 @@
         ],
         "title": "MeRead"
       },
+      "MensagemIaCreate": {
+        "properties": {
+          "conversa_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Conversa Id"
+          },
+          "texto": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 16000,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Texto"
+          },
+          "regenerar": {
+            "type": "boolean",
+            "title": "Regenerar",
+            "default": false
+          },
+          "chave": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 64,
+                "minLength": 8,
+                "pattern": "^[A-Za-z0-9-]+$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chave"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "MensagemIaCreate"
+      },
+      "MensagemIaRead": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "papel": {
+            "type": "string",
+            "enum": [
+              "user",
+              "assistant"
+            ],
+            "title": "Papel"
+          },
+          "conteudo": {
+            "type": "string",
+            "title": "Conteudo"
+          },
+          "criado_em": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Criado Em"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "papel",
+          "conteudo",
+          "criado_em"
+        ],
+        "title": "MensagemIaRead"
+      },
       "MiniappConfig": {
         "properties": {
           "ativo": {
@@ -12993,6 +13445,31 @@
         ],
         "title": "PreferenciaIaUpdate"
       },
+      "PropostaIa": {
+        "properties": {
+          "operacao_id": {
+            "type": "string",
+            "title": "Operacao Id"
+          },
+          "resumo": {
+            "type": "string",
+            "title": "Resumo"
+          },
+          "expira_em": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Expira Em"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "operacao_id",
+          "resumo",
+          "expira_em"
+        ],
+        "title": "PropostaIa"
+      },
       "ProvedorAxon": {
         "properties": {
           "tipo": {
@@ -13274,6 +13751,20 @@
         },
         "type": "object",
         "title": "RegraCategorizacaoUpdate"
+      },
+      "ResultadoProposta": {
+        "properties": {
+          "resultado": {
+            "type": "string",
+            "title": "Resultado"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "resultado"
+        ],
+        "title": "ResultadoProposta"
       },
       "ResumoDivisoes": {
         "properties": {

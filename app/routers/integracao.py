@@ -74,7 +74,7 @@ def salvar(
         db.execute(update(PreferenciaIa).values(ativa=False))
         db.execute(
             update(CredencialIntegracao)
-            .where(CredencialIntegracao.tipo == "delegada")
+            .where(CredencialIntegracao.tipo.in_(["delegada", *auth.TIPOS_WEB]))
             .values(revogada=True)
         )
         if c.endpoint != endpoint or c.provedor != payload.provedor.tipo:
@@ -92,7 +92,7 @@ def salvar(
         # Sessões do miniapp permanecem válidas: revogação aqui só atinge execuções de IA.
         db.execute(
             update(CredencialIntegracao)
-            .where(CredencialIntegracao.tipo == "delegada")
+            .where(CredencialIntegracao.tipo.in_(["delegada", *auth.TIPOS_WEB]))
             .values(revogada=True)
         )
         db.commit()
@@ -133,7 +133,8 @@ def atualizar_preferencia(
         db.execute(
             update(CredencialIntegracao)
             .where(
-                CredencialIntegracao.usuario_id == user.id, CredencialIntegracao.tipo == "delegada"
+                CredencialIntegracao.usuario_id == user.id,
+                CredencialIntegracao.tipo.in_(["delegada", *auth.TIPOS_WEB]),
             )
             .values(revogada=True)
         )
@@ -189,7 +190,7 @@ def miniapp_salvar(
     c.url, c.miniapp_ativo = origem, payload.ativo
     db.commit()
     if not payload.ativo:
-        auth.revogar(db)
+        auth.revogar(db, tipos=auth.TIPOS_TELEGRAM)
     return payload
 
 
