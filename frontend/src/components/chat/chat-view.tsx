@@ -283,7 +283,7 @@ function Conversa({
   const tentar = !doEnvio
     ? undefined
     : doEnvio.pedido !== null && doEnvio.pedidoId === null
-      ? () => enviar(doEnvio.pedido!)
+      ? () => enviar(doEnvio.pedido!, doEnvio.chave ?? undefined)
       : conversaId !== null
         ? regenerar
         : undefined

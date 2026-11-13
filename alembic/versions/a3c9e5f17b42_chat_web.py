@@ -53,6 +53,10 @@ def upgrade() -> None:
             ondelete="CASCADE",
         )
         batch_op.create_index(batch_op.f("ix_mensagem_ia_conversa_id"), ["conversa_id"])
+        batch_op.add_column(sa.Column("chave", sa.String(length=64), nullable=True))
+        batch_op.create_unique_constraint(
+            batch_op.f("uq_mensagem_ia_usuario_id"), ["usuario_id", "chave"]
+        )
 
     with op.batch_alter_table("credencial_integracao", schema=None) as batch_op:
         batch_op.alter_column("bot_id", existing_type=sa.String(length=64), nullable=True)
@@ -95,6 +99,8 @@ def downgrade() -> None:
         batch_op.alter_column("telegram_id", existing_type=sa.String(length=64), nullable=False)
         batch_op.alter_column("bot_id", existing_type=sa.String(length=64), nullable=False)
     with op.batch_alter_table("mensagem_ia", schema=None) as batch_op:
+        batch_op.drop_constraint(batch_op.f("uq_mensagem_ia_usuario_id"), type_="unique")
+        batch_op.drop_column("chave")
         batch_op.drop_index(batch_op.f("ix_mensagem_ia_conversa_id"))
         batch_op.drop_constraint(
             batch_op.f("fk_mensagem_ia_conversa_id_conversa_ia"), type_="foreignkey"

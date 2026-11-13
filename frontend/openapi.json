@@ -12131,6 +12131,20 @@
             "type": "boolean",
             "title": "Regenerar",
             "default": false
+          },
+          "chave": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 64,
+                "minLength": 8,
+                "pattern": "^[A-Za-z0-9-]+$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chave"
           }
         },
         "additionalProperties": false,

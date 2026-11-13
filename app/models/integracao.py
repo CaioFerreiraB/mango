@@ -73,6 +73,8 @@ class MensagemIa(UserOwnedMixin, TimestampMixin, Base):
     """Execução = trabalho Telegram ou mensagem do usuário numa conversa web (um dos dois)."""
 
     __tablename__ = "mensagem_ia"
+    # Idempotência do chat web: o retry de um envio cuja resposta HTTP se perdeu reusa a chave.
+    __table_args__ = (UniqueConstraint("usuario_id", "chave"),)
     trabalho_id: Mapped[int | None] = mapped_column(ForeignKey("trabalho_telegram.id"))
     conversa_id: Mapped[int | None] = mapped_column(
         ForeignKey("conversa_ia.id", ondelete="CASCADE"), index=True
@@ -80,6 +82,7 @@ class MensagemIa(UserOwnedMixin, TimestampMixin, Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     papel: Mapped[str] = mapped_column(String(16))
     conteudo: Mapped[str] = mapped_column(EncryptedStr)
+    chave: Mapped[str | None] = mapped_column(String(64))
 
 
 class OperacaoIntegracao(UserOwnedMixin, TimestampMixin, Base):

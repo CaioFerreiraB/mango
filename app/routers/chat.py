@@ -107,7 +107,7 @@ def enviar(
     user: Usuario = Depends(exigir_usuario_completo),
 ):
     conversa, pedido_id, fila = chat_web.iniciar(
-        db, user.id, payload.conversa_id, payload.texto, payload.regenerar
+        db, user.id, payload.conversa_id, payload.texto, payload.regenerar, payload.chave
     )
     # `pedido_id` = o pedido já está gravado: o cliente reconcilia por id, não por texto.
     inicio = {"id": conversa.id, "titulo": conversa.titulo, "pedido_id": pedido_id}

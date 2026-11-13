@@ -427,3 +427,43 @@ def test_limpar_e_cancelar_do_telegram_preservam_o_chat_web(db, usuario_a, monke
     assert db.scalars(select(MensagemIa.conteudo)).all() == ["web"]
     assert db.get(OperacaoIntegracao, "op-web").status == "pendente"
     integracao_auth.resolver(db, web)  # credencial do chat no app segue válida
+
+
+def test_chave_de_idempotencia_nao_duplica_pedido_nem_cota(
+    client_factory, db, usuario_a, monkeypatch
+):
+    ativar(db, usuario_a)
+    chamadas = falso(monkeypatch, "resposta")
+    cliente = client_factory(usuario_a)
+    corpo = {"texto": "quanto gastei?", "chave": "envio-123456"}
+    primeiro = eventos_sse(cliente.post("/api/ia/mensagens", json=corpo).text)
+    # Retry do mesmo envio (a resposta HTTP se perdeu): nada novo é gravado nem cobrado.
+    segundo = eventos_sse(cliente.post("/api/ia/mensagens", json=corpo).text)
+    assert [t for t, _ in segundo] == ["conversa", "fim"]
+    assert segundo[0][1]["pedido_id"] == primeiro[0][1]["pedido_id"]
+    assert len(chamadas) == 1
+    assert db.scalars(select(MensagemIa.papel)).all() == ["user", "assistant"]
+    assert len(db.scalars(select(CredencialIntegracao)).all()) == 1
+
+    # Pedido gravado cuja execução morreu sem resposta: o retry gera a resposta desse pedido.
+    conversa_id = primeiro[0][1]["id"]
+    db.add(
+        MensagemIa(
+            usuario_id=usuario_a.id,
+            conversa_id=conversa_id,
+            papel="user",
+            conteudo="e o mês passado?",
+            chave="envio-abcdefgh",
+        )
+    )
+    db.commit()
+    corpo = {"conversa_id": conversa_id, "texto": "e o mês passado?", "chave": "envio-abcdefgh"}
+    eventos = eventos_sse(cliente.post("/api/ia/mensagens", json=corpo).text)
+    assert eventos[-1][0] == "fim" and len(chamadas) == 2
+    assert chamadas[1]["corpo"]["messages"][-1]["content"] == "e o mês passado?"
+    assert db.scalars(select(MensagemIa.papel).order_by(MensagemIa.id)).all() == [
+        "user",
+        "assistant",
+        "user",
+        "assistant",
+    ]

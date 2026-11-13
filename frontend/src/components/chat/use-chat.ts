@@ -4,6 +4,7 @@ export type Envio = {
   conversaId: number | null
   pedido: string | null // null = regenerar (o pedido já está na conversa)
   pedidoId: number | null // id do pedido gravado (evento `conversa`); null = não chegou ao servidor
+  chave: string | null // idempotência do envio: o retry repete a mesma (null ao regenerar)
   resposta: string
   status: string | null
   erro: string | null
@@ -16,7 +17,7 @@ export type ChatContexto = {
   conversaId: number | null
   abrirConversa: (id: number | null) => void
   envio: Envio | null
-  enviar: (texto: string) => void
+  enviar: (texto: string, chave?: string) => void
   regenerar: () => void
   parar: () => void
 }

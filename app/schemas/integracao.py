@@ -104,6 +104,10 @@ class MensagemIaCreate(Estrito):
     conversa_id: int | None = None
     texto: Annotated[str | None, Field(min_length=1, max_length=16000)] = None
     regenerar: bool = False
+    # Gerada no cliente por envio e repetida no retry: o servidor não grava o pedido duas vezes.
+    chave: Annotated[str | None, Field(min_length=8, max_length=64, pattern=r"^[A-Za-z0-9-]+$")] = (
+        None
+    )
 
     @model_validator(mode="after")
     def _texto_ou_regenerar(self):

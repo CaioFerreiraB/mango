@@ -18,6 +18,14 @@ import {
  * então a resposta em andamento sobrevive a navegar entre páginas e a alternar painel ↔ página.
  */
 const CHAVE_PAINEL = "mango_chat_painel"
+
+// `randomUUID` só existe em contexto seguro; o self-hosted pode rodar em HTTP na rede local.
+function novaChave() {
+  return (
+    globalThis.crypto?.randomUUID?.() ??
+    `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`
+  )
+}
 const CHAVE_CONVERSA = "mango_chat_conversa"
 
 function lerConversa() {
@@ -55,7 +63,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const transmitir = useCallback(
-    (pedido: string | null) => {
+    (pedido: string | null, chave: string | null) => {
       if (abortar.current) return
       const controle = new AbortController()
       abortar.current = controle
@@ -65,6 +73,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         conversaId: alvo,
         pedido,
         pedidoId: null,
+        chave,
         resposta: "",
         status: "Enviando…",
         erro: null,
@@ -75,7 +84,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       transmitirMensagem(
         pedido === null
           ? { conversa_id: alvo, regenerar: true }
-          : { conversa_id: alvo, texto: pedido, regenerar: false },
+          : { conversa_id: alvo, texto: pedido, regenerar: false, chave },
         controle.signal,
         (ev) => {
           switch (ev.tipo) {
@@ -165,8 +174,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         setConversaId(id)
       },
       envio,
-      enviar: (texto) => transmitir(texto),
-      regenerar: () => transmitir(null),
+      enviar: (texto, chave) => transmitir(texto, chave ?? novaChave()),
+      regenerar: () => transmitir(null, null),
       parar,
     }),
     [painelAberto, setPainelAberto, conversaId, envio, transmitir, parar]

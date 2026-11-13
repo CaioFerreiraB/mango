@@ -92,11 +92,29 @@ def proposta_pendente(db, usuario_id: int, conversa_id: int) -> OperacaoIntegrac
 
 
 def iniciar(
-    db, usuario_id: int, conversa_id: int | None, texto: str | None, regenerar: bool
+    db,
+    usuario_id: int,
+    conversa_id: int | None,
+    texto: str | None,
+    regenerar: bool,
+    chave: str | None = None,
 ) -> tuple[ConversaIa, int, queue.Queue]:
     if not ia.disponivel(db, usuario_id):
         raise ConflictError("Ative a conversa em Configurações → Inteligência artificial.")
     limpar(db)
+    repetido = _pedido_da_chave(db, usuario_id, chave) if chave and not regenerar else None
+    if repetido is not None:
+        if executando(usuario_id):
+            raise ConflictError("já existe uma resposta em andamento")
+        conversa = conversa_do_usuario(db, usuario_id, repetido.conversa_id)
+        if _tem_seguinte(db, usuario_id, repetido):
+            # Já respondido (ou superado): nada a executar nem a cobrar; o cliente recarrega.
+            fila: queue.Queue = queue.Queue()
+            fila.put(("fim", {"mensagem_id": None}))
+            fila.put(None)
+            return conversa, repetido.id, fila
+        # Gravado sem resposta (a execução anterior morreu): gera a resposta desse pedido.
+        conversa_id, texto, regenerar, chave = conversa.id, None, True, None
     with _lock:
         if usuario_id in _execucoes:
             raise ConflictError("já existe uma resposta em andamento")
@@ -104,7 +122,7 @@ def iniciar(
         _execucoes[usuario_id] = {"conversa_id": None, "parar": parar}
     try:
         conversa, pedido, token, mensagens = _preparar(
-            db, usuario_id, conversa_id, texto, regenerar
+            db, usuario_id, conversa_id, texto, regenerar, chave
         )
     except BaseException:
         with _lock:
@@ -123,7 +141,29 @@ def iniciar(
     return conversa, pedido.id, fila
 
 
-def _preparar(db, usuario_id, conversa_id, texto, regenerar):
+def _pedido_da_chave(db, usuario_id, chave) -> MensagemIa | None:
+    return db.scalar(
+        select(MensagemIa).where(
+            MensagemIa.usuario_id == usuario_id,
+            MensagemIa.chave == chave,
+            MensagemIa.conversa_id.is_not(None),
+        )
+    )
+
+
+def _tem_seguinte(db, usuario_id, pedido) -> bool:
+    return db.scalar(
+        select(
+            exists().where(
+                MensagemIa.usuario_id == usuario_id,
+                MensagemIa.conversa_id == pedido.conversa_id,
+                MensagemIa.id > pedido.id,
+            )
+        )
+    )
+
+
+def _preparar(db, usuario_id, conversa_id, texto, regenerar, chave=None):
     if conversa_id is None:
         if regenerar or not texto:
             raise ValidationError("informe a mensagem")
@@ -136,7 +176,11 @@ def _preparar(db, usuario_id, conversa_id, texto, regenerar):
         pedido = _reabrir_ultimo_pedido(db, usuario_id, conversa.id)
     else:
         pedido = MensagemIa(
-            usuario_id=usuario_id, conversa_id=conversa.id, papel="user", conteudo=texto
+            usuario_id=usuario_id,
+            conversa_id=conversa.id,
+            papel="user",
+            conteudo=texto,
+            chave=chave,
         )
         db.add(pedido)
         db.flush()
