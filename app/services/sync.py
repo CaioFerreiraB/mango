@@ -82,6 +82,16 @@ def reais_para_centavos(valor: object) -> int | None:
     return int((Decimal(str(valor)) * 100).quantize(Decimal("1"), rounding=ROUND_HALF_UP))
 
 
+def _despesas_centavos(valor: object) -> int | None:
+    """`expenses` do movimento de investimento: número, ou objeto com as taxas discriminadas
+    (`incomeTax`, `iof`, `custodyFee`… — assim vem o RDB/caixinha do Nubank). Objeto → soma do que
+    houver, o que fecha com o Pluggy: `netAmount = amount − Σ expenses`."""
+    if isinstance(valor, dict):
+        partes = [v for v in valor.values() if isinstance(v, int | float)]
+        return reais_para_centavos(sum(partes)) if partes else None
+    return reais_para_centavos(valor)
+
+
 def _parse_dt(valor: str | None) -> datetime | None:
     if not valor:
         return None
@@ -580,7 +590,7 @@ def _upsert_investimento_transacoes(db: Session, inv: Investimento, client: Plug
             "value_unitario": _num(t.get("value")),
             "quantity": _num(t.get("quantity")),
             "net_amount_centavos": reais_para_centavos(t.get("netAmount")),
-            "expenses_centavos": reais_para_centavos(t.get("expenses")),
+            "expenses_centavos": _despesas_centavos(t.get("expenses")),
             "trade_date": _parse_dt(t.get("tradeDate")),
             "date": _parse_dt(t.get("date")),
             "description": t.get("description"),

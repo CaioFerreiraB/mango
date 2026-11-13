@@ -551,3 +551,14 @@ def test_subtype_fii_normalizado_por_isin():
         sync_mod._subtype_investimento({"type": "FIXED_INCOME", "subtype": "CDB", "isin": ""})
         == "CDB"
     )
+
+
+def test_expenses_objeto_de_taxas_vira_soma():
+    # RDB/caixinha do Nubank: `expenses` vem discriminado (dict) — antes derrubava o sync do item
+    from app.services.sync import _despesas_centavos
+
+    taxas = {"incomeTax": 17.95, "iof": 0, "custodyFee": None, "other": None}
+    assert _despesas_centavos(taxas) == 1_795
+    assert _despesas_centavos({"incomeTax": None}) is None
+    assert _despesas_centavos(2.5) == 250
+    assert _despesas_centavos(None) is None
