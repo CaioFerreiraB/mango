@@ -1,0 +1,17 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "buried-raster",
+        "value": "*",
+        "files": [
+          "brag-output/composition/index.html"
+        ],
+        "createdAt": "2026-10-23T21:25:53.430Z",
+        "reason": "Agent: verified intentional sequential video states. #review-detail and #review-after begin at opacity 0 and GSAP reveals them at 10.05s and 12.05s; decoded MP4 frames and snapshots show both at full opacity. No permanently hidden raster."
+      }
+    ]
+  }
+}

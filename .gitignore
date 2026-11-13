@@ -238,3 +238,6 @@ mango.db.bak-*
 docs/dev/
 docs/security/
 docs/deploy/
+
+# Cache de sessão do detector do impeccable (reescrito a cada sessão).
+.impeccable/hook.cache.json

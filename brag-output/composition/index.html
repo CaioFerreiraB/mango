@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="pt-BR" data-composition-variables='[{"id":"color-ground","type":"color","label":"Fundo","default":"#F6F5FB"},{"id":"color-ink","type":"color","label":"Texto","default":"#111519"},{"id":"color-accent","type":"color","label":"Violeta mango","default":"#7008E7"},{"id":"font-display","type":"string","label":"Fonte","default":"Manrope"}]'>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <title>mango — Menos planilha. Mais clareza.</title>
+    <script src="assets/gsap.min.js"></script>
+    <style>
+      @font-face { font-family: Manrope; src: url("assets/manrope-latin-wght-normal.woff2") format("woff2"); font-weight: 200 800; font-style: normal; font-display: block; }
+      :root { --color-ground: #F6F5FB; --color-ink: #111519; --color-accent: #7008E7; --font-display: Manrope; }
+      * { box-sizing: border-box; }
+      html, body { width: 1920px; height: 1080px; margin: 0; overflow: hidden; }
+      body { font-family: var(--font-display), sans-serif; color: var(--color-ink); background: var(--color-ground); }
+      #root, .ground, .scene { position: absolute; inset: 0; }
+      .ground { background: var(--color-ground); }
+      h1, h2, p { margin: 0; }
+      .scene { overflow: hidden; }
+      .heading { position: absolute; left: 96px; top: 77px; max-width: 1470px; font-size: 74px; line-height: 1.15; font-weight: 650; letter-spacing: -0.04em; }
+      .support { position: absolute; left: 100px; top: 177px; font-size: 30px; font-weight: 500; letter-spacing: -0.015em; color: #545962; }
+      .screen { position: absolute; left: 96px; top: 242px; width: 1728px; height: 720px; overflow: hidden; border: 1px solid #DCD9E5; border-radius: 24px; background: #FFFFFF; box-shadow: 0 16px 48px #2413420D; }
+      .screen img { position: absolute; left: 0; top: 0; display: block; width: 1728px; height: auto; }
+      .screen-plane { position: absolute; inset: 0; }
+      .brand { position: absolute; left: 96px; top: 84px; display: flex; align-items: center; gap: 14px; height: 80px; z-index: 30; }
+      .brand img { width: 76px; height: 76px; object-fit: contain; }
+      .brand span { font-size: 46px; font-weight: 750; letter-spacing: -0.04em; }
+      #hook-title { position: absolute; left: 96px; top: 348px; width: 790px; font-size: 92px; line-height: 1.2; letter-spacing: -0.04em; font-weight: 650; }
+      #hook-title span { display: block; }
+      #hook-title .accent { color: var(--color-accent); }
+      #hook-screen { left: 910px; top: 260px; }
+      #hook-screen img { width: 1728px; }
+      .demo-note { position: absolute; left: 98px; bottom: 40px; z-index: 40; font-size: 28px; line-height: 1.2; font-weight: 500; color: #545962; }
+      #review-detail, #review-after { opacity: 0; }
+      #review-cursor { position: absolute; left: 0; top: 0; width: 40px; height: 48px; z-index: 12; filter: drop-shadow(0 2px 3px #00000033); }
+      #outro { z-index: 50; }
+      #outro-inner { position: absolute; inset: 0; text-align: center; }
+      #outro-logo { position: absolute; left: 835px; top: 174px; width: 250px; height: 250px; object-fit: contain; }
+      #outro-title { position: absolute; left: 160px; right: 160px; top: 478px; font-size: 96px; line-height: 1.2; letter-spacing: -0.04em; font-weight: 650; }
+      #outro-support { position: absolute; left: 160px; right: 160px; top: 626px; font-size: 38px; line-height: 1.4; color: #545962; font-weight: 500; letter-spacing: -0.025em; }
+      #outro-credit { position: absolute; left: 160px; right: 160px; bottom: 70px; font-size: 28px; line-height: 1.4; color: #545962; font-weight: 500; }
+    </style>
+  </head>
+  <body>
+    <main id="root" data-composition-id="main" data-start="0" data-duration="25" data-width="1920" data-height="1080">
+      <div class="ground" aria-hidden="true"></div>
+
+      <div id="brand" class="brand">
+        <img id="brand-logo" src="assets/mango-logo.png" alt="" />
+        <span>mango</span>
+      </div>
+
+      <section id="hook" class="scene clip" data-start="0" data-duration="3.27" data-track-index="1">
+        <h1 id="hook-title"><span>Menos planilha.</span><span class="accent" id="hook-clarity">Mais clareza.</span></h1>
+        <div id="hook-screen" class="screen" data-layout-allow-overflow="true">
+          <img id="hook-dashboard-image" src="assets/screens/dashboard.png" alt="Painel real do mango com dados fictícios" />
+        </div>
+      </section>
+
+      <section id="dashboard" class="scene clip" data-start="3.27" data-duration="5.47" data-track-index="1">
+        <h2 id="dashboard-title" class="heading">Seu mês, em uma visão.</h2>
+        <p id="dashboard-support" class="support">Importação via Open Finance</p>
+        <div id="dashboard-screen" class="screen">
+          <div id="dashboard-plane" class="screen-plane" data-layout-allow-overflow="true">
+            <img id="dashboard-image" src="assets/screens/dashboard.png" alt="Saldo, entradas e saídas do mês no painel do mango" />
+          </div>
+        </div>
+      </section>
+
+      <section id="review" class="scene clip" data-start="8.74" data-duration="5.46" data-track-index="1">
+        <h2 id="review-title" class="heading">Importe. Revise. Pronto.</h2>
+        <div id="review-screen" class="screen">
+          <div id="review-plane" class="screen-plane" data-layout-allow-overflow="true">
+            <img id="review-before" src="assets/screens/transacoes-before.png" alt="Lista de transações importadas do mango" />
+            <img id="review-detail" src="assets/screens/transacoes-detail.png" alt="Detalhes de uma transação antes da revisão" />
+            <img id="review-after" src="assets/screens/transacoes-after.png" alt="A mesma transação com a revisão confirmada" />
+            <svg id="review-cursor" data-layout-ignore="true" viewBox="0 0 40 48" fill="none" aria-hidden="true"><path d="M5 3L34 27L21 29L15 42L5 3Z" fill="#111519" stroke="white" stroke-width="3" stroke-linejoin="round" /></svg>
+          </div>
+        </div>
+      </section>
+
+      <section id="planning" class="scene clip" data-start="14.2" data-duration="5.99" data-track-index="1">
+        <h2 id="planning-title" class="heading">Dê direção aos seus planos.</h2>
+        <p id="planning-support" class="support">Orçamentos por categoria</p>
+        <div id="planning-screen" class="screen">
+          <div id="planning-plane" class="screen-plane" data-layout-allow-overflow="true" data-hold="true">
+            <img id="planning-image" src="assets/screens/orcamentos.png" alt="Orçamentos do mango com o consumo de cada categoria" />
+          </div>
+        </div>
+      </section>
+
+      <p id="demo-note" class="demo-note">Demonstração com dados fictícios</p>
+
+      <section id="outro" class="scene clip" data-start="20.19" data-duration="4.81" data-track-index="1">
+        <div id="outro-ground" class="ground" aria-hidden="true"></div>
+        <div id="outro-inner" data-hold="true">
+          <img id="outro-logo" src="assets/mango-logo.png" alt="" />
+          <h2 id="outro-title">Conheça o mango.</h2>
+          <p id="outro-support">Código aberto. No seu servidor.</p>
+          <p id="outro-credit">Trilha: Sascha Ende · ende.app · CC BY 4.0</p>
+        </div>
+      </section>
+
+      <audio id="music" class="clip" src="assets/music/bed.mp3" data-start="0" data-duration="25" data-track-index="2" data-volume="0.30" data-fade-in="0.3" data-fade-out="1.2"></audio>
+      <audio id="reveal-sound" class="clip" src="assets/sfx/reveal.ogg" data-start="3.02" data-duration="0.19" data-track-index="3" data-volume="0.12" data-fade-out="0.04"></audio>
+      <audio id="open-sound" class="clip" src="assets/sfx/click.ogg" data-start="10.05" data-duration="0.06" data-track-index="3" data-volume="0.18" data-fade-out="0.01"></audio>
+      <audio id="confirm-sound" class="clip" src="assets/sfx/click.ogg" data-start="12.05" data-duration="0.06" data-track-index="3" data-volume="0.18" data-fade-out="0.01"></audio>
+    </main>
+
+    <script>
+      // All transforms derive from the composition clock. No live app is embedded.
+      // The screenshot states come from actual interactions with synthetic fixtures.
+      document.fonts.ready.then(() => {
+        const tl = gsap.timeline({ paused: true });
+        tl.fromTo("#hook-clarity", { opacity: 0.55 }, { opacity: 1, duration: 0.35, ease: "power2.out" }, 0);
+        tl.fromTo("#hook-title", { opacity: 1, x: 0 }, { opacity: 0, x: -28, duration: 0.28, ease: "power3.in" }, 2.78);
+        tl.fromTo("#hook-dashboard-image", { x: -300 }, { x: 0, duration: 0.47, ease: "power2.inOut" }, 2.8);
+        tl.fromTo("#hook-screen", { x: 0, y: 0 }, { x: -814, y: -18, duration: 0.47, ease: "power2.inOut" }, 2.8);
+        tl.fromTo("#brand", { x: 0, scale: 1 }, { x: 1500, scale: 0.85, transformOrigin: "left center", duration: 0.47, ease: "power2.inOut" }, 2.8);
+
+        tl.fromTo("#dashboard-title", { opacity: 0, filter: "blur(6px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.24, ease: "power2.out" }, 3.3);
+        tl.fromTo("#dashboard-support", { opacity: 0 }, { opacity: 1, duration: 0.25, ease: "power1.out" }, 3.57);
+        // One intentional reframing after viewers have read the full dashboard.
+        tl.fromTo("#dashboard-plane", { scale: 1, x: 0, y: 0 }, { scale: 1, x: 0, y: -180, transformOrigin: "0 0", duration: 0.7, ease: "power2.inOut" }, 6.25);
+        tl.fromTo("#dashboard-screen", { opacity: 1, filter: "blur(0px)" }, { opacity: 0, filter: "blur(6px)", duration: 0.16, ease: "power2.in" }, 8.58);
+        tl.fromTo("#dashboard-title, #dashboard-support", { opacity: 1 }, { opacity: 0, duration: 0.16 }, 8.58);
+
+        tl.fromTo("#review-title", { opacity: 0 }, { opacity: 1, duration: 0.18, ease: "power1.out" }, 8.74);
+        tl.fromTo("#review-screen", { opacity: 0, filter: "blur(6px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.2, ease: "power3.out" }, 8.74);
+        tl.fromTo("#review-cursor", { opacity: 0, x: 1100, y: 510, scale: 1 }, { opacity: 1, x: 1100, y: 510, duration: 0.1 }, 9.25);
+        tl.fromTo("#review-cursor", { x: 1100, y: 510 }, { x: 491.8, y: 305.9, immediateRender: false, duration: 0.65, ease: "power2.inOut" }, 9.4);
+        tl.fromTo("#review-cursor", { scale: 1 }, { scale: 0.84, immediateRender: false, duration: 0.07, ease: "power1.in" }, 10.0);
+        tl.fromTo("#review-cursor", { scale: 0.84 }, { scale: 1, immediateRender: false, duration: 0.11, ease: "power2.out" }, 10.07);
+        tl.fromTo("#review-detail", { opacity: 0 }, { opacity: 1, duration: 0.12, ease: "power1.out" }, 10.05);
+        tl.fromTo("#review-plane", { scale: 1, x: 0, y: 0 }, { scale: 1.15, x: -260, y: -100, transformOrigin: "0 0", duration: 0.65, ease: "power2.inOut" }, 10.6);
+        tl.fromTo("#review-cursor", { x: 491.8, y: 305.9 }, { x: 1664.7, y: 658, immediateRender: false, duration: 0.7, ease: "power2.inOut" }, 11.25);
+        tl.fromTo("#review-cursor", { scale: 1 }, { scale: 0.84, immediateRender: false, duration: 0.07, ease: "power1.in" }, 12.0);
+        tl.fromTo("#review-cursor", { scale: 0.84 }, { scale: 1, immediateRender: false, duration: 0.11, ease: "power2.out" }, 12.07);
+        tl.fromTo("#review-after", { opacity: 0 }, { opacity: 1, duration: 0.12, ease: "power1.out" }, 12.05);
+        tl.fromTo("#review-cursor", { opacity: 1 }, { opacity: 0, immediateRender: false, duration: 0.2 }, 12.75);
+        tl.fromTo("#review-screen", { opacity: 1, filter: "blur(0px)" }, { opacity: 0, filter: "blur(6px)", immediateRender: false, duration: 0.16, ease: "power2.in" }, 14.04);
+        tl.fromTo("#review-title", { opacity: 1 }, { opacity: 0, immediateRender: false, duration: 0.16 }, 14.04);
+
+        tl.fromTo("#planning-title", { opacity: 0, filter: "blur(6px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.2, ease: "power3.out" }, 14.2);
+        tl.fromTo("#planning-support", { opacity: 0 }, { opacity: 1, duration: 0.25 }, 14.35);
+        tl.fromTo("#planning-screen", { opacity: 0, filter: "blur(6px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.2, ease: "power3.out" }, 14.2);
+        tl.fromTo("#planning-plane", { scale: 1.38, x: -507, y: -283 }, { scale: 1.38, x: -507, y: -283, transformOrigin: "0 0", duration: 0.01 }, 14.2);
+        tl.fromTo("#planning-screen", { y: 0, scale: 1, opacity: 1 }, { y: 70, scale: 0.96, opacity: 0, immediateRender: false, duration: 0.35, ease: "power3.in" }, 19.84);
+        tl.fromTo("#planning-title, #planning-support", { opacity: 1 }, { opacity: 0, immediateRender: false, duration: 0.2 }, 19.99);
+        tl.fromTo("#brand, #demo-note", { opacity: 1 }, { opacity: 0, duration: 0.2 }, 19.99);
+
+        tl.fromTo("#outro-logo", { opacity: 0, y: 28, scale: 0.94 }, { opacity: 1, y: 0, scale: 1, duration: 0.5, ease: "power4.out" }, 20.19);
+        tl.fromTo("#outro-title", { opacity: 0, filter: "blur(6px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.22, ease: "power2.out" }, 20.35);
+        tl.fromTo("#outro-support", { opacity: 0 }, { opacity: 1, duration: 0.3 }, 20.65);
+        tl.fromTo("#outro-credit", { opacity: 0 }, { opacity: 1, duration: 0.3 }, 20.7);
+        tl.to({}, { duration: 0.01 }, 24.99);
+        window.__timelines = window.__timelines || {};
+        window.__timelines.main = tl;
+        tl.seek(0);
+      });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,60 @@
+{
+  "width": 1600,
+  "height": 960,
+  "fictionalData": true,
+  "fixedDate": "2026-10-23T15:00:00.000Z",
+  "frontend": "Unmodified existing mango frontend",
+  "rowClick": {
+    "x": 460,
+    "y": 286,
+    "box": {
+      "x": 401,
+      "y": 275.5,
+      "width": 117,
+      "height": 20
+    }
+  },
+  "reviewClick": {
+    "x": 1546,
+    "y": 612,
+    "box": {
+      "x": 1530,
+      "y": 602.796875,
+      "width": 32,
+      "height": 18.390625
+    }
+  },
+  "reviewMutation": {
+    "path": "/api/transacoes/101",
+    "method": "PATCH",
+    "body": {
+      "revisada": true
+    }
+  },
+  "requests": [
+    "GET /api/setup/status",
+    "GET /api/auth/me",
+    "GET /api/dashboard",
+    "GET /api/dashboard/series",
+    "GET /api/contas",
+    "GET /api/categorias",
+    "GET /api/assinaturas",
+    "GET /api/transacoes",
+    "GET /api/perfil",
+    "PATCH /api/transacoes/101",
+    "GET /api/orcamentos",
+    "GET /api/orcamentos/consumo",
+    "GET /api/objetivos"
+  ],
+  "unexpected": [],
+  "errors": [],
+  "screenshots": [
+    "dashboard",
+    "transacoes-before",
+    "transacoes-detail",
+    "transacoes-after",
+    "transacoes-revisada",
+    "orcamentos",
+    "objetivos"
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "name": "mango-presentation-video",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "serve:demo": "node serve-demo.mjs",
+    "capture": "node capture-demo.mjs",
+    "check": "hyperframes check composition --json",
+    "preview": "hyperframes preview composition",
+    "render": "node render.mjs"
+  },
+  "devDependencies": {
+    "hyperframes": "0.8.189",
+    "playwright": "1.64.1"
+  }
+}
