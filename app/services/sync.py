@@ -170,7 +170,8 @@ def iniciar_sync(db: Session, usuario_id: int, item_id: int | None = None) -> di
     threading.Thread(
         target=_rodar_em_fundo, args=(usuario_id, item_id), daemon=True, name="sync-manual"
     ).start()
-    return status_sync(usuario_id)
+    # Não relê `_status`: a thread pode terminar antes e o POST só garante que o sync começou.
+    return {"em_andamento": True}
 
 
 def _rodar_em_fundo(usuario_id: int, item_id: int | None) -> None:

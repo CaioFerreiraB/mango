@@ -153,14 +153,13 @@ function toastResumo(r: ResumoSync) {
 }
 
 /** O POST só dispara o sync (202); ele roda no servidor e pode levar minutos (o Pluggy é lento),
- * então acompanhamos `GET /api/sync/status` até terminar. 409 = já há um sync deste usuário
- * rodando (ex.: outra aba) → só acompanha o que está em andamento. */
+ * então acompanhamos `GET /api/sync/status` até terminar. 409 (já há um sync deste usuário, talvez
+ * de outro escopo) vira erro — acompanhá-lo daria sucesso a um pedido que não rodou. */
 async function aguardarSync(
-  disparo: Promise<{ error?: unknown; response: Response }>
+  disparo: Promise<{ error?: unknown }>
 ): Promise<ResumoSync> {
-  const { error, response } = await disparo
-  if (error && response.status !== 409)
-    throw new Error(mensagemErro(error, "falha ao sincronizar"))
+  const { error } = await disparo
+  if (error) throw new Error(mensagemErro(error, "falha ao sincronizar"))
   const limite = Date.now() + 15 * 60_000
   while (Date.now() < limite) {
     await new Promise((r) => setTimeout(r, 2000))
