@@ -69,6 +69,29 @@ export function useCriarCredencial() {
   })
 }
 
+/** Troca clientId e/ou clientSecret (ex.: secret girado no Pluggy). Campo ausente = mantém. */
+export function useAtualizarCredencial() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (args: {
+      id: number
+      client_id?: string
+      client_secret: string
+    }) => {
+      const { id, ...body } = args
+      const { data, error } = await api.PATCH(
+        "/api/credenciais-pluggy/{credencial_id}",
+        { params: { path: { credencial_id: id } }, body }
+      )
+      if (error || !data)
+        throw new Error(mensagemErro(error, "falha ao atualizar credencial"))
+      return data
+    },
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: conexoesKeys.credenciais }),
+  })
+}
+
 /** Testa a credencial guardada contra o Pluggy — devolve só o booleano (S1). */
 export function useTestarCredencial() {
   return useMutation({

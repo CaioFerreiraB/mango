@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.models.categoria import Categoria
 from app.models.investimento import Investimento
+from app.models.pluggy import CredencialPluggy
 from app.models.usuario import Usuario
 from tests.helpers import criar_conta
 
@@ -66,6 +67,27 @@ def test_credencial_nao_devolve_segredo(client_factory, usuario_a: Usuario) -> N
     assert "client_secret" not in body
     assert "client_secret_cifrado" not in body
     assert "client_id_cifrado" not in body
+
+
+def test_credencial_troca_secret_e_mantem_client_id(
+    client_factory, db: Session, usuario_a: Usuario
+) -> None:
+    """Girar o clientSecret em produção: PATCH só com o secret mantém o clientId."""
+    client = client_factory(usuario_a)
+    cred_id = client.post(
+        "/api/credenciais-pluggy", json={"client_id": "cid", "client_secret": "velho"}
+    ).json()["id"]
+
+    resp = client.patch(f"/api/credenciais-pluggy/{cred_id}", json={"client_secret": "novo"})
+    assert resp.status_code == 200, resp.text
+    assert "client_secret" not in resp.json() and "client_secret_cifrado" not in resp.json()
+
+    db.expire_all()
+    cred = db.get(CredencialPluggy, cred_id)
+    assert (cred.client_id_cifrado, cred.client_secret_cifrado) == ("cid", "novo")
+    # secret vazio é recusado na fronteira (não apaga a credencial por engano)
+    vazio = client.patch(f"/api/credenciais-pluggy/{cred_id}", json={"client_secret": ""})
+    assert vazio.status_code == 422
 
 
 def test_b_nao_vincula_investimento_de_a_a_objetivo(
