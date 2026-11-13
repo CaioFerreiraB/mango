@@ -152,15 +152,35 @@ function toastResumo(r: ResumoSync) {
   )
 }
 
+/** O POST só dispara o sync (202); ele roda no servidor e pode levar minutos (o Pluggy é lento),
+ * então acompanhamos `GET /api/sync/status` até terminar. 409 = já há um sync deste usuário
+ * rodando (ex.: outra aba) → só acompanha o que está em andamento. */
+async function aguardarSync(
+  disparo: Promise<{ error?: unknown; response: Response }>
+): Promise<ResumoSync> {
+  const { error, response } = await disparo
+  if (error && response.status !== 409)
+    throw new Error(mensagemErro(error, "falha ao sincronizar"))
+  const limite = Date.now() + 15 * 60_000
+  while (Date.now() < limite) {
+    await new Promise((r) => setTimeout(r, 2000))
+    const { data, error } = await api.GET("/api/sync/status")
+    if (error || !data)
+      throw new Error(mensagemErro(error, "falha ao consultar a sincronização"))
+    if (data.em_andamento) continue
+    if (data.erro || !data.resumo)
+      throw new Error(data.erro ?? "falha ao sincronizar")
+    return data.resumo
+  }
+  throw new Error(
+    "a sincronização está demorando — confira de novo em instantes"
+  )
+}
+
 export function useSincronizarTudo() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async (): Promise<ResumoSync> => {
-      const { data, error } = await api.POST("/api/sync", {})
-      if (error || !data)
-        throw new Error(mensagemErro(error, "falha ao sincronizar"))
-      return data
-    },
+    mutationFn: () => aguardarSync(api.POST("/api/sync", {})),
     onSuccess: (r) => {
       invalidarDados(qc)
       toastResumo(r)
@@ -172,17 +192,12 @@ export function useSincronizarTudo() {
 export function useSincronizarItem() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async (itemId: number): Promise<ResumoSync> => {
-      const { data, error } = await api.POST(
-        "/api/itens-pluggy/{item_id}/sincronizar",
-        {
+    mutationFn: (itemId: number) =>
+      aguardarSync(
+        api.POST("/api/itens-pluggy/{item_id}/sincronizar", {
           params: { path: { item_id: itemId } },
-        }
-      )
-      if (error || !data)
-        throw new Error(mensagemErro(error, "falha ao sincronizar"))
-      return data
-    },
+        })
+      ),
     onSuccess: (r) => {
       invalidarDados(qc)
       toastResumo(r)
