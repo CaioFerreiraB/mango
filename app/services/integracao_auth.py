@@ -173,8 +173,11 @@ def revogar(
     usuario_id: int | None = None,
     trabalho_id: int | None = None,
     tipos: tuple[str, ...] | None = None,
+    token: str | None = None,
 ) -> None:
     stmt = update(CredencialIntegracao)
+    if token is not None:
+        stmt = stmt.where(CredencialIntegracao.token_hash == hash_token(token))
     if usuario_id is not None:
         stmt = stmt.where(CredencialIntegracao.usuario_id == usuario_id)
     if trabalho_id is not None:

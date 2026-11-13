@@ -260,14 +260,19 @@ def test_proposta_web_confirma_uma_vez(db, usuario_a, monkeypatch):
     pendente = chat_web.proposta_pendente(db, usuario_a.id, conversa.id)
     assert pendente.id == proposta["operacao_id"]
 
+    # Outra confirmação em paralelo: a credencial dela não pode ser revogada por esta.
+    paralela = integracao_auth.emitir(
+        db, usuario_a.id, "web_confirma", mensagem_id=pendente.mensagem_id
+    )
     asyncio.run(chat_web.confirmar(db, usuario_a.id, proposta["operacao_id"]))
     db.expire_all()
     assert db.get(Transacao, t.id).revisada
+    integracao_auth.resolver(db, paralela)
     with pytest.raises(NotFoundError):
         asyncio.run(chat_web.confirmar(db, usuario_a.id, proposta["operacao_id"]))
     # Confirmar não consome cota (credencial própria) e o resultado entra na conversa.
     tipos = db.scalars(select(CredencialIntegracao.tipo)).all()
-    assert sorted(tipos) == ["web", "web_confirma"]
+    assert sorted(tipos) == ["web", "web_confirma", "web_confirma"]
     assert db.scalars(
         select(MensagemIa.papel).where(MensagemIa.conversa_id == conversa.id)
     ).all() == ["user", "assistant", "assistant"]

@@ -20,11 +20,11 @@ import {
 const CHAVE_PAINEL = "mango_chat_painel"
 
 // `randomUUID` só existe em contexto seguro; o self-hosted pode rodar em HTTP na rede local.
+// `getRandomValues` existe também fora de contexto seguro (self-hosted em HTTP na rede local),
+// ao contrário de `randomUUID`.
 function novaChave() {
-  return (
-    globalThis.crypto?.randomUUID?.() ??
-    `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`
-  )
+  const bytes = crypto.getRandomValues(new Uint8Array(16))
+  return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("")
 }
 const CHAVE_CONVERSA = "mango_chat_conversa"
 
@@ -130,17 +130,21 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
                 : "Falha de conexão."
         )
         .then(async (falha) => {
-          abortar.current = null
-          // Escrita aplicada direto (frase exata): atualiza também as páginas de dados.
-          await qc.invalidateQueries(
-            alterou ? undefined : { queryKey: chaveConversas }
-          )
-          setEnvio((e) => {
-            if (!e) return e
-            const erro = falha ?? e.erro
-            // Sucesso: a conversa recarregada já tem pedido e resposta. Erro: mantém para o retry.
-            return erro ? { ...e, erro, ativo: false, status: null } : null
-          })
+          try {
+            // Escrita aplicada direto (frase exata): atualiza também as páginas de dados.
+            await qc.invalidateQueries(
+              alterou ? undefined : { queryKey: chaveConversas }
+            )
+          } finally {
+            setEnvio((e) => {
+              if (!e) return e
+              const erro = falha ?? e.erro
+              // Sucesso: a conversa recarregada já tem pedido e resposta. Erro: mantém p/ retry.
+              return erro ? { ...e, erro, ativo: false, status: null } : null
+            })
+            // Só agora: liberar antes deixaria um novo envio começar e ser apagado acima.
+            abortar.current = null
+          }
         })
     },
     [conversaId, qc]

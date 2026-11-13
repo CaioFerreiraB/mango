@@ -385,7 +385,8 @@ async def confirmar(db, usuario_id: int, op_id: str) -> str:
         db.rollback()
         raise ConflictError(str(exc)) from None
     finally:
-        revogar(db, usuario_id=usuario_id, tipos=("web_confirma",))
+        # Só esta credencial: outra confirmação em paralelo segue com a sua.
+        revogar(db, usuario_id=usuario_id, token=token)
     db.add(
         MensagemIa(
             usuario_id=usuario_id,
