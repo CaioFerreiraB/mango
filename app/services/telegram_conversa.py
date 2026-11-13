@@ -15,7 +15,7 @@ from app.db.session import SessionLocal
 from app.models.integracao import MensagemIa, OperacaoIntegracao, TrabalhoTelegram
 from app.models.telegram import ConfigTelegram
 from app.models.usuario import Usuario
-from app.services.integracao_auth import configuracao, emitir, revogar
+from app.services.integracao_auth import TIPOS_TELEGRAM, configuracao, emitir, revogar
 from app.services.operacoes import serializar
 from app.telegram_client import TelegramClient, TelegramError
 
@@ -84,6 +84,7 @@ def cancelar(db, usuario_id, atual):
         update(OperacaoIntegracao)
         .where(
             OperacaoIntegracao.usuario_id == usuario_id,
+            OperacaoIntegracao.mensagem_id.is_(None),  # propostas do chat no app ficam
             OperacaoIntegracao.status.in_(["preparando", "pendente"]),
         )
         .values(status="cancelada")
@@ -98,7 +99,7 @@ def cancelar(db, usuario_id, atual):
         .values(status="cancelado")
     )
     db.commit()
-    revogar(db, usuario_id)
+    revogar(db, usuario_id, tipos=TIPOS_TELEGRAM)
 
 
 def botao_miniapp(c, texto, caminho):
@@ -136,7 +137,11 @@ async def executar(db, job, cliente):
             return "Ação inválida.", None
         if op.tipo == "limpar":
             cancelar(db, user.id, job.id)
-            db.execute(delete(MensagemIa).where(MensagemIa.usuario_id == user.id))
+            db.execute(
+                delete(MensagemIa).where(
+                    MensagemIa.usuario_id == user.id, MensagemIa.conversa_id.is_(None)
+                )
+            )
             op.status = "concluida"
             db.commit()
             return (
@@ -214,52 +219,9 @@ async def executar(db, job, cliente):
         if dados["confirmar"]:
             op.status = "pendente"
             db.commit()
-            return resumir_proposta(dados), confirmacao(op.id)
+            return ia_tools.resumir_proposta(dados), confirmacao(op.id)
         return await ia_tools.aplicar(servidor, db, user.id, op.id, token), None
     return resposta, None
-
-
-def resumir_proposta(dados):
-    nomes = {
-        "atualizar_transacoes": "Editar transações",
-        "vincular_objetivo": "Vincular objetivo",
-        "criar_assinatura": "Criar assinatura",
-        "atualizar_assinatura": "Editar assinatura",
-        "rejeitar_candidato_assinatura": "Rejeitar sugestão de assinatura",
-        "excluir_assinatura": "Excluir assinatura",
-        "criar_divisao": "Criar divisão",
-        "quitar_divisao": "Marcar divisão como paga",
-        "reabrir_divisao": "Reabrir divisão",
-        "excluir_divisao": "Excluir divisão",
-    }
-    campos = {
-        "ids": "Transações",
-        "revisada": "Revisada",
-        "descricao": "Descrição",
-        "observacoes": "Observações",
-        "categoria": "Categoria",
-        "assinatura_id": "Assinatura",
-        "provento_id": "Provento",
-        "valor_total_centavos": "Valor total (centavos)",
-        "valor_centavos": "Valor (centavos)",
-        "pago_por_usuario_id": "Pagador",
-        "despesa_id": "Divisão",
-        "nao_e_assinatura": "Não é assinatura",
-        "eh_transferencia": "Transferência",
-        "participantes": "Participantes",
-    }
-    linhas = ["Confira as alterações. A confirmação vale por dez minutos."]
-    if dados.get("efeitos"):
-        linhas.append(f"Transações afetadas, incluindo propagação: {dados['efeitos']}.")
-    for chamada in dados["chamadas"]:
-        linhas.append("\n" + nomes.get(chamada["nome"], "Alteração"))
-        for campo, valor in chamada["args"].items():
-            if isinstance(valor, bool):
-                valor = "Sim" if valor else "Não"
-            elif isinstance(valor, list):
-                valor = ", ".join(map(str, valor))
-            linhas.append(f"• {campos.get(campo, campo.replace('_', ' ').capitalize())}: {valor}")
-    return "\n".join(linhas)
 
 
 def confirmacao(op_id):
@@ -401,11 +363,14 @@ def iniciar():
         )
         db.execute(
             update(OperacaoIntegracao)
-            .where(OperacaoIntegracao.status == "preparando")
+            .where(
+                OperacaoIntegracao.status == "preparando",
+                OperacaoIntegracao.mensagem_id.is_(None),
+            )
             .values(status="cancelada")
         )
         db.commit()
-        revogar(db)
+        revogar(db, tipos=TIPOS_TELEGRAM)
     _parar.clear()
     for i in range(2):
         thread = threading.Thread(target=_worker, name=f"mango-conversa-{i}", daemon=True)
@@ -419,4 +384,4 @@ def parar():
         thread.join(timeout=1)
     _threads[:] = [thread for thread in _threads if thread.is_alive()]
     with SessionLocal() as db:
-        revogar(db)
+        revogar(db, tipos=TIPOS_TELEGRAM)
