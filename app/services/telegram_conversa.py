@@ -15,7 +15,7 @@ from app.db.session import SessionLocal
 from app.models.integracao import MensagemIa, OperacaoIntegracao, TrabalhoTelegram
 from app.models.telegram import ConfigTelegram
 from app.models.usuario import Usuario
-from app.services.integracao_auth import configuracao, emitir, revogar
+from app.services.integracao_auth import TIPOS_TELEGRAM, configuracao, emitir, revogar
 from app.services.operacoes import serializar
 from app.telegram_client import TelegramClient, TelegramError
 
@@ -84,6 +84,7 @@ def cancelar(db, usuario_id, atual):
         update(OperacaoIntegracao)
         .where(
             OperacaoIntegracao.usuario_id == usuario_id,
+            OperacaoIntegracao.mensagem_id.is_(None),  # propostas do chat no app ficam
             OperacaoIntegracao.status.in_(["preparando", "pendente"]),
         )
         .values(status="cancelada")
@@ -98,7 +99,7 @@ def cancelar(db, usuario_id, atual):
         .values(status="cancelado")
     )
     db.commit()
-    revogar(db, usuario_id)
+    revogar(db, usuario_id, tipos=TIPOS_TELEGRAM)
 
 
 def botao_miniapp(c, texto, caminho):
@@ -136,7 +137,11 @@ async def executar(db, job, cliente):
             return "Ação inválida.", None
         if op.tipo == "limpar":
             cancelar(db, user.id, job.id)
-            db.execute(delete(MensagemIa).where(MensagemIa.usuario_id == user.id))
+            db.execute(
+                delete(MensagemIa).where(
+                    MensagemIa.usuario_id == user.id, MensagemIa.conversa_id.is_(None)
+                )
+            )
             op.status = "concluida"
             db.commit()
             return (
@@ -358,11 +363,14 @@ def iniciar():
         )
         db.execute(
             update(OperacaoIntegracao)
-            .where(OperacaoIntegracao.status == "preparando")
+            .where(
+                OperacaoIntegracao.status == "preparando",
+                OperacaoIntegracao.mensagem_id.is_(None),
+            )
             .values(status="cancelada")
         )
         db.commit()
-        revogar(db)
+        revogar(db, tipos=TIPOS_TELEGRAM)
     _parar.clear()
     for i in range(2):
         thread = threading.Thread(target=_worker, name=f"mango-conversa-{i}", daemon=True)
@@ -376,4 +384,4 @@ def parar():
         thread.join(timeout=1)
     _threads[:] = [thread for thread in _threads if thread.is_alive()]
     with SessionLocal() as db:
-        revogar(db)
+        revogar(db, tipos=TIPOS_TELEGRAM)

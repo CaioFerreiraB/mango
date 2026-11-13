@@ -218,6 +218,32 @@ def test_b_nao_acessa_conversa_nem_proposta_de_a(
     assert client_b.post("/api/ia/operacoes/op-de-a/confirmar").status_code == 404
     assert client_b.post("/api/ia/operacoes/op-de-a/cancelar").status_code == 404
 
+    # Enviar/regenerar na conversa de A e parar uma resposta de A em andamento.
+    import threading
+
+    from app.models.integracao import PreferenciaIa
+    from app.services import chat_web, integracao_auth
+
+    c = integracao_auth.configuracao(db)
+    c.ia_ativa = c.validado = True
+    db.add(PreferenciaIa(usuario_id=usuario_b.id, ativa=True))
+    db.commit()
+    corpo = {"conversa_id": conversa.id, "texto": "oi"}
+    assert client_b.post("/api/ia/mensagens", json=corpo).status_code == 404
+    corpo = {"conversa_id": conversa.id, "regenerar": True}
+    assert client_b.post("/api/ia/mensagens", json=corpo).status_code == 404
+    db.add(PreferenciaIa(usuario_id=usuario_a.id, ativa=True))
+    db.commit()
+    token_a = integracao_auth.emitir(db, usuario_a.id, "web", mensagem_id=pedido.id)
+    parar_a = threading.Event()
+    chat_web._execucoes[usuario_a.id] = {"conversa_id": conversa.id, "parar": parar_a}
+    try:
+        assert client_b.post("/api/ia/execucao/parar").status_code == 204
+        assert not parar_a.is_set()
+        integracao_auth.resolver(db, token_a)  # credencial de A não foi revogada
+    finally:
+        chat_web._execucoes.clear()
+
     client_a = client_factory(usuario_a)
     detalhe = client_a.get(rota).json()
     assert detalhe["titulo"] == "privada" and detalhe["proposta"]["operacao_id"] == "op-de-a"

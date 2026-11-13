@@ -215,12 +215,12 @@ def atualizar_instancia(
     config.telegram_url = origem
     if not config.telegram_ativo:
         cancelar_pendentes(db)
-        from app.services.integracao_auth import revogar
+        from app.services.integracao_auth import TIPOS_TELEGRAM, revogar
         from app.services.telegram_conversa import cancelar
 
         for individual in db.scalars(select(ConfigTelegram)).all():
             cancelar(db, individual.usuario_id, None)
-        revogar(db)
+        revogar(db, tipos=TIPOS_TELEGRAM)
     db.commit()
     return ler_instancia(config)
 

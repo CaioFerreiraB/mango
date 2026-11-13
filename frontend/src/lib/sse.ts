@@ -7,8 +7,12 @@ export function criarParserSSE(
   onEvento: (tipo: string, dados: unknown) => void
 ): (pedaco: string) => void {
   let resto = ""
+  let cr = "" // `\r` no fim do pedaço: pode ser metade de um CRLF que chega no próximo
   return (pedaco) => {
-    resto += pedaco.replace(/\r\n?/g, "\n")
+    let texto = cr + pedaco
+    cr = texto.endsWith("\r") ? "\r" : ""
+    if (cr) texto = texto.slice(0, -1)
+    resto += texto.replace(/\r\n?/g, "\n")
     const blocos = resto.split("\n\n")
     resto = blocos.pop() ?? ""
     for (const bloco of blocos) {

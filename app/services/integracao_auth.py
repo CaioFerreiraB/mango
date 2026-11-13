@@ -16,6 +16,7 @@ from app.config import settings
 from app.models.integracao import (
     ConfigIntegracao,
     CredencialIntegracao,
+    MensagemIa,
     PreferenciaIa,
     TrabalhoTelegram,
 )
@@ -26,6 +27,8 @@ from app.services.telegram import instancia
 
 # Chat no app: `web` = uma execução (conta na cota); `web_confirma` = aplicar proposta clicada.
 TIPOS_WEB = ("web", "web_confirma")
+# Ações do Telegram (cancelar, desligar bot/miniapp) não derrubam execuções do chat no app.
+TIPOS_TELEGRAM = ("delegada", "miniapp")
 
 
 def configuracao(db: Session) -> ConfigIntegracao:
@@ -151,6 +154,11 @@ def _resolver_web(db: Session, cred: CredencialIntegracao) -> Usuario:
         or usuario.tipo != cred.escopo
         or usuario.tipo != "completo"
         or cred.mensagem_id is None
+        or not db.scalar(
+            select(MensagemIa.id).where(
+                MensagemIa.id == cred.mensagem_id, MensagemIa.usuario_id == cred.usuario_id
+            )
+        )
         or not c.ia_ativa
         or not c.validado
         or not pref
@@ -164,15 +172,15 @@ def revogar(
     db: Session,
     usuario_id: int | None = None,
     trabalho_id: int | None = None,
-    tipo: str | None = None,
+    tipos: tuple[str, ...] | None = None,
 ) -> None:
     stmt = update(CredencialIntegracao)
     if usuario_id is not None:
         stmt = stmt.where(CredencialIntegracao.usuario_id == usuario_id)
     if trabalho_id is not None:
         stmt = stmt.where(CredencialIntegracao.trabalho_id == trabalho_id)
-    if tipo is not None:
-        stmt = stmt.where(CredencialIntegracao.tipo == tipo)
+    if tipos is not None:
+        stmt = stmt.where(CredencialIntegracao.tipo.in_(tipos))
     db.execute(stmt.values(revogada=True))
     db.commit()
 

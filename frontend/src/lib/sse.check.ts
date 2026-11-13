@@ -32,4 +32,12 @@ const multi: unknown[] = []
 criarParserSSE((_, d) => multi.push(d))('data: {"a":\ndata: 1}\n\n')
 assert.deepEqual(multi, [{ a: 1 }])
 
+// CRLF partido entre pedaços (`\r` | `\n`) não pode virar fim de evento.
+const crlf: [string, unknown][] = []
+const alimentarCrlf = criarParserSSE((t, d) => crlf.push([t, d]))
+alimentarCrlf("event: delta\r")
+alimentarCrlf('\ndata: {"texto": "x"}\r\n\r')
+alimentarCrlf("\n")
+assert.deepEqual(crlf, [["delta", { texto: "x" }]])
+
 console.log("sse.check: ok")

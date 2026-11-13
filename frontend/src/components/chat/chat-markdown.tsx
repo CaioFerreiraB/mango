@@ -1,4 +1,4 @@
-import { CheckIcon, CopyIcon } from "lucide-react"
+import { CheckIcon, CopyIcon, ImageIcon } from "lucide-react"
 import { memo } from "react"
 import Markdown, { type Components } from "react-markdown"
 import remarkGfm from "remark-gfm"
@@ -87,6 +87,20 @@ const componentes: Components = {
     )
   },
   pre: ({ children }) => <BlocoCodigo>{children}</BlocoCodigo>,
+  // Nunca carregar imagem remota sozinha: `![x](https://…?saldo=…)` vazaria dados sem clique
+  // (prompt injection via texto de banco). Vira link explícito.
+  img: ({ src, alt }) =>
+    typeof src === "string" && src ? (
+      <a
+        href={src}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="inline-flex items-center gap-1 text-accent-ink underline underline-offset-2"
+      >
+        <ImageIcon className="size-3.5" aria-hidden />
+        {alt ? `Imagem: ${alt}` : "Imagem"}
+      </a>
+    ) : null,
   table: (props) => (
     <div className="overflow-x-auto rounded-lg border">
       <table

@@ -95,8 +95,32 @@ def falha(config: ConfigIntegracao, resposta: httpx.Response):
     )
 
 
+LINHA_MAX = 1 << 20  # 1 MiB: uma linha SSE sem fim não pode crescer a memória sem limite
+
+
+def _evento_sse(dado: str):
+    """Delta de texto de um `data:` (ou None); erro do provedor no meio do stream vira exceção."""
+    try:
+        evento = json.loads(dado)
+        if not isinstance(evento, dict):
+            raise ValueError
+    except ValueError:
+        raise UpstreamError("resposta inválida do provedor") from None
+    extra = evento.get("x_axon")
+    if evento.get("error") or (isinstance(extra, dict) and extra.get("errors")):
+        raise UpstreamError("falha do provedor durante a resposta")
+    try:
+        delta = evento["choices"][0]["delta"].get("content")
+    except (KeyError, IndexError, TypeError, AttributeError):
+        return None
+    return delta if isinstance(delta, str) and delta else None
+
+
 async def transmitir(config: ConfigIntegracao, caminho: str, *, corpo, headers=None):
-    """SSE no formato OpenAI: rende cada `choices[0].delta.content` até `[DONE]`."""
+    """SSE no formato OpenAI: rende cada `choices[0].delta.content` até `[DONE]`.
+
+    Sem `[DONE]` a resposta está incompleta (conexão cortada): erro, nunca texto parcial salvo.
+    """
     endpoint = validar_endpoint(config.endpoint or "")
     try:
         async with (
@@ -111,29 +135,24 @@ async def transmitir(config: ConfigIntegracao, caminho: str, *, corpo, headers=N
             if resposta.status_code >= 300:
                 await resposta.aread()
                 falha(config, resposta)
-            async for linha in resposta.aiter_lines():
-                if not linha.startswith("data:"):
-                    continue
-                dado = linha[5:].strip()
-                if dado == "[DONE]":
-                    return
-                try:
-                    evento = json.loads(dado)
-                    if not isinstance(evento, dict):
-                        raise ValueError
-                except ValueError:
-                    raise UpstreamError("resposta inválida do provedor") from None
-                extra = evento.get("x_axon")
-                if evento.get("error") or (isinstance(extra, dict) and extra.get("errors")):
-                    raise UpstreamError("falha do provedor durante a resposta")
-                try:
-                    delta = evento["choices"][0]["delta"].get("content")
-                except (KeyError, IndexError, TypeError, AttributeError):
-                    continue
-                if isinstance(delta, str) and delta:
-                    yield delta
+            resto = b""
+            async for bloco in resposta.aiter_bytes():
+                resto += bloco
+                *linhas, resto = resto.split(b"\n")
+                if len(resto) > LINHA_MAX:
+                    raise UpstreamError("resposta inválida do provedor")
+                for crua in linhas:
+                    linha = crua.decode("utf-8", "replace").rstrip("\r")
+                    if not linha.startswith("data:"):
+                        continue
+                    dado = linha[5:].strip()
+                    if dado == "[DONE]":
+                        return
+                    if delta := _evento_sse(dado):
+                        yield delta
     except httpx.HTTPError:
         raise UpstreamError("provedor indisponível; execução não repetida") from None
+    raise UpstreamError("resposta do provedor interrompida; tente novamente")
 
 
 def descobrir_axon(dados: dict, mcp_url: str) -> str:

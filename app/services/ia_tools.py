@@ -120,9 +120,17 @@ def execucao(db, cred):
     """(coluna da operação, id da execução, texto pedido): trabalho Telegram ou mensagem web."""
     from app.models.integracao import MensagemIa, TrabalhoTelegram
 
+    if cred.tipo == "web_confirma":
+        raise ToolError("credencial só aplica propostas já confirmadas")
     if cred.tipo == "web":
-        mensagem = db.get(MensagemIa, cred.mensagem_id)
-        return "mensagem_id", cred.mensagem_id, mensagem.conteudo if mensagem else ""
+        mensagem = db.scalar(
+            select(MensagemIa).where(
+                MensagemIa.id == cred.mensagem_id, MensagemIa.usuario_id == cred.usuario_id
+            )
+        )
+        if mensagem is None:
+            raise ToolError("execução indisponível")
+        return "mensagem_id", mensagem.id, mensagem.conteudo
     trabalho = db.get(TrabalhoTelegram, cred.trabalho_id)
     texto = json.loads(trabalho.evento or "{}").get("message", {}).get("text", "")
     return "trabalho_id", cred.trabalho_id, texto
@@ -155,6 +163,7 @@ async def despachar(server, nome, args, ctx):
         alteradas = sum(serializar(a.get(k)) != serializar(b.get(k)) for k in a.keys() | b.keys())
         op = db.scalar(
             select(OperacaoIntegracao).where(
+                OperacaoIntegracao.usuario_id == user.id,
                 getattr(OperacaoIntegracao, coluna) == execucao_id,
                 OperacaoIntegracao.tipo == "ia",
                 OperacaoIntegracao.status == "preparando",

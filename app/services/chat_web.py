@@ -35,6 +35,7 @@ logger = logging.getLogger("app.ia.chat")
 RETENCAO = timedelta(days=7)
 HISTORICO = 40  # 20 interações; a mensagem atual vai além disso
 TITULO = 60
+ERRO_GENERICO = "Não foi possível concluir. Tente uma solicitação menor."
 
 _lock = threading.Lock()
 _execucoes: dict[int, dict] = {}  # usuario_id → {"conversa_id", "parar": Event}
@@ -134,7 +135,11 @@ def _preparar(db, usuario_id, conversa_id, texto, regenerar):
     if regenerar:
         pedido = db.scalar(
             select(MensagemIa)
-            .where(MensagemIa.conversa_id == conversa.id, MensagemIa.papel == "user")
+            .where(
+                MensagemIa.usuario_id == usuario_id,
+                MensagemIa.conversa_id == conversa.id,
+                MensagemIa.papel == "user",
+            )
             .order_by(MensagemIa.id.desc())
             .limit(1)
         )
@@ -143,7 +148,9 @@ def _preparar(db, usuario_id, conversa_id, texto, regenerar):
         cancelar_propostas(db, usuario_id, pedido.id)
         db.execute(
             delete(MensagemIa).where(
-                MensagemIa.conversa_id == conversa.id, MensagemIa.id > pedido.id
+                MensagemIa.usuario_id == usuario_id,
+                MensagemIa.conversa_id == conversa.id,
+                MensagemIa.id > pedido.id,
             )
         )
     else:
@@ -159,7 +166,11 @@ def _preparar(db, usuario_id, conversa_id, texto, regenerar):
     )
     anteriores = db.scalars(
         select(MensagemIa)
-        .where(MensagemIa.conversa_id == conversa.id, MensagemIa.id <= pedido.id)
+        .where(
+            MensagemIa.usuario_id == usuario_id,
+            MensagemIa.conversa_id == conversa.id,
+            MensagemIa.id <= pedido.id,
+        )
         .order_by(MensagemIa.id.desc())
         .limit(HISTORICO + 1)
     ).all()
@@ -185,7 +196,7 @@ def parar(db, usuario_id: int) -> None:
         atual = _execucoes.get(usuario_id)
     if atual:
         atual["parar"].set()
-    revogar(db, usuario_id=usuario_id, tipo="web")
+    revogar(db, usuario_id=usuario_id, tipos=("web",))
     db.expire_all()
     db.execute(
         update(OperacaoIntegracao)
@@ -208,9 +219,41 @@ async def _ate_parar(coro, parar: threading.Event):
     return await tarefa
 
 
-def _rodar(usuario_id, conversa_id, pedido_id, token, mensagens, config, fila, parar_evt):
+def _salvar(db, usuario_id, conversa_id, texto) -> int:
+    resposta = MensagemIa(
+        usuario_id=usuario_id, conversa_id=conversa_id, papel="assistant", conteudo=texto
+    )
+    db.add(resposta)
+    db.commit()
+    return resposta.id
+
+
+def _concluir(db, usuario_id, conversa_id, pedido_id, token, evento) -> None:
+    """Escritas preparadas na execução: proposta para o clique, ou aplicação direta (IA01)."""
     from app.mcp.servidor import servidor
 
+    db.expire_all()
+    op = db.scalar(
+        select(OperacaoIntegracao).where(
+            OperacaoIntegracao.usuario_id == usuario_id,
+            OperacaoIntegracao.mensagem_id == pedido_id,
+            OperacaoIntegracao.tipo == "ia",
+            OperacaoIntegracao.status == "preparando",
+        )
+    )
+    if op is None:
+        return
+    if json.loads(op.payload)["confirmar"]:
+        op.status = "pendente"
+        db.commit()
+        evento("proposta", serializar_proposta(op))
+        return
+    resultado = asyncio.run(ia_tools.aplicar(servidor, db, usuario_id, op.id, token))
+    _salvar(db, usuario_id, conversa_id, resultado)
+    evento("aplicada", {"resultado": resultado})
+
+
+def _rodar(usuario_id, conversa_id, pedido_id, token, mensagens, config, fila, parar_evt):
     partes: list[str] = []
 
     def evento(tipo, dados):
@@ -218,68 +261,34 @@ def _rodar(usuario_id, conversa_id, pedido_id, token, mensagens, config, fila, p
             partes.append(dados["texto"])
         fila.put((tipo, dados))
 
-    def salvar(db, texto):
-        resposta = MensagemIa(
-            usuario_id=usuario_id, conversa_id=conversa_id, papel="assistant", conteudo=texto
-        )
-        db.add(resposta)
-        db.commit()
-        return resposta.id
-
     with SessionLocal() as db:
         try:
             evento("status", {"texto": "Pensando…"})
+            resposta = ia.responder(config, mensagens, token, evento, transmitir=True)
             try:
-                texto = asyncio.run(
-                    _ate_parar(
-                        ia.responder(config, mensagens, token, evento, transmitir=True), parar_evt
-                    )
-                )
+                texto = asyncio.run(_ate_parar(resposta, parar_evt))
             except asyncio.CancelledError:
+                # Parado pelo usuário: o que já chegou fica salvo; escritas são descartadas.
                 db.rollback()
                 cancelar_propostas(db, usuario_id, pedido_id)
                 db.commit()
                 parcial = "".join(partes).strip()
-                evento("fim", {"mensagem_id": salvar(db, parcial) if parcial else None})
+                salvo = _salvar(db, usuario_id, conversa_id, parcial) if parcial else None
+                evento("fim", {"mensagem_id": salvo})
                 return
-            mensagem_id = salvar(db, texto)
-            db.expire_all()
-            op = db.scalar(
-                select(OperacaoIntegracao).where(
-                    OperacaoIntegracao.mensagem_id == pedido_id,
-                    OperacaoIntegracao.tipo == "ia",
-                    OperacaoIntegracao.status == "preparando",
-                )
-            )
-            if op:
-                dados = json.loads(op.payload)
-                if dados["confirmar"]:
-                    op.status = "pendente"
-                    db.commit()
-                    evento("proposta", serializar_proposta(op))
-                else:
-                    resultado = asyncio.run(
-                        ia_tools.aplicar(servidor, db, usuario_id, op.id, token)
-                    )
-                    salvar(db, resultado)
-                    evento("aplicada", {"resultado": resultado})
+            mensagem_id = _salvar(db, usuario_id, conversa_id, texto)
+            _concluir(db, usuario_id, conversa_id, pedido_id, token, evento)
             evento("fim", {"mensagem_id": mensagem_id})
         except Exception as exc:
             db.rollback()
             cancelar_propostas(db, usuario_id, pedido_id)
             db.commit()
-            if not isinstance(exc, (DomainError, ToolError)):
+            conhecido = isinstance(exc, (DomainError, ToolError))
+            if not conhecido:
                 logger.exception("execução do chat falhou")
-            evento(
-                "erro",
-                {
-                    "mensagem": str(exc)
-                    if isinstance(exc, (DomainError, ToolError))
-                    else "Não foi possível concluir. Tente uma solicitação menor."
-                },
-            )
+            evento("erro", {"mensagem": str(exc) if conhecido else ERRO_GENERICO})
         finally:
-            revogar(db, usuario_id=usuario_id, tipo="web")
+            revogar(db, usuario_id=usuario_id, tipos=("web",))
             with _lock:
                 _execucoes.pop(usuario_id, None)
             fila.put(None)
@@ -306,7 +315,13 @@ async def confirmar(db, usuario_id: int, op_id: str) -> str:
     )
     if op is None or op.status != "pendente":
         raise NotFoundError("proposta indisponível ou já utilizada")
-    pedido = db.get(MensagemIa, op.mensagem_id)
+    pedido = db.scalar(
+        select(MensagemIa).where(
+            MensagemIa.id == op.mensagem_id, MensagemIa.usuario_id == usuario_id
+        )
+    )
+    if pedido is None:
+        raise NotFoundError("proposta indisponível ou já utilizada")
     # A aplicação passa pelas mesmas tools; uma credencial curta, revogada ao fim.
     token = emitir(db, usuario_id, "web_confirma", mensagem_id=op.mensagem_id)
     try:
@@ -315,7 +330,7 @@ async def confirmar(db, usuario_id: int, op_id: str) -> str:
         db.rollback()
         raise ConflictError(str(exc)) from None
     finally:
-        revogar(db, usuario_id=usuario_id, tipo="web_confirma")
+        revogar(db, usuario_id=usuario_id, tipos=("web_confirma",))
     db.add(
         MensagemIa(
             usuario_id=usuario_id,

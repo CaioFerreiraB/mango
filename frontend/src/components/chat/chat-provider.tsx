@@ -1,4 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query"
+import { toast } from "sonner"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
 import {
@@ -59,6 +60,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       const controle = new AbortController()
       abortar.current = controle
       let alvo = conversaId
+      let alterou = false
       setEnvio({
         conversaId: alvo,
         pedido,
@@ -99,6 +101,9 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
                   : e
               )
               break
+            case "aplicada":
+              alterou = true
+              break
             case "erro":
               atualizar({ erro: ev.dados.mensagem, status: null })
               break
@@ -116,7 +121,10 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         )
         .then(async (falha) => {
           abortar.current = null
-          await qc.invalidateQueries({ queryKey: chaveConversas })
+          // Escrita aplicada direto (frase exata): atualiza também as páginas de dados.
+          await qc.invalidateQueries(
+            alterou ? undefined : { queryKey: chaveConversas }
+          )
           setEnvio((e) => {
             if (!e) return e
             const erro = falha ?? e.erro
@@ -129,8 +137,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   )
 
   const parar = useCallback(() => {
-    // O servidor salva o que já chegou; abortar só depois, para receber o `fim`.
-    void pararResposta()
+    // O servidor salva o que já chegou; não aborta o fetch, para receber o `fim`.
+    pararResposta().catch((e: Error) => toast.error(e.message))
   }, [])
 
   // Sair da aplicação (logout/fechar) no meio da resposta: o servidor conclui sozinho.

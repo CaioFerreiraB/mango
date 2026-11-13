@@ -190,7 +190,7 @@ def miniapp_salvar(
     c.url, c.miniapp_ativo = origem, payload.ativo
     db.commit()
     if not payload.ativo:
-        auth.revogar(db)
+        auth.revogar(db, tipos=auth.TIPOS_TELEGRAM)
     return payload
 
 

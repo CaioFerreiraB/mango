@@ -22,6 +22,15 @@ export type EventoChat =
 
 export const chaveConversas = ["ia", "conversas"] as const
 
+/** Erro com o status HTTP: 404 (conversa expirada/excluída) é diferente de falha de rede. */
+export class ErroHttp extends Error {
+  readonly status: number
+  constructor(mensagem: string, status: number) {
+    super(mensagem)
+    this.status = status
+  }
+}
+
 export function usePreferenciaIa() {
   return useQuery({
     queryKey: ["ia", "preferencias"],
@@ -55,11 +64,15 @@ export function useConversa(id: number | null, acompanhar: boolean) {
     refetchInterval: (q) =>
       acompanhar && q.state.data?.executando ? 2000 : false,
     queryFn: async () => {
-      const { data, error } = await api.GET("/api/ia/conversas/{conversa_id}", {
-        params: { path: { conversa_id: id! } },
-      })
+      const { data, error, response } = await api.GET(
+        "/api/ia/conversas/{conversa_id}",
+        { params: { path: { conversa_id: id! } } }
+      )
       if (error || !data)
-        throw new Error(mensagemErro(error, "Falha ao carregar a conversa."))
+        throw new ErroHttp(
+          mensagemErro(error, "Falha ao carregar a conversa."),
+          response.status
+        )
       return data
     },
   })
@@ -103,7 +116,7 @@ export function useExcluirConversa(antes: () => void) {
 }
 
 export function useDecidirProposta() {
-  const invalidar = useInvalidar()
+  const qc = useQueryClient()
   return useMutation({
     mutationFn: async ({
       id,
@@ -123,12 +136,18 @@ export function useDecidirProposta() {
           mensagemErro(error, "Não foi possível concluir a alteração.")
         )
     },
-    onSettled: invalidar,
+    // Aplicar mexe em transações/assinaturas/divisões: a página ao lado precisa refletir.
+    onSettled: (_, __, { confirmar }) =>
+      confirmar
+        ? qc.invalidateQueries()
+        : qc.invalidateQueries({ queryKey: chaveConversas }),
   })
 }
 
 export async function pararResposta() {
-  await api.POST("/api/ia/execucao/parar")
+  const { error } = await api.POST("/api/ia/execucao/parar")
+  if (error)
+    throw new Error(mensagemErro(error, "Não foi possível parar a resposta."))
 }
 
 /**

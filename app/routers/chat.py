@@ -50,7 +50,9 @@ def obter(
         titulo=conversa.titulo,
         atualizado_em=conversa.atualizado_em,
         mensagens=db.scalars(
-            select(MensagemIa).where(MensagemIa.conversa_id == conversa.id).order_by(MensagemIa.id)
+            select(MensagemIa)
+            .where(MensagemIa.usuario_id == user.id, MensagemIa.conversa_id == conversa.id)
+            .order_by(MensagemIa.id)
         ).all(),
         proposta=chat_web.serializar_proposta(op) if op else None,
         executando=chat_web.executando(user.id, conversa.id),
@@ -80,7 +82,9 @@ def excluir(
     if chat_web.executando(user.id, conversa.id):
         raise ConflictError("pare a resposta em andamento antes de excluir")
     for pedido_id in db.scalars(
-        select(MensagemIa.id).where(MensagemIa.conversa_id == conversa.id)
+        select(MensagemIa.id).where(
+            MensagemIa.usuario_id == user.id, MensagemIa.conversa_id == conversa.id
+        )
     ).all():
         chat_web.cancelar_propostas(db, user.id, pedido_id)
     db.delete(conversa)

@@ -5,6 +5,7 @@ import json
 import queue
 from datetime import UTC, datetime, timedelta
 
+import httpx
 import pytest
 from fastapi import HTTPException
 from sqlalchemy import select, text, update
@@ -20,6 +21,8 @@ from app.models.integracao import (
 from app.models.transacao import Transacao
 from app.services import chat_web, ia_tools, integracao_auth, provedor_ia
 from tests.test_integracao_v2 import transacao
+
+_ASYNC_CLIENT = httpx.AsyncClient  # antes de qualquer monkeypatch
 
 
 @pytest.fixture(autouse=True)
@@ -319,3 +322,105 @@ def test_ia_indisponivel_e_cota_soma_telegram(db, usuario_a, monkeypatch):
         chat_web.iniciar(db, usuario_a.id, None, "oi", False)
     assert not db.scalars(select(MensagemIa)).all()
     assert not chat_web.executando(usuario_a.id)
+
+
+def _stream(monkeypatch, *blocos: bytes):
+    """`transmitir` real contra um transporte HTTP simulado que entrega `blocos` em sequência."""
+    import httpx
+
+    async def corpo():
+        for b in blocos:
+            yield b
+
+    def handler(request):
+        return httpx.Response(200, content=corpo())
+
+    monkeypatch.setattr(provedor_ia, "validar_endpoint", lambda v: v)
+    monkeypatch.setattr(
+        provedor_ia.httpx,
+        "AsyncClient",
+        lambda **kw: _ASYNC_CLIENT(transport=httpx.MockTransport(handler), **kw),
+    )
+    config = type("C", (), {"endpoint": "https://axon.test/v1", "chave": "k", "provedor": "axon"})
+
+    async def ler():
+        return [d async for d in provedor_ia.transmitir(config, "/chat/completions", corpo={})]
+
+    return ler
+
+
+def test_transmitir_exige_done_e_limita_linha(monkeypatch):
+    from app.exceptions import UpstreamError
+
+    delta = b'data: {"choices": [{"delta": {"content": "ol\xc3'
+    # Evento e caractere UTF-8 partidos entre blocos; CRLF aceito.
+    ler = _stream(monkeypatch, delta, b'\xa1"}}]}\r\n\r\n', b"data: [DONE]\n\n")
+    assert asyncio.run(ler()) == ["olá"]
+
+    # Conexão encerrada sem [DONE]: resposta incompleta não vira texto salvo.
+    ler = _stream(monkeypatch, b'data: {"choices": [{"delta": {"content": "x"}}]}\n\n')
+    with pytest.raises(UpstreamError, match="interrompida"):
+        asyncio.run(ler())
+
+    ler = _stream(monkeypatch, b"data: " + b"a" * (provedor_ia.LINHA_MAX + 10))
+    with pytest.raises(UpstreamError):
+        asyncio.run(ler())
+
+
+def test_limpar_e_cancelar_do_telegram_preservam_o_chat_web(db, usuario_a, monkeypatch):
+    from app.models.integracao import OperacaoIntegracao, TrabalhoTelegram
+    from app.services import operacoes, telegram_conversa
+    from tests.test_integracao_v2 import vincular
+
+    ativar(db, usuario_a)
+    vincular(db, usuario_a)
+    conversa = ConversaIa(usuario_id=usuario_a.id, titulo="web")
+    db.add(conversa)
+    db.flush()
+    pedido = MensagemIa(
+        usuario_id=usuario_a.id, conversa_id=conversa.id, papel="user", conteudo="web"
+    )
+    db.add(pedido)
+    db.flush()
+    db.add(
+        OperacaoIntegracao(
+            id="op-web",
+            usuario_id=usuario_a.id,
+            mensagem_id=pedido.id,
+            tipo="ia",
+            status="pendente",
+            payload="{}",
+            expira_em=datetime.now(UTC) + timedelta(minutes=10),
+        )
+    )
+    job = TrabalhoTelegram(
+        usuario_id=usuario_a.id, bot_id="123", update_id="1", chat_id=str(usuario_a.id)
+    )
+    db.add(job)
+    db.flush()
+    db.add(MensagemIa(usuario_id=usuario_a.id, trabalho_id=job.id, papel="user", conteudo="tg"))
+    db.add(
+        OperacaoIntegracao(
+            id="op-limpar",
+            usuario_id=usuario_a.id,
+            trabalho_id=job.id,
+            tipo="limpar",
+            status="pendente",
+            payload="{}",
+            expira_em=datetime.now(UTC) + timedelta(minutes=10),
+        )
+    )
+    db.commit()
+    web = integracao_auth.emitir(db, usuario_a.id, "web", mensagem_id=pedido.id)
+    job.evento = operacoes.serializar({"callback_query": {"id": "cb", "data": "sim:op-limpar"}})
+    db.commit()
+
+    class Cliente:
+        def callback(self, _id):
+            pass
+
+    asyncio.run(telegram_conversa.executar(db, job, Cliente()))
+    db.expire_all()
+    assert db.scalars(select(MensagemIa.conteudo)).all() == ["web"]
+    assert db.get(OperacaoIntegracao, "op-web").status == "pendente"
+    integracao_auth.resolver(db, web)  # credencial do chat no app segue válida

@@ -81,6 +81,7 @@ import {
   type ConversaResumo,
   type MensagemChat,
   type Proposta,
+  ErroHttp,
   useConversa,
   useConversas,
   useDecidirProposta,
@@ -119,7 +120,9 @@ export function ChatView({
   const conversa = useConversa(pronto ? conversaId : null, !envio?.ativo)
   const conversas = useConversas(pronto)
   // Conversa lembrada que expirou (7 dias) ou foi excluída em outra aba: começa uma nova.
-  const perdida = conversa.isError
+  // Falha de rede/5xx mantém a seleção e oferece tentar de novo.
+  const perdida =
+    conversa.error instanceof ErroHttp && conversa.error.status === 404
   useEffect(() => {
     if (perdida) abrirConversa(null)
   }, [perdida, abrirConversa])
@@ -188,6 +191,13 @@ export function ChatView({
           }. O histórico fica cifrado por sete dias.`}
           acao
         />
+      ) : conversa.isError && !conversa.data && !perdida ? (
+        <div className="flex flex-1 items-center justify-center p-6">
+          <Falha
+            mensagem={conversa.error.message}
+            onTentar={() => void conversa.refetch()}
+          />
+        </div>
       ) : (
         <Conversa
           key={conversaId ?? "nova"}
@@ -255,8 +265,21 @@ function Conversa({
     const ultimoPedido = lista.findLastIndex((m) => m.papel === "user")
     lista = lista.slice(0, ultimoPedido + 1)
   }
-  const ultimaResposta =
-    lista.at(-1)?.papel === "assistant" ? lista.at(-1)!.id : null
+  const ultima = lista.at(-1)
+  const ultimaResposta = ultima?.papel === "assistant" ? ultima.id : null
+  // O pedido enviado já voltou do servidor (a conversa recarrega durante o stream)?
+  const pedidoSalvo =
+    doEnvio?.pedido != null &&
+    ultima?.papel === "user" &&
+    ultima.conteudo === doEnvio.pedido
+  // Tentar de novo: pedido gravado (ou regeneração) → regenerar; não gravado (ex.: cota) → reenviar.
+  const tentar = !doEnvio
+    ? undefined
+    : doEnvio.pedido !== null && !pedidoSalvo
+      ? () => enviar(doEnvio.pedido!)
+      : conversaId !== null
+        ? regenerar
+        : undefined
   const ocupado = Boolean(envio?.ativo) || executandoNoServidor
   const vazio = !carregando && lista.length === 0 && !doEnvio
 
@@ -296,7 +319,7 @@ function Conversa({
                   )}
                 </MessageScrollerItem>
               ))}
-              {doEnvio?.pedido ? (
+              {doEnvio?.pedido && !pedidoSalvo ? (
                 <MessageScrollerItem messageId="pendente" scrollAnchor>
                   <Pedido texto={doEnvio.pedido} />
                 </MessageScrollerItem>
@@ -308,10 +331,7 @@ function Conversa({
                   ) : null}
                   {doEnvio.status ? <Pensando texto={doEnvio.status} /> : null}
                   {doEnvio.erro ? (
-                    <Falha
-                      mensagem={doEnvio.erro}
-                      onTentar={conversaId !== null ? regenerar : undefined}
-                    />
+                    <Falha mensagem={doEnvio.erro} onTentar={tentar} />
                   ) : null}
                 </MessageScrollerItem>
               ) : executandoNoServidor ? (
@@ -580,7 +600,7 @@ function Composer({
         />
         <InputGroupAddon align="block-end" className="justify-between">
           <span className="text-xs text-muted-foreground">
-            A IA pode errar. Alterações pedem sua confirmação.
+            A IA pode errar. Confira os números importantes.
           </span>
           {respondendo ? (
             <InputGroupButton
