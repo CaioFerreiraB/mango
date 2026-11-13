@@ -1,8 +1,9 @@
 """Contratos explícitos da IA e Mini App; segredos nunca aparecem nas leituras."""
 
+from datetime import UTC, datetime
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import AfterValidator, BaseModel, ConfigDict, Field, model_validator
 
 
 class Estrito(BaseModel):
@@ -62,3 +63,56 @@ class MiniappLogin(Estrito):
 class MiniappSessao(Estrito):
     token: str
     expira_em: str
+
+
+# SQLite devolve datetime sem fuso; o browser leria como hora local. Sempre UTC explícito.
+Momento = Annotated[datetime, AfterValidator(lambda d: d if d.tzinfo else d.replace(tzinfo=UTC))]
+
+
+class ConversaIaResumo(Estrito):
+    model_config = ConfigDict(extra="forbid", from_attributes=True)
+    id: int
+    titulo: str
+    atualizado_em: Momento
+
+
+class MensagemIaRead(Estrito):
+    model_config = ConfigDict(extra="forbid", from_attributes=True)
+    id: int
+    papel: Literal["user", "assistant"]
+    conteudo: str
+    criado_em: Momento
+
+
+class PropostaIa(Estrito):
+    operacao_id: str
+    resumo: str
+    expira_em: Momento
+
+
+class ConversaIaRead(ConversaIaResumo):
+    mensagens: list[MensagemIaRead]
+    proposta: PropostaIa | None
+    executando: bool
+
+
+class ConversaIaUpdate(Estrito):
+    titulo: Annotated[str, Field(min_length=1, max_length=120)]
+
+
+class MensagemIaCreate(Estrito):
+    conversa_id: int | None = None
+    texto: Annotated[str | None, Field(min_length=1, max_length=16000)] = None
+    regenerar: bool = False
+
+    @model_validator(mode="after")
+    def _texto_ou_regenerar(self):
+        if self.regenerar == bool(self.texto and self.texto.strip()):
+            raise ValueError("envie o texto ou peça para regenerar")
+        if self.regenerar and self.conversa_id is None:
+            raise ValueError("regenerar exige a conversa")
+        return self
+
+
+class ResultadoProposta(Estrito):
+    resultado: str

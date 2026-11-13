@@ -116,6 +116,18 @@ async def chamar_real(server, nome, args, ctx, db):
         _tool_db.reset(marcador)
 
 
+def execucao(db, cred):
+    """(coluna da operação, id da execução, texto pedido): trabalho Telegram ou mensagem web."""
+    from app.models.integracao import MensagemIa, TrabalhoTelegram
+
+    if cred.tipo == "web":
+        mensagem = db.get(MensagemIa, cred.mensagem_id)
+        return "mensagem_id", cred.mensagem_id, mensagem.conteudo if mensagem else ""
+    trabalho = db.get(TrabalhoTelegram, cred.trabalho_id)
+    texto = json.loads(trabalho.evento or "{}").get("message", {}).get("text", "")
+    return "trabalho_id", cred.trabalho_id, texto
+
+
 async def despachar(server, nome, args, ctx):
     with SessionLocal() as db:
         token = ctx.headers["authorization"].split(" ", 1)[1]
@@ -124,10 +136,7 @@ async def despachar(server, nome, args, ctx):
             raise ToolError("ferramenta fora do alcance da integração")
         if nome in LEITURAS:
             return await chamar_real(server, nome, args, ctx, db)
-        from app.models.integracao import TrabalhoTelegram
-
-        trabalho = db.get(TrabalhoTelegram, cred.trabalho_id)
-        mensagem = json.loads(trabalho.evento or "{}").get("message", {}).get("text", "")
+        coluna, execucao_id, mensagem = execucao(db, cred)
         antes = snapshot(db, user.id)
         db.info["operacao_atomica"] = True
         try:
@@ -146,7 +155,7 @@ async def despachar(server, nome, args, ctx):
         alteradas = sum(serializar(a.get(k)) != serializar(b.get(k)) for k in a.keys() | b.keys())
         op = db.scalar(
             select(OperacaoIntegracao).where(
-                OperacaoIntegracao.trabalho_id == cred.trabalho_id,
+                getattr(OperacaoIntegracao, coluna) == execucao_id,
                 OperacaoIntegracao.tipo == "ia",
                 OperacaoIntegracao.status == "preparando",
             )
@@ -181,10 +190,10 @@ async def despachar(server, nome, args, ctx):
             op = OperacaoIntegracao(
                 id=secrets.token_urlsafe(24),
                 usuario_id=user.id,
-                trabalho_id=cred.trabalho_id,
                 tipo="ia",
                 status="preparando",
                 expira_em=datetime.now(UTC) + timedelta(minutes=10),
+                **{coluna: execucao_id},
             )
             db.add(op)
         op.payload = serializar(dados)
@@ -218,3 +227,46 @@ async def aplicar(server, db, user_id, op_id, token):
         op.resultado = "\n\n".join(resultados)
         op.status = "concluida"
     return op.resultado
+
+
+def resumir_proposta(dados):
+    nomes = {
+        "atualizar_transacoes": "Editar transações",
+        "vincular_objetivo": "Vincular objetivo",
+        "criar_assinatura": "Criar assinatura",
+        "atualizar_assinatura": "Editar assinatura",
+        "rejeitar_candidato_assinatura": "Rejeitar sugestão de assinatura",
+        "excluir_assinatura": "Excluir assinatura",
+        "criar_divisao": "Criar divisão",
+        "quitar_divisao": "Marcar divisão como paga",
+        "reabrir_divisao": "Reabrir divisão",
+        "excluir_divisao": "Excluir divisão",
+    }
+    campos = {
+        "ids": "Transações",
+        "revisada": "Revisada",
+        "descricao": "Descrição",
+        "observacoes": "Observações",
+        "categoria": "Categoria",
+        "assinatura_id": "Assinatura",
+        "provento_id": "Provento",
+        "valor_total_centavos": "Valor total (centavos)",
+        "valor_centavos": "Valor (centavos)",
+        "pago_por_usuario_id": "Pagador",
+        "despesa_id": "Divisão",
+        "nao_e_assinatura": "Não é assinatura",
+        "eh_transferencia": "Transferência",
+        "participantes": "Participantes",
+    }
+    linhas = ["Confira as alterações. A confirmação vale por dez minutos."]
+    if dados.get("efeitos"):
+        linhas.append(f"Transações afetadas, incluindo propagação: {dados['efeitos']}.")
+    for chamada in dados["chamadas"]:
+        linhas.append("\n" + nomes.get(chamada["nome"], "Alteração"))
+        for campo, valor in chamada["args"].items():
+            if isinstance(valor, bool):
+                valor = "Sim" if valor else "Não"
+            elif isinstance(valor, list):
+                valor = ", ".join(map(str, valor))
+            linhas.append(f"• {campos.get(campo, campo.replace('_', ' ').capitalize())}: {valor}")
+    return "\n".join(linhas)

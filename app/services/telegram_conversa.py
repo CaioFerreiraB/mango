@@ -214,52 +214,9 @@ async def executar(db, job, cliente):
         if dados["confirmar"]:
             op.status = "pendente"
             db.commit()
-            return resumir_proposta(dados), confirmacao(op.id)
+            return ia_tools.resumir_proposta(dados), confirmacao(op.id)
         return await ia_tools.aplicar(servidor, db, user.id, op.id, token), None
     return resposta, None
-
-
-def resumir_proposta(dados):
-    nomes = {
-        "atualizar_transacoes": "Editar transações",
-        "vincular_objetivo": "Vincular objetivo",
-        "criar_assinatura": "Criar assinatura",
-        "atualizar_assinatura": "Editar assinatura",
-        "rejeitar_candidato_assinatura": "Rejeitar sugestão de assinatura",
-        "excluir_assinatura": "Excluir assinatura",
-        "criar_divisao": "Criar divisão",
-        "quitar_divisao": "Marcar divisão como paga",
-        "reabrir_divisao": "Reabrir divisão",
-        "excluir_divisao": "Excluir divisão",
-    }
-    campos = {
-        "ids": "Transações",
-        "revisada": "Revisada",
-        "descricao": "Descrição",
-        "observacoes": "Observações",
-        "categoria": "Categoria",
-        "assinatura_id": "Assinatura",
-        "provento_id": "Provento",
-        "valor_total_centavos": "Valor total (centavos)",
-        "valor_centavos": "Valor (centavos)",
-        "pago_por_usuario_id": "Pagador",
-        "despesa_id": "Divisão",
-        "nao_e_assinatura": "Não é assinatura",
-        "eh_transferencia": "Transferência",
-        "participantes": "Participantes",
-    }
-    linhas = ["Confira as alterações. A confirmação vale por dez minutos."]
-    if dados.get("efeitos"):
-        linhas.append(f"Transações afetadas, incluindo propagação: {dados['efeitos']}.")
-    for chamada in dados["chamadas"]:
-        linhas.append("\n" + nomes.get(chamada["nome"], "Alteração"))
-        for campo, valor in chamada["args"].items():
-            if isinstance(valor, bool):
-                valor = "Sim" if valor else "Não"
-            elif isinstance(valor, list):
-                valor = ", ".join(map(str, valor))
-            linhas.append(f"• {campos.get(campo, campo.replace('_', ' ').capitalize())}: {valor}")
-    return "\n".join(linhas)
 
 
 def confirmacao(op_id):

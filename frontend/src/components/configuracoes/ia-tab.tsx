@@ -71,9 +71,10 @@ export function IaTab() {
     <div className="max-w-2xl space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Conversar pelo Telegram</CardTitle>
+          <CardTitle>Conversar com o assistente</CardTitle>
           <CardDescription>
-            Suas mensagens e os dados consultados serão enviados ao provedor{" "}
+            No Mango (botão no canto superior direito) e pelo Telegram. Suas
+            mensagens e os dados consultados serão enviados ao provedor{" "}
             {pref.data?.provedor === "axon"
               ? "Axon"
               : "configurado pela instalação"}

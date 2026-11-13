@@ -51,7 +51,7 @@ def usuario_mcp(request: Request, db: Session = Depends(get_db)) -> Usuario:
         from app.services.integracao_auth import resolver
 
         usuario, cred = resolver(db, token)
-        if cred.tipo != "delegada":
+        if cred.tipo not in {"delegada", "web"}:
             raise HTTPException(403, "sessão do miniapp não acessa MCP")
         return usuario
     if settings.app_mode == "local":

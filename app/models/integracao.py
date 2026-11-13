@@ -50,16 +50,33 @@ class CredencialIntegracao(UserOwnedMixin, Base):
     token_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
     tipo: Mapped[str] = mapped_column(String(16))
     escopo: Mapped[str] = mapped_column(String(16))
-    bot_id: Mapped[str] = mapped_column(String(64))
-    telegram_id: Mapped[str] = mapped_column(String(64))
+    # Nulos na credencial `web` (chat no app), que não passa pelo Telegram.
+    bot_id: Mapped[str | None] = mapped_column(String(64))
+    telegram_id: Mapped[str | None] = mapped_column(String(64))
     trabalho_id: Mapped[int | None] = mapped_column(ForeignKey("trabalho_telegram.id"))
+    mensagem_id: Mapped[int | None] = mapped_column(
+        ForeignKey("mensagem_ia.id", ondelete="SET NULL")
+    )
     expira_em: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     revogada: Mapped[bool] = mapped_column(Boolean, default=False)
 
 
+class ConversaIa(UserOwnedMixin, TimestampMixin, Base):
+    """Conversa do chat web; mensagens (e ela, quando vazia) somem após sete dias."""
+
+    __tablename__ = "conversa_ia"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    titulo: Mapped[str] = mapped_column(EncryptedStr)
+
+
 class MensagemIa(UserOwnedMixin, TimestampMixin, Base):
+    """Execução = trabalho Telegram ou mensagem do usuário numa conversa web (um dos dois)."""
+
     __tablename__ = "mensagem_ia"
-    trabalho_id: Mapped[int] = mapped_column(ForeignKey("trabalho_telegram.id"))
+    trabalho_id: Mapped[int | None] = mapped_column(ForeignKey("trabalho_telegram.id"))
+    conversa_id: Mapped[int | None] = mapped_column(
+        ForeignKey("conversa_ia.id", ondelete="CASCADE"), index=True
+    )
     id: Mapped[int] = mapped_column(primary_key=True)
     papel: Mapped[str] = mapped_column(String(16))
     conteudo: Mapped[str] = mapped_column(EncryptedStr)
@@ -69,6 +86,9 @@ class OperacaoIntegracao(UserOwnedMixin, TimestampMixin, Base):
     __tablename__ = "operacao_integracao"
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     trabalho_id: Mapped[int | None] = mapped_column(ForeignKey("trabalho_telegram.id"))
+    mensagem_id: Mapped[int | None] = mapped_column(
+        ForeignKey("mensagem_ia.id", ondelete="SET NULL")
+    )
     tipo: Mapped[str] = mapped_column(String(24))
     status: Mapped[str] = mapped_column(String(24), default="pendente")
     payload: Mapped[str] = mapped_column(EncryptedStr)

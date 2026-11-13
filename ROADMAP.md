@@ -44,7 +44,7 @@ A primeira entrega está implementada em **Não publicado**: bot por instalaçã
 por usuário e relatório diário após sincronização automática. Guia em [docs/telegram.md](docs/telegram.md).
 
 - Revisar e categorizar transações por botões no Telegram, sempre validando identidade e posse.
-- Conversar com o Mango por LLM: Axon inicialmente, provedores adicionais por adaptadores e MCP.
+- Conversar com o Mango por LLM: Axon e OpenAI-compatible, pelo Telegram e pelo assistente no app.
 - Novos resumos/frequências somente quando houver necessidade; não fazem parte da v1.
 
 ### Endurecimento para exposição pública

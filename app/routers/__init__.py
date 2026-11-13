@@ -16,6 +16,7 @@ from app.routers import (
     admin_usuarios,
     auth,
     categoria,
+    chat,
     configuracao,
     conta,
     convite,
@@ -134,6 +135,7 @@ _manuais: list[APIRouter] = [
     admin_usuarios.router,  # gestão de usuários da instância — só o dono (§4.11)
     telegram.router,
     integracao.router,
+    chat.router,  # chat web com a IA (docs/dev/chat-web.md)
     acesso_mcp.router,  # token de agentes (docs/mcp.md) — só por sessão, nunca pelo próprio token
 ]
 

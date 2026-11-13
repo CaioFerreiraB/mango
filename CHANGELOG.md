@@ -12,6 +12,12 @@ ainda está se assentando. Cada versão publicada tem uma imagem correspondente 
 
 ### Adicionado
 
+- **Assistente com IA dentro do Mango:** botão no canto superior direito da topbar. No desktop abre
+  um painel à direita (a página continua usável) que pode ser expandido; no celular o chat ocupa a
+  tela toda, numa topbar nova. Respostas em streaming com o Axon, várias conversas (histórico
+  cifrado por sete dias), parar, gerar de novo e copiar. Alterações sugeridas pela IA aparecem num
+  card para você aplicar ou descartar; nada é salvo sem o clique. Usa o mesmo provedor, consentimento
+  e cota diária da conversa pelo Telegram.
 - **Separar caixinhas do Nubank:** aba **Compras** no painel de renda fixa da Carteira — selecione
   aplicações e mova para um ativo com o nome da caixinha. O Pluggy manda cada aporte como "CDB - NU
   FINANCEIRA…" sem o nome da caixinha, então a separação é manual; depois dela, aportes recorrentes

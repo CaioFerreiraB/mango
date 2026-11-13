@@ -178,3 +178,48 @@ def test_status_do_sync_nao_vaza_entre_usuarios(
         assert client_factory(usuario_a).get("/api/sync/status").json()["resumo"] == resumo
     finally:
         sync_manual._status.pop(usuario_a.id, None)
+
+
+def test_b_nao_acessa_conversa_nem_proposta_de_a(
+    client_factory, db: Session, usuario_a: Usuario, usuario_b: Usuario
+) -> None:
+    """Chat web: conversa e proposta pendente de A são invisíveis (404) para B."""
+    from datetime import UTC, datetime, timedelta
+
+    from app.models.integracao import ConversaIa, MensagemIa, OperacaoIntegracao
+
+    conversa = ConversaIa(usuario_id=usuario_a.id, titulo="privada")
+    db.add(conversa)
+    db.flush()
+    pedido = MensagemIa(
+        usuario_id=usuario_a.id, conversa_id=conversa.id, papel="user", conteudo="x"
+    )
+    db.add(pedido)
+    db.flush()
+    db.add(
+        OperacaoIntegracao(
+            id="op-de-a",
+            usuario_id=usuario_a.id,
+            mensagem_id=pedido.id,
+            tipo="ia",
+            status="pendente",
+            payload='{"versao": "v", "chamadas": [], "confirmar": true}',
+            expira_em=datetime.now(UTC) + timedelta(minutes=10),
+        )
+    )
+    db.commit()
+    rota = f"/api/ia/conversas/{conversa.id}"
+
+    client_b = client_factory(usuario_b)
+    assert client_b.get("/api/ia/conversas").json() == []
+    assert client_b.get(rota).status_code == 404
+    assert client_b.patch(rota, json={"titulo": "x"}).status_code == 404
+    assert client_b.delete(rota).status_code == 404
+    assert client_b.post("/api/ia/operacoes/op-de-a/confirmar").status_code == 404
+    assert client_b.post("/api/ia/operacoes/op-de-a/cancelar").status_code == 404
+
+    client_a = client_factory(usuario_a)
+    detalhe = client_a.get(rota).json()
+    assert detalhe["titulo"] == "privada" and detalhe["proposta"]["operacao_id"] == "op-de-a"
+    db.refresh(db.get(OperacaoIntegracao, "op-de-a"))
+    assert db.get(OperacaoIntegracao, "op-de-a").status == "pendente"

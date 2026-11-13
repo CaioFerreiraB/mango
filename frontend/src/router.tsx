@@ -10,6 +10,7 @@ import { RequireAuth, RequireSetup } from "@/components/auth/require-auth"
 import { AppLayout } from "@/components/layout/app-layout"
 import { AssinaturasPage } from "@/routes/assinaturas/page"
 import { ConfiguracoesPage } from "@/routes/configuracoes/page"
+import { ChatPage } from "@/routes/chat/page"
 import { AceitarConvitePage } from "@/routes/convite/aceitar"
 import { ContaDetalhePage } from "@/routes/contas/detalhe"
 import { ContasPage } from "@/routes/contas/page"
@@ -146,6 +147,11 @@ export const router = createBrowserRouter([
             path: "configuracoes",
             element: <ConfiguracoesPage />,
             handle: { title: "Configurações" },
+          },
+          {
+            path: "chat",
+            element: <ChatPage />,
+            handle: { title: "Assistente" },
           },
           {
             path: "*",

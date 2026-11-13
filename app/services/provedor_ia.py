@@ -1,6 +1,7 @@
 """Dois protocolos HTTP, sem SDK de agentes. Não repetir execuções de resultado incerto."""
 
 import ipaddress
+import json
 import socket
 from urllib.parse import urlsplit
 
@@ -57,30 +58,7 @@ async def requisitar(
     except httpx.HTTPError:
         raise UpstreamError("provedor indisponível; execução não repetida") from None
     if resposta.status_code >= 300:
-        if config.provedor == "axon":
-            try:
-                detalhe = resposta.json()
-                erros = detalhe.get("x_axon", {}).get("errors", [])
-                if any(
-                    e.get("kind") in {"McpUnavailable", "UnknownServer"}
-                    for e in erros
-                    if isinstance(e, dict)
-                ):
-                    raise UpstreamError(
-                        "MCP Mango inacessível ou autorização recusada; "
-                        "confira a configuração no Axon"
-                    )
-            except (ValueError, AttributeError, TypeError):
-                pass
-        motivos = {
-            401: "chave inválida",
-            404: "Assistant ou endpoint indisponível",
-            424: "Assistant indisponível",
-            429: "limite do provedor atingido",
-        }
-        raise UpstreamError(
-            motivos.get(resposta.status_code, "falha do provedor; execução não repetida")
-        )
+        falha(config, resposta)
     try:
         dados = resposta.json()
         if not isinstance(dados, dict):
@@ -88,6 +66,74 @@ async def requisitar(
         return dados
     except ValueError:
         raise UpstreamError("resposta inválida do provedor") from None
+
+
+def falha(config: ConfigIntegracao, resposta: httpx.Response):
+    """Traduz status HTTP do provedor em erro legível; nunca devolve."""
+    if config.provedor == "axon":
+        try:
+            detalhe = resposta.json()
+            erros = detalhe.get("x_axon", {}).get("errors", [])
+            if any(
+                e.get("kind") in {"McpUnavailable", "UnknownServer"}
+                for e in erros
+                if isinstance(e, dict)
+            ):
+                raise UpstreamError(
+                    "MCP Mango inacessível ou autorização recusada; confira a configuração no Axon"
+                )
+        except (ValueError, AttributeError, TypeError):
+            pass
+    motivos = {
+        401: "chave inválida",
+        404: "Assistant ou endpoint indisponível",
+        424: "Assistant indisponível",
+        429: "limite do provedor atingido",
+    }
+    raise UpstreamError(
+        motivos.get(resposta.status_code, "falha do provedor; execução não repetida")
+    )
+
+
+async def transmitir(config: ConfigIntegracao, caminho: str, *, corpo, headers=None):
+    """SSE no formato OpenAI: rende cada `choices[0].delta.content` até `[DONE]`."""
+    endpoint = validar_endpoint(config.endpoint or "")
+    try:
+        async with (
+            httpx.AsyncClient(timeout=120, follow_redirects=False, trust_env=False) as client,
+            client.stream(
+                "POST",
+                endpoint + caminho,
+                json=corpo,
+                headers={"Authorization": f"Bearer {config.chave}", **(headers or {})},
+            ) as resposta,
+        ):
+            if resposta.status_code >= 300:
+                await resposta.aread()
+                falha(config, resposta)
+            async for linha in resposta.aiter_lines():
+                if not linha.startswith("data:"):
+                    continue
+                dado = linha[5:].strip()
+                if dado == "[DONE]":
+                    return
+                try:
+                    evento = json.loads(dado)
+                    if not isinstance(evento, dict):
+                        raise ValueError
+                except ValueError:
+                    raise UpstreamError("resposta inválida do provedor") from None
+                extra = evento.get("x_axon")
+                if evento.get("error") or (isinstance(extra, dict) and extra.get("errors")):
+                    raise UpstreamError("falha do provedor durante a resposta")
+                try:
+                    delta = evento["choices"][0]["delta"].get("content")
+                except (KeyError, IndexError, TypeError, AttributeError):
+                    continue
+                if isinstance(delta, str) and delta:
+                    yield delta
+    except httpx.HTTPError:
+        raise UpstreamError("provedor indisponível; execução não repetida") from None
 
 
 def descobrir_axon(dados: dict, mcp_url: str) -> str:
