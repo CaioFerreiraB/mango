@@ -133,26 +133,7 @@ def _preparar(db, usuario_id, conversa_id, texto, regenerar):
     else:
         conversa = conversa_do_usuario(db, usuario_id, conversa_id)
     if regenerar:
-        pedido = db.scalar(
-            select(MensagemIa)
-            .where(
-                MensagemIa.usuario_id == usuario_id,
-                MensagemIa.conversa_id == conversa.id,
-                MensagemIa.papel == "user",
-            )
-            .order_by(MensagemIa.id.desc())
-            .limit(1)
-        )
-        if pedido is None:
-            raise ValidationError("nada para regenerar")
-        cancelar_propostas(db, usuario_id, pedido.id)
-        db.execute(
-            delete(MensagemIa).where(
-                MensagemIa.usuario_id == usuario_id,
-                MensagemIa.conversa_id == conversa.id,
-                MensagemIa.id > pedido.id,
-            )
-        )
+        pedido = _reabrir_ultimo_pedido(db, usuario_id, conversa.id)
     else:
         pedido = MensagemIa(
             usuario_id=usuario_id, conversa_id=conversa.id, papel="user", conteudo=texto
@@ -164,19 +145,49 @@ def _preparar(db, usuario_id, conversa_id, texto, regenerar):
     token = ia.reservar_cota(
         db, usuario_id, lambda: emitir(db, usuario_id, "web", mensagem_id=pedido.id)
     )
+    return conversa, pedido, token, _historico(db, usuario_id, conversa.id, pedido.id)
+
+
+def _reabrir_ultimo_pedido(db, usuario_id, conversa_id) -> MensagemIa:
+    """Regenerar: o último pedido volta a ser a execução; respostas e propostas dele somem."""
+    pedido = db.scalar(
+        select(MensagemIa)
+        .where(
+            MensagemIa.usuario_id == usuario_id,
+            MensagemIa.conversa_id == conversa_id,
+            MensagemIa.papel == "user",
+        )
+        .order_by(MensagemIa.id.desc())
+        .limit(1)
+    )
+    if pedido is None:
+        raise ValidationError("nada para regenerar")
+    cancelar_propostas(db, usuario_id, pedido.id)
+    db.execute(
+        delete(MensagemIa).where(
+            MensagemIa.usuario_id == usuario_id,
+            MensagemIa.conversa_id == conversa_id,
+            MensagemIa.id > pedido.id,
+        )
+    )
+    return pedido
+
+
+def _historico(db, usuario_id, conversa_id, pedido_id) -> list[dict]:
+    """Instruções + últimas interações da conversa até o pedido atual (WHIST01)."""
     anteriores = db.scalars(
         select(MensagemIa)
         .where(
             MensagemIa.usuario_id == usuario_id,
-            MensagemIa.conversa_id == conversa.id,
-            MensagemIa.id <= pedido.id,
+            MensagemIa.conversa_id == conversa_id,
+            MensagemIa.id <= pedido_id,
         )
         .order_by(MensagemIa.id.desc())
         .limit(HISTORICO + 1)
     ).all()
     mensagens = [ia.instrucoes("web")]
     mensagens += [{"role": m.papel, "content": m.conteudo} for m in reversed(anteriores)]
-    return conversa, pedido, token, mensagens
+    return mensagens
 
 
 def cancelar_propostas(db, usuario_id: int, mensagem_id: int | None = None) -> None:
