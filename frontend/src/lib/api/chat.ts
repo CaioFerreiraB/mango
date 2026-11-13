@@ -12,7 +12,11 @@ export type Proposta = components["schemas"]["PropostaIa"]
 
 /** Eventos do `POST /api/ia/mensagens` (docs/dev/chat-web.md, WSTREAM01). */
 export type EventoChat =
-  | { tipo: "conversa"; dados: { id: number; titulo: string } }
+  | {
+      tipo: "conversa"
+      // Chega só depois de o pedido estar gravado no servidor.
+      dados: { id: number; titulo: string; pedido_id: number }
+    }
   | { tipo: "status"; dados: { texto: string } }
   | { tipo: "delta"; dados: { texto: string } }
   | { tipo: "fim"; dados: { mensagem_id: number | null } }
@@ -145,8 +149,9 @@ export function useDecidirProposta() {
 }
 
 export async function pararResposta() {
-  const { error } = await api.POST("/api/ia/execucao/parar")
-  if (error)
+  const { error, response } = await api.POST("/api/ia/execucao/parar")
+  // Falha sem corpo deixa `error` indefinido: o status decide.
+  if (!response.ok)
     throw new Error(mensagemErro(error, "Não foi possível parar a resposta."))
 }
 

@@ -3,6 +3,7 @@ import { createContext, useContext } from "react"
 export type Envio = {
   conversaId: number | null
   pedido: string | null // null = regenerar (o pedido já está na conversa)
+  pedidoId: number | null // id do pedido gravado (evento `conversa`); null = não chegou ao servidor
   resposta: string
   status: string | null
   erro: string | null

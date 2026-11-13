@@ -139,7 +139,8 @@ async def transmitir(config: ConfigIntegracao, caminho: str, *, corpo, headers=N
             async for bloco in resposta.aiter_bytes():
                 resto += bloco
                 *linhas, resto = resto.split(b"\n")
-                if len(resto) > LINHA_MAX:
+                # Linha incompleta acumulada OU completa no mesmo bloco: ambas limitadas.
+                if len(resto) > LINHA_MAX or any(len(x) > LINHA_MAX for x in linhas):
                     raise UpstreamError("resposta inválida do provedor")
                 for crua in linhas:
                     linha = crua.decode("utf-8", "replace").rstrip("\r")

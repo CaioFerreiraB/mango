@@ -100,6 +100,7 @@ def test_stream_axon_persiste_cifrado_e_revoga(client_factory, db, usuario_a, mo
     assert "".join(d["texto"] for t, d in eventos if t == "delta") == "Gastou R$ 10 confidencial"
     conversa_id = eventos[0][1]["id"]
     assert eventos[0][1]["titulo"] == "quanto gastei?"
+    assert db.get(MensagemIa, eventos[0][1]["pedido_id"]).conteudo == "quanto gastei?"
 
     (chamada,) = chamadas
     assert chamada["corpo"]["stream"] is True and chamada["corpo"]["model"] == "assistant"
@@ -221,7 +222,7 @@ def test_execucao_unica_e_parar(db, usuario_a, monkeypatch):
         yield "nunca"
 
     monkeypatch.setattr(provedor_ia, "transmitir", transmitir)
-    conversa, fila = chat_web.iniciar(db, usuario_a.id, None, "longo", False)
+    conversa, _, fila = chat_web.iniciar(db, usuario_a.id, None, "longo", False)
     assert fila.get(timeout=5)[0] == "status"
     assert fila.get(timeout=5) == ("delta", {"texto": "parcial"})
     with pytest.raises(ConflictError):
@@ -250,7 +251,7 @@ def test_proposta_web_confirma_uma_vez(db, usuario_a, monkeypatch):
     ativar(db, usuario_a)
     t = transacao(db, usuario_a)
     falso(monkeypatch, "Preparei a alteração.", antes=_preparar_escrita(t))
-    conversa, fila = chat_web.iniciar(db, usuario_a.id, None, "revise a última compra", False)
+    conversa, _, fila = chat_web.iniciar(db, usuario_a.id, None, "revise a última compra", False)
     eventos = dict(drenar(fila))
     proposta = eventos["proposta"]
     assert "Editar transações" in proposta["resumo"]
@@ -276,7 +277,7 @@ def test_frase_exata_aplica_sem_botao(db, usuario_a, monkeypatch):
     ativar(db, usuario_a)
     t = transacao(db, usuario_a)
     falso(monkeypatch, "Feito.", antes=_preparar_escrita(t))
-    _, fila = chat_web.iniciar(
+    _, _, fila = chat_web.iniciar(
         db, usuario_a.id, None, f"Marque a transação {t.id} como revisada", False
     )
     eventos = dict(drenar(fila))
@@ -288,10 +289,10 @@ def test_frase_exata_aplica_sem_botao(db, usuario_a, monkeypatch):
 def test_contexto_por_conversa_e_retencao(db, usuario_a, monkeypatch):
     ativar(db, usuario_a)
     chamadas = falso(monkeypatch, "ok")
-    c1, fila = chat_web.iniciar(db, usuario_a.id, None, "primeira conversa", False)
+    c1, _, fila = chat_web.iniciar(db, usuario_a.id, None, "primeira conversa", False)
     c1_id = c1.id
     drenar(fila)
-    _, fila = chat_web.iniciar(db, usuario_a.id, None, "segunda conversa", False)
+    _, _, fila = chat_web.iniciar(db, usuario_a.id, None, "segunda conversa", False)
     drenar(fila)
     conteudos = json.dumps(chamadas[1]["corpo"]["messages"], ensure_ascii=False)
     assert "primeira conversa" not in conteudos
@@ -362,9 +363,11 @@ def test_transmitir_exige_done_e_limita_linha(monkeypatch):
     with pytest.raises(UpstreamError, match="interrompida"):
         asyncio.run(ler())
 
-    ler = _stream(monkeypatch, b"data: " + b"a" * (provedor_ia.LINHA_MAX + 10))
-    with pytest.raises(UpstreamError):
-        asyncio.run(ler())
+    gigante = b"data: " + b"a" * (provedor_ia.LINHA_MAX + 10)
+    for blocos in ((gigante,), (gigante + b"\n\ndata: [DONE]\n\n",)):
+        ler = _stream(monkeypatch, *blocos)
+        with pytest.raises(UpstreamError):
+            asyncio.run(ler())
 
 
 def test_limpar_e_cancelar_do_telegram_preservam_o_chat_web(db, usuario_a, monkeypatch):

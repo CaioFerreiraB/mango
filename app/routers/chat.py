@@ -106,10 +106,11 @@ def enviar(
     db: Session = Depends(get_db),
     user: Usuario = Depends(exigir_usuario_completo),
 ):
-    conversa, fila = chat_web.iniciar(
+    conversa, pedido_id, fila = chat_web.iniciar(
         db, user.id, payload.conversa_id, payload.texto, payload.regenerar
     )
-    inicio = {"id": conversa.id, "titulo": conversa.titulo}
+    # `pedido_id` = o pedido já está gravado: o cliente reconcilia por id, não por texto.
+    inicio = {"id": conversa.id, "titulo": conversa.titulo, "pedido_id": pedido_id}
 
     async def eventos():
         yield _sse("conversa", inicio)

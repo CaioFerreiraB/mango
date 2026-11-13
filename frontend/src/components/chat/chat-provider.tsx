@@ -64,6 +64,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       setEnvio({
         conversaId: alvo,
         pedido,
+        pedidoId: null,
         resposta: "",
         status: "Enviando…",
         erro: null,
@@ -81,7 +82,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
             case "conversa":
               alvo = ev.dados.id
               setConversaId(alvo)
-              atualizar({ conversaId: alvo })
+              atualizar({ conversaId: alvo, pedidoId: ev.dados.pedido_id })
               void qc.invalidateQueries({
                 queryKey: chaveConversas,
                 exact: true,

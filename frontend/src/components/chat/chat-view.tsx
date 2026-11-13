@@ -191,24 +191,32 @@ export function ChatView({
           }. O histórico fica cifrado por sete dias.`}
           acao
         />
-      ) : conversa.isError && !conversa.data && !perdida ? (
-        <div className="flex flex-1 items-center justify-center p-6">
-          <Falha
-            mensagem={conversa.error.message}
-            onTentar={() => void conversa.refetch()}
-          />
-        </div>
       ) : (
-        <Conversa
-          key={conversaId ?? "nova"}
-          mensagens={conversaId !== null ? conversa.data?.mensagens : []}
-          proposta={conversa.data?.proposta ?? null}
-          executandoNoServidor={Boolean(
-            conversa.data?.executando && !envio?.ativo
+        <>
+          {/* Falha ao (re)carregar sem ser 404: mantém o que já estava na tela e oferece tentar. */}
+          {conversa.isError && !perdida ? (
+            <div className="shrink-0 px-3 pt-3">
+              <Falha
+                mensagem={conversa.error.message}
+                onTentar={() => void conversa.refetch()}
+              />
+            </div>
+          ) : null}
+          {conversa.isError && !conversa.data ? (
+            <div className="flex-1" />
+          ) : (
+            <Conversa
+              key={conversaId ?? "nova"}
+              mensagens={conversaId !== null ? conversa.data?.mensagens : []}
+              proposta={conversa.data?.proposta ?? null}
+              executandoNoServidor={Boolean(
+                conversa.data?.executando && !envio?.ativo
+              )}
+              carregando={conversaId !== null && conversa.isPending}
+              variante={variante}
+            />
           )}
-          carregando={conversaId !== null && conversa.isPending}
-          variante={variante}
-        />
+        </>
       )}
     </div>
   )
@@ -267,15 +275,14 @@ function Conversa({
   }
   const ultima = lista.at(-1)
   const ultimaResposta = ultima?.papel === "assistant" ? ultima.id : null
-  // O pedido enviado já voltou do servidor (a conversa recarrega durante o stream)?
-  const pedidoSalvo =
-    doEnvio?.pedido != null &&
-    ultima?.papel === "user" &&
-    ultima.conteudo === doEnvio.pedido
-  // Tentar de novo: pedido gravado (ou regeneração) → regenerar; não gravado (ex.: cota) → reenviar.
+  // Pedido otimista some quando a versão gravada (mesmo id) já veio na conversa recarregada.
+  const pedidoNaLista =
+    doEnvio?.pedidoId != null && lista.some((m) => m.id === doEnvio.pedidoId)
+  // Tentar de novo: pedido gravado no servidor (ou regeneração) → regenerar; nunca gravado
+  // (ex.: 429 de cota, rede) → reenviar o texto. Decidido pelo id, não pelo conteúdo.
   const tentar = !doEnvio
     ? undefined
-    : doEnvio.pedido !== null && !pedidoSalvo
+    : doEnvio.pedido !== null && doEnvio.pedidoId === null
       ? () => enviar(doEnvio.pedido!)
       : conversaId !== null
         ? regenerar
@@ -319,7 +326,7 @@ function Conversa({
                   )}
                 </MessageScrollerItem>
               ))}
-              {doEnvio?.pedido && !pedidoSalvo ? (
+              {doEnvio?.pedido && !pedidoNaLista ? (
                 <MessageScrollerItem messageId="pendente" scrollAnchor>
                   <Pedido texto={doEnvio.pedido} />
                 </MessageScrollerItem>

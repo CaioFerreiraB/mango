@@ -93,7 +93,7 @@ def proposta_pendente(db, usuario_id: int, conversa_id: int) -> OperacaoIntegrac
 
 def iniciar(
     db, usuario_id: int, conversa_id: int | None, texto: str | None, regenerar: bool
-) -> tuple[ConversaIa, queue.Queue]:
+) -> tuple[ConversaIa, int, queue.Queue]:
     if not ia.disponivel(db, usuario_id):
         raise ConflictError("Ative a conversa em Configurações → Inteligência artificial.")
     limpar(db)
@@ -120,7 +120,7 @@ def iniciar(
         daemon=True,
         name="chat-web",
     ).start()
-    return conversa, fila
+    return conversa, pedido.id, fila
 
 
 def _preparar(db, usuario_id, conversa_id, texto, regenerar):
