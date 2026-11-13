@@ -10,6 +10,8 @@ ainda está se assentando. Cada versão publicada tem uma imagem correspondente 
 
 ## [Não publicado]
 
+## [0.6.0] — 2026-11-13
+
 ### Adicionado
 
 - **App instalável:** manifest e ícones do PWA — instalado na tela inicial, o mango abre em janela
@@ -226,7 +228,8 @@ Primeira versão publicada. Imagem única servindo API e interface, instalável 
 - Os endpoints de autenticação ainda não têm rate-limiting nem lockout. Ver **Problemas conhecidos**
   em [ROADMAP.md](ROADMAP.md) antes de expor a instância à internet aberta.
 
-[Não publicado]: https://github.com/CaioFerreiraB/mango/compare/v0.5.0...HEAD
+[Não publicado]: https://github.com/CaioFerreiraB/mango/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/CaioFerreiraB/mango/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/CaioFerreiraB/mango/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/CaioFerreiraB/mango/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/CaioFerreiraB/mango/compare/v0.2.0...v0.3.0
