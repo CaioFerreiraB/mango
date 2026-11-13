@@ -14,7 +14,7 @@ from app.models.usuario import Usuario
 from app.schemas.sync import ConfiguracaoSyncRead, ConfiguracaoSyncUpdate, StatusSyncRead
 from app.security.current_user import get_current_user, require_admin_ou_local
 from app.services import configuracao
-from app.services.sync import iniciar_sync, status_sync
+from app.services.sync_manual import iniciar_sync, status_sync
 
 router = APIRouter(tags=["sync"])
 

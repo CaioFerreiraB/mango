@@ -143,10 +143,10 @@ def test_telegram_vinculo_e_preferencia_sao_individuais(client_factory, usuario_
 def test_status_do_sync_nao_vaza_entre_usuarios(
     client_factory, usuario_a: Usuario, usuario_b: Usuario
 ) -> None:
-    from app.services import sync as sync_mod
+    from app.services import sync_manual
 
     resumo = {"itens": 1, "contas": 2, "transacoes": 3, "transacoes_novas": 1, "investimentos": 0}
-    sync_mod._status[usuario_a.id] = {"em_andamento": False, "resumo": resumo, "erro": None}
+    sync_manual._status[usuario_a.id] = {"em_andamento": False, "resumo": resumo, "erro": None}
     try:
         status_b = client_factory(usuario_b).get("/api/sync/status").json()
         assert status_b["em_andamento"] is False
@@ -155,4 +155,4 @@ def test_status_do_sync_nao_vaza_entre_usuarios(
         # A continua vendo o próprio resultado.
         assert client_factory(usuario_a).get("/api/sync/status").json()["resumo"] == resumo
     finally:
-        sync_mod._status.pop(usuario_a.id, None)
+        sync_manual._status.pop(usuario_a.id, None)

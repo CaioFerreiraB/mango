@@ -47,3 +47,5 @@ exclude_paths:
   - "AGENTS.md"
   # Ferramental do vídeo de apresentação (render/captura), fora do app.
   - "brag-output/**"
+  # Keep a Changelog repete `### Adicionado/Alterado/Corrigido` em toda versão (markdownlint MD024).
+  - "CHANGELOG.md"
