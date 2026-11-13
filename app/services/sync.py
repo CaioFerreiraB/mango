@@ -9,15 +9,17 @@ Segurança:
 - Throttle + lock por item contra abuso/corrida (S5).
 - `apiKey` só vive na instância do `PluggyClient` (S1).
 
-`ponytail:` roda inline no request (best-effort). Se ficar lento, mover para um worker; o
-lock é por processo (suficiente p/ desktop e self-hosted de 1 worker).
+O sync manual roda numa thread de fundo (`iniciar_sync`) e a UI consulta `status_sync`: o tempo
+depende do Pluggy (1 request por investimento, até 120s por 429) e estourava o timeout do reverse
+proxy. `ponytail:` lock e status são por processo (suficiente p/ desktop e self-hosted de 1 worker;
+multi-worker exigiria levar o status p/ uma tabela). Status some no restart — o usuário só reclica.
 """
 
 from __future__ import annotations
 
 import logging
 import threading
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from datetime import UTC, date, datetime, timedelta
 from decimal import ROUND_HALF_UP, Decimal
 
@@ -25,8 +27,9 @@ from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from app.config import settings
+from app.db.session import SessionLocal
 from app.enums import CONTA_SUBTYPE, CONTA_TYPE, TRANSACAO_STATUS, TRANSACAO_TYPE
-from app.exceptions import ConflictError, NotFoundError, RateLimitError
+from app.exceptions import ConflictError, DomainError, NotFoundError, RateLimitError
 from app.models.cartao_fatura import (
     Cartao,
     ContaBancaria,
@@ -37,7 +40,7 @@ from app.models.categoria import Categoria
 from app.models.conta import Conta
 from app.models.investimento import Investimento, InvestimentoTransacao
 from app.models.transacao import Transacao, TransacaoPagamento
-from app.pluggy.client import PluggyClient
+from app.pluggy.client import PluggyClient, PluggyError
 from app.repositories.conta import ContaRepository
 from app.repositories.fatura import FaturaRepository
 from app.repositories.investimento import InvestimentoRepository
@@ -61,6 +64,8 @@ logger = logging.getLogger("app.sync")
 # Lock por item (por processo). Impede sync concorrente do mesmo item (corrida nos upserts).
 _lock = threading.Lock()
 _em_andamento: set[int] = set()
+# Status do sync manual em segundo plano, por usuário (protegido por `_lock`).
+_status: dict[int, dict] = {}
 
 
 @dataclass
@@ -104,6 +109,22 @@ def _agora() -> datetime:
     return datetime.now(UTC)
 
 
+def _desde(item) -> date | None:
+    """Início da janela incremental. Nunca sincronizou → histórico completo (None). Senão, a janela
+    padrão OU desde o último sync bem-sucedido (−3 dias de folga p/ lançamento retroativo), o que
+    for mais antigo — um período com o sync parado não vira buraco de transações."""
+    if item.ultimo_sync_em is None:
+        return None
+    ultimo = item.ultimo_sync_em
+    if ultimo.tzinfo is None:  # SQLite devolve naive → assume UTC
+        ultimo = ultimo.replace(tzinfo=UTC)
+    hoje = datetime.now(SP).date()
+    return min(
+        hoje - timedelta(days=settings.sync_janela_dias),
+        ultimo.astimezone(SP).date() - timedelta(days=3),
+    )
+
+
 # --- controle de concorrência / throttle ---------------------------------------------
 
 
@@ -126,6 +147,55 @@ def _adquirir(item_id: int) -> None:
 def _liberar(item_id: int) -> None:
     with _lock:
         _em_andamento.discard(item_id)
+
+
+# --- sync manual em segundo plano ----------------------------------------------------
+
+
+def status_sync(usuario_id: int) -> dict:
+    with _lock:
+        return dict(_status.get(usuario_id) or {"em_andamento": False})
+
+
+def iniciar_sync(db: Session, usuario_id: int, item_id: int | None = None) -> dict:
+    """Valida o escopo no request (404 imediato, S3) e roda o sync numa thread de fundo."""
+    if not CredencialPluggyRepository(db, usuario_id).list():
+        raise NotFoundError("nenhuma credencial Pluggy configurada")
+    if item_id is not None and ItemPluggyRepository(db, usuario_id).get(item_id) is None:
+        raise NotFoundError("conexão não encontrada")
+    with _lock:
+        if (_status.get(usuario_id) or {}).get("em_andamento"):
+            raise ConflictError("sincronização já está em andamento")
+        _status[usuario_id] = {"em_andamento": True}
+    threading.Thread(
+        target=_rodar_em_fundo, args=(usuario_id, item_id), daemon=True, name="sync-manual"
+    ).start()
+    # Não relê `_status`: a thread pode terminar antes e o POST só garante que o sync começou.
+    return {"em_andamento": True}
+
+
+def _rodar_em_fundo(usuario_id: int, item_id: int | None) -> None:
+    resumo, erro = None, None
+    try:
+        with SessionLocal() as db:
+            resumo = asdict(sincronizar_usuario(db, usuario_id, item_id=item_id))
+    except PluggyError as exc:
+        # Ao cliente vai só a mensagem genérica (o detalhe do Pluggy pode conter dado interno).
+        # Ao log vai o detalhe já redigido do PluggyError (só método/rota/status) p/ diagnóstico.
+        logger.warning("sync falhou (usuario=%s, item=%s): %s", usuario_id, item_id, exc)
+        erro = "não foi possível falar com o Pluggy agora"
+    except DomainError as exc:
+        erro = exc.mensagem
+    except Exception:
+        logger.exception("sync falhou (usuario=%s, item=%s)", usuario_id, item_id)
+        erro = "erro inesperado ao sincronizar"
+    with _lock:
+        _status[usuario_id] = {
+            "em_andamento": False,
+            "resumo": resumo,
+            "erro": erro,
+            "concluido_em": _agora(),
+        }
 
 
 # --- entrada pública -----------------------------------------------------------------
@@ -154,8 +224,10 @@ def sincronizar_usuario(
     categorias_validas = set(
         db.scalars(select(Categoria.pluggy_id).where(Categoria.usuario_id.is_(None))).all()
     )
-    # 1º sync de qualquer item → pareia sobre todo o histórico; senão, só a janela recente.
-    primeiro_sync = any(it.ultimo_sync_em is None for it in itens)
+    # Pós-processamento cobre a janela mais antiga entre os itens (None = todo o histórico). Calcula
+    # antes do sync, que avança `ultimo_sync_em`.
+    janelas = [_desde(it) for it in itens]
+    janela = None if None in janelas else min(janelas, default=None)
     resumo = ResumoSync()
     # client_id_cifrado/client_secret_cifrado retornam em claro na leitura (EncryptedStr).
     with PluggyClient(cred.client_id_cifrado, cred.client_secret_cifrado) as client:
@@ -176,7 +248,6 @@ def sincronizar_usuario(
     # Pareamento roda no fim, sobre TODAS as contas do usuário (as duas pernas podem estar
     # em itens/bancos distintos). Idempotente (§4.4).
     if resumo.itens:
-        janela = None if primeiro_sync else date.today() - timedelta(days=settings.sync_janela_dias)
         aplicar_regras_transferencia(db, usuario_id, desde=janela)
         # Auto-vincula transações a assinaturas por nome exato (§4.7). Idempotente, não toca vínculo
         # manual (assinatura_id já preenchido). Mesma janela da passada de transferência.
@@ -240,11 +311,7 @@ def _sincronizar_item(
     )
 
     # 1º sync: histórico completo (cap de páginas protege). Depois: janela incremental.
-    desde = (
-        None
-        if item.ultimo_sync_em is None
-        else date.today() - timedelta(days=settings.sync_janela_dias)
-    )
+    desde = _desde(item)
 
     for acc in client.contas(pluggy_item_id):
         tipo = _coerce(acc.get("type"), CONTA_TYPE)

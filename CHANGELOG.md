@@ -10,6 +10,23 @@ ainda está se assentando. Cada versão publicada tem uma imagem correspondente 
 
 ## [Não publicado]
 
+### Adicionado
+
+- **App instalável:** manifest e ícones do PWA — instalado na tela inicial, o mango abre em janela
+  própria, sem a barra de endereço (reinstale o atalho existente para valer).
+
+### Alterado
+
+- **API de sincronização:** `POST /api/sync` e `POST /api/itens-pluggy/{id}/sincronizar` agora só
+  disparam o sync e respondem `202` com o status; o resultado sai em `GET /api/sync/status`.
+
+### Corrigido
+
+- **Sincronização:** "Atualizar" não mostra mais "falha ao sincronizar" quando o sync demora — ele
+  roda em segundo plano em vez de estourar o timeout do reverse proxy.
+- **Sincronização:** a busca incremental vai até o último sync bem-sucedido, para não deixar buraco
+  de transações se o sync ficar parado mais de 30 dias.
+
 ## [0.5.0] — 2026-11-06
 
 ### Adicionado
