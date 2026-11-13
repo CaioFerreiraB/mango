@@ -25,6 +25,7 @@ from app.models.usuario import Usuario
 from app.repositories.assinatura import AssinaturaRepository
 from app.repositories.transacao import TransacaoRepository
 from app.services import sync as sync_mod
+from app.services import sync_manual
 from app.services.sync import sincronizar_usuario
 
 BANK_ID = "acc-bank"
@@ -429,10 +430,10 @@ def test_lock_bloqueia_sync_concorrente(db, usuario, conexao):
 @pytest.fixture
 def sync_em_fundo(monkeypatch, session_factory):
     """Thread do sync manual usa a session factory do teste; status limpo entre testes."""
-    monkeypatch.setattr(sync_mod, "SessionLocal", session_factory)
-    sync_mod._status.clear()
+    monkeypatch.setattr(sync_manual, "SessionLocal", session_factory)
+    sync_manual._status.clear()
     yield
-    sync_mod._status.clear()
+    sync_manual._status.clear()
 
 
 def _aguardar(client, tentativas=200):
@@ -461,7 +462,7 @@ def test_sync_roda_em_segundo_plano_e_status_traz_resumo(
 
 
 def test_sync_em_andamento_da_409(client_factory, usuario, conexao, sync_em_fundo):
-    sync_mod._status[usuario.id] = {"em_andamento": True}
+    sync_manual._status[usuario.id] = {"em_andamento": True}
     assert client_factory(usuario).post("/api/sync").status_code == 409
 
 
@@ -476,7 +477,7 @@ def test_pluggy_error_loga_detalhe_redigido_sem_vazar_ao_cliente(
     def _boom(*a, **k):
         raise PluggyError("POST /auth → HTTP 401")
 
-    monkeypatch.setattr(sync_mod, "sincronizar_usuario", _boom)
+    monkeypatch.setattr(sync_manual, "sincronizar_usuario", _boom)
 
     # Handler direto no logger (nível fixo) — determinístico, sem depender do root/ordering.
     registros: list[logging.LogRecord] = []

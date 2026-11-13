@@ -9,17 +9,15 @@ Segurança:
 - Throttle + lock por item contra abuso/corrida (S5).
 - `apiKey` só vive na instância do `PluggyClient` (S1).
 
-O sync manual roda numa thread de fundo (`iniciar_sync`) e a UI consulta `status_sync`: o tempo
-depende do Pluggy (1 request por investimento, até 120s por 429) e estourava o timeout do reverse
-proxy. `ponytail:` lock e status são por processo (suficiente p/ desktop e self-hosted de 1 worker;
-multi-worker exigiria levar o status p/ uma tabela). Status some no restart — o usuário só reclica.
+Disparo em segundo plano do sync manual (rota): `app.services.sync_manual`. `ponytail:` o lock é
+por processo (suficiente p/ desktop e self-hosted de 1 worker).
 """
 
 from __future__ import annotations
 
 import logging
 import threading
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
 from decimal import ROUND_HALF_UP, Decimal
 
@@ -27,9 +25,8 @@ from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from app.config import settings
-from app.db.session import SessionLocal
 from app.enums import CONTA_SUBTYPE, CONTA_TYPE, TRANSACAO_STATUS, TRANSACAO_TYPE
-from app.exceptions import ConflictError, DomainError, NotFoundError, RateLimitError
+from app.exceptions import ConflictError, NotFoundError, RateLimitError
 from app.models.cartao_fatura import (
     Cartao,
     ContaBancaria,
@@ -40,7 +37,7 @@ from app.models.categoria import Categoria
 from app.models.conta import Conta
 from app.models.investimento import Investimento, InvestimentoTransacao
 from app.models.transacao import Transacao, TransacaoPagamento
-from app.pluggy.client import PluggyClient, PluggyError
+from app.pluggy.client import PluggyClient
 from app.repositories.conta import ContaRepository
 from app.repositories.fatura import FaturaRepository
 from app.repositories.investimento import InvestimentoRepository
@@ -64,8 +61,6 @@ logger = logging.getLogger("app.sync")
 # Lock por item (por processo). Impede sync concorrente do mesmo item (corrida nos upserts).
 _lock = threading.Lock()
 _em_andamento: set[int] = set()
-# Status do sync manual em segundo plano, por usuário (protegido por `_lock`).
-_status: dict[int, dict] = {}
 
 
 @dataclass
@@ -147,55 +142,6 @@ def _adquirir(item_id: int) -> None:
 def _liberar(item_id: int) -> None:
     with _lock:
         _em_andamento.discard(item_id)
-
-
-# --- sync manual em segundo plano ----------------------------------------------------
-
-
-def status_sync(usuario_id: int) -> dict:
-    with _lock:
-        return dict(_status.get(usuario_id) or {"em_andamento": False})
-
-
-def iniciar_sync(db: Session, usuario_id: int, item_id: int | None = None) -> dict:
-    """Valida o escopo no request (404 imediato, S3) e roda o sync numa thread de fundo."""
-    if not CredencialPluggyRepository(db, usuario_id).list():
-        raise NotFoundError("nenhuma credencial Pluggy configurada")
-    if item_id is not None and ItemPluggyRepository(db, usuario_id).get(item_id) is None:
-        raise NotFoundError("conexão não encontrada")
-    with _lock:
-        if (_status.get(usuario_id) or {}).get("em_andamento"):
-            raise ConflictError("sincronização já está em andamento")
-        _status[usuario_id] = {"em_andamento": True}
-    threading.Thread(
-        target=_rodar_em_fundo, args=(usuario_id, item_id), daemon=True, name="sync-manual"
-    ).start()
-    # Não relê `_status`: a thread pode terminar antes e o POST só garante que o sync começou.
-    return {"em_andamento": True}
-
-
-def _rodar_em_fundo(usuario_id: int, item_id: int | None) -> None:
-    resumo, erro = None, None
-    try:
-        with SessionLocal() as db:
-            resumo = asdict(sincronizar_usuario(db, usuario_id, item_id=item_id))
-    except PluggyError as exc:
-        # Ao cliente vai só a mensagem genérica (o detalhe do Pluggy pode conter dado interno).
-        # Ao log vai o detalhe já redigido do PluggyError (só método/rota/status) p/ diagnóstico.
-        logger.warning("sync falhou (usuario=%s, item=%s): %s", usuario_id, item_id, exc)
-        erro = "não foi possível falar com o Pluggy agora"
-    except DomainError as exc:
-        erro = exc.mensagem
-    except Exception:
-        logger.exception("sync falhou (usuario=%s, item=%s)", usuario_id, item_id)
-        erro = "erro inesperado ao sincronizar"
-    with _lock:
-        _status[usuario_id] = {
-            "em_andamento": False,
-            "resumo": resumo,
-            "erro": erro,
-            "concluido_em": _agora(),
-        }
 
 
 # --- entrada pública -----------------------------------------------------------------
