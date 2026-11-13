@@ -10,6 +10,25 @@ ainda está se assentando. Cada versão publicada tem uma imagem correspondente 
 
 ## [Não publicado]
 
+### Adicionado
+
+- **Separar caixinhas do Nubank:** aba **Compras** no painel de renda fixa da Carteira — selecione
+  aplicações e mova para um ativo com o nome da caixinha. O Pluggy manda cada aporte como "CDB - NU
+  FINANCEIRA…" sem o nome da caixinha, então a separação é manual; depois dela, aportes recorrentes
+  (mesma taxa, valor e dia do mês) seguem sozinhos para a caixinha certa, e os demais caem numa
+  "caixa de entrada" para classificar.
+- **Alterar credencial do Pluggy** em Configurações → Conexões: troque o clientSecret (girado no
+  Pluggy) sem recriar as conexões; a credencial é testada ao salvar.
+
+### Alterado
+
+- Renda fixa bancária aparece com nome curto ("CDB · Nu Financeira") em vez da razão social inteira.
+
+### Corrigido
+
+- Sync de investimentos falhava quando o Pluggy mandava as taxas de um movimento (`expenses`) como
+  objeto — caso das caixinhas/RDB do Nubank.
+
 ## [0.6.0] — 2026-11-13
 
 ### Adicionado

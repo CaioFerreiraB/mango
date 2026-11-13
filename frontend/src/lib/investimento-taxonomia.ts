@@ -58,6 +58,20 @@ export const rotuloSubtype = (s: string | null | undefined) =>
   s ? (SUBTYPE_LABEL[s] ?? s) : null
 export const iconeTipo = (t: string) => ICONE_TIPO[t] ?? Coins
 
+/** Nome de exibição do ativo. A renda fixa bancária chega do Pluggy como "<papel> - <razão social>"
+ *  (caixinha do Nubank: "CDB - NU FINANCEIRA S.A. - SOCIEDADE DE CREDITO, …") → "CDB · Nu Financeira".
+ *  Nome dado pelo usuário não casa o padrão e passa intacto. Só exibição: o nome guardado não muda. */
+export function nomeAtivo(nome: string | null | undefined): string | null {
+  const m = /^(CDB|RDB|LCI|LCA|LC|LF) - (.+)$/.exec(nome ?? "")
+  if (!m) return nome ?? null
+  const emissor = m[2]
+    .split(/\s+(?:S\.A\.?|S\/A|SA|LTDA)(?=[\s,.-]|$)|\s-\s|,/i)[0]
+    .trim()
+    .toLowerCase()
+    .replace(/(^|\s)\p{L}/gu, (c) => c.toUpperCase())
+  return emissor ? `${m[1]} · ${emissor}` : nome!
+}
+
 /** Rótulo curto do ativo: subtype quando houver (FII, CDB…), senão o tipo. */
 export const rotuloClasse = (
   type: string,
