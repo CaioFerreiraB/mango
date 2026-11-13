@@ -1,0 +1,14 @@
+{
+  "duration": 25,
+  "assertions": [
+    { "kind": "appearsBy", "selector": "#hook-title", "bySec": 0.1 },
+    { "kind": "appearsBy", "selector": "#dashboard-title", "bySec": 3.65 },
+    { "kind": "appearsBy", "selector": "#review-title", "bySec": 9.0 },
+    { "kind": "appearsBy", "selector": "#planning-title", "bySec": 14.5 },
+    { "kind": "appearsBy", "selector": "#outro-title", "bySec": 20.7 },
+    { "kind": "staysInFrame", "selector": "#dashboard-title" },
+    { "kind": "staysInFrame", "selector": "#review-title" },
+    { "kind": "staysInFrame", "selector": "#planning-title" },
+    { "kind": "staysInFrame", "selector": "#outro-title" }
+  ]
+}

@@ -1,6 +1,6 @@
-"""Schema do resumo de sincronização (§4.3) — realimenta o toast da UI."""
+"""Schemas da sincronização (§4.3): status do sync em segundo plano + resumo p/ o toast da UI."""
 
-from datetime import time
+from datetime import datetime, time
 
 from pydantic import BaseModel, ConfigDict, field_validator, model_validator
 
@@ -13,6 +13,13 @@ class ResumoSyncRead(BaseModel):
     transacoes: int
     transacoes_novas: int
     investimentos: int
+
+
+class StatusSyncRead(BaseModel):
+    em_andamento: bool
+    resumo: ResumoSyncRead | None = None
+    erro: str | None = None
+    concluido_em: datetime | None = None
 
 
 class ConfiguracaoSyncRead(ORMModel):

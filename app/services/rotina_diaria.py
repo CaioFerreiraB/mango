@@ -234,7 +234,9 @@ def _execucao_usuario(db, usuario_id: int, momento: datetime, fixo: bool) -> Non
 
 def _falha_execucao(db, usuario_id, hoje) -> None:
     # O sync pode ter commits parciais. Marca falha e segue os demais usuários.
-    logger.error("rotina usuario=%s data=%s etapa=execucao codigo=erro_interno", usuario_id, hoje)
+    logger.exception(
+        "rotina usuario=%s data=%s etapa=execucao codigo=erro_interno", usuario_id, hoje
+    )
     registro = db.scalar(
         select(ExecucaoDiaria).where(
             ExecucaoDiaria.usuario_id == usuario_id, ExecucaoDiaria.data == hoje

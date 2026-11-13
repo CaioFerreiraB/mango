@@ -25,6 +25,7 @@ from app.models.usuario import Usuario
 from app.repositories.assinatura import AssinaturaRepository
 from app.repositories.transacao import TransacaoRepository
 from app.services import sync as sync_mod
+from app.services import sync_manual
 from app.services.sync import sincronizar_usuario
 
 BANK_ID = "acc-bank"
@@ -426,18 +427,57 @@ def test_lock_bloqueia_sync_concorrente(db, usuario, conexao):
         sync_mod._em_andamento.discard(conexao.id)
 
 
-def test_pluggy_error_loga_detalhe_redigido_sem_vazar_ao_cliente(monkeypatch):
-    """Router: em PluggyError, detalhe (método/rota/status) vai ao log; ao cliente, msg genérica."""
+@pytest.fixture
+def sync_em_fundo(monkeypatch, session_factory):
+    """Thread do sync manual usa a session factory do teste; status limpo entre testes."""
+    monkeypatch.setattr(sync_manual, "SessionLocal", session_factory)
+    sync_manual._status.clear()
+    yield
+    sync_manual._status.clear()
+
+
+def _aguardar(client, tentativas=200):
+    import time
+
+    for _ in range(tentativas):
+        status = client.get("/api/sync/status").json()
+        if not status["em_andamento"]:
+            return status
+        time.sleep(0.05)
+    raise AssertionError("sync não terminou")
+
+
+def test_sync_roda_em_segundo_plano_e_status_traz_resumo(
+    client_factory, usuario, conexao, sync_em_fundo
+):
+    client = client_factory(usuario)
+    resp = client.post("/api/sync")
+    assert resp.status_code == 202
+    assert resp.json()["em_andamento"] is True
+
+    status = _aguardar(client)
+    assert status["erro"] is None
+    assert status["resumo"]["contas"] == 2
+    assert status["resumo"]["transacoes_novas"] > 0
+
+
+def test_sync_em_andamento_da_409(client_factory, usuario, conexao, sync_em_fundo):
+    sync_manual._status[usuario.id] = {"em_andamento": True}
+    assert client_factory(usuario).post("/api/sync").status_code == 409
+
+
+def test_pluggy_error_loga_detalhe_redigido_sem_vazar_ao_cliente(
+    client_factory, usuario, conexao, sync_em_fundo, monkeypatch
+):
+    """Em PluggyError, detalhe (método/rota/status) vai ao log; ao cliente, msg genérica."""
     import logging
 
-    from app.exceptions import UpstreamError
     from app.pluggy.client import PluggyError
-    from app.routers import sync as sync_router
 
     def _boom(*a, **k):
         raise PluggyError("POST /auth → HTTP 401")
 
-    monkeypatch.setattr(sync_router, "sincronizar_usuario", _boom)
+    monkeypatch.setattr(sync_manual, "sincronizar_usuario", _boom)
 
     # Handler direto no logger (nível fixo) — determinístico, sem depender do root/ordering.
     registros: list[logging.LogRecord] = []
@@ -449,16 +489,37 @@ def test_pluggy_error_loga_detalhe_redigido_sem_vazar_ao_cliente(monkeypatch):
     logger.setLevel(logging.WARNING)
     logger.disabled = False  # migrations no boot rodam fileConfig; garante logger ativo no teste
     try:
-        with pytest.raises(UpstreamError) as exc:
-            sync_router._sincronizar(db=None, usuario_id=1, item_id=None)
+        client = client_factory(usuario)
+        assert client.post("/api/sync").status_code == 202
+        status = _aguardar(client)
     finally:
         logger.removeHandler(handler)
         logger.setLevel(nivel_orig)
 
     mensagens = [r.getMessage() for r in registros]
-    assert exc.value.mensagem == "não foi possível falar com o Pluggy agora"
-    assert "HTTP 401" not in exc.value.mensagem  # detalhe não vaza ao cliente
+    assert status["erro"] == "não foi possível falar com o Pluggy agora"
+    assert status["resumo"] is None
     assert any("POST /auth → HTTP 401" in m for m in mensagens)  # mas fica no log p/ diagnóstico
+
+
+def test_janela_ancorada_no_ultimo_sync():
+    from datetime import UTC, datetime, timedelta
+    from types import SimpleNamespace
+
+    from app.config import settings
+    from app.services.periodo import SP
+
+    hoje = datetime.now(SP).date()
+    assert sync_mod._desde(SimpleNamespace(ultimo_sync_em=None)) is None
+    recente = SimpleNamespace(ultimo_sync_em=datetime.now(UTC) - timedelta(days=1))
+    assert sync_mod._desde(recente) == hoje - timedelta(days=settings.sync_janela_dias)
+    # Sync parado há 60 dias → busca desde o último sync (−3d), não só os últimos 30.
+    antigo = datetime.now(UTC) - timedelta(days=60)
+    esperado = antigo.astimezone(SP).date() - timedelta(days=3)
+    assert sync_mod._desde(SimpleNamespace(ultimo_sync_em=antigo)) == esperado
+    # SQLite devolve naive (UTC).
+    naive = SimpleNamespace(ultimo_sync_em=antigo.replace(tzinfo=None))
+    assert sync_mod._desde(naive) == esperado
 
 
 def test_subtype_fii_normalizado_por_isin():

@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "mango",
-    "version": "0.4.0"
+    "version": "0.5.0"
   },
   "paths": {
     "/health": {
@@ -2362,12 +2362,12 @@
         "summary": "Sincronizar Tudo",
         "operationId": "sincronizar_tudo_api_sync_post",
         "responses": {
-          "200": {
+          "202": {
             "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ResumoSyncRead"
+                  "$ref": "#/components/schemas/StatusSyncRead"
                 }
               }
             }
@@ -2394,12 +2394,12 @@
           }
         ],
         "responses": {
-          "200": {
+          "202": {
             "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ResumoSyncRead"
+                  "$ref": "#/components/schemas/StatusSyncRead"
                 }
               }
             }
@@ -2410,6 +2410,27 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sync/status": {
+      "get": {
+        "tags": [
+          "sync"
+        ],
+        "summary": "Obter Status",
+        "operationId": "obter_status_api_sync_status_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatusSyncRead"
                 }
               }
             }
@@ -14061,6 +14082,52 @@
           "app_mode"
         ],
         "title": "SetupStatus"
+      },
+      "StatusSyncRead": {
+        "properties": {
+          "em_andamento": {
+            "type": "boolean",
+            "title": "Em Andamento"
+          },
+          "resumo": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ResumoSyncRead"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "erro": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Erro"
+          },
+          "concluido_em": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Concluido Em"
+          }
+        },
+        "type": "object",
+        "required": [
+          "em_andamento"
+        ],
+        "title": "StatusSyncRead"
       },
       "TelegramInstanciaRead": {
         "properties": {

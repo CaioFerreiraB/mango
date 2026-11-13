@@ -41,3 +41,11 @@ exclude_paths:
   - "frontend/src/components/ui/**"
   - "tests/**"
   - "docs/**"
+  # Skills de agente vendoradas (cópia para o Codex do que vive em .claude/) e instruções de
+  # agente — não são código do mango. O AGENTS.md cita docs/dev/, que é local (gitignored).
+  - ".agents/**"
+  - "AGENTS.md"
+  # Ferramental do vídeo de apresentação (render/captura), fora do app.
+  - "brag-output/**"
+  # Keep a Changelog repete `### Adicionado/Alterado/Corrigido` em toda versão (markdownlint MD024).
+  - "CHANGELOG.md"

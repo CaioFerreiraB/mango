@@ -1,0 +1,1 @@
+mango: suas contas, transações e planos em uma visão mais clara. Importe via Open Finance, revise seus gastos e acompanhe seu orçamento. Código aberto, para hospedar no seu servidor.

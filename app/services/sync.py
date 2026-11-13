@@ -9,8 +9,8 @@ Segurança:
 - Throttle + lock por item contra abuso/corrida (S5).
 - `apiKey` só vive na instância do `PluggyClient` (S1).
 
-`ponytail:` roda inline no request (best-effort). Se ficar lento, mover para um worker; o
-lock é por processo (suficiente p/ desktop e self-hosted de 1 worker).
+Disparo em segundo plano do sync manual (rota): `app.services.sync_manual`. `ponytail:` o lock é
+por processo (suficiente p/ desktop e self-hosted de 1 worker).
 """
 
 from __future__ import annotations
@@ -104,6 +104,22 @@ def _agora() -> datetime:
     return datetime.now(UTC)
 
 
+def _desde(item) -> date | None:
+    """Início da janela incremental. Nunca sincronizou → histórico completo (None). Senão, a janela
+    padrão OU desde o último sync bem-sucedido (−3 dias de folga p/ lançamento retroativo), o que
+    for mais antigo — um período com o sync parado não vira buraco de transações."""
+    if item.ultimo_sync_em is None:
+        return None
+    ultimo = item.ultimo_sync_em
+    if ultimo.tzinfo is None:  # SQLite devolve naive → assume UTC
+        ultimo = ultimo.replace(tzinfo=UTC)
+    hoje = datetime.now(SP).date()
+    return min(
+        hoje - timedelta(days=settings.sync_janela_dias),
+        ultimo.astimezone(SP).date() - timedelta(days=3),
+    )
+
+
 # --- controle de concorrência / throttle ---------------------------------------------
 
 
@@ -154,8 +170,10 @@ def sincronizar_usuario(
     categorias_validas = set(
         db.scalars(select(Categoria.pluggy_id).where(Categoria.usuario_id.is_(None))).all()
     )
-    # 1º sync de qualquer item → pareia sobre todo o histórico; senão, só a janela recente.
-    primeiro_sync = any(it.ultimo_sync_em is None for it in itens)
+    # Pós-processamento cobre a janela mais antiga entre os itens (None = todo o histórico). Calcula
+    # antes do sync, que avança `ultimo_sync_em`.
+    janelas = [_desde(it) for it in itens]
+    janela = None if None in janelas else min(janelas, default=None)
     resumo = ResumoSync()
     # client_id_cifrado/client_secret_cifrado retornam em claro na leitura (EncryptedStr).
     with PluggyClient(cred.client_id_cifrado, cred.client_secret_cifrado) as client:
@@ -176,7 +194,6 @@ def sincronizar_usuario(
     # Pareamento roda no fim, sobre TODAS as contas do usuário (as duas pernas podem estar
     # em itens/bancos distintos). Idempotente (§4.4).
     if resumo.itens:
-        janela = None if primeiro_sync else date.today() - timedelta(days=settings.sync_janela_dias)
         aplicar_regras_transferencia(db, usuario_id, desde=janela)
         # Auto-vincula transações a assinaturas por nome exato (§4.7). Idempotente, não toca vínculo
         # manual (assinatura_id já preenchido). Mesma janela da passada de transferência.
@@ -240,11 +257,7 @@ def _sincronizar_item(
     )
 
     # 1º sync: histórico completo (cap de páginas protege). Depois: janela incremental.
-    desde = (
-        None
-        if item.ultimo_sync_em is None
-        else date.today() - timedelta(days=settings.sync_janela_dias)
-    )
+    desde = _desde(item)
 
     for acc in client.contas(pluggy_item_id):
         tipo = _coerce(acc.get("type"), CONTA_TYPE)

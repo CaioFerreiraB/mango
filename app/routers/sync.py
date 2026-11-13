@@ -1,56 +1,39 @@
 """Sincronização com o Pluggy (§4.3): atualizar todas as conexões ou uma específica.
 
-Mutações (POST) → passam pelo CSRF do self-hosted (S7). Erros do Pluggy viram 502 com
-mensagem genérica (sem vazar corpo/segredo, S1/S7).
+O POST só valida o escopo e dispara o sync em segundo plano (202); a UI acompanha por
+`GET /sync/status` — o sync pode levar minutos e estourava o timeout do reverse proxy.
+Mutações (POST) → passam pelo CSRF do self-hosted (S7). Erros do Pluggy chegam ao cliente só como
+mensagem genérica no status (sem vazar corpo/segredo, S1/S7).
 """
-
-import logging
 
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
-from app.exceptions import UpstreamError
 from app.models.usuario import Usuario
-from app.pluggy.client import PluggyError
-from app.schemas.sync import ConfiguracaoSyncRead, ConfiguracaoSyncUpdate, ResumoSyncRead
+from app.schemas.sync import ConfiguracaoSyncRead, ConfiguracaoSyncUpdate, StatusSyncRead
 from app.security.current_user import get_current_user, require_admin_ou_local
 from app.services import configuracao
-from app.services.sync import sincronizar_usuario
+from app.services.sync_manual import iniciar_sync, status_sync
 
 router = APIRouter(tags=["sync"])
-logger = logging.getLogger("app.sync")
 
 
-def _sincronizar(db: Session, usuario_id: int, item_id: int | None) -> ResumoSyncRead:
-    try:
-        resumo = sincronizar_usuario(db, usuario_id, item_id=item_id)
-    except PluggyError as exc:
-        # Ao cliente vai só a mensagem genérica (o detalhe do Pluggy pode conter dado interno).
-        # Ao log vai o detalhe já redigido do PluggyError (só método/rota/status) p/ diagnóstico.
-        logger.warning("sync falhou (usuario=%s, item=%s): %s", usuario_id, item_id, exc)
-        raise UpstreamError("não foi possível falar com o Pluggy agora") from None
-    return ResumoSyncRead(
-        itens=resumo.itens,
-        contas=resumo.contas,
-        transacoes=resumo.transacoes,
-        transacoes_novas=resumo.transacoes_novas,
-        investimentos=resumo.investimentos,
-    )
+@router.post("/sync", response_model=StatusSyncRead, status_code=202)
+def sincronizar_tudo(db: Session = Depends(get_db), user: Usuario = Depends(get_current_user)):
+    return iniciar_sync(db, user.id)
 
 
-@router.post("/sync", response_model=ResumoSyncRead)
-def sincronizar_tudo(
-    db: Session = Depends(get_db), user: Usuario = Depends(get_current_user)
-) -> ResumoSyncRead:
-    return _sincronizar(db, user.id, None)
-
-
-@router.post("/itens-pluggy/{item_id}/sincronizar", response_model=ResumoSyncRead)
+@router.post("/itens-pluggy/{item_id}/sincronizar", response_model=StatusSyncRead, status_code=202)
 def sincronizar_item(
     item_id: int, db: Session = Depends(get_db), user: Usuario = Depends(get_current_user)
-) -> ResumoSyncRead:
-    return _sincronizar(db, user.id, item_id)
+):
+    return iniciar_sync(db, user.id, item_id)
+
+
+@router.get("/sync/status", response_model=StatusSyncRead)
+def obter_status(user: Usuario = Depends(get_current_user)):
+    return status_sync(user.id)
 
 
 @router.get("/sync/configuracao", response_model=ConfiguracaoSyncRead)

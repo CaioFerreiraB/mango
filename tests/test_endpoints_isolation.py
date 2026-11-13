@@ -138,3 +138,21 @@ def test_telegram_vinculo_e_preferencia_sao_individuais(client_factory, usuario_
     estado_a = a.get("/api/telegram").json()
     assert estado_a["identidade"]["usuario_id"] == "456"
     assert estado_a["notif_nao_revisadas"] is True
+
+
+def test_status_do_sync_nao_vaza_entre_usuarios(
+    client_factory, usuario_a: Usuario, usuario_b: Usuario
+) -> None:
+    from app.services import sync_manual
+
+    resumo = {"itens": 1, "contas": 2, "transacoes": 3, "transacoes_novas": 1, "investimentos": 0}
+    sync_manual._status[usuario_a.id] = {"em_andamento": False, "resumo": resumo, "erro": None}
+    try:
+        status_b = client_factory(usuario_b).get("/api/sync/status").json()
+        assert status_b["em_andamento"] is False
+        assert status_b["resumo"] is None and status_b["erro"] is None
+
+        # A continua vendo o próprio resultado.
+        assert client_factory(usuario_a).get("/api/sync/status").json()["resumo"] == resumo
+    finally:
+        sync_manual._status.pop(usuario_a.id, None)
