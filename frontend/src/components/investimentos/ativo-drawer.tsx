@@ -416,6 +416,7 @@ function CorpoAtivo({
               <ComprasRF
                 posicao={p}
                 invs={invsPosicao}
+                carregando={investimentosQuery.isPending}
                 erro={investimentosQuery.isError && !investimentosData}
                 onTentarNovamente={() => investimentosQuery.refetch()}
               />
@@ -3134,11 +3135,13 @@ function AlocacaoDonut({ alocacao }: { alocacao: FundamentosFIIAlocacao[] }) {
 function ComprasRF({
   posicao: p,
   invs,
+  carregando,
   erro,
   onTentarNovamente,
 }: {
   posicao: CarteiraPosicao
   invs: Investimento[]
+  carregando: boolean
   erro: boolean
   onTentarNovamente: () => void
 }) {
@@ -3192,8 +3195,20 @@ function ComprasRF({
         </Button>
       </EmptyState>
     )
-  // posição sempre tem ≥1 compra: lista vazia sem erro = ainda carregando
-  if (invs.length === 0) return <Skeleton className="h-40 w-full" />
+  if (carregando) return <Skeleton className="h-40 w-full" />
+  // Lista carregada sem as compras do resumo (as duas consultas divergiram, ex.: sync no meio).
+  if (invs.length === 0)
+    return (
+      <EmptyState
+        icon={AlertTriangle}
+        title="Compras não encontradas"
+        description="A lista de aplicações está desatualizada em relação à carteira."
+      >
+        <Button variant="outline" size="sm" onClick={onTentarNovamente}>
+          Atualizar
+        </Button>
+      </EmptyState>
+    )
   return (
     <div className="space-y-3">
       <p className="text-sm text-muted-foreground">
