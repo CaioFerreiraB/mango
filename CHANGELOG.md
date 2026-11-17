@@ -10,6 +10,16 @@ ainda está se assentando. Cada versão publicada tem uma imagem correspondente 
 
 ## [Não publicado]
 
+### Segurança
+
+- **Freio de força-bruta no login e na recuperação de senha:** após 5 tentativas malsucedidas em
+  15 minutos, as próximas são bloqueadas por 15 minutos (contado por e-mail e por IP). Fecha a
+  porta à força-bruta do segundo fator (TOTP) e da recuperação de senha.
+- **Cabeçalhos de segurança em todas as respostas HTTP:** Content-Security-Policy, HSTS,
+  X-Content-Type-Options, X-Frame-Options e Referrer-Policy — defesa contra clickjacking,
+  MIME-sniffing e downgrade de conexão. O mini app do Telegram mantém a CSP afrouxada de que
+  precisa.
+
 ## [0.7.0] — 2026-11-13
 
 ### Adicionado
