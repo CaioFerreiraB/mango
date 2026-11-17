@@ -24,6 +24,7 @@ from app.security.sessions import (
     revogar_todas,
     set_session_cookies,
 )
+from app.services import tentativas
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -38,20 +39,27 @@ def _por_email(db: Session, email: str) -> Usuario | None:
 def login(
     payload: LoginRequest, request: Request, response: Response, db: Session = Depends(get_db)
 ) -> LoginResponse:
+    # Freio de forca-bruta (§5.2): bloqueia antes de validar; a tentativa bloqueada nem chega aqui.
+    chaves = tentativas.chaves_de(payload.email, request)
+    tentativas.verificar(db, chaves)
+
     usuario = _por_email(db, payload.email)
     if (
         usuario is None
         or not usuario.ativo
         or not passwords.verify_password(payload.senha, usuario.senha_hash or "")
     ):
+        tentativas.registrar_falha(db, chaves)
         raise _CREDENCIAL_INVALIDA
 
     if usuario.totp_exigido_no_login:
         if not payload.codigo_totp:
             return LoginResponse(totp_necessario=True)  # senha ok, falta o código — sem sessão
         if not totp.verificar(usuario.totp_secret_cifrado or "", payload.codigo_totp):
+            tentativas.registrar_falha(db, chaves)
             raise _CREDENCIAL_INVALIDA  # mesmo erro genérico de senha errada
 
+    tentativas.limpar(db, chaves)  # sucesso zera o contador
     sessao = criar_sessao(db, usuario, request)
     set_session_cookies(response, sessao)
     return LoginResponse(usuario=MeRead.model_validate(usuario, from_attributes=True))
@@ -74,13 +82,21 @@ def me(usuario: Usuario = Depends(get_current_user)) -> Usuario:
 
 
 @router.post("/recuperar-senha", status_code=status.HTTP_204_NO_CONTENT)
-def recuperar_senha(payload: RecuperarSenhaRequest, db: Session = Depends(get_db)) -> None:
+def recuperar_senha(
+    payload: RecuperarSenhaRequest, request: Request, db: Session = Depends(get_db)
+) -> None:
+    # Freio de forca-bruta (§5.2): sem ele, o TOTP de 6 digitos e bruteavel sabendo so o e-mail.
+    chaves = tentativas.chaves_de(payload.email, request)
+    tentativas.verificar(db, chaves)
+
     usuario = _por_email(db, payload.email)
     # Sem e-mail (#15): o TOTP é a prova de posse. Falha genérica p/ não enumerar contas.
     if usuario is None or not totp.verificar(
         usuario.totp_secret_cifrado or "", payload.codigo_totp
     ):
+        tentativas.registrar_falha(db, chaves)
         raise _CREDENCIAL_INVALIDA
     usuario.senha_hash = passwords.hash_password(payload.nova_senha)
     db.commit()
+    tentativas.limpar(db, chaves)  # sucesso zera o contador
     revogar_todas(db, usuario.id)  # força re-login em todos os dispositivos
