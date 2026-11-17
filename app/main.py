@@ -24,6 +24,7 @@ from app.mcp import ciclo_mcp, endpoint_mcp
 from app.routers import ROUTERS_ABERTOS_A_TODOS_OS_TIPOS, all_routers
 from app.security.csrf import csrf_middleware
 from app.security.current_user import exigir_usuario_completo
+from app.security.headers import security_headers_middleware
 from app.web import mount_spa
 
 _STATUS_POR_ERRO = {
@@ -75,6 +76,10 @@ app = FastAPI(title="mango", version=__version__, lifespan=lifespan)
 
 # CSRF nas mutações da API (só self-hosted; ver app.security.csrf).
 app.middleware("http")(csrf_middleware)
+
+# Cabeçalhos de segurança em TODA resposta (ver app.security.headers). Registrado por último →
+# é o middleware mais externo, então carimba até a resposta 403 do CSRF e as de exceção.
+app.middleware("http")(security_headers_middleware)
 
 
 @app.exception_handler(RequestValidationError)
