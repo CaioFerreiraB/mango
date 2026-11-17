@@ -145,3 +145,26 @@ jobs:
 
       - name: Build (cliente tipado + typecheck + Vite)
         run: npm run build
+
+  # Varredura de CVE nas dependências (auditoria de segurança 2026-11). O Trivy lê o uv.lock
+  # (Python) e o frontend/package-lock.json (npm) e reprova o build quando há vulnerabilidade
+  # HIGH/CRITICAL COM correção disponível. `ignore-unfixed` não trava o merge por CVE sem patch
+  # upstream — não há o que fazer além de esperar. Para só observar sem reprovar (modo de
+  # adoção), troque `exit-code` para "0" ou ponha `continue-on-error: true` no passo.
+  #
+  # Third-party → fixado em SHA com a versão no comentário (ver cabeçalho deste arquivo); o
+  # Dependabot atualiza SHA e comentário juntos.
+  seguranca:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Trivy — CVE nas dependências (filesystem)
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          scanners: vuln
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
