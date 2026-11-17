@@ -21,6 +21,7 @@ from app.models import (  # noqa: F401
     pluggy,
     saldo_diario,
     telegram,
+    tentativa_acesso,
     transacao,
     usuario,
 )
