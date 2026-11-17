@@ -10,6 +10,8 @@ ainda está se assentando. Cada versão publicada tem uma imagem correspondente 
 
 ## [Não publicado]
 
+## [0.8.0] — 2026-11-17
+
 ### Segurança
 
 - **Freio de força-bruta no login e na recuperação de senha:** após 5 tentativas malsucedidas em
@@ -266,7 +268,8 @@ Primeira versão publicada. Imagem única servindo API e interface, instalável 
 - Os endpoints de autenticação ainda não têm rate-limiting nem lockout. Ver **Problemas conhecidos**
   em [ROADMAP.md](ROADMAP.md) antes de expor a instância à internet aberta.
 
-[Não publicado]: https://github.com/CaioFerreiraB/mango/compare/v0.7.0...HEAD
+[Não publicado]: https://github.com/CaioFerreiraB/mango/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/CaioFerreiraB/mango/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/CaioFerreiraB/mango/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/CaioFerreiraB/mango/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/CaioFerreiraB/mango/compare/v0.4.0...v0.5.0
