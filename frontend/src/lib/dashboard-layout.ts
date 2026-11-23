@@ -14,6 +14,7 @@ export type WidgetId =
   | "kpi-saidas"
   | "kpi-resultado"
   | "kpi-investido"
+  | "ultimas"
   | "fluxo"
   | "categorias"
   | "patrimonio"
@@ -26,6 +27,7 @@ export const CATALOGO: { id: WidgetId; titulo: string; largura: Largura }[] = [
   { id: "kpi-saidas", titulo: "Saídas no mês", largura: 12 },
   { id: "kpi-resultado", titulo: "Resultado no mês", largura: 12 },
   { id: "kpi-investido", titulo: "Investido no mês", largura: 12 },
+  { id: "ultimas", titulo: "Últimas transações", largura: 60 },
   { id: "fluxo", titulo: "Entradas e saídas", largura: 60 },
   { id: "categorias", titulo: "Despesas por categoria", largura: 60 },
   { id: "patrimonio", titulo: "Evolução patrimonial", largura: 60 },
@@ -51,7 +53,8 @@ export function layoutPadrao(): WidgetLayout[] {
 /**
  * Layout efetivo: o salvo, na ordem salva, sem ids que o catálogo não conhece mais (widget
  * removido numa versão nova) nem repetidos; widget do catálogo ausente do salvo (widget novo)
- * entra no fim, visível, com a largura padrão. Sem salvo → padrão.
+ * entra visível, com a largura padrão, logo depois do vizinho anterior no catálogo (ou no início,
+ * se nenhum anterior estiver no salvo). Sem salvo → padrão.
  */
 export function mesclarLayout(
   salvo: WidgetLayout[] | null | undefined
@@ -69,9 +72,18 @@ export function mesclarLayout(
       visivel: w.visivel,
     })
   }
-  for (const w of CATALOGO)
-    if (!vistos.has(w.id))
-      out.push({ id: w.id, largura: w.largura, visivel: true })
+  CATALOGO.forEach((w, i) => {
+    if (vistos.has(w.id)) return
+    let pos = 0
+    for (let j = i - 1; j >= 0; j--) {
+      const k = out.findIndex((x) => x.id === CATALOGO[j].id)
+      if (k >= 0) {
+        pos = k + 1
+        break
+      }
+    }
+    out.splice(pos, 0, { id: w.id, largura: w.largura, visivel: true })
+  })
   return out
 }
 

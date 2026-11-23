@@ -38,6 +38,7 @@ import {
   GraficoPatrimonio,
 } from "@/components/dashboard/graficos"
 import { KpiCard } from "@/components/dashboard/kpi-card"
+import { TransacoesTabela } from "@/components/transacoes/transacoes-tabela"
 import { PainelCartoes } from "@/components/dashboard/painel-cartoes"
 import { PeriodoPicker } from "@/components/dashboard/periodo-picker"
 import { SyncButton } from "@/components/sync-button"
@@ -67,6 +68,7 @@ import {
   type Granularidade,
 } from "@/lib/api/dashboard"
 import { useAtualizarPerfil, usePerfil } from "@/lib/api/perfil"
+import { useTransacoes } from "@/lib/api/transacoes"
 import {
   CATALOGO,
   ROTULO_LARGURA,
@@ -169,6 +171,12 @@ export function DashboardPage() {
   const serieCat = useDashboardSeries(periodo, granCat)
   const dashPeriodo = useDashboard(periodo)
   const patrimonio = usePatrimonio(12)
+  // Mesmo recorte padrão da tela de transações (sem pagamento de fatura nem parcelas futuras).
+  const ultimas = useTransacoes({
+    ocultar_pagamento_fatura: true,
+    ocultar_futuras: true,
+    limit: 10,
+  })
 
   const contas = useContas()
   const categorias = useCategorias()
@@ -268,6 +276,19 @@ export function DashboardPage() {
     return <KpiCard label={label} centavos={centavos(d)} {...extra} />
   }
 
+  const pendentes =
+    d && d.nao_revisadas > 0 ? (
+      <Link
+        to="/transacoes?pendente=true"
+        className="flex items-center justify-between rounded-lg border border-dashed bg-muted/40 px-4 py-3 text-sm transition-colors hover:bg-muted"
+      >
+        <span>
+          <strong>{d.nao_revisadas}</strong> transação(ões) aguardando revisão
+        </span>
+        <ArrowRight className="size-4 text-muted-foreground" aria-hidden />
+      </Link>
+    ) : null
+
   const widgets: Record<WidgetId, () => ReactNode> = {
     "kpi-saldo": () => kpi("Saldo em contas", (r) => r.saldo_total_centavos),
     "kpi-entradas": () =>
@@ -297,6 +318,34 @@ export function DashboardPage() {
         serie: buckets6m,
         campo: "investido_centavos",
       }),
+    ultimas: () => (
+      <CardGrafico
+        titulo="Últimas transações"
+        descricao="As 10 mais recentes"
+        acao={
+          <Button asChild variant="ghost" size="sm">
+            <Link to="/transacoes">Ver todas</Link>
+          </Button>
+        }
+      >
+        <div className="space-y-3">
+          {pendentes}
+          {ultimas.isLoading ? (
+            <Skeleton className="h-[420px] w-full" />
+          ) : ultimas.isError ? (
+            <p className="py-8 text-center text-sm text-muted-foreground">
+              Não foi possível carregar as transações.
+            </p>
+          ) : ultimas.data?.items.length ? (
+            <TransacoesTabela items={ultimas.data.items} />
+          ) : (
+            <p className="py-8 text-center text-sm text-muted-foreground">
+              Nenhuma transação ainda.
+            </p>
+          )}
+        </div>
+      </CardGrafico>
+    ),
     fluxo: () => (
       <CardGrafico
         titulo="Entradas e saídas"
@@ -472,17 +521,8 @@ export function DashboardPage() {
         </p>
       ) : null}
 
-      {d && d.nao_revisadas > 0 ? (
-        <Link
-          to="/transacoes?pendente=true"
-          className="flex items-center justify-between rounded-lg border border-dashed bg-muted/40 px-4 py-3 text-sm transition-colors hover:bg-muted"
-        >
-          <span>
-            <strong>{d.nao_revisadas}</strong> transação(ões) aguardando revisão
-          </span>
-          <ArrowRight className="size-4 text-muted-foreground" aria-hidden />
-        </Link>
-      ) : null}
+      {/* Pendentes moram acima da tabela de últimas transações; sem ela visível, ficam no topo. */}
+      {visiveis.some((w) => w.id === "ultimas") ? null : pendentes}
 
       {/* @container: o grid lê a largura disponível (ver SPAN). */}
       <div className="@container">

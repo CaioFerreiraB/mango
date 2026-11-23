@@ -31,9 +31,12 @@ export type TransacaoUpdate = components["schemas"]["TransacaoUpdate"]
  * Valor em reais para exibir: em compra internacional o `amount_centavos` é a moeda estrangeira;
  * o valor convertido que entrou na conta/fatura vem em `amount_in_account_currency_centavos`
  * (nulo → transação doméstica, cai no `amount_centavos`).
+ * Sinal pelo `type` (DEBIT negativo): compra de cartão vem DEBIT com valor POSITIVO do Pluggy.
  */
-export const valorEfetivoCentavos = (t: Transacao): number =>
-  t.amount_in_account_currency_centavos ?? t.amount_centavos
+export const valorEfetivoCentavos = (t: Transacao): number => {
+  const v = Math.abs(t.amount_in_account_currency_centavos ?? t.amount_centavos)
+  return t.type === "DEBIT" ? -v : v
+}
 
 /** Texto do banco: o normalizado do Pluggy e, se o conector não mandar, o cru do extrato. */
 export const descricaoBanco = (t: Transacao): string | null =>

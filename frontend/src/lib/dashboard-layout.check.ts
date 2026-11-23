@@ -15,7 +15,8 @@ import {
 assert.deepEqual(mesclarLayout(null), layoutPadrao())
 assert.equal(layoutPadrao().length, CATALOGO.length)
 
-// Salvo: ordem preservada; desconhecido e repetido caem; ausente (widget novo) entra no fim.
+// Salvo: ordem preservada; desconhecido e repetido caem; ausente (widget novo) entra logo depois
+// do vizinho anterior no catálogo (ou no início, sem nenhum anterior no salvo).
 {
   const salvo = [
     { id: "fluxo", largura: 30, visivel: false },
@@ -24,20 +25,47 @@ assert.equal(layoutPadrao().length, CATALOGO.length)
     { id: "fluxo", largura: 60, visivel: true }, // repetido: vale o 1º
   ] as WidgetLayout[]
   const l = mesclarLayout(salvo)
-  assert.deepEqual(l.slice(0, 2), [
-    { id: "fluxo", largura: 30, visivel: false },
-    { id: "kpi-saldo", largura: 20, visivel: true },
-  ])
+  assert.deepEqual(
+    l.map((w) => w.id),
+    [
+      "fluxo",
+      "categorias", // depois de fluxo
+      "patrimonio",
+      "faturas",
+      "kpi-saldo",
+      "kpi-entradas", // depois de kpi-saldo
+      "kpi-saidas",
+      "kpi-resultado",
+      "kpi-investido",
+      "ultimas",
+    ]
+  )
+  assert.deepEqual(l[0], { id: "fluxo", largura: 30, visivel: false })
+  assert.deepEqual(l[4], { id: "kpi-saldo", largura: 20, visivel: true })
   assert.equal(l.length, CATALOGO.length)
   assert.ok(!l.some((w) => w.id === "widget-removido"))
   const novo = l.find((w) => w.id === "patrimonio")
   assert.deepEqual(novo, { id: "patrimonio", largura: 60, visivel: true })
 }
 
+// Layout salvo antes de "ultimas" existir: o widget novo nasce logo abaixo dos cards.
+{
+  const antigo = layoutPadrao().filter((w) => w.id !== "ultimas")
+  const ids = mesclarLayout(antigo).map((w) => w.id)
+  assert.equal(ids.indexOf("ultimas"), ids.indexOf("kpi-investido") + 1)
+}
+
+// Sem nenhum vizinho anterior no salvo → início.
+assert.equal(
+  mesclarLayout([{ id: "faturas", largura: 60, visivel: true }])[0].id,
+  "kpi-saldo"
+)
+
 // Largura inválida vinda de fora vira inteira.
 assert.equal(
-  mesclarLayout([{ id: "fluxo", largura: 6, visivel: true }] as never)[0]
-    .largura,
+  mesclarLayout([{ id: "fluxo", largura: 6, visivel: true }] as never).find(
+    (w) => w.id === "fluxo"
+  )?.largura,
   60
 )
 

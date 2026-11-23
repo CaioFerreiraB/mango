@@ -278,16 +278,7 @@ function Resultados({ fechar }: { fechar: () => void }) {
                   <span className="truncate">{desc}</span>
                   <span className="ml-auto flex shrink-0 items-center gap-2 text-xs text-muted-foreground">
                     {formatDate(t.date)}
-                    {/* Sinal pelo `type`: compra de cartão vem DEBIT com valor positivo do Pluggy. */}
-                    <Valor
-                      centavos={
-                        t.type === "DEBIT"
-                          ? -Math.abs(valorEfetivoCentavos(t))
-                          : Math.abs(valorEfetivoCentavos(t))
-                      }
-                      sinal
-                      neutro
-                    />
+                    <Valor centavos={valorEfetivoCentavos(t)} sinal neutro />
                   </span>
                 </CommandItem>
               )
