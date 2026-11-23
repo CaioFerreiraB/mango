@@ -1,12 +1,11 @@
 import { AlertTriangle, ArrowRight, Landmark, PiggyBank } from "lucide-react"
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { Link } from "react-router"
 
 import {
   BarrasEmpilhadasCategorias,
-  BarrasEntradasSaidas,
-  LinhaResultado,
-  RoscaCategorias,
+  DistribuicaoCategorias,
+  GraficoFluxo,
   RoscaEntradasSaidas,
 } from "@/components/dashboard/graficos"
 import { KpiCard } from "@/components/dashboard/kpi-card"
@@ -93,16 +92,21 @@ export function DashboardPage() {
   const [fim, setFim] = useState(mes.fim)
   const periodo = { inicio, fim }
 
-  const [granFluxo, setGranFluxo] = useState<Granularidade>("diaria")
+  const [granFluxo, setGranFluxo] = useState<Granularidade>("semanal")
   const serieFluxo = useDashboardSeries(periodo, granFluxo)
-  const [granCat, setGranCat] = useState<Granularidade>("diaria")
+  const [granCat, setGranCat] = useState<Granularidade>("semanal")
   const serieCat = useDashboardSeries(periodo, granCat)
   const dashPeriodo = useDashboard(periodo) // rosca "Período consolidado" segue o seletor
 
   const contas = useContas()
   const categorias = useCategorias()
-  const rotulo = new Map(
-    (categorias.data ?? []).map((c) => [c.pluggy_id, nomeCategoria(c)])
+  // Estável entre renders: os gráficos memorizam a option por ela (hover não pode resetar).
+  const rotulo = useMemo(
+    () =>
+      new Map(
+        (categorias.data ?? []).map((c) => [c.pluggy_id, nomeCategoria(c)])
+      ),
+    [categorias.data]
   )
 
   // Sem contas conectadas: ensina o próximo passo em vez de mostrar zeros.
@@ -142,20 +146,20 @@ export function DashboardPage() {
             description="Tente novamente em instantes."
           />
         ) : dashMes.isLoading || !dashMes.data ? (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {[0, 1, 2, 3].map((i) => (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+            {[0, 1, 2, 3, 4].map((i) => (
               <Skeleton key={i} className="h-28 w-full" />
             ))}
           </div>
         ) : (
           <>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
               <KpiCard
-                label="Saldo total"
+                label="Saldo em contas"
                 centavos={dashMes.data.saldo_total_centavos}
               />
               <KpiCard
-                label="Entradas"
+                label="Entradas no mês"
                 centavos={dashMes.data.entradas_centavos}
                 sinal
                 delta={variacao(
@@ -166,7 +170,7 @@ export function DashboardPage() {
                 campo="entradas_centavos"
               />
               <KpiCard
-                label="Saídas"
+                label="Saídas no mês"
                 centavos={-dashMes.data.saidas_centavos}
                 delta={variacao(
                   dashMes.data.saidas_centavos,
@@ -176,7 +180,7 @@ export function DashboardPage() {
                 campo="saidas_centavos"
               />
               <KpiCard
-                label="Resultado"
+                label="Resultado no mês"
                 centavos={dashMes.data.resultado_centavos}
                 sinal
                 delta={variacao(
@@ -185,6 +189,17 @@ export function DashboardPage() {
                 )}
                 serie={buckets6m}
                 campo="resultado_centavos"
+              />
+              <KpiCard
+                label="Investido no mês"
+                centavos={dashMes.data.investido_centavos}
+                sinal
+                delta={variacao(
+                  dashMes.data.investido_centavos,
+                  ant?.investido_centavos
+                )}
+                serie={buckets6m}
+                campo="investido_centavos"
               />
             </div>
 
@@ -245,22 +260,15 @@ export function DashboardPage() {
             </div>
             <SeletorGranularidade valor={granFluxo} onChange={setGranFluxo} />
           </CardHeader>
-          <CardContent className="grid gap-6 lg:grid-cols-2">
-            <SecaoGrafico
-              titulo="Entradas vs. saídas"
-              carregando={serieFluxo.isLoading}
-            >
-              <BarrasEntradasSaidas
+          <CardContent>
+            {serieFluxo.isLoading ? (
+              <Skeleton className="h-[280px] w-full" />
+            ) : (
+              <GraficoFluxo
                 buckets={serieFluxo.data?.buckets ?? []}
                 granularidade={granFluxo}
               />
-            </SecaoGrafico>
-            <SecaoGrafico titulo="Resultado" carregando={serieFluxo.isLoading}>
-              <LinhaResultado
-                buckets={serieFluxo.data?.buckets ?? []}
-                granularidade={granFluxo}
-              />
-            </SecaoGrafico>
+            )}
           </CardContent>
         </Card>
 
@@ -271,26 +279,31 @@ export function DashboardPage() {
                 Despesas por categoria
               </CardTitle>
               <CardDescription>
-                Distribuição e evolução do período (exclui transferências)
+                Todas as despesas do período (exclui transferências e
+                investimentos)
               </CardDescription>
             </div>
             <SeletorGranularidade valor={granCat} onChange={setGranCat} />
           </CardHeader>
-          <CardContent className="grid gap-6 lg:grid-cols-2">
-            <SecaoGrafico
-              titulo="Distribuição do período"
-              carregando={serieCat.isLoading}
-            >
-              <RoscaCategorias
-                buckets={serieCat.data?.buckets ?? []}
+          <CardContent className="space-y-8">
+            {/* Distribuição: total do período inteiro (não depende da granularidade). */}
+            {dashPeriodo.isLoading ? (
+              <Skeleton className="h-[260px] w-full" />
+            ) : (
+              <DistribuicaoCategorias
+                gastos={dashPeriodo.data?.gasto_por_categoria ?? []}
                 rotulo={rotulo}
               />
-            </SecaoGrafico>
-            <SecaoGrafico titulo="Por período" carregando={serieCat.isLoading}>
+            )}
+            <SecaoGrafico
+              titulo={`Por ${PERIODO_LABEL[granCat]}`}
+              carregando={serieCat.isLoading}
+            >
               <BarrasEmpilhadasCategorias
                 buckets={serieCat.data?.buckets ?? []}
                 granularidade={granCat}
                 rotulo={rotulo}
+                comLegenda={false}
               />
             </SecaoGrafico>
           </CardContent>

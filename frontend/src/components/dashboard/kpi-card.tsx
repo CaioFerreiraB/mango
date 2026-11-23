@@ -58,11 +58,11 @@ export function KpiCard({
           <p className="truncate text-sm text-muted-foreground">{label}</p>
           {/* Valor sempre neutro e forte (identidade da referência): o sinal +/− carrega o
               sentido, nunca a cor — `text-foreground` sobrepõe a cor por sinal do `Valor` (a11y). */}
-          <div className="flex items-baseline gap-2 text-2xl tracking-tight">
+          <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1 text-2xl tracking-tight">
             <Valor
               centavos={centavos}
               sinal={sinal}
-              className="font-bold text-foreground"
+              className="font-bold whitespace-nowrap text-foreground"
             />
             {delta != null ? <Delta delta={delta} /> : null}
           </div>

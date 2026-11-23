@@ -125,7 +125,6 @@ export function GraficoFaturas({ contaId }: { contaId: number }) {
             buckets={serie}
             granularidade="mensal"
             rotulo={rotulo}
-            n={6}
           />
         ) : (
           <BarrasTotal buckets={buckets} />

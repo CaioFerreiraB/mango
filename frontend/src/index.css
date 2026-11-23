@@ -89,6 +89,16 @@
   --chart-4: oklch(0.491 0.27 292.581);
   --chart-5: oklch(0.432 0.232 292.759);
   --chart-6: oklch(0.372 0.176 292.759);
+  /* Paleta categórica (dataviz, validada vs #fff): ordem fixa, nunca ciclada; 9ª+ vira "Outras". Não deriva do accent. */
+  --chart-cat-1: #2a78d6;
+  --chart-cat-2: #eb6834;
+  --chart-cat-3: #1baf7a;
+  --chart-cat-4: #eda100;
+  --chart-cat-5: #e87ba4;
+  --chart-cat-6: #008300;
+  --chart-cat-7: #6250d6;
+  --chart-cat-8: #e34948;
+  --chart-cat-outras: oklch(0.78 0.012 255);
   --radius: 0.625rem;
   --sidebar: oklch(0.987 0.002 197.1);
   --sidebar-foreground: oklch(0.42 0.02 255);
@@ -131,6 +141,16 @@
   --chart-4: oklch(0.491 0.27 292.581);
   --chart-5: oklch(0.432 0.232 292.759);
   --chart-6: oklch(0.372 0.176 292.759);
+  /* Mesmos 8 matizes, degraus do dark (validados vs o card dark). */
+  --chart-cat-1: #3987e5;
+  --chart-cat-2: #d95926;
+  --chart-cat-3: #199e70;
+  --chart-cat-4: #c98500;
+  --chart-cat-5: #d55181;
+  --chart-cat-6: #0ca30c;
+  --chart-cat-7: #9085e9;
+  --chart-cat-8: #e66767;
+  --chart-cat-outras: oklch(0.48 0.012 255);
   --sidebar: oklch(0.218 0.008 223.9);
   --sidebar-foreground: oklch(0.8 0.012 255);
   --sidebar-icon: oklch(0.66 0.015 255);
