@@ -1,4 +1,4 @@
-import { ChevronRight } from "lucide-react"
+import { ChevronRight, PanelLeft } from "lucide-react"
 import { Fragment } from "react"
 import { NavLink, useLocation } from "react-router"
 
@@ -29,7 +29,7 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
   SidebarRail,
-  SidebarTrigger,
+  SidebarSeparator,
   useSidebar,
 } from "@/components/ui/sidebar"
 import {
@@ -150,6 +150,24 @@ function NavSectionItem({
   )
 }
 
+/** Recolhe/expande a barra (atalho Ctrl+B). Recolhida, mostra só o ícone com a dica. */
+function BotaoRecolher() {
+  const { state, toggleSidebar } = useSidebar()
+  const rotulo = state === "collapsed" ? "Expandir menu" : "Recolher menu"
+  return (
+    <SidebarMenuItem>
+      <SidebarMenuButton
+        onClick={toggleSidebar}
+        tooltip={`${rotulo} (Ctrl+B)`}
+        aria-label={rotulo}
+      >
+        <PanelLeft aria-hidden />
+        <span>{rotulo}</span>
+      </SidebarMenuButton>
+    </SidebarMenuItem>
+  )
+}
+
 export function AppSidebar() {
   const { pathname } = useLocation()
   const me = useMe()
@@ -160,10 +178,8 @@ export function AppSidebar() {
 
   return (
     <Sidebar variant="inset" collapsible="icon">
-      {/* Logo + botão de recolher lado a lado; recolhida (só ícones), o botão desce para baixo do
-          logo para continuar à mão. */}
-      <SidebarHeader className="flex-row items-center gap-1 group-data-[collapsible=icon]:flex-col">
-        <SidebarMenu className="min-w-0 flex-1">
+      <SidebarHeader>
+        <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild tooltip="mango">
               <NavLink to="/">
@@ -179,15 +195,16 @@ export function AppSidebar() {
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
-        <SidebarTrigger
-          className="shrink-0 text-sidebar-icon hover:text-sidebar-accent-foreground"
-          title="Recolher ou expandir o menu (Ctrl+B)"
-        />
       </SidebarHeader>
 
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupContent>
+            {/* Recolher/expandir como 1ª linha da navegação, separada do resto por uma linha. */}
+            <SidebarMenu>
+              <BotaoRecolher />
+            </SidebarMenu>
+            <SidebarSeparator className="my-2" />
             <SidebarMenu>
               {!somenteDivisao && (
                 <NavItemButton item={dashboardItem} pathname={pathname} />
