@@ -3,6 +3,7 @@ import {
   PanelRightCloseIcon,
   PanelRightOpenIcon,
 } from "lucide-react"
+import { useState } from "react"
 import { useLocation, useNavigate } from "react-router"
 
 import { AcoesPainel, ChatView } from "@/components/chat/chat-view"
@@ -10,6 +11,7 @@ import { useChat } from "@/components/chat/use-chat"
 import { Button } from "@/components/ui/button"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { useMe } from "@/lib/api/auth"
+import { cn } from "@/lib/utils"
 
 const ID_BOTAO = "chat-toggle"
 const desktop = () => window.matchMedia("(min-width: 768px)").matches
@@ -54,32 +56,46 @@ export function ChatPanel() {
   const navigate = useNavigate()
   const { pathname } = useLocation()
   const me = useMe()
-  if (!painelAberto || pathname === "/chat" || me.data?.tipo !== "completo")
-    return null
+  const aberto = painelAberto && pathname !== "/chat"
+  // Monta o chat só na 1ª abertura e o mantém depois (fechar não perde a conversa nem a animação).
+  const [montado, setMontado] = useState(aberto)
+  if (aberto && !montado) setMontado(true)
+  if (me.data?.tipo !== "completo") return null
   const fechar = () => {
     setPainelAberto(false)
     document.getElementById(ID_BOTAO)?.focus()
   }
   return (
+    // Abre/fecha animando a largura, como a sidebar (200ms linear); o conteúdo fica ancorado à
+    // direita com largura fixa, então desliza para dentro em vez de se espremer. Fechado = inert.
     <aside
       aria-label="Assistente"
-      className="sticky top-0 hidden h-svh w-[360px] shrink-0 py-2 pr-2 md:flex lg:w-[420px]"
+      aria-hidden={!aberto}
+      inert={!aberto}
+      className={cn(
+        "sticky top-0 hidden h-svh shrink-0 overflow-hidden transition-[width] duration-200 ease-linear motion-reduce:transition-none md:block",
+        aberto ? "w-[360px] lg:w-[420px]" : "w-0"
+      )}
       onKeyDown={(e) => {
         // Esc vindo de popover/diálogo (portais) não é DOM do painel: não fecha o painel junto.
         if (e.key === "Escape" && e.currentTarget.contains(e.target as Node))
           fechar()
       }}
     >
-      <div className="flex min-h-0 w-full flex-col overflow-hidden rounded-xl bg-background shadow-sm">
-        <ChatView
-          variante="painel"
-          acoes={
-            <AcoesPainel
-              onExpandir={() => navigate("/chat")}
-              onFechar={fechar}
+      <div className="absolute inset-y-0 right-0 flex w-[360px] py-2 pr-2 lg:w-[420px]">
+        <div className="flex min-h-0 w-full flex-col overflow-hidden rounded-xl bg-background shadow-sm">
+          {montado ? (
+            <ChatView
+              variante="painel"
+              acoes={
+                <AcoesPainel
+                  onExpandir={() => navigate("/chat")}
+                  onFechar={fechar}
+                />
+              }
             />
-          }
-        />
+          ) : null}
+        </div>
       </div>
     </aside>
   )
