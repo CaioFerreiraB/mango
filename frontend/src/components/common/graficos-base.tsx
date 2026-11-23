@@ -162,6 +162,9 @@ export function GraficoLinhas({
         data: dados.map((d) => num(d[s.chave])),
         showSymbol: !!s.pontos,
         connectNulls: !!s.conectarNulos,
+        // Suave sem inventar valor: a monotônica não passa acima/abaixo dos pontos vizinhos.
+        smooth: 0.35,
+        smoothMonotone: "x" as const,
         symbol: "circle",
         symbolSize: s.pontos ? 6 : 8,
         lineStyle: {
@@ -388,6 +391,7 @@ export function Sparkline({
           type: "line",
           data: dados.map((d) => d.valor),
           smooth: 0.4,
+          smoothMonotone: "x",
           showSymbol: false,
           lineStyle: { color: t.primary, width: 2 },
           itemStyle: { color: t.primary },
