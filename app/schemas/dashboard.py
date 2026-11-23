@@ -71,3 +71,28 @@ class PatrimonioPonto(BaseModel):
 
 class PatrimonioSerie(BaseModel):
     pontos: list[PatrimonioPonto]
+
+
+class CartaoPainel(BaseModel):
+    """Um cartão no painel do dashboard. Compras = DEBIT do cartão (sem transferência), em grandeza;
+    fatura atual = saldo da conta CREDIT (o que o Pluggy dá como fatura em aberto); próximas =
+    lançamentos com data futura (parcelas e compras ainda não faturadas)."""
+
+    conta_id: int
+    nome: str
+    fecha: date | None
+    vence: date | None
+    limite_centavos: int | None
+    disponivel_centavos: int | None
+    compras_mes_centavos: int
+    fatura_atual_centavos: int
+    proximas_centavos: int
+
+
+class CartoesResumo(BaseModel):
+    compras_mes_centavos: int
+    fatura_atual_centavos: int
+    proximas_centavos: int
+    total_ano_centavos: int
+    media_mes_centavos: int  # total do ano ÷ meses decorridos (o corrente conta)
+    cartoes: list[CartaoPainel]

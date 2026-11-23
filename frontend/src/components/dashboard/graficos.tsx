@@ -108,8 +108,10 @@ export function GraficoFluxo({
       name: nome,
       type: "bar" as const,
       data: dados,
-      barMaxWidth: 24,
-      barGap: "8%",
+      // Largura proporcional ao espaço do período (dia < semana < mês); teto só p/ 1-2 buckets.
+      barMaxWidth: 72,
+      barGap: "10%",
+      barCategoryGap: "30%",
       itemStyle: { color: cor, borderRadius: [4, 4, 0, 0] },
     })
     return {
@@ -140,13 +142,13 @@ export function GraficoFluxo({
           showSymbol: false,
           z: 3,
           lineStyle: {
-            color: t.textoSec,
+            color: t.primary,
             width: 2,
             type: [6, 4],
-            opacity: 0.6,
+            opacity: 0.75,
           },
           itemStyle: {
-            color: t.textoSec,
+            color: t.primary,
             borderColor: t.superficie,
             borderWidth: 2,
           },
@@ -260,54 +262,6 @@ function SemDados() {
     <p className="py-8 text-center text-sm text-muted-foreground">
       Sem dados no período.
     </p>
-  )
-}
-
-/** Distribuição entradas vs. saídas do período (§polaridade: cores semânticas). */
-export function RoscaEntradasSaidas({
-  entradas,
-  saidas,
-}: {
-  entradas: number
-  saidas: number
-}) {
-  const t = useTemaGrafico()
-  const fatias = useMemo(
-    () =>
-      [
-        { nome: "Entradas", valor: entradas, cor: t.positivo },
-        { nome: "Saídas", valor: saidas, cor: t.negativo },
-      ].filter((f) => f.valor > 0),
-    [entradas, saidas, t]
-  )
-  const option = useMemo(() => opcaoRosca(t, fatias), [t, fatias])
-  if (fatias.length === 0) return <SemDados />
-  const total = entradas + saidas
-  return (
-    <div className="flex flex-col items-center gap-4 @md:flex-row">
-      <EChart
-        option={option}
-        className="size-[160px] shrink-0"
-        ariaLabel="Distribuição de entradas e saídas no período"
-      />
-      <ul className="w-full space-y-1.5 text-sm @md:flex-1">
-        {fatias.map((f) => (
-          <li key={f.nome} className="flex items-center justify-between gap-3">
-            <span className="flex items-center gap-2">
-              <span
-                className="size-2.5 shrink-0 rounded-[2px]"
-                style={{ background: f.cor }}
-                aria-hidden
-              />
-              {f.nome}
-            </span>
-            <span className="text-muted-foreground tabular-nums">
-              {formatBRL(f.valor)} · {Math.round((f.valor / total) * 100)}%
-            </span>
-          </li>
-        ))}
-      </ul>
-    </div>
   )
 }
 
@@ -473,7 +427,8 @@ export function BarrasEmpilhadasCategorias({
         type: "bar" as const,
         stack: "cat",
         data: valores,
-        barMaxWidth: 24,
+        barMaxWidth: 96,
+        barCategoryGap: "30%",
         itemStyle: {
           color: corSlot(t, f.slot),
           // Gap de 2px entre segmentos (dataviz); só o topo da pilha é arredondado.

@@ -8,9 +8,19 @@ from sqlalchemy.orm import Session
 
 from app.db.session import get_db
 from app.models.usuario import Usuario
-from app.schemas.dashboard import DashboardResumo, DashboardSeries, PatrimonioSerie
+from app.schemas.dashboard import (
+    CartoesResumo,
+    DashboardResumo,
+    DashboardSeries,
+    PatrimonioSerie,
+)
 from app.security.current_user import get_current_user
-from app.services.dashboard import montar_dashboard, montar_patrimonio, montar_series
+from app.services.dashboard import (
+    montar_cartoes,
+    montar_dashboard,
+    montar_patrimonio,
+    montar_series,
+)
 from app.services.periodo import mes_corrente
 from app.services.revisao import corte_revisao
 
@@ -50,3 +60,12 @@ def patrimonio(
 ) -> PatrimonioSerie:
     """Evolução patrimonial mês a mês (contas BANK + investimentos), terminando no mês corrente."""
     return montar_patrimonio(db, user.id, meses)
+
+
+@router.get("/cartoes", response_model=CartoesResumo)
+def cartoes(
+    db: Session = Depends(get_db),
+    user: Usuario = Depends(get_current_user),
+) -> CartoesResumo:
+    """Painel dos cartões: compras do mês, fatura atual, próximas, limite e resumo do ano."""
+    return montar_cartoes(db, user.id)

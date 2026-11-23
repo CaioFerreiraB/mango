@@ -211,7 +211,7 @@ export function GraficoLinhas({
   )
 }
 
-/** Barras de uma série só (ex.: total por mês), ponta arredondada, ≤ 24px. */
+/** Barras de uma série só (ex.: total por mês), ponta arredondada, largura proporcional ao período. */
 export function GraficoBarras({
   dados,
   x,
@@ -253,7 +253,8 @@ export function GraficoBarras({
           name: nome,
           type: "bar",
           data: dados.map((d) => num(d[chave])),
-          barMaxWidth: 24,
+          barMaxWidth: 96,
+          barCategoryGap: "30%",
           itemStyle: { color: corResolvida, borderRadius: [4, 4, 0, 0] },
         },
       ],

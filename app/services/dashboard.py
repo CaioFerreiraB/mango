@@ -11,12 +11,14 @@ from datetime import UTC, date, datetime, timedelta
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.models.cartao_fatura import Fatura
+from app.models.cartao_fatura import Cartao, Fatura
 from app.models.conta import Conta
 from app.models.investimento import Investimento
 from app.models.investimento_saldo_diario import InvestimentoSaldoDiario
 from app.models.transacao import Transacao
 from app.schemas.dashboard import (
+    CartaoPainel,
+    CartoesResumo,
     DashboardResumo,
     DashboardSeries,
     FaturaResumoBucket,
@@ -351,3 +353,85 @@ def montar_patrimonio(db: Session, usuario_id: int, meses: int = 12) -> Patrimon
             )
         )
     return PatrimonioSerie(pontos=pontos)
+
+
+def montar_cartoes(db: Session, usuario_id: int) -> CartoesResumo:
+    """Painel dos cartões: por cartão, compras do mês, fatura atual, próximas (data futura), limite
+    e disponível; e o resumo global (inclui total do ano e média mensal). Datas no fuso SP."""
+    hoje = hoje_sp()
+    ini_mes, _ = limites_sp(hoje.replace(day=1), hoje)
+    ini_ano, fim_hoje = limites_sp(hoje.replace(month=1, day=1), hoje)
+
+    contas = db.execute(
+        select(Conta, Cartao)
+        .outerjoin(Cartao, Cartao.conta_id == Conta.id)
+        .where(Conta.usuario_id == usuario_id, Conta.type == "CREDIT")
+        .order_by(Conta.id)
+    ).all()
+    if not contas:
+        return CartoesResumo(
+            compras_mes_centavos=0,
+            fatura_atual_centavos=0,
+            proximas_centavos=0,
+            total_ano_centavos=0,
+            media_mes_centavos=0,
+            cartoes=[],
+        )
+    ids = [c.id for c, _ in contas]
+
+    # Compras (DEBIT, sem transferência) do ano até hoje e futuras, por cartão; grandeza por linha
+    # (`abs`: compra de cartão vem DEBIT com amount positivo do Pluggy).
+    linhas = db.execute(
+        select(Transacao.conta_id, Transacao.date, func.abs(VALOR_EFETIVO)).where(
+            Transacao.usuario_id == usuario_id,
+            Transacao.conta_id.in_(ids),
+            Transacao.type == "DEBIT",
+            Transacao.eh_transferencia.is_(False),
+            Transacao.date >= ini_ano,
+        )
+    ).all()
+    mes: dict[int, int] = {}
+    ano: dict[int, int] = {}
+    futuras: dict[int, int] = {}
+    for conta_id, dt, valor in linhas:
+        dt = dt if dt.tzinfo is not None else dt.replace(tzinfo=UTC)
+        if dt >= fim_hoje:
+            futuras[conta_id] = futuras.get(conta_id, 0) + valor
+            continue
+        ano[conta_id] = ano.get(conta_id, 0) + valor
+        if dt >= ini_mes:
+            mes[conta_id] = mes.get(conta_id, 0) + valor
+
+    # Vencimento sem `balance_due_date`: a próxima fatura conhecida.
+    prox_venc: dict[int, date] = {}
+    for cartao_id, due in db.execute(
+        select(Fatura.cartao_id, func.min(Fatura.due_date))
+        .where(Fatura.usuario_id == usuario_id, Fatura.due_date >= ini_mes)
+        .group_by(Fatura.cartao_id)
+    ):
+        due = due if due.tzinfo is not None else due.replace(tzinfo=UTC)
+        prox_venc[cartao_id] = due.astimezone(SP).date()
+
+    cartoes = [
+        CartaoPainel(
+            conta_id=conta.id,
+            nome=conta.marketing_name or conta.nome or "Cartão",
+            fecha=cartao.balance_close_date if cartao else None,
+            vence=(cartao.balance_due_date if cartao else None) or prox_venc.get(conta.id),
+            limite_centavos=cartao.credit_limit_centavos if cartao else None,
+            disponivel_centavos=cartao.available_credit_limit_centavos if cartao else None,
+            compras_mes_centavos=mes.get(conta.id, 0),
+            fatura_atual_centavos=abs(conta.saldo_centavos),
+            proximas_centavos=futuras.get(conta.id, 0),
+        )
+        for conta, cartao in contas
+    ]
+    total_ano = sum(ano.values())
+    return CartoesResumo(
+        compras_mes_centavos=sum(c.compras_mes_centavos for c in cartoes),
+        fatura_atual_centavos=sum(c.fatura_atual_centavos for c in cartoes),
+        proximas_centavos=sum(c.proximas_centavos for c in cartoes),
+        total_ano_centavos=total_ano,
+        media_mes_centavos=round(total_ano / hoje.month),
+        cartoes=cartoes,
+    )

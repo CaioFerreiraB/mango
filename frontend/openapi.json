@@ -2693,6 +2693,28 @@
         }
       }
     },
+    "/api/dashboard/cartoes": {
+      "get": {
+        "tags": [
+          "dashboard"
+        ],
+        "summary": "Cartoes",
+        "description": "Painel dos cartões: compras do mês, fatura atual, próximas, limite e resumo do ano.",
+        "operationId": "cartoes_api_dashboard_cartoes_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CartoesResumo"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/orcamentos": {
       "get": {
         "tags": [
@@ -7716,6 +7738,90 @@
         ],
         "title": "BrapiTokenTeste"
       },
+      "CartaoPainel": {
+        "properties": {
+          "conta_id": {
+            "type": "integer",
+            "title": "Conta Id"
+          },
+          "nome": {
+            "type": "string",
+            "title": "Nome"
+          },
+          "fecha": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fecha"
+          },
+          "vence": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vence"
+          },
+          "limite_centavos": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Limite Centavos"
+          },
+          "disponivel_centavos": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Disponivel Centavos"
+          },
+          "compras_mes_centavos": {
+            "type": "integer",
+            "title": "Compras Mes Centavos"
+          },
+          "fatura_atual_centavos": {
+            "type": "integer",
+            "title": "Fatura Atual Centavos"
+          },
+          "proximas_centavos": {
+            "type": "integer",
+            "title": "Proximas Centavos"
+          }
+        },
+        "type": "object",
+        "required": [
+          "conta_id",
+          "nome",
+          "fecha",
+          "vence",
+          "limite_centavos",
+          "disponivel_centavos",
+          "compras_mes_centavos",
+          "fatura_atual_centavos",
+          "proximas_centavos"
+        ],
+        "title": "CartaoPainel",
+        "description": "Um cartão no painel do dashboard. Compras = DEBIT do cartão (sem transferência), em grandeza;\nfatura atual = saldo da conta CREDIT (o que o Pluggy dá como fatura em aberto); próximas =\nlançamentos com data futura (parcelas e compras ainda não faturadas)."
+      },
       "CartaoRead": {
         "properties": {
           "conta_id": {
@@ -8609,6 +8715,47 @@
           "quantidade_ativos"
         ],
         "title": "CarteiraTotais"
+      },
+      "CartoesResumo": {
+        "properties": {
+          "compras_mes_centavos": {
+            "type": "integer",
+            "title": "Compras Mes Centavos"
+          },
+          "fatura_atual_centavos": {
+            "type": "integer",
+            "title": "Fatura Atual Centavos"
+          },
+          "proximas_centavos": {
+            "type": "integer",
+            "title": "Proximas Centavos"
+          },
+          "total_ano_centavos": {
+            "type": "integer",
+            "title": "Total Ano Centavos"
+          },
+          "media_mes_centavos": {
+            "type": "integer",
+            "title": "Media Mes Centavos"
+          },
+          "cartoes": {
+            "items": {
+              "$ref": "#/components/schemas/CartaoPainel"
+            },
+            "type": "array",
+            "title": "Cartoes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "compras_mes_centavos",
+          "fatura_atual_centavos",
+          "proximas_centavos",
+          "total_ano_centavos",
+          "media_mes_centavos",
+          "cartoes"
+        ],
+        "title": "CartoesResumo"
       },
       "CategoriaCreate": {
         "properties": {
@@ -16288,7 +16435,7 @@
           "visivel"
         ],
         "title": "WidgetLayout",
-        "description": "Um widget do dashboard: id do catálogo do frontend, largura em colunas de um grid de 60\n(⅕ ¼ ⅓ ½ ⅔ ¾ inteira) e visibilidade. Id desconhecido é aceito (o frontend ignora) — o catálogo mora no cliente."
+        "description": "Um widget do dashboard: id do catálogo do frontend, largura em colunas de um grid de 60\n(⅕ ¼ ⅓ ½ ⅔ ¾ inteira) e visibilidade. Id desconhecido é aceito (o frontend ignora) — o\ncatálogo mora no cliente."
       }
     }
   }

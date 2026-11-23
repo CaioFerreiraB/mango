@@ -35,6 +35,9 @@ ainda está se assentando. Cada versão publicada tem uma imagem correspondente 
   IR/IOF). Cartões ficam de fora.
 - **Despesas por categoria com todas as despesas:** a rosca soma todas as categorias e as barras ao
   lado servem de legenda, com valor e percentual do período inteiro.
+- **Painel de cartões no dashboard:** visão global (compras no mês, fatura atual, próximas
+  faturas, total do ano e média mensal) e um bloco por cartão com fechamento/vencimento, limite
+  comprometido (fatura atual + parcelas futuras) e disponível.
 - **Busca global:** campo no topo (atalho Ctrl/⌘ K ou /) para achar páginas, configurações,
   contas, faturas e transações.
 
@@ -44,8 +47,9 @@ ainda está se assentando. Cada versão publicada tem uma imagem correspondente 
   saídas (e resgates, das entradas) e passam a aparecer em "Investido". O resumo do assistente
   (MCP, chat e Telegram) segue a mesma regra.
 - Dashboard: cards renomeados para "Saldo em contas" e "… no mês"; gráfico de entradas e saídas
-  com o resultado como linha tracejada e granularidade semanal por padrão; seletor de período no
-  topo.
+  com o resultado como linha tracejada na cor de destaque e granularidade semanal por padrão;
+  barras com largura proporcional ao período (dia < semana < mês); seletor de período no topo; o
+  bloco "Período consolidado" saiu.
 - Layout mais largo no desktop e tipografia mais suave: textos e ícones deixaram o quase-preto por
   tons de ardósia, e o item ativo da barra lateral ganhou a cor de destaque.
 - Todos os gráficos passaram a usar Apache ECharts. Na Visão Geral de investimentos, valor (R$) e

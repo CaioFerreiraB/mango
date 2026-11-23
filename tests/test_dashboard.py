@@ -496,3 +496,85 @@ def test_snapshot_investimento_grava_liquido(db, usuario):
 
     snap = db.scalars(select(InvestimentoSaldoDiario)).one()
     assert (snap.valor_centavos, snap.liquido_centavos) == (50_000, 46_000)
+
+
+# --- painel de cartões ------------------------------------------------------------------------
+
+
+def test_cartoes_compras_mes_ano_futuras_e_limite(db, usuario):
+    from app.services.dashboard import montar_cartoes
+    from app.services.periodo import hoje_sp
+
+    _bank, credit = _contas(db, usuario.id)  # CREDIT saldo −5_000 → fatura atual 5_000
+    db.add(
+        Cartao(
+            conta_id=credit.id,
+            credit_limit_centavos=100_000,
+            available_credit_limit_centavos=80_000,
+        )
+    )
+    db.commit()
+    repo = TransacaoRepository(db, usuario.id)
+    agora = datetime.now(UTC)
+    hoje = hoje_sp()
+    _tx(repo, credit, "mes", 3_000, quando=agora)  # DEBIT com amount positivo (Pluggy)
+    repo.create(
+        conta_id=credit.id,
+        pluggy_transaction_id="mes-debit",
+        date=agora,
+        amount_centavos=2_000,
+        currency_code="BRL",
+        type="DEBIT",
+        status="POSTED",
+    )
+    repo.create(
+        conta_id=credit.id,
+        pluggy_transaction_id="parcela-futura",
+        date=agora + timedelta(days=40),
+        amount_centavos=7_000,
+        currency_code="BRL",
+        type="DEBIT",
+        status="POSTED",
+    )
+    repo.create(
+        conta_id=credit.id,
+        pluggy_transaction_id="pgto",
+        date=agora,
+        amount_centavos=-9_999,
+        currency_code="BRL",
+        type="DEBIT",
+        status="POSTED",
+        eh_transferencia=True,  # pagamento de fatura não é compra
+    )
+    if hoje.month > 1:  # compra de um mês anterior do mesmo ano: entra só no total do ano
+        repo.create(
+            conta_id=credit.id,
+            pluggy_transaction_id="antes",
+            date=agora.replace(day=1) - timedelta(days=1),
+            amount_centavos=4_000,
+            currency_code="BRL",
+            type="DEBIT",
+            status="POSTED",
+        )
+
+    r = montar_cartoes(db, usuario.id)
+
+    (c,) = r.cartoes
+    assert c.limite_centavos == 100_000 and c.disponivel_centavos == 80_000
+    assert c.fatura_atual_centavos == 5_000
+    assert c.proximas_centavos == 7_000
+    # `_tx` com valor positivo vira CREDIT (estorno) e não conta; só o DEBIT de 2_000 é compra.
+    assert c.compras_mes_centavos == 2_000
+    ano = 2_000 + (4_000 if hoje.month > 1 else 0)
+    assert r.total_ano_centavos == ano
+    assert r.media_mes_centavos == round(ano / hoje.month)
+    assert r.compras_mes_centavos == 2_000 and r.proximas_centavos == 7_000
+
+
+def test_cartoes_vazio_e_isolado(db, usuario):
+    from app.services.dashboard import montar_cartoes
+
+    outro = _usuario(db, "outro-cartao@mango.test")
+    _contas(db, outro.id)  # o cartão é do outro
+    r = montar_cartoes(db, usuario.id)
+    assert r.cartoes == [] and r.total_ano_centavos == 0

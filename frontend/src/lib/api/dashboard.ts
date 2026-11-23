@@ -63,3 +63,17 @@ export function usePatrimonio(meses = 12) {
     },
   })
 }
+
+export type CartoesResumo = components["schemas"]["CartoesResumo"]
+
+/** Painel dos cartões: compras do mês, fatura atual, próximas, limite e resumo do ano. */
+export function useCartoesPainel() {
+  return useQuery({
+    queryKey: ["dashboard-cartoes"],
+    queryFn: async (): Promise<CartoesResumo> => {
+      const { data, error } = await api.GET("/api/dashboard/cartoes")
+      if (error || !data) throw new Error("falha ao carregar os cartões")
+      return data
+    },
+  })
+}

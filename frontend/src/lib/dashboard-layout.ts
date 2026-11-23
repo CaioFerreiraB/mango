@@ -17,7 +17,6 @@ export type WidgetId =
   | "fluxo"
   | "categorias"
   | "patrimonio"
-  | "consolidado"
   | "faturas"
 
 /** Ordem e largura padrão (grid de 60 colunas a partir de `lg`). */
@@ -30,8 +29,7 @@ export const CATALOGO: { id: WidgetId; titulo: string; largura: Largura }[] = [
   { id: "fluxo", titulo: "Entradas e saídas", largura: 60 },
   { id: "categorias", titulo: "Despesas por categoria", largura: 60 },
   { id: "patrimonio", titulo: "Evolução patrimonial", largura: 60 },
-  { id: "consolidado", titulo: "Período consolidado", largura: 20 },
-  { id: "faturas", titulo: "Faturas em aberto", largura: 20 },
+  { id: "faturas", titulo: "Cartões de crédito", largura: 60 },
 ]
 
 export const LARGURAS: Largura[] = [12, 15, 20, 30, 40, 45, 60]

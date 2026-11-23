@@ -31,15 +31,14 @@ import { Link } from "react-router"
 import { toast } from "sonner"
 
 import { EmptyState } from "@/components/common/empty-state"
-import { Valor } from "@/components/common/valor"
 import {
   BarrasEmpilhadasCategorias,
   DistribuicaoCategorias,
   GraficoFluxo,
   GraficoPatrimonio,
-  RoscaEntradasSaidas,
 } from "@/components/dashboard/graficos"
 import { KpiCard } from "@/components/dashboard/kpi-card"
+import { PainelCartoes } from "@/components/dashboard/painel-cartoes"
 import { PeriodoPicker } from "@/components/dashboard/periodo-picker"
 import { SyncButton } from "@/components/sync-button"
 import { Button } from "@/components/ui/button"
@@ -360,51 +359,17 @@ export function DashboardPage() {
         )}
       </CardGrafico>
     ),
-    consolidado: () => (
-      <CardGrafico
-        titulo="Período consolidado"
-        descricao={`Entradas e saídas · ${rotuloPeriodo}`}
-      >
-        {dashPeriodo.isLoading ? (
-          <Skeleton className="h-[160px] w-full" />
-        ) : (
-          <RoscaEntradasSaidas
-            entradas={dashPeriodo.data?.entradas_centavos ?? 0}
-            saidas={dashPeriodo.data?.saidas_centavos ?? 0}
-          />
-        )}
-      </CardGrafico>
-    ),
     faturas: () => (
       <CardGrafico
-        titulo="Faturas em aberto"
-        descricao="Próximos vencimentos"
+        titulo="Cartões de crédito"
+        descricao="Visão global das faturas, parcelas e limites"
         acao={
           <Button asChild variant="ghost" size="sm">
             <Link to="/faturas">Ver faturas</Link>
           </Button>
         }
       >
-        {!d ? (
-          <Skeleton className="h-20 w-full" />
-        ) : d.faturas_abertas.length === 0 ? (
-          <p className="py-4 text-sm text-muted-foreground">
-            Nenhuma fatura a vencer.
-          </p>
-        ) : (
-          <div className="space-y-1">
-            {d.faturas_abertas.map((f) => (
-              <Link
-                key={f.id}
-                to={`/faturas/${f.id}`}
-                className="flex items-center justify-between gap-3 rounded-md py-1.5 text-sm transition-colors hover:text-primary"
-              >
-                <span>Vencimento {formatDate(f.due_date)}</span>
-                <Valor centavos={-f.total_amount_centavos} />
-              </Link>
-            ))}
-          </div>
-        )}
+        <PainelCartoes saidasMes={d?.saidas_centavos} />
       </CardGrafico>
     ),
   }
