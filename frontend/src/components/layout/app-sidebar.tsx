@@ -29,6 +29,7 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
   SidebarRail,
+  SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar"
 import {
@@ -159,8 +160,10 @@ export function AppSidebar() {
 
   return (
     <Sidebar variant="inset" collapsible="icon">
-      <SidebarHeader>
-        <SidebarMenu>
+      {/* Logo + botão de recolher lado a lado; recolhida (só ícones), o botão desce para baixo do
+          logo para continuar à mão. */}
+      <SidebarHeader className="flex-row items-center gap-1 group-data-[collapsible=icon]:flex-col">
+        <SidebarMenu className="min-w-0 flex-1">
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild tooltip="mango">
               <NavLink to="/">
@@ -176,6 +179,10 @@ export function AppSidebar() {
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
+        <SidebarTrigger
+          className="shrink-0 text-sidebar-icon hover:text-sidebar-accent-foreground"
+          title="Recolher ou expandir o menu (Ctrl+B)"
+        />
       </SidebarHeader>
 
       <SidebarContent>
