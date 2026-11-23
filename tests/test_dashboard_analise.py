@@ -225,3 +225,25 @@ def test_rota_analise_valida_periodo(client_factory, db: Session):
     assert r.status_code == 422
     r = c.get("/api/dashboard/analise/transacoes", params={"natureza": "receita"})
     assert r.json() == {"items": [], "total": 0}
+
+
+def test_estorno_sem_compra_fecha_contrapartes_e_meios(db: Session):
+    """Estorno numa contraparte/cartão sem compra no período: entra em "Outros" e na quebra por
+    conta (com valor negativo), para top + Outros e a soma por conta fecharem no total."""
+    u = _usuario(db, "estorno-sem-compra@mango.test")
+    _cats(db)
+    _, credit = _contas(db, u.id)
+    repo = TransacaoRepository(db, u.id)
+    compra = _tx(repo, credit, "compra", -10_000, cat="10000000", quando=_em(2026, 2, 3))
+    compra.merchant_nome = "Loja A"
+    estorno = _tx(repo, credit, "estorno", 4_000, cat="17000000", quando=_em(2026, 2, 4))
+    estorno.merchant_nome = "Loja B"
+    db.commit()
+
+    a = montar_analise(db, u.id, "despesa", *FEV)
+    assert a.total_centavos == 6_000
+    assert [c.nome for c in a.contrapartes] == ["Loja A"]
+    assert a.outras_contrapartes_centavos == -4_000
+    assert sum(c.total_centavos for c in a.contrapartes) + a.outras_contrapartes_centavos == 6_000
+    (cartao,) = a.meios
+    assert sum(c.total_centavos for c in cartao.por_conta) == cartao.total_centavos == 6_000

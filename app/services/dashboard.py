@@ -503,8 +503,13 @@ def periodo_anterior(inicio: date, fim: date) -> tuple[date, date]:
     return inicio - timedelta(days=n), inicio - timedelta(days=1)
 
 
+# Teto da chave: `description` é Text e `casefold` pode expandir; o produtor (ranking) e o filtro
+# do drill-down usam a mesma chave truncada, então a comparação continua exata.
+_MAX_CHAVE = 200
+
+
 def chave_contraparte(nome: str | None) -> str:
-    return " ".join((nome or "").split()).casefold()
+    return " ".join((nome or "").split()).casefold()[:_MAX_CHAVE]
 
 
 def _meses_entre(inicio: date, fim: date) -> list[tuple[int, int]]:
@@ -567,7 +572,9 @@ def _nome_contas(db: Session, usuario_id: int) -> dict[int, str]:
 def _ranking_contrapartes(
     atual: list[Lancamento],
 ) -> tuple[list[ContraparteTotal], list[ContraparteTotal]]:
-    """(top 5, resto) das contrapartes com total > 0, agrupadas pelo nome normalizado."""
+    """(top 5, resto) das contrapartes, agrupadas pelo nome normalizado. O top é das que têm
+    total > 0; o resto leva as demais, inclusive saldo ≤ 0 (estorno sem compra no período), para
+    top + "Outros" fechar no total da análise."""
     contrap: dict[str, list] = {}  # chave → [nome, total, quantidade]
     for x in atual:
         c = contrap.setdefault(
@@ -579,12 +586,13 @@ def _ranking_contrapartes(
         (
             ContraparteTotal(chave=k, nome=n, total_centavos=t, quantidade=q)
             for k, (n, t, q) in contrap.items()
-            if t > 0
+            if t != 0
         ),
         key=lambda c: c.total_centavos,
         reverse=True,
     )
-    return ranking[:_TOP_CONTRAPARTES], ranking[_TOP_CONTRAPARTES:]
+    top = [c for c in ranking[:_TOP_CONTRAPARTES] if c.total_centavos > 0]
+    return top, ranking[len(top) :]
 
 
 def _meios(atual: list[Lancamento], nomes: dict[int, str]) -> list[MeioTotal]:
@@ -601,7 +609,7 @@ def _meios(atual: list[Lancamento], nomes: dict[int, str]) -> list[MeioTotal]:
                 (
                     ContaTotal(conta_id=cid, nome=nomes.get(cid, "Conta"), total_centavos=v)
                     for cid, v in por_conta.items()
-                    if cid is not None and v > 0
+                    if cid is not None and v != 0  # estorno líquido também explica o total
                 ),
                 key=lambda c: c.total_centavos,
                 reverse=True,

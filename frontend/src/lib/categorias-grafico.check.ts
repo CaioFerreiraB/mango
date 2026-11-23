@@ -25,6 +25,7 @@ const rotulo = new Map([["a", "Alimentação"]])
   )
   assert.equal(d.fatias.length, 2)
   assert.equal(d.total, 650)
+  assert.equal(d.abatimento, 0)
   assert.equal(d.slotDe(null), 1)
 }
 
@@ -54,3 +55,20 @@ const rotulo = new Map([["a", "Alimentação"]])
 }
 
 console.log("categorias-grafico: ok")
+
+// Categoria com saldo negativo (estorno sem compra no período) não vira fatia: vai para o
+// abatimento, e total + abatimento = líquido.
+{
+  const d = distribuirCategorias(
+    [
+      { categoria_id: "a", total_centavos: 1000 },
+      { categoria_id: "b", total_centavos: -400 },
+    ],
+    new Map()
+  )
+  assert.deepEqual(
+    d.itens.map((i) => i.id),
+    ["a"]
+  )
+  assert.equal(d.total + d.abatimento, 600)
+}

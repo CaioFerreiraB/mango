@@ -369,8 +369,9 @@ export function DistribuicaoCategorias({
         {/* Total no miolo: pointer-events-none para não roubar o hover da rosca. */}
         <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
           <span className="text-xs text-muted-foreground">Total</span>
+          {/* Líquido (= KPI): compras menos estorno de categoria sem compra no período. */}
           <span className="text-lg font-semibold tabular-nums">
-            {formatBRL(dist.total)}
+            {formatBRL(dist.total + dist.abatimento)}
           </span>
         </div>
       </div>
@@ -482,6 +483,14 @@ function BarrasLegenda({
           </li>
         )
       })}
+      {dist.abatimento < 0 ? (
+        <li className="flex items-baseline justify-between gap-3 px-2 py-1.5 text-sm text-muted-foreground">
+          <span className="truncate">Estornos sem compra no período</span>
+          <span className="shrink-0 tabular-nums">
+            {formatBRL(dist.abatimento)}
+          </span>
+        </li>
+      ) : null}
     </ul>
   )
 }

@@ -36,7 +36,10 @@ export type Distribuicao = {
   fatias: ItemCategoria[]
   /** id → slot (null = outras), para colorir o empilhado com a mesma regra. */
   slotDe: (categoriaId: string | null) => number | null
+  /** Soma das compras por categoria (base dos %). */
   total: number
+  /** Soma das categorias com saldo < 0 no período (estorno sem compra): abate o total líquido. */
+  abatimento: number
 }
 
 export function distribuirCategorias(
@@ -78,5 +81,8 @@ export function distribuirCategorias(
     fatias,
     slotDe: (id) => slots.get(id ?? SEM) ?? null,
     total: itens.reduce((s, i) => s + i.valor, 0),
+    abatimento: [...somas.values()]
+      .filter((v) => v < 0)
+      .reduce((s, v) => s + v, 0),
   }
 }

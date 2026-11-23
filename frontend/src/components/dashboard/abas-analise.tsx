@@ -46,6 +46,7 @@ import {
   mesAteHoje,
   ultimos6MesesCompletos,
 } from "@/lib/format"
+import { cn } from "@/lib/utils"
 
 type Periodo = { inicio: string; fim: string }
 
@@ -177,7 +178,12 @@ function RankingContrapartes({
   onSelecionar: (f: FiltroAnalise) => void
 }) {
   if (a.contrapartes.length === 0) return <SemDados />
-  const max = a.contrapartes[0].total_centavos
+  // "Outros" pode passar da maior contraparte (ou ser negativo, com estornos): a escala usa o
+  // maior dos dois e a largura fica em [1%, 100%].
+  const max = Math.max(
+    a.contrapartes[0].total_centavos,
+    a.outras_contrapartes_centavos
+  )
   const linha = (nome: string, valor: number) => (
     <>
       <div className="flex items-baseline justify-between gap-3 text-sm">
@@ -192,7 +198,9 @@ function RankingContrapartes({
       <div className="mt-1.5 h-2 rounded-full bg-muted" aria-hidden>
         <div
           className="h-full rounded-full bg-primary"
-          style={{ width: `${Math.max((valor / max) * 100, 1)}%` }}
+          style={{
+            width: `${Math.min(100, Math.max((valor / max) * 100, 1))}%`,
+          }}
         />
       </div>
     </>
@@ -218,7 +226,7 @@ function RankingContrapartes({
           </button>
         </li>
       ))}
-      {a.outras_contrapartes_centavos > 0 ? (
+      {a.outras_contrapartes_centavos !== 0 ? (
         <li className="px-2 py-2 text-muted-foreground">
           {linha(
             `Outros (${a.outras_contrapartes_quantidade})`,
@@ -306,7 +314,12 @@ function Acumulado({
     },
     [a]
   )
-  if (a.total_centavos === 0 && a.anterior_centavos === 0) return <SemDados />
+  // Vazio só sem nenhum ponto ≠ 0 (compra + estorno no mesmo período termina em 0, mas houve
+  // movimento a mostrar).
+  const temValor = a.acumulado.some(
+    (p) => (p.atual_centavos ?? 0) !== 0 || (p.anterior_centavos ?? 0) !== 0
+  )
+  if (!temValor) return <SemDados />
   return (
     <GraficoLinhas
       dados={dados}
@@ -513,9 +526,45 @@ function DespesasOrcamento({
               ariaLabel={`Gasto e orçamento por categoria em ${nomeMes}`}
             />
             <p className="text-xs text-muted-foreground">
-              Em vermelho, categorias acima do limite. Clique numa categoria
-              para ver as transações.
+              Em vermelho, categorias acima do limite. Escolha uma categoria (no
+              gráfico ou abaixo) para ver as transações.
             </p>
+            {/* Mesmo drill-down das barras, por teclado/leitor de tela — e a leitura em tabela. */}
+            <ul
+              className="flex flex-wrap gap-1.5"
+              aria-label="Categorias do orçamento"
+            >
+              {itens.map((it, i) => (
+                <li key={it.orcamento_mensal_id}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className={cn(
+                      "h-auto py-1 text-xs font-normal",
+                      it.realizado_centavos > it.limite_centavos &&
+                        "border-destructive/50"
+                    )}
+                    onClick={() =>
+                      setAlvo({
+                        tipo: "despesa",
+                        categoriaId: it.categoria_id,
+                        titulo: dados[i].nome,
+                      })
+                    }
+                  >
+                    <span className="max-w-[14ch] truncate">
+                      {dados[i].nome}
+                    </span>
+                    <span className="text-muted-foreground tabular-nums">
+                      {it.percentual}%
+                      {it.realizado_centavos > it.limite_centavos
+                        ? " · acima"
+                        : ""}
+                    </span>
+                  </Button>
+                </li>
+              ))}
+            </ul>
           </div>
         )}
       </Estado>

@@ -3,6 +3,7 @@ import { useMemo } from "react"
 import { EChart } from "@/components/common/echart"
 import {
   comAlfa,
+  escaparHTML,
   linhaTooltipHTML,
   opcoesBase,
   useCores,
@@ -84,7 +85,8 @@ function tooltipEixo(
           )
         )
       const extra = detalhe?.(i)
-      return `<div style="margin-bottom:4px;font-weight:500">${formatarRotulo(rotulos[i] ?? "")}</div>${linhas.join("")}${extra ? `<div style="margin-top:6px">${extra}</div>` : ""}`
+      // O rótulo pode ser nome do usuário (ex.: categoria): escapado. `detalhe` é HTML deliberado.
+      return `<div style="margin-bottom:4px;font-weight:500">${escaparHTML(formatarRotulo(rotulos[i] ?? ""))}</div>${linhas.join("")}${extra ? `<div style="margin-top:6px">${extra}</div>` : ""}`
     },
   }
 }

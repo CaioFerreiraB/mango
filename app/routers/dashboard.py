@@ -113,7 +113,7 @@ class _FiltroQuery:
     """Filtros do drill-down (query string) — agrupados para a assinatura da rota ficar enxuta."""
 
     categoria_id: str | None = Query(None, min_length=1, max_length=16)
-    contraparte: str | None = Query(None, max_length=255)
+    contraparte: str | None = Query(None, max_length=200)  # = `_MAX_CHAVE` do produtor
     meio: str | None = Query(None, max_length=64)
     conta_id: int | None = Query(None)
 
