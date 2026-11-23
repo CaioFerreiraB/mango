@@ -139,9 +139,12 @@ via `ilustracao(avatar, cena)` de `frontend/src/lib/illustrations.ts` — nunca 
   - **Filtros de página** no mobile ficam atrás de um botão "Filtros" (com o resumo do valor atual)
     que abre um drawer inferior — o topo da página não acumula controles. Botões de ação do topo
     viram só ícone (`max-sm:sr-only` no rótulo).
-  - **Card de destaque (saldo no dashboard):** degradê `--destaque-a → --destaque-b` (accent com
-    L normalizada 0.44 → 0.29 via RCS), texto branco, ondas SVG decorativas atrás do conteúdo e
-    olho de privacidade. Um por tela, no máximo.
+  - **Card de destaque (saldo no dashboard, mobile e desktop):** degradê `--destaque-a →
+    --destaque-b` (accent com L normalizada 0.44 → 0.29 via RCS), texto branco, ondas SVG
+    decorativas atrás do conteúdo. Mede o próprio espaço (`@container`): valor reduz em ⅕ de linha.
+    Um por tela, no máximo. O olho dele liga o **modo privacidade de todos os cards** do painel
+    (valor e tooltip da mini-área mascarados, lembrado no navegador); sem o card de saldo, o olho
+    vai para a barra do topo.
   - **Safe area obrigatória:** a barra fica `env(safe-area-inset-bottom)` + 0.75rem acima da borda,
     e o conteúdo reserva `--bottom-nav-h` + safe area + folga no `pb` do `<main>`, senão a barra
     `fixed` cobre o fim da página. Toasts usam o mesmo `mobileOffset`.

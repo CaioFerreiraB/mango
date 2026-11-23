@@ -18,6 +18,7 @@ import {
   ArrowDown,
   ArrowRight,
   ArrowUp,
+  Eye,
   EyeOff,
   GripVertical,
   Landmark,
@@ -79,7 +80,6 @@ import {
   type Granularidade,
 } from "@/lib/api/dashboard"
 import { useAtualizarPerfil, usePerfil } from "@/lib/api/perfil"
-import { useIsMobile } from "@/hooks/use-mobile"
 import { useTransacoes } from "@/lib/api/transacoes"
 import {
   CATALOGO,
@@ -167,6 +167,8 @@ function variacao(atual: number, anterior: number | undefined): number | null {
   return (atual - anterior) / Math.abs(anterior)
 }
 
+const CHAVE_OCULTO = "mango:dashboard-oculto"
+
 export function DashboardPage() {
   // Cards "no mês": sempre mês corrente até hoje, comparados ao mesmo período do mês anterior.
   const mes = mesAteHoje()
@@ -202,7 +204,23 @@ export function DashboardPage() {
   })
 
   const contas = useContas()
-  const mobile = useIsMobile()
+  // Modo privacidade dos cards: o olho mora no card de saldo (ou no topo, se ele estiver oculto).
+  // Lembrado neste navegador — quem esconde os valores não quer vê-los voltar ao recarregar.
+  const [oculto, setOculto] = useState(() => {
+    try {
+      return localStorage.getItem(CHAVE_OCULTO) === "1"
+    } catch {
+      return false
+    }
+  })
+  const alternarOculto = () => {
+    setOculto(!oculto)
+    try {
+      localStorage.setItem(CHAVE_OCULTO, oculto ? "0" : "1")
+    } catch {
+      // armazenamento bloqueado (aba privada): vale só nesta visita
+    }
+  }
   const categorias = useCategorias()
   // Estável entre renders: os gráficos memorizam a option por ela (hover não pode resetar).
   const rotulo = useMemo(
@@ -297,7 +315,14 @@ export function DashboardPage() {
   ) {
     if (dashMes.isError) return <ErroCard />
     if (!d) return <Skeleton className="h-full min-h-36 w-full rounded-xl" />
-    return <KpiCard label={label} centavos={centavos(d)} {...extra} />
+    return (
+      <KpiCard
+        label={label}
+        centavos={centavos(d)}
+        oculto={oculto}
+        {...extra}
+      />
+    )
   }
 
   const pendentes =
@@ -315,13 +340,17 @@ export function DashboardPage() {
 
   const widgets: Record<WidgetId, () => ReactNode> = {
     "kpi-saldo": () =>
-      mobile && d ? (
+      dashMes.isError ? (
+        <ErroCard />
+      ) : !d ? (
+        <Skeleton className="h-full min-h-36 w-full rounded-xl" />
+      ) : (
         <SaldoDestaque
           centavos={d.saldo_total_centavos}
           contas={contas.data?.filter((c) => c.type === "BANK").length}
+          oculto={oculto}
+          onAlternarOculto={alternarOculto}
         />
-      ) : (
-        kpi("Saldo em contas", (r) => r.saldo_total_centavos)
       ),
     "kpi-entradas": () =>
       kpi("Entradas no mês", (r) => r.entradas_centavos, {
@@ -519,6 +548,18 @@ export function DashboardPage() {
             </>
           ) : (
             <>
+              {visiveis.some((w) => w.id === "kpi-saldo") ? null : (
+                <Button
+                  variant="outline"
+                  size="icon-sm"
+                  onClick={alternarOculto}
+                  aria-pressed={oculto}
+                  aria-label={oculto ? "Mostrar valores" : "Ocultar valores"}
+                  title={oculto ? "Mostrar valores" : "Ocultar valores"}
+                >
+                  {oculto ? <EyeOff aria-hidden /> : <Eye aria-hidden />}
+                </Button>
+              )}
               <SyncButton compacto />
               <Button
                 variant="outline"

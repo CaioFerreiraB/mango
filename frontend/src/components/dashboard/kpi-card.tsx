@@ -1,5 +1,4 @@
 import { ArrowDownRight, ArrowUpRight, Eye, EyeOff } from "lucide-react"
-import { useState } from "react"
 
 import { Valor } from "@/components/common/valor"
 import { AreaTendencia, type CampoSerie } from "@/components/dashboard/graficos"
@@ -44,9 +43,12 @@ export function KpiCard({
   delta,
   serie,
   campo,
+  oculto = false,
 }: {
   label: string
   centavos: number
+  /** Modo privacidade: valor mascarado (e o tooltip da mini-área também). */
+  oculto?: boolean
   sinal?: boolean
   delta?: number | null
   serie?: SerieBucket[]
@@ -91,6 +93,7 @@ export function KpiCard({
             <Valor
               centavos={centavos}
               sinal={sinal}
+              oculto={oculto}
               className="font-bold whitespace-nowrap text-foreground"
             />
             {delta != null ? <Delta delta={delta} /> : null}
@@ -98,7 +101,7 @@ export function KpiCard({
         </div>
         {temArea && serie && campo ? (
           <div className="-mx-4 @[13rem]:-mx-6">
-            <AreaTendencia buckets={serie} campo={campo} />
+            <AreaTendencia buckets={serie} campo={campo} oculto={oculto} />
           </div>
         ) : null}
       </CardContent>
@@ -107,23 +110,25 @@ export function KpiCard({
 }
 
 /**
- * Saldo em contas no mobile: card de destaque no tom escuro do accent do usuário (degradê
- * `--destaque-a → b`, texto branco AA em qualquer preset), ondas decorativas e olho de privacidade.
+ * Saldo em contas: card de destaque no tom escuro do accent do usuário (degradê
+ * `--destaque-a → b`, texto branco AA em qualquer preset), ondas decorativas e o olho que liga o
+ * modo privacidade de TODOS os cards do painel (o estado mora na página). Mede o próprio espaço
+ * (`@container`): no desktop ele ocupa ⅕ da linha, no mobile a linha inteira.
  */
 export function SaldoDestaque({
   centavos,
   contas,
+  oculto,
+  onAlternarOculto,
 }: {
   centavos: number
   /** Quantas contas (BANK) somam o saldo; omitido enquanto carrega. */
   contas?: number
+  oculto: boolean
+  onAlternarOculto: () => void
 }) {
-  const [oculto, setOculto] = useState(false)
   return (
-    <section
-      aria-label="Saldo em contas"
-      className="relative isolate overflow-hidden rounded-2xl bg-destaque-b bg-linear-135 from-destaque-a to-destaque-b px-5 pt-4 pb-5 text-white shadow-[0_12px_28px_-14px_var(--destaque-b)]"
-    >
+    <div className="@container relative isolate flex flex-col overflow-hidden rounded-xl bg-destaque-b bg-linear-135 from-destaque-a to-destaque-b px-5 pt-4 pb-5 text-white shadow-[0_12px_28px_-14px_var(--destaque-b)]">
       {/* Ondas: decoração pura, atrás do conteúdo (dados sempre por cima). */}
       <svg
         viewBox="0 0 320 120"
@@ -143,32 +148,59 @@ export function SaldoDestaque({
         />
       </svg>
       <div className="flex items-start justify-between gap-3">
-        <p className="pt-1 text-sm text-white/80">Saldo em contas</p>
-        <button
-          type="button"
-          onClick={() => setOculto((v) => !v)}
-          aria-pressed={oculto}
-          aria-label={oculto ? "Mostrar saldo" : "Ocultar saldo"}
-          className="-mr-1 flex size-9 shrink-0 items-center justify-center rounded-full bg-white/12 text-white transition-colors hover:bg-white/20 focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:outline-none motion-reduce:transition-none"
-        >
-          {oculto ? (
-            <EyeOff className="size-4" aria-hidden />
-          ) : (
-            <Eye className="size-4" aria-hidden />
-          )}
-        </button>
+        <p className="truncate pt-1 text-sm text-white/80">Saldo em contas</p>
+        <BotaoOcultar
+          oculto={oculto}
+          onClick={onAlternarOculto}
+          className="-mr-1 size-9 bg-white/12 text-white hover:bg-white/20 focus-visible:ring-white/70"
+        />
       </div>
+      {/* Estreito (⅕ da linha no desktop) reduz o valor em vez de cortá-lo. */}
       <Valor
         centavos={centavos}
         oculto={oculto}
         neutro
-        className="mt-1 block text-[1.875rem] leading-tight font-bold tracking-tight text-white"
+        className="mt-1 block text-2xl leading-tight font-bold tracking-tight whitespace-nowrap text-white @[17rem]:text-[1.875rem]"
       />
       {contas != null ? (
-        <p className="mt-3 inline-flex rounded-full bg-white/12 px-2.5 py-1 text-xs text-white/90">
-          {contas === 1 ? "1 conta" : `${contas} contas`}
+        // mt-auto: no desktop o card estica até a altura dos vizinhos e a pílula desce ao rodapé.
+        <p className="mt-auto self-start pt-3">
+          <span className="inline-flex rounded-full bg-white/12 px-2.5 py-1 text-xs text-white/90">
+            {contas === 1 ? "1 conta" : `${contas} contas`}
+          </span>
         </p>
       ) : null}
-    </section>
+    </div>
+  )
+}
+
+/** Olho do modo privacidade: mascara os valores de todos os cards do painel. */
+export function BotaoOcultar({
+  oculto,
+  onClick,
+  className,
+}: {
+  oculto: boolean
+  onClick: () => void
+  className?: string
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={oculto}
+      aria-label={oculto ? "Mostrar valores" : "Ocultar valores"}
+      title={oculto ? "Mostrar valores" : "Ocultar valores"}
+      className={cn(
+        "flex shrink-0 items-center justify-center rounded-full transition-colors focus-visible:ring-2 focus-visible:outline-none motion-reduce:transition-none",
+        className
+      )}
+    >
+      {oculto ? (
+        <EyeOff className="size-4" aria-hidden />
+      ) : (
+        <Eye className="size-4" aria-hidden />
+      )}
+    </button>
   )
 }

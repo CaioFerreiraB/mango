@@ -199,12 +199,17 @@ const NOME_CAMPO: Record<CampoSerie, string> = {
  * Tendência de um campo da série nos últimos meses, como área compacta (sparkline). Linha na cor
  * primária + degradê que some — único acento (DESIGN.md "Restrained"). Vazio → `null`.
  */
+/** Modo privacidade: o tooltip mostra a máscara no lugar do valor (estável p/ o memo da option). */
+const mascarar = () => "R$ ••••"
+
 export function AreaTendencia({
   buckets,
   campo,
+  oculto = false,
 }: {
   buckets: SerieBucket[]
   campo: CampoSerie
+  oculto?: boolean
 }) {
   const dados = useMemo(
     () =>
@@ -219,7 +224,7 @@ export function AreaTendencia({
     <Sparkline
       dados={dados}
       nome={NOME_CAMPO[campo]}
-      formatarValor={formatBRL}
+      formatarValor={oculto ? mascarar : formatBRL}
       ariaLabel={`Tendência de ${NOME_CAMPO[campo].toLowerCase()} nos últimos meses`}
     />
   )

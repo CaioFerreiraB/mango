@@ -15,8 +15,9 @@ ainda está se assentando. Cada versão publicada tem uma imagem correspondente 
 - **Nova navegação no celular:** o menu completo abre pelo ☰ no topo, como uma gaveta lateral, e
   a barra inferior virou uma pílula flutuante com o Início e mais três atalhos que você escolhe em
   Configurações → Preferências → Atalhos do celular.
-- **Saldo em destaque no celular:** o saldo em contas ganhou um card na sua cor de destaque, com
-  botão para ocultar o valor; os outros cards ficam dois por linha.
+- **Saldo em destaque:** o saldo em contas ganhou um card na sua cor de destaque (celular e
+  computador). O olho dele oculta os valores de todos os cards do painel e fica lembrado neste
+  navegador; no celular, os outros cards ficam dois por linha.
 - **Filtros do dashboard num botão** no celular, em vez de ocupar o topo da página.
 - **Últimas transações no dashboard:** as 10 mais recentes logo abaixo dos cards, com o aviso de
   transações pendentes acima da tabela.
