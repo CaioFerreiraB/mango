@@ -16,9 +16,7 @@ export type WidgetId =
   | "kpi-investido"
   | "ultimas"
   | "fluxo"
-  | "categorias"
   | "patrimonio"
-  | "faturas"
 
 /** Ordem e largura padrão (grid de 60 colunas a partir de `lg`). */
 export const CATALOGO: { id: WidgetId; titulo: string; largura: Largura }[] = [
@@ -29,10 +27,10 @@ export const CATALOGO: { id: WidgetId; titulo: string; largura: Largura }[] = [
   { id: "kpi-investido", titulo: "Investido no mês", largura: 12 },
   { id: "ultimas", titulo: "Últimas transações", largura: 60 },
   { id: "fluxo", titulo: "Entradas e saídas", largura: 60 },
-  { id: "categorias", titulo: "Despesas por categoria", largura: 60 },
   { id: "patrimonio", titulo: "Evolução patrimonial", largura: 60 },
-  { id: "faturas", titulo: "Cartões de crédito", largura: 60 },
 ]
+// Categorias de despesa e cartões moram na aba Despesas: ids antigos ("categorias", "faturas")
+// num layout salvo caem no merge como desconhecidos.
 
 export const LARGURAS: Largura[] = [12, 15, 20, 30, 40, 45, 60]
 

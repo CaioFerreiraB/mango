@@ -40,6 +40,8 @@ from app.services.categoria_arvore import subarvores as montar_subarvores
 from app.services.categoria_resolucao import com_assinatura, expr_categoria_efetiva
 from app.services.gasto_usuario import (
     categorias_investimento,
+    categorias_renda,
+    expr_estorno_cartao,
     linhas_do_periodo,
     parcelas_divisao,
     tipo_do_lancamento,
@@ -208,19 +210,26 @@ def transacoes_do_item(
         def no_item(cat):  # espelha `_eh_nao_planejado` em SQL
             return or_(cat.is_(None), and_(cat.not_in(cobertas), cat != CATEGORIA_PAGAMENTO_FATURA))
 
-    def do_tipo(cat, tipo_tx: str | None):
+    def do_tipo(cat, natureza=None):
         if tipo == "investimento":
             return cat.in_(investimento)
         fora = or_(cat.is_(None), cat.not_in(investimento))
-        return fora if tipo_tx is None else and_(fora, Transacao.type == tipo_tx)
+        return fora if natureza is None else and_(fora, natureza)
 
     cat = expr_categoria_efetiva(usuario_id)
+    # Estorno de cartão abate a despesa (`gasto_usuario.expr_estorno_cartao`): entra na lista da
+    # despesa e sai da de receita, como no realizado.
+    estorno = expr_estorno_cartao(usuario_id, cat, categorias_renda(db, usuario_id))
+    natureza = {
+        "despesa": or_(Transacao.type == "DEBIT", estorno),
+        "receita": and_(Transacao.type == "CREDIT", ~estorno),
+    }.get(tipo)
     stmt = (
         com_assinatura(select(Transacao), usuario_id)
         .where(
             *_filtros_mes(usuario_id, ano, mes),
             Transacao.type.in_(("DEBIT", "CREDIT")),
-            do_tipo(cat, {"despesa": "DEBIT", "receita": "CREDIT"}.get(tipo)),
+            do_tipo(cat, natureza),
             no_item(cat),
         )
         .order_by(Transacao.date.desc(), Transacao.id.desc())

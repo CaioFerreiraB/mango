@@ -14,7 +14,6 @@ import {
 } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 import {
-  AlertTriangle,
   ArrowDown,
   ArrowRight,
   ArrowUp,
@@ -29,21 +28,22 @@ import {
   SlidersHorizontal,
 } from "lucide-react"
 import { useMemo, useState, type ReactNode } from "react"
-import { Link } from "react-router"
+import { Link, useSearchParams } from "react-router"
 import { toast } from "sonner"
 
 import { EmptyState } from "@/components/common/empty-state"
+import { AbaDespesas, AbaReceitas } from "@/components/dashboard/abas-analise"
 import {
-  BarrasEmpilhadasCategorias,
-  DistribuicaoCategorias,
+  CardGrafico,
+  ErroCard,
+  SeletorGranularidade,
+} from "@/components/dashboard/card-grafico"
+import {
   GraficoFluxo,
   GraficoPatrimonio,
-  type CategoriaSelecionada,
 } from "@/components/dashboard/graficos"
 import { KpiCard, SaldoDestaque } from "@/components/dashboard/kpi-card"
-import { TransacoesCategoriaDialog } from "@/components/dashboard/transacoes-categoria-dialog"
 import { TransacoesTabela } from "@/components/transacoes/transacoes-tabela"
-import { PainelCartoes } from "@/components/dashboard/painel-cartoes"
 import { PeriodoPicker } from "@/components/dashboard/periodo-picker"
 import {
   Drawer,
@@ -58,13 +58,6 @@ import {
 import { SyncButton } from "@/components/sync-button"
 import { Button } from "@/components/ui/button"
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
-import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -72,6 +65,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { useCategorias, nomeCategoria } from "@/lib/api/categorias"
 import { useContas } from "@/lib/api/contas"
@@ -79,6 +73,7 @@ import {
   useDashboard,
   useDashboardSeries,
   usePatrimonio,
+  PERIODO_LABEL,
   type Granularidade,
 } from "@/lib/api/dashboard"
 import { useAtualizarPerfil, usePerfil } from "@/lib/api/perfil"
@@ -106,12 +101,6 @@ import {
   ultimos6MesesCompletos,
 } from "@/lib/format"
 import { cn } from "@/lib/utils"
-
-const PERIODO_LABEL: Record<Granularidade, string> = {
-  diaria: "dia",
-  semanal: "semana",
-  mensal: "mês",
-}
 
 /** Presets do filtro rápido: intervalo até hoje (fuso SP). */
 const PRESETS_RAPIDOS = [
@@ -171,6 +160,9 @@ function variacao(atual: number, anterior: number | undefined): number | null {
 
 const CHAVE_OCULTO = "mango:dashboard-oculto"
 
+const ABAS = ["geral", "receitas", "despesas"] as const
+type Aba = (typeof ABAS)[number]
+
 export function DashboardPage() {
   // Cards "no mês": sempre mês corrente até hoje, comparados ao mesmo período do mês anterior.
   const mes = mesAteHoje()
@@ -194,12 +186,20 @@ export function DashboardPage() {
 
   const [granFluxo, setGranFluxo] = useState<Granularidade>("semanal")
   const serieFluxo = useDashboardSeries(periodo, granFluxo)
-  const [granCat, setGranCat] = useState<Granularidade>("semanal")
-  const serieCat = useDashboardSeries(periodo, granCat)
-  const dashPeriodo = useDashboard(periodo)
-  // Clique numa categoria (rosca, barras-legenda ou empilhado) → transações dela no período.
-  const [categoriaAberta, setCategoriaAberta] =
-    useState<CategoriaSelecionada | null>(null)
+  // Aba na URL (?aba=receitas): o voltar do navegador e um link direto funcionam.
+  const [params, setParams] = useSearchParams()
+  const aba = ABAS.includes(params.get("aba") as Aba)
+    ? (params.get("aba") as Aba)
+    : "geral"
+  const trocarAba = (v: string) =>
+    setParams(
+      (p) => {
+        if (v === "geral") p.delete("aba")
+        else p.set("aba", v)
+        return p
+      },
+      { replace: true }
+    )
   const patrimonio = usePatrimonio(12)
   // Mesmo recorte padrão da tela de transações (sem pagamento de fatura nem parcelas futuras).
   const ultimas = useTransacoes({
@@ -430,42 +430,6 @@ export function DashboardPage() {
         )}
       </CardGrafico>
     ),
-    categorias: () => (
-      <CardGrafico
-        titulo="Despesas por categoria"
-        descricao={`Todas as despesas · ${rotuloPeriodo} (sem transferências e investimentos)`}
-        acao={<SeletorGranularidade valor={granCat} onChange={setGranCat} />}
-      >
-        <div className="space-y-8">
-          {/* Distribuição: total do período inteiro (não depende da granularidade). */}
-          {dashPeriodo.isLoading ? (
-            <Skeleton className="h-[260px] w-full" />
-          ) : (
-            <DistribuicaoCategorias
-              gastos={dashPeriodo.data?.gasto_por_categoria ?? []}
-              rotulo={rotulo}
-              onSelecionar={setCategoriaAberta}
-            />
-          )}
-          <div className="space-y-2">
-            <p className="text-sm text-muted-foreground">
-              Por {PERIODO_LABEL[granCat]}
-            </p>
-            {serieCat.isLoading ? (
-              <Skeleton className="h-[240px] w-full" />
-            ) : (
-              <BarrasEmpilhadasCategorias
-                buckets={serieCat.data?.buckets ?? []}
-                granularidade={granCat}
-                rotulo={rotulo}
-                comLegenda={false}
-                onSelecionar={setCategoriaAberta}
-              />
-            )}
-          </div>
-        </div>
-      </CardGrafico>
-    ),
     patrimonio: () => (
       <CardGrafico
         titulo="Evolução patrimonial"
@@ -482,23 +446,23 @@ export function DashboardPage() {
         )}
       </CardGrafico>
     ),
-    faturas: () => (
-      <CardGrafico
-        titulo="Cartões de crédito"
-        descricao="Visão global das faturas, parcelas e limites"
-        acao={
-          <Button asChild variant="ghost" size="sm">
-            <Link to="/faturas">Ver faturas</Link>
-          </Button>
-        }
-      >
-        <PainelCartoes saidasMes={d?.saidas_centavos} />
-      </CardGrafico>
-    ),
   }
 
+  const geral = aba === "geral"
   return (
-    <div className="space-y-4">
+    <Tabs value={aba} onValueChange={trocarAba} className="gap-4">
+      {/* Abas no topo; o período abaixo vale para as três. Personalizar é só da Geral. */}
+      <TabsList className="w-full sm:w-fit">
+        <TabsTrigger value="geral" disabled={editando}>
+          Geral
+        </TabsTrigger>
+        <TabsTrigger value="receitas" disabled={editando}>
+          Receitas
+        </TabsTrigger>
+        <TabsTrigger value="despesas" disabled={editando}>
+          Despesas
+        </TabsTrigger>
+      </TabsList>
       <div className="flex flex-wrap items-center justify-between gap-2">
         {/* Mobile: o período mora num botão "Filtros" (gaveta), não espalhado pelo topo. */}
         <FiltrosMobile inicio={inicio} fim={fim} onChange={mudarPeriodo} />
@@ -555,7 +519,7 @@ export function DashboardPage() {
             </>
           ) : (
             <>
-              {visiveis.some((w) => w.id === "kpi-saldo") ? null : (
+              {geral && visiveis.some((w) => w.id === "kpi-saldo") ? null : (
                 <Button
                   variant="outline"
                   size="icon-sm"
@@ -568,81 +532,95 @@ export function DashboardPage() {
                 </Button>
               )}
               <SyncButton compacto />
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setRascunho(salvo)}
-              >
-                <LayoutGrid aria-hidden />
-                <span className="max-sm:sr-only">Personalizar</span>
-              </Button>
+              {geral ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setRascunho(salvo)}
+                >
+                  <LayoutGrid aria-hidden />
+                  <span className="max-sm:sr-only">Personalizar</span>
+                </Button>
+              ) : null}
             </>
           )}
         </div>
       </div>
 
-      {editando ? (
-        <p className="rounded-lg bg-muted/60 px-4 py-2.5 text-sm text-muted-foreground">
-          Arraste os blocos pela alça ou use ▲ ▼ para reordenar. Cada bloco pode
-          ser ocultado e, em telas largas, mudar de largura; os ocultos voltam
-          por “Adicionar visualização”.
-        </p>
-      ) : null}
+      <TabsContent value="geral" className="space-y-4">
+        {editando ? (
+          <p className="rounded-lg bg-muted/60 px-4 py-2.5 text-sm text-muted-foreground">
+            Arraste os blocos pela alça ou use ▲ ▼ para reordenar. Cada bloco
+            pode ser ocultado e, em telas largas, mudar de largura; os ocultos
+            voltam por “Adicionar visualização”.
+          </p>
+        ) : null}
 
-      {/* Pendentes moram acima da tabela de últimas transações; sem ela visível, ficam no topo. */}
-      {visiveis.some((w) => w.id === "ultimas") ? null : pendentes}
+        {/* Pendentes moram acima da tabela de últimas transações; sem ela visível, ficam no topo. */}
+        {visiveis.some((w) => w.id === "ultimas") ? null : pendentes}
 
-      {/* @container: o grid lê a largura disponível (ver SPAN). */}
-      <div className="@container">
-        <DndContext
-          sensors={sensores}
-          collisionDetection={closestCenter}
-          onDragEnd={aoSoltar}
-        >
-          <SortableContext
-            items={visiveis.map((w) => w.id)}
-            strategy={rectSortingStrategy}
+        {/* @container: o grid lê a largura disponível (ver SPAN). */}
+        <div className="@container">
+          <DndContext
+            sensors={sensores}
+            collisionDetection={closestCenter}
+            onDragEnd={aoSoltar}
           >
-            <div className="grid grid-cols-2 gap-3 sm:gap-4 @3xl:grid-cols-6 @6xl:grid-cols-60">
-              {visiveis.map((w, i) => (
-                <Widget
-                  key={w.id}
-                  w={w}
-                  editando={editando}
-                  primeiro={i === 0}
-                  ultimo={i === visiveis.length - 1}
-                  onOcultar={() =>
-                    alterar(w.id, (x) => ({ ...x, visivel: false }))
-                  }
-                  onLargura={() =>
-                    alterar(w.id, (x) => ({
-                      ...x,
-                      largura: proximaLargura(x.largura),
-                    }))
-                  }
-                  onMover={(delta) => moverVisivel(w.id, delta)}
-                >
-                  {widgets[w.id as WidgetId]()}
-                </Widget>
-              ))}
-            </div>
-          </SortableContext>
-        </DndContext>
-      </div>
-      <TransacoesCategoriaDialog
-        categoria={categoriaAberta}
-        inicio={inicio}
-        fim={fim}
-        onFechar={() => setCategoriaAberta(null)}
-      />
-      {visiveis.length === 0 ? (
-        <EmptyState
-          icon={LayoutGrid}
-          title="Nenhuma visualização no painel"
-          description="Use “Adicionar visualização” para trazer os blocos de volta."
+            <SortableContext
+              items={visiveis.map((w) => w.id)}
+              strategy={rectSortingStrategy}
+            >
+              <div className="grid grid-cols-2 gap-3 sm:gap-4 @3xl:grid-cols-6 @6xl:grid-cols-60">
+                {visiveis.map((w, i) => (
+                  <Widget
+                    key={w.id}
+                    w={w}
+                    editando={editando}
+                    primeiro={i === 0}
+                    ultimo={i === visiveis.length - 1}
+                    onOcultar={() =>
+                      alterar(w.id, (x) => ({ ...x, visivel: false }))
+                    }
+                    onLargura={() =>
+                      alterar(w.id, (x) => ({
+                        ...x,
+                        largura: proximaLargura(x.largura),
+                      }))
+                    }
+                    onMover={(delta) => moverVisivel(w.id, delta)}
+                  >
+                    {widgets[w.id as WidgetId]()}
+                  </Widget>
+                ))}
+              </div>
+            </SortableContext>
+          </DndContext>
+        </div>
+        {visiveis.length === 0 ? (
+          <EmptyState
+            icon={LayoutGrid}
+            title="Nenhuma visualização no painel"
+            description="Use “Adicionar visualização” para trazer os blocos de volta."
+          />
+        ) : null}
+      </TabsContent>
+      <TabsContent value="receitas" className="@container">
+        <AbaReceitas
+          periodo={periodo}
+          rotuloPeriodo={rotuloPeriodo}
+          rotulo={rotulo}
+          oculto={oculto}
         />
-      ) : null}
-    </div>
+      </TabsContent>
+      <TabsContent value="despesas" className="@container">
+        <AbaDespesas
+          periodo={periodo}
+          rotuloPeriodo={rotuloPeriodo}
+          rotulo={rotulo}
+          oculto={oculto}
+        />
+      </TabsContent>
+    </Tabs>
   )
 }
 
@@ -744,65 +722,6 @@ function Widget({
         </div>
       ) : null}
     </section>
-  )
-}
-
-function CardGrafico({
-  titulo,
-  descricao,
-  acao,
-  children,
-}: {
-  titulo: string
-  descricao?: string
-  acao?: ReactNode
-  children: ReactNode
-}) {
-  return (
-    <Card>
-      <CardHeader className="flex-row flex-wrap items-start justify-between gap-x-4 gap-y-2">
-        <div className="min-w-0">
-          <CardTitle className="text-base">{titulo}</CardTitle>
-          {descricao ? <CardDescription>{descricao}</CardDescription> : null}
-        </div>
-        {acao}
-      </CardHeader>
-      <CardContent className="@container">{children}</CardContent>
-    </Card>
-  )
-}
-
-function ErroCard() {
-  return (
-    <Card>
-      <CardContent className="flex items-center gap-2 text-sm text-muted-foreground">
-        <AlertTriangle className="size-4" aria-hidden />
-        Não foi possível carregar.
-      </CardContent>
-    </Card>
-  )
-}
-
-function SeletorGranularidade({
-  valor,
-  onChange,
-}: {
-  valor: Granularidade
-  onChange: (g: Granularidade) => void
-}) {
-  return (
-    <ToggleGroup
-      type="single"
-      size="sm"
-      variant="outline"
-      spacing={0}
-      value={valor}
-      onValueChange={(v) => v && onChange(v as Granularidade)}
-    >
-      <ToggleGroupItem value="diaria">Diário</ToggleGroupItem>
-      <ToggleGroupItem value="semanal">Semanal</ToggleGroupItem>
-      <ToggleGroupItem value="mensal">Mensal</ToggleGroupItem>
-    </ToggleGroup>
   )
 }
 

@@ -21,6 +21,7 @@ assert.equal(layoutPadrao().length, CATALOGO.length)
   const salvo = [
     { id: "fluxo", largura: 30, visivel: false },
     { id: "widget-removido", largura: 60, visivel: true },
+    { id: "categorias", largura: 60, visivel: true }, // foi para a aba Despesas
     { id: "kpi-saldo", largura: 20, visivel: true },
     { id: "fluxo", largura: 60, visivel: true }, // repetido: vale o 1º
   ] as WidgetLayout[]
@@ -29,9 +30,7 @@ assert.equal(layoutPadrao().length, CATALOGO.length)
     l.map((w) => w.id),
     [
       "fluxo",
-      "categorias", // depois de fluxo
-      "patrimonio",
-      "faturas",
+      "patrimonio", // depois de fluxo
       "kpi-saldo",
       "kpi-entradas", // depois de kpi-saldo
       "kpi-saidas",
@@ -41,9 +40,9 @@ assert.equal(layoutPadrao().length, CATALOGO.length)
     ]
   )
   assert.deepEqual(l[0], { id: "fluxo", largura: 30, visivel: false })
-  assert.deepEqual(l[4], { id: "kpi-saldo", largura: 20, visivel: true })
+  assert.deepEqual(l[2], { id: "kpi-saldo", largura: 20, visivel: true })
   assert.equal(l.length, CATALOGO.length)
-  assert.ok(!l.some((w) => w.id === "widget-removido"))
+  assert.ok(!l.some((w) => w.id === "widget-removido" || w.id === "categorias"))
   const novo = l.find((w) => w.id === "patrimonio")
   assert.deepEqual(novo, { id: "patrimonio", largura: 60, visivel: true })
 }
@@ -57,7 +56,7 @@ assert.equal(layoutPadrao().length, CATALOGO.length)
 
 // Sem nenhum vizinho anterior no salvo → início.
 assert.equal(
-  mesclarLayout([{ id: "faturas", largura: 60, visivel: true }])[0].id,
+  mesclarLayout([{ id: "patrimonio", largura: 60, visivel: true }])[0].id,
   "kpi-saldo"
 )
 

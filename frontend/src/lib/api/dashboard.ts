@@ -7,7 +7,15 @@ export type DashboardResumo = components["schemas"]["DashboardResumo"]
 export type GastoCategoria = components["schemas"]["GastoCategoria"]
 export type DashboardSeries = components["schemas"]["DashboardSeries"]
 export type SerieBucket = components["schemas"]["SerieBucket"]
-export type Granularidade = "diaria" | "semanal" | "mensal"
+export type Granularidade = "diaria" | "semanal" | "mensal" | "anual"
+
+/** "Por {rótulo}" nas descrições dos gráficos. */
+export const PERIODO_LABEL: Record<Granularidade, string> = {
+  diaria: "dia",
+  semanal: "semana",
+  mensal: "mês",
+  anual: "ano",
+}
 
 /** Agregados do período (§4.10). Sem `inicio/fim` o backend usa o mês corrente (fuso SP). */
 export function useDashboard(periodo?: { inicio?: string; fim?: string }) {
@@ -73,6 +81,74 @@ export function useCartoesPainel() {
     queryFn: async (): Promise<CartoesResumo> => {
       const { data, error } = await api.GET("/api/dashboard/cartoes")
       if (error || !data) throw new Error("falha ao carregar os cartões")
+      return data
+    },
+  })
+}
+
+export type AnaliseNatureza = components["schemas"]["AnaliseNatureza"]
+export type Natureza = "receita" | "despesa"
+
+/** Aba Receitas ou Despesas: totais, categorias, contrapartes, meios, dia da semana, acumulado e
+ *  orçamento × realizado — tudo do mesmo recorte dos KPIs. */
+export function useAnalise(
+  natureza: Natureza,
+  periodo: { inicio: string; fim: string }
+) {
+  return useQuery({
+    queryKey: ["dashboard", "analise", natureza, periodo.inicio, periodo.fim],
+    queryFn: async (): Promise<AnaliseNatureza> => {
+      const { data, error } = await api.GET("/api/dashboard/analise", {
+        params: { query: { natureza, ...periodo } },
+      })
+      if (error || !data) throw new Error("falha ao carregar a análise")
+      return data
+    },
+  })
+}
+
+/** Pedaço da análise aberto num gráfico (categoria, contraparte, meio e/ou conta). */
+export type FiltroAnalise = {
+  natureza: Natureza
+  titulo: string
+  categoria_id?: string
+  contraparte?: string
+  meio?: string
+  conta_id?: number
+}
+
+/** Transações de um pedaço da análise — mesmo recorte do servidor, a soma bate com o gráfico. */
+export function useTransacoesDaAnalise(
+  filtro: FiltroAnalise | null,
+  periodo: { inicio: string; fim: string }
+) {
+  return useQuery({
+    queryKey: [
+      "dashboard",
+      "analise-transacoes",
+      filtro,
+      periodo.inicio,
+      periodo.fim,
+    ],
+    enabled: filtro !== null,
+    queryFn: async () => {
+      const { natureza, categoria_id, contraparte, meio, conta_id } = filtro!
+      const { data, error } = await api.GET(
+        "/api/dashboard/analise/transacoes",
+        {
+          params: {
+            query: {
+              natureza,
+              categoria_id,
+              contraparte,
+              meio,
+              conta_id,
+              ...periodo,
+            },
+          },
+        }
+      )
+      if (error || !data) throw new Error("falha ao carregar as transações")
       return data
     },
   })

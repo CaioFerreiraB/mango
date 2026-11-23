@@ -2615,7 +2615,8 @@
               "enum": [
                 "diaria",
                 "semanal",
-                "mensal"
+                "mensal",
+                "anual"
               ],
               "type": "string",
               "default": "semanal",
@@ -2708,6 +2709,236 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/CartoesResumo"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/dashboard/analise": {
+      "get": {
+        "tags": [
+          "dashboard"
+        ],
+        "summary": "Analise",
+        "description": "Abas Receitas/Despesas: totais vs período anterior, categorias, maiores contrapartes, meios\nde pagamento, dia da semana, acumulado diário e orçamento (previsto) × realizado.",
+        "operationId": "analise_api_dashboard_analise_get",
+        "parameters": [
+          {
+            "name": "natureza",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "enum": [
+                "receita",
+                "despesa"
+              ],
+              "type": "string",
+              "title": "Natureza"
+            }
+          },
+          {
+            "name": "inicio",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Inicio"
+            }
+          },
+          {
+            "name": "fim",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Fim"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnaliseNatureza"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/dashboard/analise/transacoes": {
+      "get": {
+        "tags": [
+          "dashboard"
+        ],
+        "summary": "Analise Transacoes",
+        "description": "Transações de um pedaço da análise (categoria, contraparte, meio e/ou conta). Mesmo recorte\ndos gráficos: a soma bate com o valor exibido. Até 200, mais recentes primeiro.",
+        "operationId": "analise_transacoes_api_dashboard_analise_transacoes_get",
+        "parameters": [
+          {
+            "name": "natureza",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "enum": [
+                "receita",
+                "despesa"
+              ],
+              "type": "string",
+              "title": "Natureza"
+            }
+          },
+          {
+            "name": "inicio",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Inicio"
+            }
+          },
+          {
+            "name": "fim",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Fim"
+            }
+          },
+          {
+            "name": "categoria_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 16
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Categoria Id"
+            }
+          },
+          {
+            "name": "contraparte",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 255
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Contraparte"
+            }
+          },
+          {
+            "name": "meio",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 64
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Meio"
+            }
+          },
+          {
+            "name": "conta_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Conta Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransacaoListagem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
             }
@@ -7100,6 +7331,161 @@
         "type": "object",
         "title": "AcessoMcpUpdate"
       },
+      "AcumuladoPonto": {
+        "properties": {
+          "indice": {
+            "type": "integer",
+            "title": "Indice"
+          },
+          "data": {
+            "type": "string",
+            "format": "date",
+            "title": "Data"
+          },
+          "atual_centavos": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Atual Centavos"
+          },
+          "anterior_centavos": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Anterior Centavos"
+          },
+          "esperado_centavos": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Esperado Centavos"
+          }
+        },
+        "type": "object",
+        "required": [
+          "indice",
+          "data",
+          "atual_centavos",
+          "anterior_centavos",
+          "esperado_centavos"
+        ],
+        "title": "AcumuladoPonto",
+        "description": "Dia `indice` (0 = 1º dia) do período atual e do anterior equivalente, lado a lado."
+      },
+      "AnaliseNatureza": {
+        "properties": {
+          "natureza": {
+            "type": "string",
+            "title": "Natureza"
+          },
+          "anterior_inicio": {
+            "type": "string",
+            "format": "date",
+            "title": "Anterior Inicio"
+          },
+          "anterior_fim": {
+            "type": "string",
+            "format": "date",
+            "title": "Anterior Fim"
+          },
+          "total_centavos": {
+            "type": "integer",
+            "title": "Total Centavos"
+          },
+          "anterior_centavos": {
+            "type": "integer",
+            "title": "Anterior Centavos"
+          },
+          "quantidade": {
+            "type": "integer",
+            "title": "Quantidade"
+          },
+          "por_categoria": {
+            "items": {
+              "$ref": "#/components/schemas/GastoCategoria"
+            },
+            "type": "array",
+            "title": "Por Categoria"
+          },
+          "contrapartes": {
+            "items": {
+              "$ref": "#/components/schemas/ContraparteTotal"
+            },
+            "type": "array",
+            "title": "Contrapartes"
+          },
+          "outras_contrapartes_centavos": {
+            "type": "integer",
+            "title": "Outras Contrapartes Centavos"
+          },
+          "outras_contrapartes_quantidade": {
+            "type": "integer",
+            "title": "Outras Contrapartes Quantidade"
+          },
+          "meios": {
+            "items": {
+              "$ref": "#/components/schemas/MeioTotal"
+            },
+            "type": "array",
+            "title": "Meios"
+          },
+          "dias_semana": {
+            "items": {
+              "$ref": "#/components/schemas/DiaSemanaTotal"
+            },
+            "type": "array",
+            "title": "Dias Semana"
+          },
+          "acumulado": {
+            "items": {
+              "$ref": "#/components/schemas/AcumuladoPonto"
+            },
+            "type": "array",
+            "title": "Acumulado"
+          },
+          "previsto": {
+            "items": {
+              "$ref": "#/components/schemas/PrevistoMes"
+            },
+            "type": "array",
+            "title": "Previsto"
+          }
+        },
+        "type": "object",
+        "required": [
+          "natureza",
+          "anterior_inicio",
+          "anterior_fim",
+          "total_centavos",
+          "anterior_centavos",
+          "quantidade",
+          "por_categoria",
+          "contrapartes",
+          "outras_contrapartes_centavos",
+          "outras_contrapartes_quantidade",
+          "meios",
+          "dias_semana",
+          "acumulado",
+          "previsto"
+        ],
+        "title": "AnaliseNatureza",
+        "description": "Aba Receitas ou Despesas do dashboard: mesmas regras dos KPIs (sem transferências nem\ninvestimento; estorno de cartão abate despesa; parte do usuário nas divisões)."
+      },
       "AporteManualCreate": {
         "properties": {
           "data": {
@@ -9915,6 +10301,29 @@
         "title": "ContaSaldoSerie",
         "description": "Série de saldo diário (fecho de cada dia) de uma conta BANK, para o sparkline dos cards."
       },
+      "ContaTotal": {
+        "properties": {
+          "conta_id": {
+            "type": "integer",
+            "title": "Conta Id"
+          },
+          "nome": {
+            "type": "string",
+            "title": "Nome"
+          },
+          "total_centavos": {
+            "type": "integer",
+            "title": "Total Centavos"
+          }
+        },
+        "type": "object",
+        "required": [
+          "conta_id",
+          "nome",
+          "total_centavos"
+        ],
+        "title": "ContaTotal"
+      },
       "ContaUpdate": {
         "properties": {
           "objetivo_id": {
@@ -9932,6 +10341,35 @@
         "type": "object",
         "title": "ContaUpdate",
         "description": "Update estreito (§4 crud.md): o usuário só altera o vínculo com objetivo.\n\n`objetivo_id=None` desvincula. Campos importados do Pluggy não são editáveis aqui."
+      },
+      "ContraparteTotal": {
+        "properties": {
+          "chave": {
+            "type": "string",
+            "title": "Chave"
+          },
+          "nome": {
+            "type": "string",
+            "title": "Nome"
+          },
+          "total_centavos": {
+            "type": "integer",
+            "title": "Total Centavos"
+          },
+          "quantidade": {
+            "type": "integer",
+            "title": "Quantidade"
+          }
+        },
+        "type": "object",
+        "required": [
+          "chave",
+          "nome",
+          "total_centavos",
+          "quantidade"
+        ],
+        "title": "ContraparteTotal",
+        "description": "Estabelecimento/destinatário (despesa) ou pagador (receita), como o banco nomeia.\n`chave` = nome normalizado (filtro do drill-down)."
       },
       "ConversaIaRead": {
         "properties": {
@@ -10284,6 +10722,29 @@
           "buckets"
         ],
         "title": "DashboardSeries"
+      },
+      "DiaSemanaTotal": {
+        "properties": {
+          "dia": {
+            "type": "integer",
+            "title": "Dia"
+          },
+          "total_centavos": {
+            "type": "integer",
+            "title": "Total Centavos"
+          },
+          "ocorrencias": {
+            "type": "integer",
+            "title": "Ocorrencias"
+          }
+        },
+        "type": "object",
+        "required": [
+          "dia",
+          "total_centavos",
+          "ocorrencias"
+        ],
+        "title": "DiaSemanaTotal"
       },
       "DivisaoDaTransacao": {
         "properties": {
@@ -12620,6 +13081,32 @@
         ],
         "title": "MeRead"
       },
+      "MeioTotal": {
+        "properties": {
+          "meio": {
+            "type": "string",
+            "title": "Meio"
+          },
+          "total_centavos": {
+            "type": "integer",
+            "title": "Total Centavos"
+          },
+          "por_conta": {
+            "items": {
+              "$ref": "#/components/schemas/ContaTotal"
+            },
+            "type": "array",
+            "title": "Por Conta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "meio",
+          "total_centavos",
+          "por_conta"
+        ],
+        "title": "MeioTotal"
+      },
       "MensagemIaCreate": {
         "properties": {
           "conversa_id": {
@@ -14097,6 +14584,36 @@
           "ativa"
         ],
         "title": "PreferenciaIaUpdate"
+      },
+      "PrevistoMes": {
+        "properties": {
+          "mes": {
+            "type": "string",
+            "title": "Mes"
+          },
+          "previsto_centavos": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Previsto Centavos"
+          },
+          "realizado_centavos": {
+            "type": "integer",
+            "title": "Realizado Centavos"
+          }
+        },
+        "type": "object",
+        "required": [
+          "mes",
+          "previsto_centavos",
+          "realizado_centavos"
+        ],
+        "title": "PrevistoMes"
       },
       "PropostaIa": {
         "properties": {

@@ -60,7 +60,9 @@ function tooltipEixo(
   rotulos: string[],
   formatarRotulo: (v: string) => string,
   formatarValor: (v: number) => string,
-  ponteiro: "line" | "shadow"
+  ponteiro: "line" | "shadow",
+  /** HTML extra no fim do tooltip do ponto `i` (ex.: total, diferença). */
+  detalhe?: (i: number) => string
 ): EChartsOption["tooltip"] {
   return {
     ...opcoesBase(t).tooltip,
@@ -81,7 +83,8 @@ function tooltipEixo(
             formatarValor(Number(p.value))
           )
         )
-      return `<div style="margin-bottom:4px;font-weight:500">${formatarRotulo(rotulos[i] ?? "")}</div>${linhas.join("")}`
+      const extra = detalhe?.(i)
+      return `<div style="margin-bottom:4px;font-weight:500">${formatarRotulo(rotulos[i] ?? "")}</div>${linhas.join("")}${extra ? `<div style="margin-top:6px">${extra}</div>` : ""}`
     },
   }
 }
@@ -113,12 +116,14 @@ export function GraficoLinhas({
   formatarValor = formatarY,
   legenda = false,
   referenciaX,
+  detalheTooltip,
   altura = 240,
   ariaLabel,
 }: {
   dados: Linha[]
   x: string
   series: SerieLinha[]
+  detalheTooltip?: (i: number) => string
   formatarX?: (v: string) => string
   formatarRotulo?: (v: string) => string
   formatarY: (v: number) => string
@@ -146,9 +151,20 @@ export function GraficoLinhas({
       },
       xAxis: eixoX(t, rotulos, formatarX, true),
       yAxis: eixoY(t, formatarY),
-      tooltip: tooltipEixo(t, rotulos, formatarRotulo, formatarValor, "line"),
+      tooltip: tooltipEixo(
+        t,
+        rotulos,
+        formatarRotulo,
+        formatarValor,
+        "line",
+        detalheTooltip
+      ),
       legend: legenda
         ? {
+            type: "scroll",
+            pageIconColor: t.textoSec,
+            pageIconInactiveColor: t.borda,
+            pageTextStyle: { color: t.textoSec },
             bottom: 0,
             icon: "roundRect",
             itemWidth: 10,
@@ -203,6 +219,7 @@ export function GraficoLinhas({
     formatarValor,
     legenda,
     referenciaX,
+    detalheTooltip,
     t,
   ])
   return (
@@ -226,6 +243,9 @@ export function GraficoBarras({
   formatarRotulo = (v) => v,
   formatarY,
   formatarValor = formatarY,
+  cores,
+  detalheTooltip,
+  onClique,
   altura = 240,
   ariaLabel,
 }: {
@@ -234,6 +254,10 @@ export function GraficoBarras({
   chave: string
   nome: string
   cor?: string
+  /** Cor por barra (expressão CSS; `null` = a cor da série) — ex.: destacar máximo/mínimo. */
+  cores?: (string | null)[]
+  detalheTooltip?: (i: number) => string
+  onClique?: (i: number) => void
   formatarX?: (v: string) => string
   formatarRotulo?: (v: string) => string
   formatarY: (v: number) => string
@@ -242,8 +266,11 @@ export function GraficoBarras({
   ariaLabel: string
 }) {
   const t = useTemaGrafico()
-  const [corResolvida] = useCores([cor])
+  // Estável entre renders (useCores memoriza pela chave): a option não pode mudar a cada render.
+  const resolvidas = useCores([cor, ...(cores ?? []).map((c) => c ?? cor)])
+  const clicavel = onClique != null
   const option = useMemo<EChartsOption>(() => {
+    const [corResolvida, ...porBarra] = resolvidas
     const rotulos = dados.map((d) => String(d[x] ?? ""))
     return {
       ...opcoesBase(t),
@@ -258,12 +285,24 @@ export function GraficoBarras({
       },
       xAxis: eixoX(t, rotulos, formatarX),
       yAxis: { ...eixoY(t, formatarY), scale: false },
-      tooltip: tooltipEixo(t, rotulos, formatarRotulo, formatarValor, "shadow"),
+      tooltip: tooltipEixo(
+        t,
+        rotulos,
+        formatarRotulo,
+        formatarValor,
+        "shadow",
+        detalheTooltip
+      ),
       series: [
         {
           name: nome,
           type: "bar",
-          data: dados.map((d) => num(d[chave])),
+          cursor: clicavel ? "pointer" : "default",
+          data: dados.map((d, i) =>
+            porBarra[i]
+              ? { value: num(d[chave]), itemStyle: { color: porBarra[i] } }
+              : num(d[chave])
+          ),
           barMaxWidth: 96,
           barCategoryGap: "30%",
           itemStyle: { color: corResolvida, borderRadius: [4, 4, 0, 0] },
@@ -275,11 +314,13 @@ export function GraficoBarras({
     x,
     chave,
     nome,
-    corResolvida,
+    resolvidas,
     formatarX,
     formatarRotulo,
     formatarY,
     formatarValor,
+    detalheTooltip,
+    clicavel,
     t,
   ])
   return (
@@ -288,6 +329,119 @@ export function GraficoBarras({
       ariaLabel={ariaLabel}
       className="w-full"
       altura={altura}
+      onClique={onClique ? ({ dataIndex }) => onClique(dataIndex) : undefined}
+    />
+  )
+}
+
+export type SerieBarra = { chave: string; nome: string; cor: string }
+
+/**
+ * Colunas agrupadas (2–3 séries lado a lado por período/categoria), mesmo eixo, com legenda.
+ * `destaque` repinta as barras de uma série quando a condição vale (ex.: gasto acima do orçado).
+ */
+export function GraficoBarrasAgrupadas({
+  dados,
+  x,
+  series,
+  destaque,
+  formatarX,
+  formatarRotulo = (v) => v,
+  formatarY,
+  formatarValor = formatarY,
+  detalheTooltip,
+  onClique,
+  altura = 260,
+  ariaLabel,
+}: {
+  dados: Linha[]
+  x: string
+  series: SerieBarra[]
+  destaque?: { serie: number; cor: string; quando: (i: number) => boolean }
+  formatarX?: (v: string) => string
+  formatarRotulo?: (v: string) => string
+  formatarY: (v: number) => string
+  formatarValor?: (v: number) => string
+  detalheTooltip?: (i: number) => string
+  onClique?: (i: number) => void
+  altura?: number
+  ariaLabel: string
+}) {
+  const t = useTemaGrafico()
+  const cores = useCores([...series.map((s) => s.cor), destaque?.cor ?? ""])
+  const clicavel = onClique != null
+  const option = useMemo<EChartsOption>(() => {
+    const rotulos = dados.map((d) => String(d[x] ?? ""))
+    const corDestaque = cores[series.length]
+    return {
+      ...opcoesBase(t),
+      animation: !semMovimento(),
+      grid: {
+        left: 4,
+        right: 8,
+        top: 12,
+        bottom: 32,
+        outerBoundsMode: "same",
+        outerBoundsContain: "axisLabel",
+      },
+      xAxis: eixoX(t, rotulos, formatarX),
+      yAxis: { ...eixoY(t, formatarY), scale: false },
+      tooltip: tooltipEixo(
+        t,
+        rotulos,
+        formatarRotulo,
+        formatarValor,
+        "shadow",
+        detalheTooltip
+      ),
+      legend: {
+        type: "scroll",
+        pageIconColor: t.textoSec,
+        pageIconInactiveColor: t.borda,
+        pageTextStyle: { color: t.textoSec },
+        bottom: 0,
+        icon: "roundRect",
+        itemWidth: 10,
+        itemHeight: 10,
+        itemGap: 16,
+        textStyle: { color: t.textoSec },
+      },
+      series: series.map((s, k) => ({
+        name: s.nome,
+        type: "bar" as const,
+        cursor: clicavel ? "pointer" : "default",
+        barMaxWidth: 40,
+        barGap: "12%",
+        barCategoryGap: "32%",
+        itemStyle: { color: cores[k], borderRadius: [4, 4, 0, 0] },
+        data: dados.map((d, i) =>
+          destaque?.serie === k && destaque.quando(i)
+            ? { value: num(d[s.chave]), itemStyle: { color: corDestaque } }
+            : num(d[s.chave])
+        ),
+      })),
+    }
+  }, [
+    dados,
+    x,
+    series,
+    destaque,
+    cores,
+    formatarX,
+    formatarRotulo,
+    formatarY,
+    formatarValor,
+    detalheTooltip,
+    clicavel,
+    t,
+  ])
+  return (
+    <EChart
+      option={option}
+      ariaLabel={ariaLabel}
+      className="w-full"
+      altura={altura}
+      onClique={onClique ? ({ dataIndex }) => onClique(dataIndex) : undefined}
     />
   )
 }

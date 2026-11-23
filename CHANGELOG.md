@@ -12,6 +12,16 @@ ainda está se assentando. Cada versão publicada tem uma imagem correspondente 
 
 ### Adicionado
 
+- **Dashboard em abas — Geral, Receitas e Despesas:** a Geral mantém os cards, as últimas
+  transações, entradas e saídas e a evolução patrimonial. **Receitas** traz a evolução por
+  dia/semana/mês/ano, a distribuição por categoria, as principais fontes de receita, previstas
+  (orçamento de receita) × realizadas e o acumulado vs. o período anterior. **Despesas** traz a
+  evolução empilhada por categoria, a rosca de categorias (movida da Geral), os maiores
+  estabelecimentos, despesas × orçamento do mês, o acumulado com o ritmo do orçamento, a média por
+  dia da semana, a divisão por meio de pagamento (com a quebra por conta/cartão) e o painel de
+  cartões (movido da Geral). Clicar numa categoria, fonte, estabelecimento, meio ou categoria do
+  orçamento abre as transações correspondentes, somando exatamente o valor do gráfico. A aba fica
+  na URL (`?aba=receitas`) e os gráficos de série ganharam a granularidade anual.
 - **Nova navegação no celular:** o menu completo abre pelo ☰ no topo, como uma gaveta lateral, e
   a barra inferior virou uma pílula flutuante com o Início e mais três atalhos que você escolhe em
   Configurações → Preferências → Atalhos do celular.
@@ -70,6 +80,9 @@ ainda está se assentando. Cada versão publicada tem uma imagem correspondente 
 
 ### Corrigido
 
+- **Estorno no cartão abate a despesa:** crédito numa conta de cartão (estorno, crédito de compra)
+  contava como receita, inflando as entradas. Agora reduz a despesa da categoria no dashboard e no
+  orçamento; crédito categorizado como Renda (ex.: cashback) continua receita.
 - **Compra de cartão aparecia como entrada (+R$)** na lista e no detalhe de transações; o sinal
   agora segue o tipo do lançamento.
 - Criar uma divisão "Eu paguei" sem escolher ninguém deixava avançar e falhava no fim; agora o

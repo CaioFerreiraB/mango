@@ -1,4 +1,5 @@
 import { ArrowDownRight, ArrowUpRight, Eye, EyeOff } from "lucide-react"
+import type { ReactNode } from "react"
 
 import { Valor } from "@/components/common/valor"
 import { AreaTendencia, type CampoSerie } from "@/components/dashboard/graficos"
@@ -11,13 +12,13 @@ import { cn } from "@/lib/utils"
  * Variação vs. mesmo período do mês anterior. Pílula **neutra** (identidade sóbria): a direção é
  * dada pela seta e pelo sinal, nunca só por cor (a11y, DESIGN.md). `delta` já vem como fração.
  */
-function Delta({ delta }: { delta: number }) {
+function Delta({ delta, titulo }: { delta: number; titulo: string }) {
   const sobe = delta > 0
   const Icone = sobe ? ArrowUpRight : ArrowDownRight
   return (
     <span
       className="inline-flex shrink-0 items-center gap-0.5 rounded-full border px-2 py-0.5 text-xs font-medium text-muted-foreground tabular-nums"
-      title="Comparado ao mesmo período do mês anterior"
+      title={titulo}
     >
       {delta === 0 ? (
         "0%"
@@ -44,9 +45,14 @@ export function KpiCard({
   serie,
   campo,
   oculto = false,
+  rodape,
+  tituloDelta = "Comparado ao mesmo período do mês anterior",
 }: {
   label: string
   centavos: number
+  /** Linha de contexto sob o valor (ex.: "62% utilizado", "1–23 out"). */
+  rodape?: ReactNode
+  tituloDelta?: string
   /** Modo privacidade: valor mascarado (e o tooltip da mini-área também). */
   oculto?: boolean
   sinal?: boolean
@@ -96,8 +102,13 @@ export function KpiCard({
               oculto={oculto}
               className="font-bold whitespace-nowrap text-foreground"
             />
-            {delta != null ? <Delta delta={delta} /> : null}
+            {delta != null ? (
+              <Delta delta={delta} titulo={tituloDelta} />
+            ) : null}
           </div>
+          {rodape ? (
+            <p className="truncate text-xs text-muted-foreground">{rodape}</p>
+          ) : null}
         </div>
         {temArea && serie && campo ? (
           <div className="-mx-4 @[13rem]:-mx-6">

@@ -96,3 +96,67 @@ class CartoesResumo(BaseModel):
     total_ano_centavos: int
     media_mes_centavos: int  # total do ano ÷ meses decorridos (o corrente conta)
     cartoes: list[CartaoPainel]
+
+
+class ContraparteTotal(BaseModel):
+    """Estabelecimento/destinatário (despesa) ou pagador (receita), como o banco nomeia.
+    `chave` = nome normalizado (filtro do drill-down)."""
+
+    chave: str
+    nome: str
+    total_centavos: int
+    quantidade: int
+
+
+class ContaTotal(BaseModel):
+    conta_id: int
+    nome: str
+    total_centavos: int
+
+
+class MeioTotal(BaseModel):
+    meio: str  # "Pix", "Cartão de crédito", "Boleto"… (ver `gasto_usuario.meio_de`)
+    total_centavos: int
+    por_conta: list[ContaTotal]  # vazio para lançamentos de divisão (sem conta)
+
+
+class DiaSemanaTotal(BaseModel):
+    dia: int  # 0 = segunda … 6 = domingo
+    total_centavos: int
+    ocorrencias: int  # quantos desses dias o período tem (até hoje), com ou sem movimento
+
+
+class AcumuladoPonto(BaseModel):
+    """Dia `indice` (0 = 1º dia) do período atual e do anterior equivalente, lado a lado."""
+
+    indice: int
+    data: date
+    atual_centavos: int | None  # None depois de hoje
+    anterior_centavos: int | None  # None além do tamanho do período anterior
+    esperado_centavos: int | None  # ritmo do orçamento (pró-rata diário); None sem orçamento
+
+
+class PrevistoMes(BaseModel):
+    mes: str  # YYYY-MM (mês inteiro)
+    previsto_centavos: int | None  # soma dos orçamentos do tipo no mês; None = sem orçamento
+    realizado_centavos: int
+
+
+class AnaliseNatureza(BaseModel):
+    """Aba Receitas ou Despesas do dashboard: mesmas regras dos KPIs (sem transferências nem
+    investimento; estorno de cartão abate despesa; parte do usuário nas divisões)."""
+
+    natureza: str  # receita | despesa
+    anterior_inicio: date
+    anterior_fim: date
+    total_centavos: int
+    anterior_centavos: int
+    quantidade: int
+    por_categoria: list[GastoCategoria]
+    contrapartes: list[ContraparteTotal]  # as 5 maiores
+    outras_contrapartes_centavos: int
+    outras_contrapartes_quantidade: int  # quantas contrapartes caem em "Outros"
+    meios: list[MeioTotal]
+    dias_semana: list[DiaSemanaTotal]
+    acumulado: list[AcumuladoPonto]
+    previsto: list[PrevistoMes]  # meses inteiros que o período toca

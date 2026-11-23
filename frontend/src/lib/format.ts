@@ -193,9 +193,10 @@ export function badgeData(iso: string): { dia: string; mes: string } {
 /** Rótulo curto de um bucket da série para eixo: diária/semanal → `01/06`, mensal → `jun/26`. */
 export function formatBucketLabel(
   inicio: string,
-  granularidade: "diaria" | "semanal" | "mensal"
+  granularidade: "diaria" | "semanal" | "mensal" | "anual"
 ): string {
   const [ano, mes, dia] = inicio.split("-")
+  if (granularidade === "anual") return ano
   if (granularidade === "mensal") {
     const nome = mesCurto.format(parseISO(inicio)).replace(".", "")
     return `${nome}/${ano.slice(2)}`

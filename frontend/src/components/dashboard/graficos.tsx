@@ -62,9 +62,10 @@ function eixos(t: TemaGrafico, rotulos: string[]): EChartsOption {
   }
 }
 
-/** Tooltip de eixo: cabeçalho do período + uma linha por série com valor ≠ 0. */
+/** Tooltip de eixo: cabeçalho do período + uma linha por série com valor ≠ 0 (+ total, opcional). */
 function tooltipEixo(
-  formatar: (v: number) => string = formatBRL
+  formatar: (v: number) => string = formatBRL,
+  comTotal = false
 ): EChartsOption["tooltip"] {
   return {
     trigger: "axis",
@@ -80,12 +81,22 @@ function tooltipEixo(
             formatar(Number(p.value))
           )
         )
-      return `<div style="margin-bottom:4px;font-weight:500">${ps[0]?.name ?? ""}</div>${linhas.join("") || "Sem movimento"}`
+      const total = ps.reduce((acc, p) => acc + Number(p.value || 0), 0)
+      const rodape =
+        comTotal && linhas.length > 1
+          ? `<div style="margin-top:6px;font-weight:500">Total ${formatar(total)}</div>`
+          : ""
+      return `<div style="margin-bottom:4px;font-weight:500">${ps[0]?.name ?? ""}</div>${linhas.join("") || "Sem movimento"}${rodape}`
     },
   }
 }
 
+// Legenda numa linha só (rola com setas quando não cabe): quebrar em 2+ linhas invadiria o plot.
 const legenda = (t: TemaGrafico): EChartsOption["legend"] => ({
+  type: "scroll",
+  pageIconColor: t.textoSec,
+  pageIconInactiveColor: t.borda,
+  pageTextStyle: { color: t.textoSec },
   bottom: 0,
   icon: "roundRect",
   itemWidth: 10,
@@ -300,10 +311,17 @@ export function DistribuicaoCategorias({
   gastos,
   rotulo,
   onSelecionar,
+  ariaLabel = "Distribuição das despesas por categoria no período",
+  rotuloLista = "Despesas por categoria",
+  detalhe,
 }: {
   gastos: GastoEntrada[]
   rotulo: Map<string, string>
   onSelecionar?: (c: CategoriaSelecionada) => void
+  ariaLabel?: string
+  rotuloLista?: string
+  /** Linha secundária por item (ex.: quebra por conta de um meio de pagamento). */
+  detalhe?: Map<string, string>
 }) {
   const t = useTemaGrafico()
   const dist = useMemo(
@@ -339,7 +357,7 @@ export function DistribuicaoCategorias({
         <EChart
           option={option}
           className="size-full"
-          ariaLabel="Distribuição das despesas por categoria no período"
+          ariaLabel={ariaLabel}
           instancia={(c) => (chart.current = c)}
           onHover={setAtiva}
           onClique={({ dataIndex }) => {
@@ -363,6 +381,8 @@ export function DistribuicaoCategorias({
         fatiaDoItem={fatiaDoItem}
         onHover={realcar}
         onSelecionar={onSelecionar}
+        rotuloLista={rotuloLista}
+        detalhe={detalhe}
       />
     </div>
   )
@@ -395,6 +415,8 @@ function BarrasLegenda({
   fatiaDoItem,
   onHover,
   onSelecionar,
+  rotuloLista,
+  detalhe,
 }: {
   dist: Distribuicao
   t: TemaGrafico
@@ -403,11 +425,13 @@ function BarrasLegenda({
   fatiaDoItem: (slot: number | null) => number
   onHover: (idx: number | null) => void
   onSelecionar?: (c: CategoriaSelecionada) => void
+  rotuloLista: string
+  detalhe?: Map<string, string>
 }) {
   return (
     <ul
       className="scrollbar-sutil max-h-[300px] space-y-1 overflow-y-auto pr-1"
-      aria-label="Despesas por categoria"
+      aria-label={rotuloLista}
       onMouseLeave={() => onHover(null)}
     >
       {dist.itens.map((it) => {
@@ -447,6 +471,11 @@ function BarrasLegenda({
                   }}
                 />
               </div>
+              {detalhe?.get(it.id) ? (
+                <p className="mt-1 truncate text-xs text-muted-foreground">
+                  {detalhe.get(it.id)}
+                </p>
+              ) : null}
             </LinhaLegenda>
           </li>
         )
@@ -523,7 +552,7 @@ export function BarrasEmpilhadasCategorias({
             },
           }
         : {}),
-      tooltip: { ...opcoesBase(t).tooltip, ...tooltipEixo() },
+      tooltip: { ...opcoesBase(t).tooltip, ...tooltipEixo(formatBRL, true) },
       series,
     }
   }, [buckets, granularidade, dist, comLegenda, t])

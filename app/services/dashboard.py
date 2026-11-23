@@ -15,27 +15,39 @@ from app.models.cartao_fatura import Cartao, Fatura
 from app.models.conta import Conta
 from app.models.investimento import Investimento
 from app.models.investimento_saldo_diario import InvestimentoSaldoDiario
+from app.models.orcamento import OrcamentoMensal
 from app.models.transacao import Transacao
 from app.schemas.dashboard import (
+    AcumuladoPonto,
+    AnaliseNatureza,
     CartaoPainel,
     CartoesResumo,
+    ContaTotal,
+    ContraparteTotal,
     DashboardResumo,
     DashboardSeries,
+    DiaSemanaTotal,
     FaturaResumoBucket,
     FaturasResumo,
     GastoCategoria,
+    MeioTotal,
     PatrimonioPonto,
     PatrimonioSerie,
+    PrevistoMes,
     SerieBucket,
 )
 from app.services import saldo_diario
+from app.services.categoria_arvore import subarvores as montar_subarvores
 from app.services.categoria_resolucao import com_assinatura, expr_categoria_efetiva
 from app.services.gasto_usuario import (
     VALOR_EFETIVO,
+    Lancamento,
     categorias_investimento,
+    lancamentos_do_periodo,
     linhas_do_periodo,
     tipo_do_lancamento,
 )
+from app.services.orcamento_mensal import materializar_mes
 from app.services.periodo import SP, hoje_sp, limites_sp
 from app.services.revisao import expr_pendente_revisao
 
@@ -221,10 +233,12 @@ def resumo_faturas(
 
 
 def _inicio_bucket(d: date, granularidade: str) -> date:
-    """Início do período que contém `d`: o próprio dia (diária), 1º dia do mês (mensal) ou
-    segunda-feira (semanal)."""
+    """Início do período que contém `d`: o próprio dia (diária), 1º dia do mês (mensal), 1º de
+    janeiro (anual) ou segunda-feira (semanal)."""
     if granularidade == "diaria":
         return d
+    if granularidade == "anual":
+        return d.replace(month=1, day=1)
     if granularidade == "mensal":
         return d.replace(day=1)
     return d - timedelta(days=d.weekday())
@@ -233,6 +247,8 @@ def _inicio_bucket(d: date, granularidade: str) -> date:
 def _proximo_bucket(inicio: date, granularidade: str) -> date:
     if granularidade == "diaria":
         return inicio + timedelta(days=1)
+    if granularidade == "anual":
+        return inicio.replace(year=inicio.year + 1)
     if granularidade == "mensal":
         return (inicio.replace(day=28) + timedelta(days=4)).replace(day=1)
     return inicio + timedelta(days=7)
@@ -434,4 +450,261 @@ def montar_cartoes(db: Session, usuario_id: int) -> CartoesResumo:
         total_ano_centavos=total_ano,
         media_mes_centavos=round(total_ano / hoje.month),
         cartoes=cartoes,
+    )
+
+
+# --- Abas Receitas / Despesas ------------------------------------------------------------------
+
+_TOP_CONTRAPARTES = 5
+SEM_CONTRAPARTE = "Não identificado"
+
+
+def _menos_meses(d: date, meses: int) -> date:
+    total = d.year * 12 + d.month - 1 - meses
+    ano, mes = divmod(total, 12)
+    ultimo = (date(ano + (mes + 1) // 12, (mes + 1) % 12 + 1, 1) - timedelta(days=1)).day
+    return date(ano, mes + 1, min(d.day, ultimo))
+
+
+def periodo_anterior(inicio: date, fim: date) -> tuple[date, date]:
+    """Período anterior equivalente: começando no dia 1º, os mesmos dias N meses antes (1–23/nov →
+    1–23/out); senão, os N dias imediatamente antes."""
+    if inicio.day == 1:
+        meses = (fim.year - inicio.year) * 12 + fim.month - inicio.month + 1
+        return _menos_meses(inicio, meses), _menos_meses(fim, meses)
+    n = (fim - inicio).days + 1
+    return inicio - timedelta(days=n), inicio - timedelta(days=1)
+
+
+def chave_contraparte(nome: str | None) -> str:
+    return " ".join((nome or "").split()).casefold()
+
+
+def _meses_entre(inicio: date, fim: date) -> list[tuple[int, int]]:
+    out, (a, m) = [], (inicio.year, inicio.month)
+    while (a, m) <= (fim.year, fim.month):
+        out.append((a, m))
+        a, m = (a + 1, 1) if m == 12 else (a, m + 1)
+    return out
+
+
+def _orcado_por_mes(
+    db: Session, usuario_id: int, tipo: str, meses: list[tuple[int, int]]
+) -> dict[tuple[int, int], int]:
+    """Soma dos limites do tipo por mês, só das linhas-raiz (orçamento de subcategoria já está
+    dentro do da categoria-pai, regra #20). Mês sem linha visível fica de fora. O mês corrente é
+    materializado como em `orcamento_consumo` (backstop); passados/futuros só leem o que existe."""
+    hoje = hoje_sp()
+    if (hoje.year, hoje.month) in meses:
+        materializar_mes(db, usuario_id, hoje.year, hoje.month)
+    linhas = db.execute(
+        select(
+            OrcamentoMensal.ano,
+            OrcamentoMensal.mes,
+            OrcamentoMensal.categoria_id,
+            OrcamentoMensal.limite_centavos,
+        ).where(
+            OrcamentoMensal.usuario_id == usuario_id,
+            OrcamentoMensal.tipo == tipo,
+            OrcamentoMensal.suprimido.is_(False),
+            OrcamentoMensal.ano * 100 + OrcamentoMensal.mes >= meses[0][0] * 100 + meses[0][1],
+            OrcamentoMensal.ano * 100 + OrcamentoMensal.mes <= meses[-1][0] * 100 + meses[-1][1],
+        )
+    ).all()
+    arv = montar_subarvores(db, usuario_id, {c for _, _, c, _ in linhas})
+    por_mes: dict[tuple[int, int], list[tuple[str, int]]] = {}
+    for a, m, c, lim in linhas:
+        por_mes.setdefault((a, m), []).append((c, lim))
+    out: dict[tuple[int, int], int] = {}
+    for chave, itens in por_mes.items():
+        cats = [c for c, _ in itens]
+        out[chave] = sum(lim for c, lim in itens if not any(o != c and c in arv[o] for o in cats))
+    return out
+
+
+def _da_natureza(
+    lancs: list[Lancamento], natureza: str, investimento: set[str]
+) -> list[Lancamento]:
+    return [x for x in lancs if tipo_do_lancamento(x.categoria, x.tipo, investimento) == natureza]
+
+
+def _nome_contas(db: Session, usuario_id: int) -> dict[int, str]:
+    return {
+        cid: mn or nome or "Conta"
+        for cid, mn, nome in db.execute(
+            select(Conta.id, Conta.marketing_name, Conta.nome).where(Conta.usuario_id == usuario_id)
+        )
+    }
+
+
+def montar_analise(
+    db: Session, usuario_id: int, natureza: str, inicio: date, fim: date
+) -> AnaliseNatureza:
+    """Tudo das abas Receitas/Despesas numa leitura só da base de `gasto_usuario` (mesma regra dos
+    KPIs e do orçamento): totais vs período anterior, categorias, top contrapartes, meios de
+    pagamento, média por dia da semana, acumulado diário e previsto (orçamento) × realizado."""
+    hoje = hoje_sp()
+    ant_ini, ant_fim = periodo_anterior(inicio, fim)
+    meses = _meses_entre(inicio, fim)
+    mes_ini = date(*meses[0], 1)
+    mes_fim = _menos_meses(date(*meses[-1], 1), -1) - timedelta(days=1)
+    ini_dt, fim_excl = limites_sp(min(ant_ini, mes_ini), max(fim, mes_fim))
+    lancs = _da_natureza(
+        lancamentos_do_periodo(db, usuario_id, ini_dt, fim_excl),
+        natureza,
+        categorias_investimento(db, usuario_id),
+    )
+    dia = [x.data.astimezone(SP).date() for x in lancs]
+    atual = [x for x, d in zip(lancs, dia, strict=True) if inicio <= d <= fim]
+    anterior = [x for x, d in zip(lancs, dia, strict=True) if ant_ini <= d <= ant_fim]
+
+    por_cat: dict[str | None, int] = {}
+    contrap: dict[str, list] = {}  # chave → [nome, total, quantidade]
+    meios: dict[str, dict[int | None, int]] = {}
+    for x in atual:
+        por_cat[x.categoria] = por_cat.get(x.categoria, 0) + x.valor
+        k = chave_contraparte(x.contraparte)
+        c = contrap.setdefault(k, [x.contraparte or SEM_CONTRAPARTE, 0, 0])
+        c[1] += x.valor
+        c[2] += 1
+        m = meios.setdefault(x.meio, {})
+        m[x.conta_id] = m.get(x.conta_id, 0) + x.valor
+
+    ranking = sorted(
+        (
+            ContraparteTotal(chave=k, nome=n, total_centavos=t, quantidade=q)
+            for k, (n, t, q) in contrap.items()
+            if t > 0
+        ),
+        key=lambda c: c.total_centavos,
+        reverse=True,
+    )
+    top, resto = ranking[:_TOP_CONTRAPARTES], ranking[_TOP_CONTRAPARTES:]
+
+    nomes = _nome_contas(db, usuario_id)
+    meios_out = sorted(
+        (
+            MeioTotal(
+                meio=meio,
+                total_centavos=sum(por_conta.values()),
+                por_conta=sorted(
+                    (
+                        ContaTotal(conta_id=cid, nome=nomes.get(cid, "Conta"), total_centavos=v)
+                        for cid, v in por_conta.items()
+                        if cid is not None and v > 0
+                    ),
+                    key=lambda c: c.total_centavos,
+                    reverse=True,
+                ),
+            )
+            for meio, por_conta in meios.items()
+        ),
+        key=lambda m: m.total_centavos,
+        reverse=True,
+    )
+
+    # Média por dia da semana: só até hoje (dia futuro não "aconteceu"), contando dias sem gasto.
+    ate = min(fim, hoje)
+    ocorr = [0] * 7
+    d = inicio
+    while d <= ate:
+        ocorr[d.weekday()] += 1
+        d += timedelta(days=1)
+    tot_sem = [0] * 7
+    for x, dd in zip(lancs, dia, strict=True):
+        if inicio <= dd <= ate:
+            tot_sem[dd.weekday()] += x.valor
+
+    # Acumulado dia a dia (atual × anterior, alinhados pelo índice do dia) + ritmo do orçamento.
+    por_dia: dict[date, int] = {}
+    for x, dd in zip(lancs, dia, strict=True):
+        por_dia[dd] = por_dia.get(dd, 0) + x.valor
+    orcado = _orcado_por_mes(db, usuario_id, natureza, meses)
+    n_ant = (ant_fim - ant_ini).days + 1
+    acumulado: list[AcumuladoPonto] = []
+    soma_at = soma_ant = 0
+    esperado = 0.0
+    for i in range((fim - inicio).days + 1):
+        d = inicio + timedelta(days=i)
+        da = ant_ini + timedelta(days=i)
+        soma_at += por_dia.get(d, 0)
+        if i < n_ant:
+            soma_ant += por_dia.get(da, 0)
+        lim = orcado.get((d.year, d.month))
+        if lim is not None:
+            dias_mes = (_menos_meses(d.replace(day=1), -1) - timedelta(days=1)).day
+            esperado += lim / dias_mes
+        acumulado.append(
+            AcumuladoPonto(
+                indice=i,
+                data=d,
+                atual_centavos=soma_at if d <= hoje else None,
+                anterior_centavos=soma_ant if i < n_ant else None,
+                esperado_centavos=round(esperado) if orcado else None,
+            )
+        )
+
+    realizado_mes: dict[tuple[int, int], int] = {}
+    for x, dd in zip(lancs, dia, strict=True):
+        if mes_ini <= dd <= mes_fim:
+            realizado_mes[(dd.year, dd.month)] = realizado_mes.get((dd.year, dd.month), 0) + x.valor
+
+    return AnaliseNatureza(
+        natureza=natureza,
+        anterior_inicio=ant_ini,
+        anterior_fim=ant_fim,
+        total_centavos=sum(x.valor for x in atual),
+        anterior_centavos=sum(x.valor for x in anterior),
+        quantidade=len(atual),
+        por_categoria=_gasto_por_categoria(por_cat),
+        contrapartes=top,
+        outras_contrapartes_centavos=sum(c.total_centavos for c in resto),
+        outras_contrapartes_quantidade=len(resto),
+        meios=meios_out,
+        dias_semana=[
+            DiaSemanaTotal(dia=i, total_centavos=tot_sem[i], ocorrencias=ocorr[i]) for i in range(7)
+        ],
+        acumulado=acumulado,
+        previsto=[
+            PrevistoMes(
+                mes=f"{a:04d}-{m:02d}",
+                previsto_centavos=orcado.get((a, m)),
+                realizado_centavos=realizado_mes.get((a, m), 0),
+            )
+            for a, m in meses
+        ],
+    )
+
+
+def lancamentos_da_analise(
+    db: Session,
+    usuario_id: int,
+    natureza: str,
+    inicio: date,
+    fim: date,
+    *,
+    categoria_id: str | None = None,
+    contraparte: str | None = None,
+    meio: str | None = None,
+    conta_id: int | None = None,
+) -> list[Lancamento]:
+    """Drill-down de um pedaço da análise — o mesmo recorte de `montar_analise`, então a lista
+    soma exatamente o valor do gráfico. Mais recentes primeiro."""
+    ini, fim_excl = limites_sp(inicio, fim)
+    lancs = _da_natureza(
+        lancamentos_do_periodo(db, usuario_id, ini, fim_excl),
+        natureza,
+        categorias_investimento(db, usuario_id),
+    )
+    return sorted(
+        (
+            x
+            for x in lancs
+            if (categoria_id is None or x.categoria == categoria_id)
+            and (contraparte is None or chave_contraparte(x.contraparte) == contraparte)
+            and (meio is None or x.meio == meio)
+            and (conta_id is None or x.conta_id == conta_id)
+        ),
+        key=lambda x: x.data,
+        reverse=True,
     )
