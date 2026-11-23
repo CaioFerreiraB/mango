@@ -10,6 +10,7 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
 import { ChatToggle } from "@/components/chat/chat-panel"
+import { BuscaGlobal } from "@/components/layout/busca-global"
 import { Separator } from "@/components/ui/separator"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 
@@ -70,7 +71,8 @@ export function AppHeader() {
           })}
         </BreadcrumbList>
       </Breadcrumb>
-      <div className="ml-auto flex items-center">
+      <div className="ml-auto flex flex-1 items-center justify-end gap-1 md:ml-4">
+        <BuscaGlobal />
         <ChatToggle />
       </div>
     </header>

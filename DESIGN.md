@@ -32,6 +32,10 @@ Sistema visual da SPA do mango. Os tokens vivem em `frontend/src/index.css` (Tai
 - **Layout de cor:** corpo da página **branco** (`--background`) flutuante (`rounded-xl`, sombra)
   sobre fundo `--sidebar`; a sidebar usa a mesma tinta — o fundo atrás do corpo é sempre a cor da
   sidebar.
+- **Tinta do texto:** slate (`--foreground` `oklch(0.3 0.016 255)`; dark off-white `0.93`), nunca
+  preto/branco puros. Sidebar um degrau abaixo (`--sidebar-foreground`), ícones mais um
+  (`--sidebar-icon`); item ativo = pill `--sidebar-accent` + texto/ícone `accent-ink`, hover em
+  meia intensidade do pill.
 - **Neutros (`mist`):** cinzas levemente frios (hue ~214) para superfícies, bordas e texto —
   `--background/card/muted/secondary/accent/border/input/ring` **não** derivam do accent.
 - **Semânticos:** `destructive` (vermelho) para ações destrutivas/erro. Tokens próprios para
@@ -52,7 +56,8 @@ Sistema visual da SPA do mango. Os tokens vivem em `frontend/src/index.css` (Tai
 - **Raio base** `--radius: 0.625rem`, com escala `sm/md/lg/xl/2xl…` derivada. Cantos suaves,
   consistentes entre componentes.
 - Espaçamento da escala Tailwind; ritmo variado (não um único gap padrão). Conteúdo central em
-  `max-w-6xl` com padding responsivo (`p-4 md:p-6`).
+  `max-w-[100rem]` com padding responsivo (`p-4 md:p-6`); telas de formulário limitam a própria
+  largura (ex.: Configurações em `max-w-5xl`).
 
 ## Components
 

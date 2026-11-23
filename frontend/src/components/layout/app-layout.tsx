@@ -25,7 +25,7 @@ export function AppLayout() {
           <AppHeader />
           {/* pb no mobile: a bottom bar é `fixed` e cobriria o fim do conteúdo. */}
           <main className="flex-1 p-4 pb-[calc(var(--bottom-nav-h)+env(safe-area-inset-bottom)+1rem)] md:p-6 md:pb-6">
-            <div className="mx-auto w-full max-w-6xl">
+            <div className="mx-auto w-full max-w-[100rem]">
               <Outlet />
             </div>
           </main>

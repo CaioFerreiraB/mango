@@ -15,8 +15,9 @@ import {
   type SaldoDiarioPonto,
 } from "@/lib/api/contas"
 
-const GRID_CONTAS = "grid grid-cols-1 gap-4 sm:grid-cols-2"
-const GRID_CARTOES = "grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
+const GRID_CONTAS = "grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3"
+const GRID_CARTOES =
+  "grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4"
 
 function Secao({
   titulo,

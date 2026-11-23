@@ -76,9 +76,13 @@ export type TransacaoFiltro = {
   offset?: number
 }
 
-export function useTransacoes(filtro: TransacaoFiltro = {}) {
+export function useTransacoes(
+  filtro: TransacaoFiltro = {},
+  { enabled = true }: { enabled?: boolean } = {}
+) {
   return useQuery({
     queryKey: ["transacoes", filtro],
+    enabled,
     placeholderData: keepPreviousData, // paginação sem "piscar" a tabela
     queryFn: async (): Promise<TransacaoListagem> => {
       const { data, error } = await api.GET("/api/transacoes", {

@@ -66,7 +66,7 @@ function janelaPaginas(atual: number, total: number): (number | "gap")[] {
  */
 export function TransacoesPage() {
   const [params] = useSearchParams()
-  const [busca, setBusca] = useState("")
+  const [busca, setBusca] = useState(params.get("busca") ?? "")
   const [contaId, setContaId] = useState<number | null>(
     params.get("conta_id") ? Number(params.get("conta_id")) : null
   )
@@ -337,7 +337,10 @@ export function TransacoesPage() {
         </EmptyState>
       ) : (
         <>
-          <TransacoesTabela items={listagem.data!.items} />
+          <TransacoesTabela
+            items={listagem.data!.items}
+            abrirId={Number(params.get("id")) || null}
+          />
 
           <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-muted-foreground">
             <span>

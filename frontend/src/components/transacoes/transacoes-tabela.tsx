@@ -135,10 +135,13 @@ function AlcaResize({
 export function TransacoesTabela({
   items,
   ocultarLinkFatura = false,
+  abrirId = null,
 }: {
   items: ItemListagem[]
   /** Repassado ao drawer: esconde "Ir para a fatura" quando já estamos numa fatura. */
   ocultarLinkFatura?: boolean
+  /** Transação cujo drawer nasce aberto (link da busca global). */
+  abrirId?: number | null
 }) {
   const contas = useContas()
   const contaNome = new Map(
@@ -152,7 +155,10 @@ export function TransacoesTabela({
   const perfil = usePerfil() // corte da revisão (§4.3) — decide o estado do StatusBadge
   // Descrição · Valor · Data · Conta · Categoria · Status
   const { larguras, iniciar } = useLarguras([300, 120, 110, 160, 180, 120])
-  const [selecionadaId, setSelecionadaId] = useState<number | null>(null)
+  // `abrirId` (busca global → `/transacoes?id=`) só semeia: fechar o drawer não reabre.
+  const [selecionadaId, setSelecionadaId] = useState<number | null>(
+    abrirId ?? null
+  )
   const [divisaoId, setDivisaoId] = useState<number | null>(null)
   const selecionada =
     items.find(
