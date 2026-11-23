@@ -124,7 +124,10 @@ export function NovaDivisaoWizard({
     ...(transacao ? [] : [2]),
     3,
     4,
-    ...(form.pagoPorMim && !transacao ? [5] : []),
+    // Conta "somente divisão" não tem transações de banco para escolher.
+    ...(form.pagoPorMim && !transacao && me.data?.tipo === "completo"
+      ? [5]
+      : []),
     6,
   ]
   const indice = passos.indexOf(form.passo)
@@ -449,6 +452,17 @@ function PassoTransacao({
       </p>
       {candidatas.isLoading ? (
         <p className="text-sm text-muted-foreground">Buscando transações…</p>
+      ) : candidatas.isError ? (
+        <p role="alert" className="text-sm text-destructive">
+          Não foi possível buscar as transações.{" "}
+          <button
+            type="button"
+            className="underline underline-offset-4"
+            onClick={() => candidatas.refetch()}
+          >
+            Tentar de novo
+          </button>
+        </p>
       ) : itens.length > 0 ? (
         <ul
           className="max-h-56 divide-y overflow-y-auto rounded-lg border"

@@ -140,8 +140,10 @@ class TransacaoRepository(UserScopedRepository[Transacao]):
             )
 
         if tem_divisao is not None:
+            # Só o pagador vincula a própria transação (`divisao.definir_vinculo`).
             vinculadas = select(DivisaoDespesa.transacao_id).where(
-                DivisaoDespesa.transacao_id.is_not(None)
+                DivisaoDespesa.transacao_id.is_not(None),
+                DivisaoDespesa.pago_por_usuario_id == self.usuario_id,
             )
             filtros.append(
                 Transacao.id.in_(vinculadas) if tem_divisao else Transacao.id.not_in(vinculadas)
@@ -200,7 +202,7 @@ class TransacaoRepository(UserScopedRepository[Transacao]):
         ).all()
         ids_tx = [i for o, i in pagina if o == 0]
         transacoes = {
-            t.id: t for t in self.db.scalars(select(Transacao).where(Transacao.id.in_(ids_tx)))
+            t.id: t for t in self.db.scalars(self._scoped().where(Transacao.id.in_(ids_tx)))
         }
         return [transacoes[i] if o == 0 else i for o, i in pagina], total
 

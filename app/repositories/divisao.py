@@ -52,11 +52,13 @@ class DivisaoDespesaRepository:
             ).all()
         )
 
-    def obter(self, despesa_id: int) -> DivisaoDespesa | None:
-        """Qualquer envolvido (criador, pagador ou participante) pode ver."""
-        return self.db.scalars(
-            select(DivisaoDespesa).where(DivisaoDespesa.id == despesa_id, self._visivel())
-        ).first()
+    def obter(self, despesa_id: int, *, para_atualizar: bool = False) -> DivisaoDespesa | None:
+        """Qualquer envolvido (criador, pagador ou participante) pode ver. `para_atualizar` trava
+        a linha (`FOR UPDATE`) até o fim da transação."""
+        query = select(DivisaoDespesa).where(DivisaoDespesa.id == despesa_id, self._visivel())
+        if para_atualizar:
+            query = query.with_for_update(of=DivisaoDespesa)
+        return self.db.scalars(query).first()
 
     def obter_como_criador(self, despesa_id: int) -> DivisaoDespesa | None:
         """Só quem criou — usado antes de editar/excluir."""

@@ -138,7 +138,9 @@ function DivisaoVisao({
             : "Valor integral"}
         </Badge>
 
-        {me.data?.id === divisao.pago_por_usuario_id ? (
+        {/* Conta "somente divisão" não tem transações de banco para vincular. */}
+        {me.data?.id === divisao.pago_por_usuario_id &&
+        me.data?.tipo === "completo" ? (
           <VinculoTransacao divisao={divisao} />
         ) : null}
 
@@ -257,6 +259,17 @@ function VinculoTransacao({ divisao }: { divisao: DivisaoDespesa }) {
       {escolhendo ? (
         candidatas.isLoading ? (
           <Skeleton className="h-16 w-full" />
+        ) : candidatas.isError ? (
+          <p role="alert" className="text-xs text-destructive">
+            Não foi possível buscar as transações.{" "}
+            <button
+              type="button"
+              className="underline underline-offset-4"
+              onClick={() => candidatas.refetch()}
+            >
+              Tentar de novo
+            </button>
+          </p>
         ) : (candidatas.data ?? []).length === 0 ? (
           <p className="text-xs text-muted-foreground">
             Nenhuma saída sem divisão em 7 dias dessa data.

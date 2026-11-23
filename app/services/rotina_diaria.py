@@ -82,10 +82,12 @@ def _secao_transacoes(db, usuario: Usuario, momento: datetime) -> list[str]:
     return linhas
 
 
-def _secao_divisoes(db, usuario: Usuario) -> list[str]:
-    """Divisões que o usuário pagou e ainda não têm transação vinculada (RF11)."""
+def _secao_divisoes(db, usuario: Usuario, momento: datetime) -> list[str]:
+    """Divisões que o usuário pagou e ainda não têm transação vinculada (RF11), até o fim do dia
+    de `momento` — mesmo corte da seção de transações."""
+    fim = limites_sp(momento.astimezone(SP).date(), momento.astimezone(SP).date())[1]
     itens, total = divisao_service.pendentes(
-        db, usuario.id, corte_revisao(usuario.revisao_desde), limite=5
+        db, usuario.id, corte_revisao(usuario.revisao_desde), fim, limite=5
     )
     if not total:
         return []
@@ -104,7 +106,7 @@ def _secao_divisoes(db, usuario: Usuario) -> list[str]:
 def relatorio(db, usuario: Usuario, momento: datetime, *, divisoes: bool = True) -> str | None:
     secoes = [_secao_transacoes(db, usuario, momento)]
     if divisoes:
-        secoes.append(_secao_divisoes(db, usuario))
+        secoes.append(_secao_divisoes(db, usuario, momento))
     secoes = [s for s in secoes if s]
     if not secoes:
         return None

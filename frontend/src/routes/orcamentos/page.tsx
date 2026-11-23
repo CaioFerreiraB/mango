@@ -446,10 +446,10 @@ function ResumoSecao({
             <p className="text-sm text-muted-foreground">{r.restanteTotal}</p>
             <p className="text-lg font-semibold">
               {/* Nunca mostra "-": despesa mantém a cor do sinal real (vermelho se estourou),
-                  só sem o sinal de menos no texto; receita usa o valor já em módulo — bater
-                  ou passar da meta é notícia boa, nunca um alerta. */}
+                  só sem o sinal de menos no texto. Nas metas (receita/investimento), passar
+                  da meta zera o restante — o excedente não é "o que falta". */}
               <Valor
-                centavos={despesa ? restanteTotal : Math.abs(restanteTotal)}
+                centavos={despesa ? restanteTotal : Math.max(restanteTotal, 0)}
                 absoluto={despesa}
               />
             </p>
@@ -635,7 +635,7 @@ function LinhaTabela({
           <SemValor />
         ) : (
           <Valor
-            centavos={despesa ? restante : Math.abs(restante)}
+            centavos={despesa ? restante : Math.max(restante, 0)}
             absoluto={despesa}
           />
         )}

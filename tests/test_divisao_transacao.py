@@ -347,6 +347,19 @@ def test_relatorio_inclui_divisoes_e_respeita_toggle(
     assert texto is not None
     assert "Divisões sem transação" in texto and "15/06 · Jantar · R$ 123,45" in texto
     assert relatorio(db, usuario_a, momento, divisoes=False) is None
+    # Divisão com data depois do dia do relatório não entra (mesmo corte das transações).
+    assert relatorio(db, usuario_a, datetime(2026, 6, 14, 12, tzinfo=UTC)) is None
+
+
+def test_criar_com_transacao_ja_usada_da_409(client_factory, db, usuario_a, usuario_b, cenario):
+    tx = _tx(db, usuario_a.id, cenario, "jantar", 10000)
+    a = client_factory(usuario_a)
+    corpo = _divisao(usuario_a.id, [usuario_b.id], transacao_id=tx.id)
+    assert a.post("/api/divisoes-despesa", json=corpo).status_code == 201
+    resp = a.post("/api/divisoes-despesa", json=corpo)
+    assert resp.status_code == 409, resp.text
+    # Nada da segunda tentativa ficou gravado (divisão + participantes atômicos).
+    assert len(a.get("/api/divisoes-despesa").json()) == 1
 
 
 # --- investimentos (RF12–RF14) -------------------------------------------------------------

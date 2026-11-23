@@ -140,13 +140,16 @@ def _transacao_vinculavel(db: Session, usuario_id: int, transacao_id: int) -> Tr
     return tx
 
 
+_JA_VINCULADA = "essa transação já está vinculada a outra divisão"
+
+
 def _commit_vinculo(db: Session) -> None:
     """`transacao_id` é único: corrida entre dois vínculos da mesma transação vira 409."""
     try:
         commit(db)
     except IntegrityError as exc:
         db.rollback()
-        raise ConflictError("essa transação já está vinculada a outra divisão") from exc
+        raise ConflictError(_JA_VINCULADA) from exc
 
 
 def criar(db: Session, usuario_id: int, payload: DivisaoDespesaCreate) -> DivisaoDespesaRead:
@@ -163,25 +166,31 @@ def criar(db: Session, usuario_id: int, payload: DivisaoDespesaCreate) -> Divisa
     if payload.transacao_id is not None:
         data = _transacao_vinculavel(db, usuario_id, payload.transacao_id).date
     repo = DivisaoDespesaRepository(db, usuario_id)
-    despesa = repo.criar(
-        pago_por_usuario_id=payload.pago_por_usuario_id,
-        descricao=payload.descricao,
-        categoria_id=payload.categoria_id,
-        valor_total_centavos=payload.valor_total_centavos,
-        modo_divisao=payload.modo_divisao,
-        quitada=False,
-        arquivada=False,
-        data=data,
-        transacao_id=payload.transacao_id,
-        sem_transacao=payload.sem_transacao,
-    )
     linhas = _rateio(
         payload.valor_total_centavos,
         payload.modo_divisao,
         payload.pago_por_usuario_id,
         ids_validados,
     )
-    repo.definir_participantes(despesa.id, linhas)
+    # Os `flush` de `criar`/`definir_participantes` já esbarram no UNIQUE de `transacao_id`:
+    # o 409 cobre o bloco inteiro, não só o commit (divisão e participantes ficam atômicos).
+    try:
+        despesa = repo.criar(
+            pago_por_usuario_id=payload.pago_por_usuario_id,
+            descricao=payload.descricao,
+            categoria_id=payload.categoria_id,
+            valor_total_centavos=payload.valor_total_centavos,
+            modo_divisao=payload.modo_divisao,
+            quitada=False,
+            arquivada=False,
+            data=data,
+            transacao_id=payload.transacao_id,
+            sem_transacao=payload.sem_transacao,
+        )
+        repo.definir_participantes(despesa.id, linhas)
+    except IntegrityError as exc:
+        db.rollback()
+        raise ConflictError(_JA_VINCULADA) from exc
     _commit_vinculo(db)
     db.refresh(despesa)
     return enriquecer(db, usuario_id, despesa)
@@ -191,7 +200,9 @@ def definir_vinculo(
     db: Session, usuario_id: int, despesa_id: int, payload: DivisaoVinculo
 ) -> DivisaoDespesaRead:
     """Só o pagador (RF02) — a transação vinculada é dele, mesmo que outra pessoa tenha criado."""
-    despesa = DivisaoDespesaRepository(db, usuario_id).obter(despesa_id)
+    # Linha travada até o commit: duas trocas simultâneas não leem ambas "sem transação" e a
+    # segunda não sobrescreve a primeira (no SQLite a escrita já é serializada).
+    despesa = DivisaoDespesaRepository(db, usuario_id).obter(despesa_id, para_atualizar=True)
     if despesa is None:
         raise NotFoundError("despesa não encontrada")
     if despesa.pago_por_usuario_id != usuario_id:
@@ -420,10 +431,15 @@ def lancamentos(
 
 
 def pendentes(
-    db: Session, usuario_id: int, corte: datetime | None, limite: int
+    db: Session, usuario_id: int, corte: datetime | None, fim: datetime, limite: int
 ) -> tuple[list[DivisaoDespesa], int]:
-    """Divisões pendentes de vínculo (RF10/RF11), mais recentes primeiro, + total."""
-    filtros = (DivisaoDespesa.arquivada.is_(False), expr_pendente(usuario_id, corte))
+    """Divisões pendentes de vínculo (RF10/RF11) com data antes de `fim` (mesmo corte de "hoje"
+    da seção de transações), mais recentes primeiro, + total."""
+    filtros = (
+        DivisaoDespesa.arquivada.is_(False),
+        DivisaoDespesa.data < fim,
+        expr_pendente(usuario_id, corte),
+    )
     total = db.scalar(select(func.count()).select_from(DivisaoDespesa).where(*filtros)) or 0
     itens = db.scalars(
         select(DivisaoDespesa)
