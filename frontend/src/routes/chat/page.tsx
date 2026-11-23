@@ -19,12 +19,15 @@ export function ChatPage() {
         variante="pagina"
         voltar={voltar}
         acoes={
-          <AcaoRecolher
-            onRecolher={() => {
-              setPainelAberto(true)
-              voltar()
-            }}
-          />
+          // Recolher para o painel só existe onde há painel (≥ lg, ver ChatToggle).
+          <span className="hidden lg:contents">
+            <AcaoRecolher
+              onRecolher={() => {
+                setPainelAberto(true)
+                voltar()
+              }}
+            />
+          </span>
         }
       />
     </div>
