@@ -23,11 +23,15 @@ from app.schemas.dashboard import (
     SerieBucket,
 )
 from app.services.categoria_resolucao import com_assinatura, expr_categoria_efetiva
-from app.services.gasto_usuario import VALOR_EFETIVO, linhas_do_periodo
+from app.services.gasto_usuario import (
+    VALOR_EFETIVO,
+    categorias_investimento,
+    linhas_do_periodo,
+    tipo_do_lancamento,
+)
 from app.services.periodo import SP, limites_sp
 from app.services.revisao import expr_pendente_revisao
 
-_TOP_CATEGORIAS = 8
 _ULTIMAS = 10
 _FATURAS_ABERTAS = 5
 _FATURAS_GRAFICO = 6
@@ -36,18 +40,23 @@ _FATURAS_GRAFICO = 6
 # do usuário (assinatura + categorias desativadas), então é montada por query, não em módulo.
 
 
-def _totais(linhas) -> tuple[int, int, dict[str | None, int]]:
-    """(entradas, saídas, gasto por categoria) das linhas de `gasto_usuario.linhas_do_periodo`
-    — já na parte do usuário (divisão) e em grandeza; quem diz entrada/saída é o `type`."""
-    entradas = saidas = 0
+def _totais(linhas, investimento: set[str]) -> tuple[int, int, int, dict[str | None, int]]:
+    """(entradas, saídas, investido, gasto por categoria) das linhas de
+    `gasto_usuario.linhas_do_periodo` — já na parte do usuário (divisão) e em grandeza; quem diz
+    entrada/saída é o `type`. Categoria de investimento não é entrada/saída: aporte (DEBIT) −
+    resgate (CREDIT) vai para `investido`, que pode ficar negativo."""
+    entradas = saidas = investido = 0
     por_cat: dict[str | None, int] = {}
-    for _, valor, tipo, cat in linhas:
-        if tipo == "CREDIT":
+    for _, valor, tipo_tx, cat in linhas:
+        tipo = tipo_do_lancamento(cat, tipo_tx, investimento)
+        if tipo == "investimento":
+            investido += valor if tipo_tx == "DEBIT" else -valor
+        elif tipo == "receita":
             entradas += valor
         else:
             saidas += valor
             por_cat[cat] = por_cat.get(cat, 0) + valor
-    return entradas, saidas, por_cat
+    return entradas, saidas, investido, por_cat
 
 
 def _saldo_em_contas(db: Session, usuario_id: int) -> int:
@@ -72,8 +81,8 @@ def _contar_pendentes(db: Session, do_usuario, corte: datetime | None) -> int:
 
 
 def _gasto_por_categoria(por_cat: dict[str | None, int]) -> list[GastoCategoria]:
-    """Top-N categorias por gasto no período, pela categoria efetiva (§4.5)."""
-    top = sorted(por_cat.items(), key=lambda kv: kv[1], reverse=True)[:_TOP_CATEGORIAS]
+    """Todas as categorias com gasto no período, maior primeiro, pela categoria efetiva (§4.5)."""
+    top = sorted(por_cat.items(), key=lambda kv: kv[1], reverse=True)
     return [GastoCategoria(categoria_id=cat, total_centavos=total) for cat, total in top]
 
 
@@ -110,13 +119,16 @@ def montar_dashboard(
 ) -> DashboardResumo:
     ini, fim_excl = limites_sp(inicio, fim)
     do_usuario = Transacao.usuario_id == usuario_id
-    entradas, saidas, por_cat = _totais(linhas_do_periodo(db, usuario_id, ini, fim_excl))
+    entradas, saidas, investido, por_cat = _totais(
+        linhas_do_periodo(db, usuario_id, ini, fim_excl), categorias_investimento(db, usuario_id)
+    )
 
     return DashboardResumo(
         saldo_total_centavos=_saldo_em_contas(db, usuario_id),
         entradas_centavos=entradas,
         saidas_centavos=saidas,
         resultado_centavos=entradas - saidas,
+        investido_centavos=investido,
         nao_revisadas=_contar_pendentes(db, do_usuario, corte_revisao),
         gasto_por_categoria=_gasto_por_categoria(por_cat),
         ultimas_transacoes=_ultimas_transacoes(db, do_usuario),
@@ -230,34 +242,28 @@ def montar_series(
     linhas = linhas_do_periodo(db, usuario_id, ini, fim_excl)
 
     # Buckets vazios de inicio→fim para os gráficos não pularem períodos sem transação.
-    buckets: dict[date, dict] = {}
+    por_bucket: dict[date, list] = {}
     b = _inicio_bucket(inicio, granularidade)
     while b <= fim:
-        buckets[b] = {"entradas": 0, "saidas": 0, "cat": {}}
+        por_bucket[b] = []
         b = _proximo_bucket(b, granularidade)
-
-    for dt, valor, tipo, cat in linhas:
-        chave = _inicio_bucket(dt.astimezone(SP).date(), granularidade)
-        bal = buckets.setdefault(chave, {"entradas": 0, "saidas": 0, "cat": {}})
-        # Grandeza já resolvida (e na parte do usuário) por `linhas_do_periodo`.
-        if tipo == "CREDIT":
-            bal["entradas"] += valor
-        else:
-            bal["saidas"] += valor
-            bal["cat"][cat] = bal["cat"].get(cat, 0) + valor
+    for linha in linhas:
+        chave = _inicio_bucket(linha[0].astimezone(SP).date(), granularidade)
+        por_bucket.setdefault(chave, []).append(linha)
+    investimento = categorias_investimento(db, usuario_id)
+    # Mesma regra dos KPIs (`_totais`): os buckets somam o resumo do mesmo período.
+    totais = {chave: _totais(ls, investimento) for chave, ls in por_bucket.items()}
 
     return DashboardSeries(
         buckets=[
             SerieBucket(
                 inicio=chave,
-                entradas_centavos=bal["entradas"],
-                saidas_centavos=bal["saidas"],
-                resultado_centavos=bal["entradas"] - bal["saidas"],
-                por_categoria=[
-                    GastoCategoria(categoria_id=c, total_centavos=t)
-                    for c, t in sorted(bal["cat"].items(), key=lambda kv: kv[1], reverse=True)
-                ],
+                entradas_centavos=ent,
+                saidas_centavos=sai,
+                resultado_centavos=ent - sai,
+                investido_centavos=inv,
+                por_categoria=_gasto_por_categoria(cat),
             )
-            for chave, bal in sorted(buckets.items())
+            for chave, (ent, sai, inv, cat) in sorted(totais.items())
         ]
     )

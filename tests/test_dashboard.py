@@ -321,3 +321,68 @@ def test_compra_de_cartao_com_debit_positivo_conta_como_saida(db, usuario):
     serie = montar_series(db, usuario.id, date(2026, 3, 1), date(2026, 3, 31), "mensal")
     assert serie.buckets[0].saidas_centavos == 40_000
     assert serie.buckets[0].por_categoria[0].total_centavos == 40_000
+
+
+def test_investimento_nao_e_despesa_nem_receita(db, usuario):
+    """Aporte/resgate em categoria de investimento (subárvore 03 menos 0306) sai de saídas,
+    entradas e gasto por categoria e vai para `investido` (aporte − resgate). Rendimento (0306)
+    continua entrada. Série reconcilia com o resumo."""
+    db.add_all(
+        [
+            Categoria(pluggy_id="03000000", description="Investimentos"),
+            Categoria(pluggy_id="03010000", description="Renda fixa", parent_id="03000000"),
+            Categoria(pluggy_id="03060000", description="Juros", parent_id="03000000"),
+            Categoria(pluggy_id="07010000", description="Telefone"),
+        ]
+    )
+    db.commit()
+    bank, _credit = _contas(db, usuario.id)
+    repo = TransacaoRepository(db, usuario.id)
+    _tx(repo, bank, "sal", 500_000)
+    _tx(repo, bank, "vivo", -10_000, cat="07010000")
+    _tx(repo, bank, "aporte", -200_000, cat="03010000")
+    _tx(repo, bank, "resgate", 50_000, cat="03010000")
+    _tx(repo, bank, "juros", 3_000, cat="03060000")
+
+    d = montar_dashboard(db, usuario.id, *mes_corrente())
+
+    assert d.entradas_centavos == 503_000  # salário + juros; resgate fora
+    assert d.saidas_centavos == 10_000  # aporte fora
+    assert d.resultado_centavos == 493_000
+    assert d.investido_centavos == 150_000
+    assert {g.categoria_id for g in d.gasto_por_categoria} == {"07010000"}
+
+    s = montar_series(db, usuario.id, *mes_corrente(), "semanal")
+    assert sum(b.investido_centavos for b in s.buckets) == 150_000
+    assert sum(b.saidas_centavos for b in s.buckets) == 10_000
+    assert sum(b.entradas_centavos for b in s.buckets) == 503_000
+
+
+def test_investido_negativo_quando_resgata_mais(db, usuario):
+    db.add(Categoria(pluggy_id="03000000", description="Investimentos"))
+    db.commit()
+    bank, _credit = _contas(db, usuario.id)
+    repo = TransacaoRepository(db, usuario.id)
+    _tx(repo, bank, "aporte", -10_000, cat="03000000")
+    _tx(repo, bank, "resgate", 40_000, cat="03000000")
+
+    d = montar_dashboard(db, usuario.id, *mes_corrente())
+
+    assert d.investido_centavos == -30_000
+    assert d.entradas_centavos == 0 and d.saidas_centavos == 0
+
+
+def test_gasto_por_categoria_traz_todas(db, usuario):
+    """Sem corte de top-N: a rosca do dashboard mostra todas as despesas."""
+    cats = [f"07{i:02d}0000" for i in range(1, 13)]
+    db.add_all([Categoria(pluggy_id=c, description=c) for c in cats])
+    db.commit()
+    bank, _credit = _contas(db, usuario.id)
+    repo = TransacaoRepository(db, usuario.id)
+    for i, c in enumerate(cats):
+        _tx(repo, bank, f"t{i}", -(1_000 + i), cat=c)
+
+    d = montar_dashboard(db, usuario.id, *mes_corrente())
+
+    assert len(d.gasto_por_categoria) == 12
+    assert d.gasto_por_categoria[0].categoria_id == cats[-1]  # maior primeiro

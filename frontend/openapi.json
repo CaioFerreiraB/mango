@@ -10032,6 +10032,10 @@
             "type": "integer",
             "title": "Resultado Centavos"
           },
+          "investido_centavos": {
+            "type": "integer",
+            "title": "Investido Centavos"
+          },
           "nao_revisadas": {
             "type": "integer",
             "title": "Nao Revisadas"
@@ -10064,6 +10068,7 @@
           "entradas_centavos",
           "saidas_centavos",
           "resultado_centavos",
+          "investido_centavos",
           "nao_revisadas",
           "gasto_por_categoria",
           "ultimas_transacoes",
@@ -14755,6 +14760,10 @@
             "type": "integer",
             "title": "Resultado Centavos"
           },
+          "investido_centavos": {
+            "type": "integer",
+            "title": "Investido Centavos"
+          },
           "por_categoria": {
             "items": {
               "$ref": "#/components/schemas/GastoCategoria"
@@ -14769,6 +14778,7 @@
           "entradas_centavos",
           "saidas_centavos",
           "resultado_centavos",
+          "investido_centavos",
           "por_categoria"
         ],
         "title": "SerieBucket",

@@ -27,8 +27,9 @@ async def resumo_financeiro(
     fim: Annotated[date | None, Field(description="Padrão: hoje")] = None,
     formato: Formato = "tabela",
 ) -> CallToolResult:
-    """Resumo do período (padrão: mês atual): entradas, saídas, resultado, saldo em contas,
-    transações a revisar, gasto por categoria e faturas em aberto. Transferências não contam."""
+    """Resumo do período (padrão: mês atual): entradas, saídas, resultado, investido, saldo em
+    contas, transações a revisar, gasto por categoria e faturas em aberto. Transferências não
+    contam; aporte/resgate em categoria de investimento não é saída/entrada, vai em "Investido"."""
     params = {"inicio": inicio and inicio.isoformat(), "fim": fim and fim.isoformat()}
     r = await api(ctx, "GET", "/dashboard", params=params)
     cats, cts = await categorias(ctx), await contas(ctx)
@@ -55,7 +56,8 @@ async def resumo_financeiro(
         f"## Resumo — {periodo}",
         f"- **Entradas:** {f.brl(r['entradas_centavos'])}\n"
         f"- **Saídas:** {f.brl(r['saidas_centavos'])}\n"
-        f"- **Resultado:** {f.brl(r['resultado_centavos'])}\n- **Saldo em contas:** "
+        f"- **Resultado:** {f.brl(r['resultado_centavos'])}\n"
+        f"- **Investido:** {f.brl(r['investido_centavos'])}\n- **Saldo em contas:** "
         f"{f.brl(r['saldo_total_centavos'])}\n- **Transações a revisar:** {r['nao_revisadas']}",
         "### Gasto por categoria\n\n" + f.tabela(["Categoria", "Total", "%"], linhas, formato),
         "### Faturas em aberto\n\n" + f.tabela(["Cartão", "Vencimento", "Total"], faturas, formato)

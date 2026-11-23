@@ -18,7 +18,8 @@ class DashboardResumo(BaseModel):
     saldo_total_centavos: int
     entradas_centavos: int
     saidas_centavos: int
-    resultado_centavos: int
+    resultado_centavos: int  # entradas − saídas (investimento fica fora das duas)
+    investido_centavos: int  # aportes − resgates em categoria de investimento; pode ser < 0
     nao_revisadas: int
     gasto_por_categoria: list[GastoCategoria]
     ultimas_transacoes: list[TransacaoRead]
@@ -33,6 +34,7 @@ class SerieBucket(BaseModel):
     entradas_centavos: int
     saidas_centavos: int
     resultado_centavos: int
+    investido_centavos: int
     por_categoria: list[GastoCategoria]
 
 

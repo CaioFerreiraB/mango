@@ -21,6 +21,7 @@ from sqlalchemy.orm import Session, aliased
 from app.models.categoria import Categoria
 from app.models.divisao import DivisaoDespesa, DivisaoParticipante
 from app.models.transacao import Transacao
+from app.services.categoria_arvore import subarvores as montar_subarvores
 from app.services.categoria_resolucao import com_assinatura, expr_categoria_efetiva
 
 # Valor efetivo em reais = valor na moeda da conta (compra internacional), senão o `amount` cru.
@@ -84,6 +85,25 @@ def parcelas_divisao(usuario_id: int):
             ),
         )
     )
+
+
+# Investimento = subárvore 03 menos os rendimentos (0306 juros/dividendos), que são receita.
+# Fonte única de orçamento e dashboard: aporte/resgate não é despesa/receita.
+RAIZ_INVESTIMENTO = "03000000"
+RAIZ_RENDIMENTOS = "03060000"
+
+
+def categorias_investimento(db: Session, usuario_id: int) -> set[str]:
+    """Categorias de investimento do usuário (pela árvore: pega personalizadas filhas)."""
+    arv = montar_subarvores(db, usuario_id, {RAIZ_INVESTIMENTO, RAIZ_RENDIMENTOS})
+    return arv[RAIZ_INVESTIMENTO] - arv[RAIZ_RENDIMENTOS]
+
+
+def tipo_do_lancamento(cat: str | None, tipo_tx: str, investimento: set[str]) -> str:
+    """'investimento' | 'despesa' | 'receita' de uma linha de `linhas_do_periodo`."""
+    if cat in investimento:
+        return "investimento"
+    return "despesa" if tipo_tx == "DEBIT" else "receita"
 
 
 def linhas_do_periodo(

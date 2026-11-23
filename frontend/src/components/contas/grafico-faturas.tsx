@@ -90,6 +90,7 @@ export function GraficoFaturas({ contaId }: { contaId: number }) {
     entradas_centavos: 0,
     saidas_centavos: 0,
     resultado_centavos: 0,
+    investido_centavos: 0,
     por_categoria: b.por_categoria,
   }))
 

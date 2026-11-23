@@ -38,16 +38,18 @@ from app.schemas.orcamento import OrcamentoConsumoItem, OrcamentoConsumoRead
 from app.services.categoria_arvore import com_descendentes
 from app.services.categoria_arvore import subarvores as montar_subarvores
 from app.services.categoria_resolucao import com_assinatura, expr_categoria_efetiva
-from app.services.gasto_usuario import linhas_do_periodo, parcelas_divisao
+from app.services.gasto_usuario import (
+    categorias_investimento,
+    linhas_do_periodo,
+    parcelas_divisao,
+    tipo_do_lancamento,
+)
 from app.services.orcamento_mensal import materializar_mes
 from app.services.periodo import hoje_sp, limites_sp
 
 # Do maior para o menor: o primeiro que o percentual cruza é o alerta a exibir.
 _LIMIARES = (100, 90, 75, 50)
 
-# Investimento = subárvore 03 menos os rendimentos (0306 juros/dividendos), que são receita.
-RAIZ_INVESTIMENTO = "03000000"
-RAIZ_RENDIMENTOS = "03060000"
 TIPOS = ("despesa", "receita", "investimento")
 
 
@@ -55,18 +57,6 @@ def _intervalo_mes(ano: int, mes: int) -> tuple[date, date]:
     inicio = date(ano, mes, 1)
     prox = date(ano + mes // 12, mes % 12 + 1, 1)  # 1º dia do mês seguinte
     return inicio, prox - timedelta(days=1)
-
-
-def categorias_investimento(db: Session, usuario_id: int) -> set[str]:
-    """Categorias cujo realizado vai para a aba Investimentos (pela árvore: pega personalizadas)."""
-    arv = montar_subarvores(db, usuario_id, {RAIZ_INVESTIMENTO, RAIZ_RENDIMENTOS})
-    return arv[RAIZ_INVESTIMENTO] - arv[RAIZ_RENDIMENTOS]
-
-
-def tipo_do_lancamento(cat: str | None, tipo_tx: str, investimento: set[str]) -> str:
-    if cat in investimento:
-        return "investimento"
-    return "despesa" if tipo_tx == "DEBIT" else "receita"
 
 
 # ponytail: uma categoria num mês raramente passa de dezenas de linhas; paginar se um dia estourar.
