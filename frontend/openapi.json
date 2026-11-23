@@ -2615,7 +2615,8 @@
               "enum": [
                 "diaria",
                 "semanal",
-                "mensal"
+                "mensal",
+                "anual"
               ],
               "type": "string",
               "default": "semanal",
@@ -2630,6 +2631,304 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/DashboardSeries"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/dashboard/patrimonio": {
+      "get": {
+        "tags": [
+          "dashboard"
+        ],
+        "summary": "Patrimonio",
+        "description": "Evolução patrimonial mês a mês (contas BANK + investimentos), terminando no mês corrente.",
+        "operationId": "patrimonio_api_dashboard_patrimonio_get",
+        "parameters": [
+          {
+            "name": "meses",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 36,
+              "minimum": 1,
+              "default": 12,
+              "title": "Meses"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PatrimonioSerie"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/dashboard/cartoes": {
+      "get": {
+        "tags": [
+          "dashboard"
+        ],
+        "summary": "Cartoes",
+        "description": "Painel dos cartões: compras do mês, fatura atual, próximas, limite e resumo do ano.",
+        "operationId": "cartoes_api_dashboard_cartoes_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CartoesResumo"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/dashboard/analise": {
+      "get": {
+        "tags": [
+          "dashboard"
+        ],
+        "summary": "Analise",
+        "description": "Abas Receitas/Despesas: totais vs período anterior, categorias, maiores contrapartes, meios\nde pagamento, dia da semana, acumulado diário e orçamento (previsto) × realizado.",
+        "operationId": "analise_api_dashboard_analise_get",
+        "parameters": [
+          {
+            "name": "natureza",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "enum": [
+                "receita",
+                "despesa"
+              ],
+              "type": "string",
+              "title": "Natureza"
+            }
+          },
+          {
+            "name": "inicio",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Inicio"
+            }
+          },
+          {
+            "name": "fim",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Fim"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnaliseNatureza"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/dashboard/analise/transacoes": {
+      "get": {
+        "tags": [
+          "dashboard"
+        ],
+        "summary": "Analise Transacoes",
+        "description": "Transações de um pedaço da análise (categoria, contraparte, meio e/ou conta). Mesmo recorte\ndos gráficos: a soma bate com o valor exibido. Até 200, mais recentes primeiro.",
+        "operationId": "analise_transacoes_api_dashboard_analise_transacoes_get",
+        "parameters": [
+          {
+            "name": "natureza",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "enum": [
+                "receita",
+                "despesa"
+              ],
+              "type": "string",
+              "title": "Natureza"
+            }
+          },
+          {
+            "name": "inicio",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Inicio"
+            }
+          },
+          {
+            "name": "fim",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Fim"
+            }
+          },
+          {
+            "name": "categoria_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 16
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Categoria Id"
+            }
+          },
+          {
+            "name": "contraparte",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 255
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Contraparte"
+            }
+          },
+          {
+            "name": "meio",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 64
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Meio"
+            }
+          },
+          {
+            "name": "conta_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Conta Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransacaoListagem"
                 }
               }
             }
@@ -7032,6 +7331,161 @@
         "type": "object",
         "title": "AcessoMcpUpdate"
       },
+      "AcumuladoPonto": {
+        "properties": {
+          "indice": {
+            "type": "integer",
+            "title": "Indice"
+          },
+          "data": {
+            "type": "string",
+            "format": "date",
+            "title": "Data"
+          },
+          "atual_centavos": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Atual Centavos"
+          },
+          "anterior_centavos": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Anterior Centavos"
+          },
+          "esperado_centavos": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Esperado Centavos"
+          }
+        },
+        "type": "object",
+        "required": [
+          "indice",
+          "data",
+          "atual_centavos",
+          "anterior_centavos",
+          "esperado_centavos"
+        ],
+        "title": "AcumuladoPonto",
+        "description": "Dia `indice` (0 = 1º dia) do período atual e do anterior equivalente, lado a lado."
+      },
+      "AnaliseNatureza": {
+        "properties": {
+          "natureza": {
+            "type": "string",
+            "title": "Natureza"
+          },
+          "anterior_inicio": {
+            "type": "string",
+            "format": "date",
+            "title": "Anterior Inicio"
+          },
+          "anterior_fim": {
+            "type": "string",
+            "format": "date",
+            "title": "Anterior Fim"
+          },
+          "total_centavos": {
+            "type": "integer",
+            "title": "Total Centavos"
+          },
+          "anterior_centavos": {
+            "type": "integer",
+            "title": "Anterior Centavos"
+          },
+          "quantidade": {
+            "type": "integer",
+            "title": "Quantidade"
+          },
+          "por_categoria": {
+            "items": {
+              "$ref": "#/components/schemas/GastoCategoria"
+            },
+            "type": "array",
+            "title": "Por Categoria"
+          },
+          "contrapartes": {
+            "items": {
+              "$ref": "#/components/schemas/ContraparteTotal"
+            },
+            "type": "array",
+            "title": "Contrapartes"
+          },
+          "outras_contrapartes_centavos": {
+            "type": "integer",
+            "title": "Outras Contrapartes Centavos"
+          },
+          "outras_contrapartes_quantidade": {
+            "type": "integer",
+            "title": "Outras Contrapartes Quantidade"
+          },
+          "meios": {
+            "items": {
+              "$ref": "#/components/schemas/MeioTotal"
+            },
+            "type": "array",
+            "title": "Meios"
+          },
+          "dias_semana": {
+            "items": {
+              "$ref": "#/components/schemas/DiaSemanaTotal"
+            },
+            "type": "array",
+            "title": "Dias Semana"
+          },
+          "acumulado": {
+            "items": {
+              "$ref": "#/components/schemas/AcumuladoPonto"
+            },
+            "type": "array",
+            "title": "Acumulado"
+          },
+          "previsto": {
+            "items": {
+              "$ref": "#/components/schemas/PrevistoMes"
+            },
+            "type": "array",
+            "title": "Previsto"
+          }
+        },
+        "type": "object",
+        "required": [
+          "natureza",
+          "anterior_inicio",
+          "anterior_fim",
+          "total_centavos",
+          "anterior_centavos",
+          "quantidade",
+          "por_categoria",
+          "contrapartes",
+          "outras_contrapartes_centavos",
+          "outras_contrapartes_quantidade",
+          "meios",
+          "dias_semana",
+          "acumulado",
+          "previsto"
+        ],
+        "title": "AnaliseNatureza",
+        "description": "Aba Receitas ou Despesas do dashboard: mesmas regras dos KPIs (sem transferências nem\ninvestimento; estorno de cartão abate despesa; parte do usuário nas divisões)."
+      },
       "AporteManualCreate": {
         "properties": {
           "data": {
@@ -7669,6 +8123,90 @@
           "valida"
         ],
         "title": "BrapiTokenTeste"
+      },
+      "CartaoPainel": {
+        "properties": {
+          "conta_id": {
+            "type": "integer",
+            "title": "Conta Id"
+          },
+          "nome": {
+            "type": "string",
+            "title": "Nome"
+          },
+          "fecha": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fecha"
+          },
+          "vence": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vence"
+          },
+          "limite_centavos": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Limite Centavos"
+          },
+          "disponivel_centavos": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Disponivel Centavos"
+          },
+          "compras_mes_centavos": {
+            "type": "integer",
+            "title": "Compras Mes Centavos"
+          },
+          "fatura_atual_centavos": {
+            "type": "integer",
+            "title": "Fatura Atual Centavos"
+          },
+          "proximas_centavos": {
+            "type": "integer",
+            "title": "Proximas Centavos"
+          }
+        },
+        "type": "object",
+        "required": [
+          "conta_id",
+          "nome",
+          "fecha",
+          "vence",
+          "limite_centavos",
+          "disponivel_centavos",
+          "compras_mes_centavos",
+          "fatura_atual_centavos",
+          "proximas_centavos"
+        ],
+        "title": "CartaoPainel",
+        "description": "Um cartão no painel do dashboard. Compras = DEBIT do cartão (sem transferência), em grandeza;\nfatura atual = saldo da conta CREDIT (o que o Pluggy dá como fatura em aberto); próximas =\nlançamentos com data futura (parcelas e compras ainda não faturadas)."
       },
       "CartaoRead": {
         "properties": {
@@ -8563,6 +9101,47 @@
           "quantidade_ativos"
         ],
         "title": "CarteiraTotais"
+      },
+      "CartoesResumo": {
+        "properties": {
+          "compras_mes_centavos": {
+            "type": "integer",
+            "title": "Compras Mes Centavos"
+          },
+          "fatura_atual_centavos": {
+            "type": "integer",
+            "title": "Fatura Atual Centavos"
+          },
+          "proximas_centavos": {
+            "type": "integer",
+            "title": "Proximas Centavos"
+          },
+          "total_ano_centavos": {
+            "type": "integer",
+            "title": "Total Ano Centavos"
+          },
+          "media_mes_centavos": {
+            "type": "integer",
+            "title": "Media Mes Centavos"
+          },
+          "cartoes": {
+            "items": {
+              "$ref": "#/components/schemas/CartaoPainel"
+            },
+            "type": "array",
+            "title": "Cartoes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "compras_mes_centavos",
+          "fatura_atual_centavos",
+          "proximas_centavos",
+          "total_ano_centavos",
+          "media_mes_centavos",
+          "cartoes"
+        ],
+        "title": "CartoesResumo"
       },
       "CategoriaCreate": {
         "properties": {
@@ -9722,6 +10301,29 @@
         "title": "ContaSaldoSerie",
         "description": "Série de saldo diário (fecho de cada dia) de uma conta BANK, para o sparkline dos cards."
       },
+      "ContaTotal": {
+        "properties": {
+          "conta_id": {
+            "type": "integer",
+            "title": "Conta Id"
+          },
+          "nome": {
+            "type": "string",
+            "title": "Nome"
+          },
+          "total_centavos": {
+            "type": "integer",
+            "title": "Total Centavos"
+          }
+        },
+        "type": "object",
+        "required": [
+          "conta_id",
+          "nome",
+          "total_centavos"
+        ],
+        "title": "ContaTotal"
+      },
       "ContaUpdate": {
         "properties": {
           "objetivo_id": {
@@ -9739,6 +10341,35 @@
         "type": "object",
         "title": "ContaUpdate",
         "description": "Update estreito (§4 crud.md): o usuário só altera o vínculo com objetivo.\n\n`objetivo_id=None` desvincula. Campos importados do Pluggy não são editáveis aqui."
+      },
+      "ContraparteTotal": {
+        "properties": {
+          "chave": {
+            "type": "string",
+            "title": "Chave"
+          },
+          "nome": {
+            "type": "string",
+            "title": "Nome"
+          },
+          "total_centavos": {
+            "type": "integer",
+            "title": "Total Centavos"
+          },
+          "quantidade": {
+            "type": "integer",
+            "title": "Quantidade"
+          }
+        },
+        "type": "object",
+        "required": [
+          "chave",
+          "nome",
+          "total_centavos",
+          "quantidade"
+        ],
+        "title": "ContraparteTotal",
+        "description": "Estabelecimento/destinatário (despesa) ou pagador (receita), como o banco nomeia.\n`chave` = nome normalizado (filtro do drill-down)."
       },
       "ConversaIaRead": {
         "properties": {
@@ -10032,6 +10663,10 @@
             "type": "integer",
             "title": "Resultado Centavos"
           },
+          "investido_centavos": {
+            "type": "integer",
+            "title": "Investido Centavos"
+          },
           "nao_revisadas": {
             "type": "integer",
             "title": "Nao Revisadas"
@@ -10064,6 +10699,7 @@
           "entradas_centavos",
           "saidas_centavos",
           "resultado_centavos",
+          "investido_centavos",
           "nao_revisadas",
           "gasto_por_categoria",
           "ultimas_transacoes",
@@ -10086,6 +10722,29 @@
           "buckets"
         ],
         "title": "DashboardSeries"
+      },
+      "DiaSemanaTotal": {
+        "properties": {
+          "dia": {
+            "type": "integer",
+            "title": "Dia"
+          },
+          "total_centavos": {
+            "type": "integer",
+            "title": "Total Centavos"
+          },
+          "ocorrencias": {
+            "type": "integer",
+            "title": "Ocorrencias"
+          }
+        },
+        "type": "object",
+        "required": [
+          "dia",
+          "total_centavos",
+          "ocorrencias"
+        ],
+        "title": "DiaSemanaTotal"
       },
       "DivisaoDaTransacao": {
         "properties": {
@@ -12422,6 +13081,32 @@
         ],
         "title": "MeRead"
       },
+      "MeioTotal": {
+        "properties": {
+          "meio": {
+            "type": "string",
+            "title": "Meio"
+          },
+          "total_centavos": {
+            "type": "integer",
+            "title": "Total Centavos"
+          },
+          "por_conta": {
+            "items": {
+              "$ref": "#/components/schemas/ContaTotal"
+            },
+            "type": "array",
+            "title": "Por Conta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "meio",
+          "total_centavos",
+          "por_conta"
+        ],
+        "title": "MeioTotal"
+      },
       "MensagemIaCreate": {
         "properties": {
           "conversa_id": {
@@ -13378,6 +14063,71 @@
         "type": "object",
         "title": "OrcamentoUpdate"
       },
+      "PatrimonioPonto": {
+        "properties": {
+          "mes": {
+            "type": "string",
+            "title": "Mes"
+          },
+          "contas_centavos": {
+            "type": "integer",
+            "title": "Contas Centavos"
+          },
+          "investimentos_centavos": {
+            "type": "integer",
+            "title": "Investimentos Centavos"
+          },
+          "investimentos_liquido_centavos": {
+            "type": "integer",
+            "title": "Investimentos Liquido Centavos"
+          },
+          "total_centavos": {
+            "type": "integer",
+            "title": "Total Centavos"
+          },
+          "liquido_centavos": {
+            "type": "integer",
+            "title": "Liquido Centavos"
+          },
+          "liquido_estimado": {
+            "type": "boolean",
+            "title": "Liquido Estimado"
+          },
+          "tem_investimentos": {
+            "type": "boolean",
+            "title": "Tem Investimentos"
+          }
+        },
+        "type": "object",
+        "required": [
+          "mes",
+          "contas_centavos",
+          "investimentos_centavos",
+          "investimentos_liquido_centavos",
+          "total_centavos",
+          "liquido_centavos",
+          "liquido_estimado",
+          "tem_investimentos"
+        ],
+        "title": "PatrimonioPonto",
+        "description": "Fecho de um mês (o corrente fecha hoje). Contas = só BANK (cartão fica fora)."
+      },
+      "PatrimonioSerie": {
+        "properties": {
+          "pontos": {
+            "items": {
+              "$ref": "#/components/schemas/PatrimonioPonto"
+            },
+            "type": "array",
+            "title": "Pontos"
+          }
+        },
+        "type": "object",
+        "required": [
+          "pontos"
+        ],
+        "title": "PatrimonioSerie"
+      },
       "PerfilRead": {
         "properties": {
           "id": {
@@ -13494,6 +14244,34 @@
           "totp_login_habilitado": {
             "type": "boolean",
             "title": "Totp Login Habilitado"
+          },
+          "dashboard_layout": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/WidgetLayout"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dashboard Layout"
+          },
+          "atalhos_mobile": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Atalhos Mobile"
           }
         },
         "type": "object",
@@ -13511,7 +14289,9 @@
           "revisao_desde",
           "brapi_token_configurado",
           "totp_configurado",
-          "totp_login_habilitado"
+          "totp_login_habilitado",
+          "dashboard_layout",
+          "atalhos_mobile"
         ],
         "title": "PerfilRead"
       },
@@ -13638,6 +14418,37 @@
             "maximum": 100.0,
             "minimum": 1.0,
             "title": "Orcamento Alerta Pct"
+          },
+          "dashboard_layout": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/WidgetLayout"
+                },
+                "type": "array",
+                "maxItems": 30
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dashboard Layout"
+          },
+          "atalhos_mobile": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string",
+                  "pattern": "^[a-z][a-z-]{0,31}$"
+                },
+                "type": "array",
+                "maxItems": 3
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Atalhos Mobile"
           }
         },
         "type": "object",
@@ -13773,6 +14584,36 @@
           "ativa"
         ],
         "title": "PreferenciaIaUpdate"
+      },
+      "PrevistoMes": {
+        "properties": {
+          "mes": {
+            "type": "string",
+            "title": "Mes"
+          },
+          "previsto_centavos": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Previsto Centavos"
+          },
+          "realizado_centavos": {
+            "type": "integer",
+            "title": "Realizado Centavos"
+          }
+        },
+        "type": "object",
+        "required": [
+          "mes",
+          "previsto_centavos",
+          "realizado_centavos"
+        ],
+        "title": "PrevistoMes"
       },
       "PropostaIa": {
         "properties": {
@@ -14755,6 +15596,10 @@
             "type": "integer",
             "title": "Resultado Centavos"
           },
+          "investido_centavos": {
+            "type": "integer",
+            "title": "Investido Centavos"
+          },
           "por_categoria": {
             "items": {
               "$ref": "#/components/schemas/GastoCategoria"
@@ -14769,6 +15614,7 @@
           "entradas_centavos",
           "saidas_centavos",
           "resultado_centavos",
+          "investido_centavos",
           "por_categoria"
         ],
         "title": "SerieBucket",
@@ -16104,6 +16950,40 @@
           "dividendos_mes_centavos"
         ],
         "title": "VisaoGeralInvestimentos"
+      },
+      "WidgetLayout": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z-]{0,31}$",
+            "title": "Id"
+          },
+          "largura": {
+            "type": "integer",
+            "enum": [
+              12,
+              15,
+              20,
+              30,
+              40,
+              45,
+              60
+            ],
+            "title": "Largura"
+          },
+          "visivel": {
+            "type": "boolean",
+            "title": "Visivel"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "largura",
+          "visivel"
+        ],
+        "title": "WidgetLayout",
+        "description": "Um widget do dashboard: id do catálogo do frontend, largura em colunas de um grid de 60\n(⅕ ¼ ⅓ ½ ⅔ ¾ inteira) e visibilidade. Id desconhecido é aceito (o frontend ignora) — o\ncatálogo mora no cliente."
       }
     }
   }

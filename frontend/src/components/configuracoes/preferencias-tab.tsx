@@ -1,4 +1,6 @@
 import { useRef, useState } from "react"
+import { RotateCcw } from "lucide-react"
+import { useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
@@ -12,6 +14,13 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
   ACCENT_PADRAO,
@@ -19,6 +28,13 @@ import {
   aplicarAccent,
   type Accent,
 } from "@/lib/accent"
+import {
+  ATALHOS,
+  ATALHOS_PADRAO,
+  atalhosEfetivos,
+  inicioItem,
+} from "@/config/nav"
+import { useMe } from "@/lib/api/auth"
 import { useAtualizarPerfil, usePerfil, type Perfil } from "@/lib/api/perfil"
 import {
   AVATAR_PADRAO,
@@ -162,6 +178,7 @@ function PreferenciasForm({ perfil }: { perfil: Perfil }) {
         </CardContent>
       </Card>
 
+      <AtalhosCard perfil={perfil} />
       <RevisaoCorteCard perfil={perfil} />
       <AlertaOrcamentoCard perfil={perfil} />
     </div>
@@ -245,6 +262,107 @@ function RevisaoCorteCard({ perfil }: { perfil: Perfil }) {
             </Button>
           ) : null}
         </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+/** Barra de atalhos do celular: "Início" fixo + 3 escolhas. Grava a cada troca. Conta de divisão
+ *  não escolhe (a barra dela é fixa), então o card não aparece. */
+function AtalhosCard({ perfil }: { perfil: Perfil }) {
+  const me = useMe()
+  const atualizar = useAtualizarPerfil()
+  const qc = useQueryClient()
+  // Seleção otimista só enquanto grava; fora disso os seletores seguem o perfil confirmado (que
+  // pode mudar por outra aba). Uma gravação por vez: os controles travam enquanto ela corre, então
+  // duas trocas rápidas não chegam ao servidor fora de ordem.
+  const [otimista, setOtimista] = useState<string[] | null>(null)
+  const ids =
+    otimista ?? atalhosEfetivos(perfil.atalhos_mobile).map((a) => a.id)
+  if (me.data?.tipo === "divisao") return null
+
+  function gravar(novos: string[] | null) {
+    setOtimista(atalhosEfetivos(novos).map((a) => a.id))
+    atualizar.mutate(
+      { atalhos_mobile: novos },
+      {
+        // Perfil confirmado já no cache antes de soltar o otimista: sem piscar a escolha antiga.
+        onSuccess: (p) => qc.setQueryData(["perfil"], p),
+        onError: (err) => toast.error(err.message),
+        onSettled: () => setOtimista(null),
+      }
+    )
+  }
+
+  function trocar(pos: number, id: string) {
+    // Escolher um atalho que já está noutra posição troca os dois de lugar (nunca repete).
+    const novos = [...ids]
+    const j = novos.indexOf(id)
+    if (j >= 0) novos[j] = novos[pos]!
+    novos[pos] = id
+    gravar(novos)
+  }
+
+  const padrao = ids.join() === ATALHOS_PADRAO.join()
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">Atalhos do celular</CardTitle>
+        <CardDescription>
+          A barra inferior do celular tem o Início fixo e mais três atalhos à
+          sua escolha. O resto da navegação fica no menu ☰.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="atalho-inicio">1º · fixo</Label>
+            <Select disabled value="inicio">
+              <SelectTrigger id="atalho-inicio" className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="inicio">
+                  <inicioItem.icon aria-hidden />
+                  {inicioItem.short}
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          {ids.map((id, pos) => (
+            <div key={pos} className="flex flex-col gap-1.5">
+              <Label htmlFor={`atalho-${pos}`}>{pos + 2}º atalho</Label>
+              <Select
+                value={id}
+                onValueChange={(v) => trocar(pos, v)}
+                disabled={atualizar.isPending}
+              >
+                <SelectTrigger id={`atalho-${pos}`} className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {ATALHOS.map((a) => (
+                    <SelectItem key={a.id} value={a.id}>
+                      <a.icon aria-hidden />
+                      {a.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          ))}
+        </div>
+        {padrao ? null : (
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={atualizar.isPending}
+            onClick={() => gravar(null)}
+          >
+            <RotateCcw aria-hidden />
+            Restaurar padrão
+          </Button>
+        )}
       </CardContent>
     </Card>
   )

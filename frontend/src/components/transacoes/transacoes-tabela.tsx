@@ -135,11 +135,26 @@ function AlcaResize({
 export function TransacoesTabela({
   items,
   ocultarLinkFatura = false,
+  abrirId = null,
+  ocultarCategoria = false,
+  parteDoUsuario = false,
 }: {
   items: ItemListagem[]
   /** Repassado ao drawer: esconde "Ir para a fatura" quando já estamos numa fatura. */
   ocultarLinkFatura?: boolean
+  /** Transação cujo drawer nasce aberto (link da busca global). */
+  abrirId?: number | null
+  /** Esconde a coluna Categoria (lista já filtrada por uma categoria — coluna redundante). */
+  ocultarCategoria?: boolean
+  /** Compra dividida mostra só a parte do usuário (drill-down de gráfico: a lista soma a fatia). */
+  parteDoUsuario?: boolean
 }) {
+  const valorDe = (t: Transacao) => {
+    const v = valorEfetivoCentavos(t)
+    return parteDoUsuario && t.divisao
+      ? Math.sign(v) * t.divisao.minha_parte_centavos
+      : v
+  }
   const contas = useContas()
   const contaNome = new Map(
     (contas.data ?? []).map((c) => [
@@ -152,7 +167,17 @@ export function TransacoesTabela({
   const perfil = usePerfil() // corte da revisão (§4.3) — decide o estado do StatusBadge
   // Descrição · Valor · Data · Conta · Categoria · Status
   const { larguras, iniciar } = useLarguras([300, 120, 110, 160, 180, 120])
-  const [selecionadaId, setSelecionadaId] = useState<number | null>(null)
+  // `abrirId` (busca global → `/transacoes?id=`) só semeia: fechar o drawer não reabre.
+  const [selecionadaId, setSelecionadaId] = useState<number | null>(
+    abrirId ?? null
+  )
+  // Com a tabela já montada, um `abrirId` novo (outra busca) abre a transação pedida; fechar o
+  // drawer não reabre, porque `abrirId` não muda.
+  const [abrirVisto, setAbrirVisto] = useState(abrirId)
+  if (abrirId !== abrirVisto) {
+    setAbrirVisto(abrirId)
+    if (abrirId != null) setSelecionadaId(abrirId)
+  }
   const [divisaoId, setDivisaoId] = useState<number | null>(null)
   const selecionada =
     items.find(
@@ -164,9 +189,11 @@ export function TransacoesTabela({
       <div className="hidden rounded-lg border md:block">
         <Table className="table-fixed">
           <colgroup>
-            {larguras.map((w, i) => (
-              <col key={i} style={{ width: w }} />
-            ))}
+            {larguras.map((w, i) =>
+              ocultarCategoria && i === 4 ? null : (
+                <col key={i} style={{ width: w }} />
+              )
+            )}
           </colgroup>
           <TableHeader>
             <TableRow>
@@ -186,10 +213,12 @@ export function TransacoesTabela({
                 Conta
                 <AlcaResize aoIniciar={iniciar(3)} />
               </TableHead>
-              <TableHead className="relative">
-                Categoria
-                <AlcaResize aoIniciar={iniciar(4)} />
-              </TableHead>
+              {ocultarCategoria ? null : (
+                <TableHead className="relative">
+                  Categoria
+                  <AlcaResize aoIniciar={iniciar(4)} />
+                </TableHead>
+              )}
               <TableHead className="text-right">Status</TableHead>
             </TableRow>
           </TableHeader>
@@ -243,19 +272,21 @@ export function TransacoesTabela({
                     <TableCell className="text-sm text-muted-foreground">
                       —
                     </TableCell>
-                    <TableCell>
-                      {catL ? (
-                        <Badge
-                          variant="secondary"
-                          className="max-w-full font-normal"
-                        >
-                          <IconeL className="size-3.5 shrink-0" aria-hidden />
-                          <span className="min-w-0 truncate">{catL}</span>
-                        </Badge>
-                      ) : (
-                        <span className="text-muted-foreground">—</span>
-                      )}
-                    </TableCell>
+                    {ocultarCategoria ? null : (
+                      <TableCell>
+                        {catL ? (
+                          <Badge
+                            variant="secondary"
+                            className="max-w-full font-normal"
+                          >
+                            <IconeL className="size-3.5 shrink-0" aria-hidden />
+                            <span className="min-w-0 truncate">{catL}</span>
+                          </Badge>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
+                      </TableCell>
+                    )}
                     <TableCell className="text-right">
                       <BadgeLancamento lancamento={t} />
                     </TableCell>
@@ -341,7 +372,7 @@ export function TransacoesTabela({
                   </TableCell>
                   <TableCell>
                     <div className="truncate">
-                      <Valor centavos={valorEfetivoCentavos(t)} sinal neutro />
+                      <Valor centavos={valorDe(t)} sinal neutro />
                     </div>
                   </TableCell>
                   <TableCell className="text-muted-foreground">
@@ -355,19 +386,21 @@ export function TransacoesTabela({
                       {contaNome.get(t.conta_id) ?? "—"}
                     </div>
                   </TableCell>
-                  <TableCell>
-                    {catNome ? (
-                      <Badge
-                        variant="secondary"
-                        className="max-w-full font-normal"
-                      >
-                        <IconeCat className="size-3.5 shrink-0" aria-hidden />
-                        <span className="min-w-0 truncate">{catNome}</span>
-                      </Badge>
-                    ) : (
-                      <span className="text-muted-foreground">—</span>
-                    )}
-                  </TableCell>
+                  {ocultarCategoria ? null : (
+                    <TableCell>
+                      {catNome ? (
+                        <Badge
+                          variant="secondary"
+                          className="max-w-full font-normal"
+                        >
+                          <IconeCat className="size-3.5 shrink-0" aria-hidden />
+                          <span className="min-w-0 truncate">{catNome}</span>
+                        </Badge>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
+                  )}
                   <TableCell className="text-right">
                     <StatusBadge
                       estado={estadoRevisao(
@@ -482,7 +515,7 @@ export function TransacoesTabela({
                 </div>
                 <div className="shrink-0 text-right">
                   <Valor
-                    centavos={valorEfetivoCentavos(t)}
+                    centavos={valorDe(t)}
                     sinal
                     className="block text-xs font-semibold"
                   />

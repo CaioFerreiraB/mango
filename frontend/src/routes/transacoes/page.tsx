@@ -66,7 +66,7 @@ function janelaPaginas(atual: number, total: number): (number | "gap")[] {
  */
 export function TransacoesPage() {
   const [params] = useSearchParams()
-  const [busca, setBusca] = useState("")
+  const [busca, setBusca] = useState(params.get("busca") ?? "")
   const [contaId, setContaId] = useState<number | null>(
     params.get("conta_id") ? Number(params.get("conta_id")) : null
   )
@@ -90,6 +90,15 @@ export function TransacoesPage() {
   // Divididas = transações vinculadas a uma divisão + parcelas de divisão sem transação sua.
   const [divisao, setDivisao] = useState<"todas" | "divididas" | "nao">("todas")
   const [page, setPage] = useState(0)
+  // A busca global navega para `/transacoes?busca=` com a tela já aberta (instância mantida): o
+  // termo novo da URL substitui o campo e volta à 1ª página.
+  const buscaUrl = params.get("busca") ?? ""
+  const [buscaUrlVista, setBuscaUrlVista] = useState(buscaUrl)
+  if (buscaUrl !== buscaUrlVista) {
+    setBuscaUrlVista(buscaUrl)
+    setBusca(buscaUrl)
+    setPage(0)
+  }
 
   const contas = useContas()
   const assinaturas = useAssinaturas()
@@ -337,7 +346,10 @@ export function TransacoesPage() {
         </EmptyState>
       ) : (
         <>
-          <TransacoesTabela items={listagem.data!.items} />
+          <TransacoesTabela
+            items={listagem.data!.items}
+            abrirId={Number(params.get("id")) || null}
+          />
 
           <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-muted-foreground">
             <span>

@@ -5,7 +5,14 @@ import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
 /** "Atualizar conexões" (§4.3): dispara o sync de todos os itens e realimenta um toast. */
-export function SyncButton({ size = "sm" }: { size?: "sm" | "default" }) {
+export function SyncButton({
+  size = "sm",
+  compacto = false,
+}: {
+  size?: "sm" | "default"
+  /** Só o ícone em telas pequenas (o rótulo fica para leitor de tela). */
+  compacto?: boolean
+}) {
   const sync = useSincronizarTudo()
   return (
     <Button
@@ -18,7 +25,9 @@ export function SyncButton({ size = "sm" }: { size?: "sm" | "default" }) {
         className={cn("size-4", sync.isPending && "animate-spin")}
         aria-hidden
       />
-      {sync.isPending ? "Atualizando…" : "Atualizar"}
+      <span className={compacto ? "max-sm:sr-only" : undefined}>
+        {sync.isPending ? "Atualizando…" : "Atualizar"}
+      </span>
     </Button>
   )
 }

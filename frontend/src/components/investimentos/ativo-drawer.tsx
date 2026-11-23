@@ -24,24 +24,17 @@ import {
   X,
 } from "lucide-react"
 import { useMemo, useState } from "react"
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Cell,
-  Line,
-  LineChart,
-  Pie,
-  PieChart,
-  ReferenceLine,
-  XAxis,
-  YAxis,
-} from "recharts"
 
 import { AvatarBanco } from "@/components/contas/avatar-banco"
 import { EmptyState } from "@/components/common/empty-state"
 import { Valor } from "@/components/common/valor"
-import { eixoBRL, linhaTooltip } from "@/components/dashboard/chart-helpers"
+import {
+  GraficoBarras,
+  GraficoLinhas,
+  Rosca,
+} from "@/components/common/graficos-base"
+import { corIndicador } from "@/lib/echart-tema"
+import { eixoBRL } from "@/components/dashboard/chart-helpers"
 import { PeriodoPicker } from "@/components/dashboard/periodo-picker"
 import {
   MoverAtivoDialog,
@@ -50,14 +43,6 @@ import {
 } from "@/components/investimentos/ativo-rf-dialogs"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import {
-  ChartContainer,
-  ChartLegend,
-  ChartLegendContent,
-  ChartTooltip,
-  ChartTooltipContent,
-  type ChartConfig,
-} from "@/components/ui/chart"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -164,6 +149,9 @@ import {
   rotuloTipo,
 } from "@/lib/investimento-taxonomia"
 
+/** Rótulo + cor (expressão CSS) por chave de série. */
+type ConfigSeries = Record<string, { label: string; color: string }>
+
 const PRESETS_PERIODO = [
   {
     id: "3m",
@@ -186,13 +174,6 @@ const PRESETS_PERIODO = [
     range: () => [addDias(hojeISO(), -29), hojeISO()] as const,
   },
 ]
-
-const COR_INDICADOR: Record<string, string> = {
-  cdi: "var(--chart-2)",
-  selic: "var(--chart-3)",
-  ipca: "var(--chart-4)",
-  ibov: "var(--chart-5)",
-}
 
 const fmtDiaMes = new Intl.DateTimeFormat("pt-BR", {
   day: "2-digit",
@@ -888,14 +869,14 @@ function PerformanceFII({ ids }: { ids: number[] }) {
     fim,
   })
 
-  const config: ChartConfig = {
+  const config: ConfigSeries = {
     fii: { label: "Este FII", color: "var(--primary)" },
   }
   for (const i of indicadores.data ?? [])
     if (bench.includes(i.codigo))
       config[i.codigo] = {
         label: i.nome,
-        color: COR_INDICADOR[i.codigo] ?? "var(--chart-5)",
+        color: corIndicador(i.codigo),
       }
 
   const porData = new Map<string, Record<string, number | string>>()
@@ -962,72 +943,29 @@ function PerformanceFII({ ids }: { ids: number[] }) {
         </div>
       ) : (
         <>
-          <ChartContainer
-            config={config}
-            className="aspect-auto h-[200px] w-full"
-          >
-            <LineChart data={dados}>
-              <CartesianGrid vertical={false} strokeDasharray="3 3" />
-              <XAxis
-                dataKey="data"
-                tickLine={false}
-                axisLine={false}
-                tickMargin={8}
-                minTickGap={32}
-                tickFormatter={tickDia}
-              />
-              <YAxis
-                tickLine={false}
-                axisLine={false}
-                width={48}
-                tickFormatter={(v: number) => pctTexto(v)}
-              />
-              <ChartTooltip
-                content={
-                  <ChartTooltipContent
-                    labelFormatter={(_, payload) =>
-                      formatDate(String(payload?.[0]?.payload?.data ?? ""))
-                    }
-                    formatter={(value, name, item) => (
-                      <>
-                        <span
-                          className="mt-0.5 size-2.5 shrink-0 rounded-[2px]"
-                          style={{ background: item.color }}
-                          aria-hidden
-                        />
-                        <div className="flex flex-1 items-center justify-between gap-2 leading-none">
-                          <span className="text-muted-foreground">
-                            {config[String(name)]?.label ?? name}
-                          </span>
-                          <span className="font-mono font-medium text-foreground tabular-nums">
-                            {pctTexto(Number(value))}
-                          </span>
-                        </div>
-                      </>
-                    )}
-                  />
-                }
-              />
-              <Line
-                dataKey="fii"
-                stroke="var(--color-fii)"
-                strokeWidth={2}
-                dot={false}
-                isAnimationActive={false}
-              />
-              {bench.map((codigo) => (
-                <Line
-                  key={codigo}
-                  dataKey={codigo}
-                  stroke={`var(--color-${codigo})`}
-                  strokeWidth={1.5}
-                  strokeDasharray={codigo === "cdi" ? "4 4" : undefined}
-                  dot={false}
-                  isAnimationActive={false}
-                />
-              ))}
-            </LineChart>
-          </ChartContainer>
+          <GraficoLinhas
+            dados={dados}
+            x="data"
+            altura={200}
+            formatarX={tickDia}
+            formatarRotulo={formatDate}
+            formatarY={pctTexto}
+            series={[
+              {
+                chave: "fii",
+                nome: config.fii.label,
+                cor: config.fii.color,
+              },
+              ...bench.map((codigo) => ({
+                chave: codigo,
+                nome: config[codigo]?.label ?? codigo,
+                cor: config[codigo]?.color ?? corIndicador(codigo),
+                largura: 1.5,
+                tracejada: codigo === "cdi",
+              })),
+            ]}
+            ariaLabel="Rentabilidade do FII vs. indicadores no período"
+          />
           <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
             {legenda.map((l) => {
               const val = ultimo?.[l.codigo]
@@ -1169,31 +1107,18 @@ function DonutParticipacao({
   pct: number | null
 }) {
   const valor = pct == null ? 0 : Math.max(0, Math.min(100, pct))
-  const dados = [
-    { nome: "fatia", v: valor },
-    { nome: "resto", v: 100 - valor },
-  ]
   return (
     <div className="flex flex-col items-center gap-1.5">
       <div className="relative">
-        <ChartContainer config={{}} className="aspect-square h-[92px]">
-          <PieChart>
-            <Pie
-              data={dados}
-              dataKey="v"
-              nameKey="nome"
-              innerRadius={30}
-              outerRadius={42}
-              startAngle={90}
-              endAngle={-270}
-              strokeWidth={0}
-              isAnimationActive={false}
-            >
-              <Cell fill="var(--primary)" />
-              <Cell fill="var(--muted)" />
-            </Pie>
-          </PieChart>
-        </ChartContainer>
+        <Rosca
+          fatias={[
+            { nome: "fatia", valor, cor: "var(--primary)" },
+            { nome: "resto", valor: 100 - valor, cor: "var(--muted)" },
+          ]}
+          tamanho={92}
+          espessura={0.29}
+          ariaLabel={`${rotulo}: ${pct == null ? "sem dado" : `${fmtPct.format(pct)}%`}`}
+        />
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
           <span className="text-sm font-semibold text-accent-ink tabular-nums">
             {pct == null ? "—" : `${fmtPct.format(pct)}%`}
@@ -1223,13 +1148,13 @@ function PerformanceTab({ ids }: { ids: number[] }) {
     { inicio: inicioComum, fim }
   )
 
-  const config: ChartConfig = {
+  const config: ConfigSeries = {
     ativo: { label: "Este ativo", color: "var(--primary)" },
   }
   for (const i of indicadores.data ?? []) {
     config[i.codigo] = {
       label: i.nome,
-      color: COR_INDICADOR[i.codigo] ?? "var(--chart-5)",
+      color: corIndicador(i.codigo),
     }
   }
 
@@ -1312,73 +1237,29 @@ function PerformanceTab({ ids }: { ids: number[] }) {
           </p>
         </div>
       ) : (
-        <ChartContainer
-          config={config}
-          className="aspect-auto h-[240px] w-full"
-        >
-          <LineChart data={dadosChart}>
-            <CartesianGrid vertical={false} strokeDasharray="3 3" />
-            <XAxis
-              dataKey="data"
-              tickLine={false}
-              axisLine={false}
-              tickMargin={8}
-              minTickGap={32}
-              tickFormatter={tickDia}
-            />
-            <YAxis
-              tickLine={false}
-              axisLine={false}
-              width={48}
-              tickFormatter={(v: number) => pctTexto(v)}
-            />
-            <ChartTooltip
-              content={
-                <ChartTooltipContent
-                  labelFormatter={(_, payload) =>
-                    formatDate(String(payload?.[0]?.payload?.data ?? ""))
-                  }
-                  formatter={(value, name, item) => (
-                    <>
-                      <span
-                        className="mt-0.5 size-2.5 shrink-0 rounded-[2px]"
-                        style={{ background: item.color }}
-                        aria-hidden
-                      />
-                      <div className="flex flex-1 items-center justify-between gap-2 leading-none">
-                        <span className="text-muted-foreground">
-                          {config[String(name)]?.label ?? name}
-                        </span>
-                        <span className="font-mono font-medium text-foreground tabular-nums">
-                          {pctTexto(Number(value))}
-                        </span>
-                      </div>
-                    </>
-                  )}
-                />
-              }
-            />
-            <ChartLegend content={<ChartLegendContent />} />
-            <Line
-              dataKey="ativo"
-              stroke="var(--color-ativo)"
-              strokeWidth={2}
-              dot={false}
-              isAnimationActive={false}
-            />
-            {selecionados.map((codigo) => (
-              <Line
-                key={codigo}
-                dataKey={codigo}
-                stroke={`var(--color-${codigo})`}
-                strokeWidth={1.5}
-                strokeDasharray="4 3"
-                dot={false}
-                isAnimationActive={false}
-              />
-            ))}
-          </LineChart>
-        </ChartContainer>
+        <GraficoLinhas
+          dados={dadosChart}
+          x="data"
+          legenda
+          formatarX={tickDia}
+          formatarRotulo={formatDate}
+          formatarY={pctTexto}
+          series={[
+            {
+              chave: "ativo",
+              nome: config.ativo.label,
+              cor: config.ativo.color,
+            },
+            ...selecionados.map((codigo) => ({
+              chave: codigo,
+              nome: config[codigo]?.label ?? codigo,
+              cor: config[codigo]?.color ?? corIndicador(codigo),
+              largura: 1.5,
+              tracejada: true,
+            })),
+          ]}
+          ariaLabel="Rentabilidade acumulada do ativo vs. indicadores"
+        />
       )}
       <p className="text-xs text-muted-foreground">
         Evolução do preço unitário e da posição em reais chegam em breve.
@@ -1721,14 +1602,14 @@ function EvolucaoInvestimento({
     }
   )
 
-  const config: ChartConfig = {
+  const config: ConfigSeries = {
     aplicado: { label: "Valor aplicado", color: "var(--muted-foreground)" },
     bruto: { label: "Valor bruto", color: "var(--primary)" },
   }
   for (const i of indicadores.data ?? [])
     config[i.codigo] = {
       label: i.nome,
-      color: COR_INDICADOR[i.codigo] ?? "var(--chart-5)",
+      color: corIndicador(i.codigo),
     }
 
   const porData = new Map<string, Record<string, number | string>>()
@@ -1814,80 +1695,42 @@ function EvolucaoInvestimento({
           </p>
         </div>
       ) : (
-        <ChartContainer
-          config={config}
-          className="aspect-auto h-[240px] w-full"
-        >
-          <LineChart data={dados}>
-            <CartesianGrid vertical={false} strokeDasharray="3 3" />
-            <XAxis
-              dataKey="data"
-              tickLine={false}
-              axisLine={false}
-              tickMargin={8}
-              minTickGap={32}
-              tickFormatter={tickDia}
-            />
-            <YAxis
-              tickLine={false}
-              axisLine={false}
-              width={52}
-              tickFormatter={(v: number) => eixoBRL(Number(v))}
-            />
-            <ChartTooltip
-              content={
-                <ChartTooltipContent
-                  labelFormatter={(_, payload) =>
-                    formatDate(String(payload?.[0]?.payload?.data ?? ""))
-                  }
-                  formatter={(value, name, item) =>
-                    linhaTooltip(value, String(name), item.color, config)
-                  }
-                />
-              }
-            />
-            <ChartLegend content={<ChartLegendContent />} />
-            {reconstruidoAte ? (
-              <ReferenceLine
-                x={reconstruidoAte}
-                stroke="var(--muted-foreground)"
-                strokeDasharray="2 4"
-                label={{
-                  value: "estimado",
-                  position: "insideTopLeft",
-                  fontSize: 10,
-                  fill: "var(--muted-foreground)",
-                }}
-              />
-            ) : null}
-            <Line
-              dataKey="aplicado"
-              stroke="var(--color-aplicado)"
-              strokeWidth={1.5}
-              strokeDasharray="4 4"
-              dot={false}
-              isAnimationActive={false}
-            />
-            <Line
-              dataKey="bruto"
-              stroke="var(--color-bruto)"
-              strokeWidth={2}
-              dot={false}
-              isAnimationActive={false}
-            />
-            {selecionados.map((codigo) => (
-              <Line
-                key={codigo}
-                dataKey={codigo}
-                stroke={`var(--color-${codigo})`}
-                strokeWidth={1.5}
-                strokeDasharray="4 3"
-                dot={false}
-                isAnimationActive={false}
-              />
-            ))}
-          </LineChart>
-        </ChartContainer>
+        <GraficoLinhas
+          dados={dados}
+          x="data"
+          legenda
+          formatarX={tickDia}
+          formatarRotulo={formatDate}
+          formatarY={eixoBRL}
+          formatarValor={formatBRL}
+          referenciaX={
+            reconstruidoAte
+              ? { valor: reconstruidoAte, rotulo: "estimado" }
+              : undefined
+          }
+          series={[
+            {
+              chave: "aplicado",
+              nome: config.aplicado.label,
+              cor: config.aplicado.color,
+              largura: 1.5,
+              tracejada: true,
+            },
+            {
+              chave: "bruto",
+              nome: config.bruto.label,
+              cor: config.bruto.color,
+            },
+            ...selecionados.map((codigo) => ({
+              chave: codigo,
+              nome: config[codigo]?.label ?? codigo,
+              cor: config[codigo]?.color ?? corIndicador(codigo),
+              largura: 1.5,
+              tracejada: true,
+            })),
+          ]}
+          ariaLabel="Evolução do valor aplicado e bruto do título"
+        />
       )}
       <p className="text-xs text-muted-foreground">
         Valores em R$.{" "}
@@ -1935,13 +1778,13 @@ function PerformanceTesouro({
     }
   )
 
-  const config: ChartConfig = {
+  const config: ConfigSeries = {
     ativo: { label: "Este título", color: "var(--primary)" },
   }
   for (const i of indicadores.data ?? [])
     config[i.codigo] = {
       label: i.nome,
-      color: COR_INDICADOR[i.codigo] ?? "var(--chart-5)",
+      color: corIndicador(i.codigo),
     }
 
   const porMes = new Map<string, Record<string, number | string>>()
@@ -2008,73 +1851,30 @@ function PerformanceTesouro({
           </p>
         </div>
       ) : (
-        <ChartContainer
-          config={config}
-          className="aspect-auto h-[240px] w-full"
-        >
-          <LineChart data={dados}>
-            <CartesianGrid vertical={false} strokeDasharray="3 3" />
-            <XAxis
-              dataKey="mes"
-              tickLine={false}
-              axisLine={false}
-              tickMargin={8}
-              minTickGap={24}
-              tickFormatter={rotuloMes}
-            />
-            <YAxis
-              tickLine={false}
-              axisLine={false}
-              width={48}
-              tickFormatter={(v: number) => pctTexto(v)}
-            />
-            <ChartTooltip
-              content={
-                <ChartTooltipContent
-                  labelFormatter={(_, payload) =>
-                    rotuloMes(String(payload?.[0]?.payload?.mes ?? ""))
-                  }
-                  formatter={(value, name, item) => (
-                    <>
-                      <span
-                        className="mt-0.5 size-2.5 shrink-0 rounded-[2px]"
-                        style={{ background: item.color }}
-                        aria-hidden
-                      />
-                      <div className="flex flex-1 items-center justify-between gap-2 leading-none">
-                        <span className="text-muted-foreground">
-                          {config[String(name)]?.label ?? name}
-                        </span>
-                        <span className="font-mono font-medium text-foreground tabular-nums">
-                          {pctTexto(Number(value))}
-                        </span>
-                      </div>
-                    </>
-                  )}
-                />
-              }
-            />
-            <ChartLegend content={<ChartLegendContent />} />
-            <Line
-              dataKey="ativo"
-              stroke="var(--color-ativo)"
-              strokeWidth={2}
-              dot={{ r: 2.5, strokeWidth: 0, fill: "var(--color-ativo)" }}
-              isAnimationActive={false}
-            />
-            {efetivos.map((codigo) => (
-              <Line
-                key={codigo}
-                dataKey={codigo}
-                stroke={`var(--color-${codigo})`}
-                strokeWidth={1.5}
-                strokeDasharray="4 3"
-                dot={false}
-                isAnimationActive={false}
-              />
-            ))}
-          </LineChart>
-        </ChartContainer>
+        <GraficoLinhas
+          dados={dados}
+          x="mes"
+          legenda
+          formatarX={rotuloMes}
+          formatarRotulo={rotuloMes}
+          formatarY={pctTexto}
+          series={[
+            {
+              chave: "ativo",
+              nome: config.ativo.label,
+              cor: config.ativo.color,
+              pontos: true,
+            },
+            ...efetivos.map((codigo) => ({
+              chave: codigo,
+              nome: config[codigo]?.label ?? codigo,
+              cor: config[codigo]?.color ?? corIndicador(codigo),
+              largura: 1.5,
+              tracejada: true,
+            })),
+          ]}
+          ariaLabel="Rendimento mensal do título vs. indicadores"
+        />
       )}
       <p className="text-xs text-muted-foreground">
         Quanto rendeu em cada mês (%), não valores em R$. O IPCA pode aparecer
@@ -2232,10 +2032,10 @@ function CardTotal({ titulo, total }: { titulo: string; total: TotalLado }) {
   )
 }
 
-const CFG_COMPRAS: ChartConfig = {
+const CFG_COMPRAS = {
   valor: { label: "Valor comprado", color: "var(--primary)" },
   qtd: { label: "Quantidade", color: "var(--primary)" },
-}
+} as const
 
 /** Compras dos últimos 12 meses em barras, alternando o total em valor ou em quantidade. */
 function GraficoCompras({ buckets }: { buckets: BucketCompra[] }) {
@@ -2256,47 +2056,20 @@ function GraficoCompras({ buckets }: { buckets: BucketCompra[] }) {
           <ToggleGroupItem value="qtd">Quantidade</ToggleGroupItem>
         </ToggleGroup>
       </div>
-      <ChartContainer
-        config={CFG_COMPRAS}
-        className="aspect-auto h-[220px] w-full"
-      >
-        <BarChart data={buckets}>
-          <CartesianGrid vertical={false} strokeDasharray="3 3" />
-          <XAxis
-            dataKey="label"
-            tickLine={false}
-            axisLine={false}
-            tickMargin={8}
-          />
-          <YAxis
-            tickLine={false}
-            axisLine={false}
-            width={44}
-            tickFormatter={
-              modo === "valor" ? eixoBRL : (v) => fmtQtd.format(Number(v))
-            }
-          />
-          <ChartTooltip
-            content={
-              <ChartTooltipContent
-                formatter={(value, name) => (
-                  <div className="flex flex-1 items-center justify-between gap-2 leading-none">
-                    <span className="text-muted-foreground">
-                      {CFG_COMPRAS[name as string]?.label ?? name}
-                    </span>
-                    <span className="font-mono font-medium text-foreground tabular-nums">
-                      {modo === "valor"
-                        ? formatBRL(Number(value))
-                        : `${fmtQtd.format(Number(value))} cotas`}
-                    </span>
-                  </div>
-                )}
-              />
-            }
-          />
-          <Bar dataKey={modo} fill="var(--primary)" radius={4} />
-        </BarChart>
-      </ChartContainer>
+      <GraficoBarras
+        dados={buckets}
+        x="label"
+        chave={modo}
+        nome={CFG_COMPRAS[modo].label}
+        altura={220}
+        formatarY={modo === "valor" ? eixoBRL : (v: number) => fmtQtd.format(v)}
+        formatarValor={
+          modo === "valor"
+            ? formatBRL
+            : (v: number) => `${fmtQtd.format(v)} cotas`
+        }
+        ariaLabel="Compras por mês"
+      />
     </section>
   )
 }
@@ -2797,10 +2570,6 @@ function CardResumo({
   )
 }
 
-const CFG_PROVENTOS: ChartConfig = {
-  totalCentavos: { label: "Rendimentos", color: "var(--primary)" },
-}
-
 /** Rendimento por cota em reais → `R$ 0,0900`: 4 casas, pois FIIs pagam sub-centavo por cota. */
 const fmtRendimentoCota = new Intl.NumberFormat("pt-BR", {
   style: "currency",
@@ -2814,41 +2583,16 @@ function GraficoProventos({ buckets }: { buckets: BucketProvento[] }) {
   return (
     <section className="space-y-2">
       <h3 className="text-sm font-medium">Histórico de rendimentos</h3>
-      <ChartContainer
-        config={CFG_PROVENTOS}
-        className="aspect-auto h-[220px] w-full"
-      >
-        <BarChart data={buckets}>
-          <CartesianGrid vertical={false} strokeDasharray="3 3" />
-          <XAxis
-            dataKey="label"
-            tickLine={false}
-            axisLine={false}
-            tickMargin={8}
-          />
-          <YAxis
-            tickLine={false}
-            axisLine={false}
-            width={44}
-            tickFormatter={eixoBRL}
-          />
-          <ChartTooltip
-            content={
-              <ChartTooltipContent
-                formatter={(value) => (
-                  <div className="flex flex-1 items-center justify-between gap-2 leading-none">
-                    <span className="text-muted-foreground">Recebido</span>
-                    <span className="font-mono font-medium text-foreground tabular-nums">
-                      {formatBRL(Number(value))}
-                    </span>
-                  </div>
-                )}
-              />
-            }
-          />
-          <Bar dataKey="totalCentavos" fill="var(--primary)" radius={4} />
-        </BarChart>
-      </ChartContainer>
+      <GraficoBarras
+        dados={buckets}
+        x="label"
+        chave="totalCentavos"
+        nome="Recebido"
+        altura={220}
+        formatarY={eixoBRL}
+        formatarValor={formatBRL}
+        ariaLabel="Rendimentos recebidos por mês"
+      />
     </section>
   )
 }
@@ -3062,51 +2806,22 @@ function IndicadoresFIITab({ ids }: { ids: number[] }) {
 
 /** Alocação da carteira do FII (CVM) em rosca — uma fatia por classe de ativo. */
 function AlocacaoDonut({ alocacao }: { alocacao: FundamentosFIIAlocacao[] }) {
-  const cor = (i: number) => `var(--chart-${(i % 6) + 1})`
-  const config: ChartConfig = Object.fromEntries(
-    alocacao.map((a, i) => [a.classe, { label: a.classe, color: cor(i) }])
-  )
+  // Paleta categórica (dataviz): ordem fixa; da 9ª classe em diante, neutro.
+  const cor = (i: number) =>
+    i < 8 ? `var(--chart-cat-${i + 1})` : "var(--chart-cat-outras)"
   return (
     <div className="flex flex-col items-center gap-3">
-      <ChartContainer config={config} className="aspect-square h-[180px]">
-        <PieChart>
-          <ChartTooltip
-            content={
-              <ChartTooltipContent
-                nameKey="classe"
-                formatter={(value, name) => (
-                  <>
-                    <span
-                      className="mt-0.5 size-2.5 shrink-0 rounded-[2px]"
-                      style={{ background: config[String(name)]?.color }}
-                      aria-hidden
-                    />
-                    <div className="flex flex-1 items-center justify-between gap-2 leading-none">
-                      <span className="text-muted-foreground">
-                        {config[String(name)]?.label ?? name}
-                      </span>
-                      <span className="font-mono font-medium text-foreground tabular-nums">
-                        {fmtPct.format(Number(value))}%
-                      </span>
-                    </div>
-                  </>
-                )}
-              />
-            }
-          />
-          <Pie
-            data={alocacao}
-            dataKey="pct"
-            nameKey="classe"
-            innerRadius={45}
-            strokeWidth={2}
-          >
-            {alocacao.map((a, i) => (
-              <Cell key={a.classe} fill={cor(i)} />
-            ))}
-          </Pie>
-        </PieChart>
-      </ChartContainer>
+      <Rosca
+        fatias={alocacao.map((a, i) => ({
+          nome: a.classe,
+          valor: a.pct,
+          cor: cor(i),
+        }))}
+        tamanho={180}
+        espessura={0.5}
+        formatarValor={(v) => `${fmtPct.format(v)}%`}
+        ariaLabel="Alocação do fundo por classe de ativo"
+      />
       <ul className="w-full space-y-1.5">
         {alocacao.map((a, i) => (
           <li key={a.classe} className="flex items-center gap-2 text-sm">

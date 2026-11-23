@@ -13,7 +13,7 @@ from app.exceptions import ConflictError, NotFoundError, ValidationError
 from app.models.categoria import Categoria
 from app.models.orcamento import Orcamento, OrcamentoMensal
 from app.repositories.orcamento import OrcamentoRepository
-from app.services.orcamento_consumo import categorias_investimento
+from app.services.gasto_usuario import categorias_investimento
 from app.services.periodo import hoje_sp
 
 

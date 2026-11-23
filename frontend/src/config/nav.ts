@@ -7,6 +7,7 @@ import {
   Handshake,
   Landmark,
   LayoutDashboard,
+  MessageSquareText,
   PiggyBank,
   Repeat,
   Settings,
@@ -23,7 +24,7 @@ export type NavItem = {
   /** Caminho da rota-cliente (português, espelha o domínio). */
   url: string
   icon: LucideIcon
-  /** Linha de apoio nas listas que mostram descrição (drawer "Mais" do mobile). */
+  /** Linha de apoio (hoje só "Divisão de contas" e "Configurações" usam). */
   descricao?: string
 }
 
@@ -134,35 +135,105 @@ export type BottomNavItem = NavItem & {
   match?: string[]
 }
 
+/** 1ª aba da barra inferior, fixa (as outras 3 o usuário escolhe). */
+export const inicioItem: BottomNavItem = {
+  ...dashboardItem,
+  title: "Início",
+  short: "Início",
+}
+
+export type Atalho = BottomNavItem & { id: string }
+
 /**
- * Abas fixas da navegação inferior no mobile (`< md`). São os destinos de uso diário; o resto da
- * IA fica na aba "Mais" (ver `bottom-nav.tsx`), que é derivada de `navSections` — item novo numa
- * seção aparece lá sozinho, sem tocar aqui.
+ * Destinos que podem ocupar as 3 abas configuráveis da barra inferior (Configurações →
+ * Preferências). O `id` é o que vai para `perfil.atalhos_mobile`; id que sair daqui é ignorado.
  */
-export const bottomNavItems: BottomNavItem[] = [
-  { ...dashboardItem, short: "Dashboard" },
+export const ATALHOS: Atalho[] = [
   {
+    id: "transacoes",
     title: "Transações",
-    short: "Movimentações",
+    short: "Transações",
     url: "/transacoes",
     icon: ArrowRightLeft,
-    match: ["/contas", "/faturas"],
   },
   {
+    id: "contas",
+    title: "Contas",
+    short: "Contas",
+    url: "/contas",
+    icon: Landmark,
+  },
+  {
+    id: "faturas",
+    title: "Faturas",
+    short: "Faturas",
+    url: "/faturas",
+    icon: CreditCard,
+  },
+  {
+    id: "orcamentos",
     title: "Orçamentos",
     short: "Orçamento",
     url: "/orcamentos",
     icon: PiggyBank,
   },
   {
+    id: "objetivos",
+    title: "Objetivos",
+    short: "Objetivos",
+    url: "/objetivos",
+    icon: Target,
+  },
+  {
+    id: "assinaturas",
+    title: "Assinaturas",
+    short: "Assinaturas",
+    url: "/assinaturas",
+    icon: Repeat,
+  },
+  {
+    id: "investimentos",
+    title: "Investimentos",
+    short: "Investimentos",
+    url: "/investimentos/visao_geral",
+    icon: TrendingUp,
+    match: ["/investimentos"],
+  },
+  {
+    id: "divisoes",
     title: "Divisão de contas",
     short: "Divisão",
     url: "/divisoes",
     icon: Users,
   },
+  {
+    id: "chat",
+    title: "Assistente",
+    short: "Assistente",
+    url: "/chat",
+    icon: MessageSquareText,
+  },
+  { ...settingsItem, id: "configuracoes", short: "Configurações" },
 ]
 
-/** Conta `tipo="divisao"`: sobra só o módulo dela — o resto vive na aba "Mais". */
+export const ATALHOS_PADRAO = ["transacoes", "orcamentos", "investimentos"]
+
+/**
+ * Os 3 atalhos em vigor: os salvos que o catálogo conhece, sem repetir, completados com os
+ * padrões (lista salva curta, ou com id que saiu do catálogo, ainda dá 3 abas).
+ */
+export function atalhosEfetivos(salvos: string[] | null | undefined): Atalho[] {
+  const ids: string[] = []
+  for (const id of [
+    ...(salvos ?? []),
+    ...ATALHOS_PADRAO,
+    ...ATALHOS.map((a) => a.id),
+  ])
+    if (!ids.includes(id) && ATALHOS.some((a) => a.id === id)) ids.push(id)
+  return ids.slice(0, 3).map((id) => ATALHOS.find((a) => a.id === id)!)
+}
+
+/** Conta `tipo="divisao"`: barra fixa com o módulo dela e as configurações (sem escolha). */
 export const bottomNavItemsDivisaoOnly: BottomNavItem[] = [
   {
     title: "Divisão de contas",
@@ -170,6 +241,7 @@ export const bottomNavItemsDivisaoOnly: BottomNavItem[] = [
     url: "/divisoes",
     icon: Users,
   },
+  { ...settingsItem, short: "Configurações" },
 ]
 
 /** Aba ativa considerando os prefixos irmãos declarados em `match`. */

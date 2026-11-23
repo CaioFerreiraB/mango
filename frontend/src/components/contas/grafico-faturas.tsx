@@ -1,14 +1,8 @@
-import { useState } from "react"
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts"
+import { useMemo, useState } from "react"
 
-import { eixoBRL, linhaTooltip } from "@/components/dashboard/chart-helpers"
+import { GraficoBarras } from "@/components/common/graficos-base"
+import { eixoBRL } from "@/components/dashboard/chart-helpers"
 import { BarrasEmpilhadasCategorias } from "@/components/dashboard/graficos"
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-  type ChartConfig,
-} from "@/components/ui/chart"
 import {
   Card,
   CardContent,
@@ -21,49 +15,30 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { useMapaCategorias } from "@/lib/api/categorias"
 import { useFaturasResumo, type FaturaResumoBucket } from "@/lib/api/contas"
 import type { SerieBucket } from "@/lib/api/dashboard"
-import { formatBucketLabel } from "@/lib/format"
+import { formatBRL, formatBucketLabel } from "@/lib/format"
 
 type Modo = "total" | "categoria"
 
-const CFG_TOTAL: ChartConfig = {
-  total: { label: "Total da fatura", color: "var(--primary)" },
-}
-
 /** Total de cada fatura como barra única na cor primária. */
 function BarrasTotal({ buckets }: { buckets: FaturaResumoBucket[] }) {
-  const dados = buckets.map((b) => ({
-    label: formatBucketLabel(b.due_date, "mensal"),
-    total: b.total_centavos,
-  }))
+  const dados = useMemo(
+    () =>
+      buckets.map((b) => ({
+        label: formatBucketLabel(b.due_date, "mensal"),
+        total: b.total_centavos,
+      })),
+    [buckets]
+  )
   return (
-    <ChartContainer config={CFG_TOTAL} className="aspect-auto h-[240px] w-full">
-      <BarChart data={dados}>
-        <CartesianGrid vertical={false} strokeDasharray="3 3" />
-        <XAxis
-          dataKey="label"
-          tickLine={false}
-          axisLine={false}
-          tickMargin={8}
-        />
-        <YAxis
-          tickLine={false}
-          axisLine={false}
-          width={44}
-          tickFormatter={eixoBRL}
-        />
-        <ChartTooltip
-          content={
-            <ChartTooltipContent
-              hideLabel
-              formatter={(value, name, item) =>
-                linhaTooltip(value, String(name), item.color, CFG_TOTAL)
-              }
-            />
-          }
-        />
-        <Bar dataKey="total" fill="var(--color-total)" radius={4} />
-      </BarChart>
-    </ChartContainer>
+    <GraficoBarras
+      dados={dados}
+      x="label"
+      chave="total"
+      nome="Total da fatura"
+      formatarY={eixoBRL}
+      formatarValor={formatBRL}
+      ariaLabel="Total de cada fatura"
+    />
   )
 }
 
@@ -90,6 +65,7 @@ export function GraficoFaturas({ contaId }: { contaId: number }) {
     entradas_centavos: 0,
     saidas_centavos: 0,
     resultado_centavos: 0,
+    investido_centavos: 0,
     por_categoria: b.por_categoria,
   }))
 
@@ -124,7 +100,6 @@ export function GraficoFaturas({ contaId }: { contaId: number }) {
             buckets={serie}
             granularidade="mensal"
             rotulo={rotulo}
-            n={6}
           />
         ) : (
           <BarrasTotal buckets={buckets} />

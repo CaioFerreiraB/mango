@@ -38,16 +38,20 @@ from app.schemas.orcamento import OrcamentoConsumoItem, OrcamentoConsumoRead
 from app.services.categoria_arvore import com_descendentes
 from app.services.categoria_arvore import subarvores as montar_subarvores
 from app.services.categoria_resolucao import com_assinatura, expr_categoria_efetiva
-from app.services.gasto_usuario import linhas_do_periodo, parcelas_divisao
+from app.services.gasto_usuario import (
+    categorias_investimento,
+    categorias_renda,
+    expr_estorno_cartao,
+    linhas_do_periodo,
+    parcelas_divisao,
+    tipo_do_lancamento,
+)
 from app.services.orcamento_mensal import materializar_mes
 from app.services.periodo import hoje_sp, limites_sp
 
 # Do maior para o menor: o primeiro que o percentual cruza é o alerta a exibir.
 _LIMIARES = (100, 90, 75, 50)
 
-# Investimento = subárvore 03 menos os rendimentos (0306 juros/dividendos), que são receita.
-RAIZ_INVESTIMENTO = "03000000"
-RAIZ_RENDIMENTOS = "03060000"
 TIPOS = ("despesa", "receita", "investimento")
 
 
@@ -55,18 +59,6 @@ def _intervalo_mes(ano: int, mes: int) -> tuple[date, date]:
     inicio = date(ano, mes, 1)
     prox = date(ano + mes // 12, mes % 12 + 1, 1)  # 1º dia do mês seguinte
     return inicio, prox - timedelta(days=1)
-
-
-def categorias_investimento(db: Session, usuario_id: int) -> set[str]:
-    """Categorias cujo realizado vai para a aba Investimentos (pela árvore: pega personalizadas)."""
-    arv = montar_subarvores(db, usuario_id, {RAIZ_INVESTIMENTO, RAIZ_RENDIMENTOS})
-    return arv[RAIZ_INVESTIMENTO] - arv[RAIZ_RENDIMENTOS]
-
-
-def tipo_do_lancamento(cat: str | None, tipo_tx: str, investimento: set[str]) -> str:
-    if cat in investimento:
-        return "investimento"
-    return "despesa" if tipo_tx == "DEBIT" else "receita"
 
 
 # ponytail: uma categoria num mês raramente passa de dezenas de linhas; paginar se um dia estourar.
@@ -218,19 +210,26 @@ def transacoes_do_item(
         def no_item(cat):  # espelha `_eh_nao_planejado` em SQL
             return or_(cat.is_(None), and_(cat.not_in(cobertas), cat != CATEGORIA_PAGAMENTO_FATURA))
 
-    def do_tipo(cat, tipo_tx: str | None):
+    def do_tipo(cat, natureza=None):
         if tipo == "investimento":
             return cat.in_(investimento)
         fora = or_(cat.is_(None), cat.not_in(investimento))
-        return fora if tipo_tx is None else and_(fora, Transacao.type == tipo_tx)
+        return fora if natureza is None else and_(fora, natureza)
 
     cat = expr_categoria_efetiva(usuario_id)
+    # Estorno de cartão abate a despesa (`gasto_usuario.expr_estorno_cartao`): entra na lista da
+    # despesa e sai da de receita, como no realizado.
+    estorno = expr_estorno_cartao(usuario_id, cat, categorias_renda(db, usuario_id))
+    natureza = {
+        "despesa": or_(Transacao.type == "DEBIT", estorno),
+        "receita": and_(Transacao.type == "CREDIT", ~estorno),
+    }.get(tipo)
     stmt = (
         com_assinatura(select(Transacao), usuario_id)
         .where(
             *_filtros_mes(usuario_id, ano, mes),
             Transacao.type.in_(("DEBIT", "CREDIT")),
-            do_tipo(cat, {"despesa": "DEBIT", "receita": "CREDIT"}.get(tipo)),
+            do_tipo(cat, natureza),
             no_item(cat),
         )
         .order_by(Transacao.date.desc(), Transacao.id.desc())

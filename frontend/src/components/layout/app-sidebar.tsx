@@ -1,5 +1,5 @@
-import { ChevronRight } from "lucide-react"
-import { Fragment } from "react"
+import { ChevronRight, PanelLeft } from "lucide-react"
+import { Fragment, useEffect } from "react"
 import { NavLink, useLocation } from "react-router"
 
 import { NavUser } from "@/components/layout/nav-user"
@@ -29,6 +29,7 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
   SidebarRail,
+  SidebarSeparator,
   useSidebar,
 } from "@/components/ui/sidebar"
 import {
@@ -149,6 +150,24 @@ function NavSectionItem({
   )
 }
 
+/** Recolhe/expande a barra (atalho Ctrl+B). Recolhida, mostra só o ícone com a dica. */
+function BotaoRecolher() {
+  const { state, toggleSidebar } = useSidebar()
+  const rotulo = state === "collapsed" ? "Expandir menu" : "Recolher menu"
+  return (
+    <SidebarMenuItem>
+      <SidebarMenuButton
+        onClick={toggleSidebar}
+        tooltip={`${rotulo} (Ctrl+B)`}
+        aria-label={rotulo}
+      >
+        <PanelLeft aria-hidden />
+        <span>{rotulo}</span>
+      </SidebarMenuButton>
+    </SidebarMenuItem>
+  )
+}
+
 export function AppSidebar() {
   const { pathname } = useLocation()
   const me = useMe()
@@ -156,6 +175,9 @@ export function AppSidebar() {
   // somem, e a única seção vira "Compartilhado" (Configurações continua pros dois tipos).
   const somenteDivisao = me.data?.tipo === "divisao"
   const secoes = somenteDivisao ? navSectionsDivisaoOnly : navSections
+  const { isMobile, setOpenMobile } = useSidebar()
+  // Mobile (gaveta): ir para outra rota — por qualquer link do menu — fecha a gaveta.
+  useEffect(() => setOpenMobile(false), [pathname, setOpenMobile])
 
   return (
     <Sidebar variant="inset" collapsible="icon">
@@ -178,9 +200,27 @@ export function AppSidebar() {
         </SidebarMenu>
       </SidebarHeader>
 
-      <SidebarContent>
+      {/* Mobile (gaveta de toque): linhas de 44px e texto maior, em vez das de 32px do desktop. */}
+      <SidebarContent
+        className={
+          isMobile
+            ? "[&_[data-sidebar=menu-button]]:h-11 [&_[data-sidebar=menu-button]]:text-[15px] [&_[data-sidebar=menu-sub-button]]:h-10 [&_[data-sidebar=menu-sub-button]]:text-[15px]"
+            : undefined
+        }
+      >
         <SidebarGroup>
           <SidebarGroupContent>
+            {/* Recolher/expandir como 1ª linha da navegação, separada do resto por uma linha. No
+                mobile o menu é uma gaveta (fecha tocando fora/Esc), então não há o que recolher. */}
+            {isMobile ? null : (
+              <>
+                <SidebarMenu>
+                  <BotaoRecolher />
+                </SidebarMenu>
+                {/* Recolhida, os botões são `size-8` alinhados à esquerda: a linha acompanha. */}
+                <SidebarSeparator className="my-2 group-data-[collapsible=icon]:mx-0 group-data-[collapsible=icon]:w-8!" />
+              </>
+            )}
             <SidebarMenu>
               {!somenteDivisao && (
                 <NavItemButton item={dashboardItem} pathname={pathname} />

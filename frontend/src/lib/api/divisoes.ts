@@ -35,7 +35,6 @@ function invalidar(qc: ReturnType<typeof useQueryClient>) {
   qc.invalidateQueries({ queryKey: ["transacoes"] })
   qc.invalidateQueries({ queryKey: ["orcamentos"] })
   qc.invalidateQueries({ queryKey: ["dashboard"] })
-  qc.invalidateQueries({ queryKey: ["dashboard-series"] })
 }
 
 export function useResumoDivisoes() {
