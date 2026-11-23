@@ -219,17 +219,21 @@ def test_vinculo_concorrente_nao_sobrescreve(
 
     lenta = session_factory()
     try:
-        assert lenta.get(DivisaoDespesa, d["id"]).transacao_id is None  # leu "sem transação"
+        # Referência forte: o identity map é fraco e, sem ela, a próxima consulta recarregaria o
+        # vínculo novo — o teste cairia na validação sequencial, não no compare-and-set.
+        defasada = lenta.get(DivisaoDespesa, d["id"])
+        assert defasada.transacao_id is None  # leu "sem transação"
         assert (
             a.put(
                 f"/api/divisoes-despesa/{d['id']}/vinculo", json={"transacao_id": tx1.id}
             ).status_code
             == 200
         )
-        with pytest.raises(ConflictError):
+        with pytest.raises(ConflictError, match="o vínculo da divisão mudou"):
             divisao_service.definir_vinculo(
                 lenta, usuario_a.id, d["id"], DivisaoVinculo(transacao_id=tx2.id)
             )
+        assert defasada is not None
     finally:
         lenta.close()
     assert a.get(f"/api/divisoes-despesa/{d['id']}").json()["transacao_id"] == tx1.id
