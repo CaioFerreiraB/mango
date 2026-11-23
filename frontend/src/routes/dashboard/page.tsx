@@ -121,7 +121,8 @@ const PRESETS_RAPIDOS = [
 ]
 
 // Classes estáticas (o Tailwind não enxerga classe montada em runtime). Grid de 60 no `lg`; abaixo
-// dele 2 colunas: até ½ ocupa uma, mais largo ocupa as duas; no mobile (1 coluna) tudo é inteiro.
+// dele 2 colunas: até ½ ocupa uma, mais largo ocupa as duas. No mobile só os cards do mês ficam
+// dois por linha (compactos, ver KpiCard); gráfico ocupa a linha toda.
 const SPAN: Record<Largura, string> = {
   12: "sm:col-span-1 lg:col-span-12",
   15: "sm:col-span-1 lg:col-span-15",
@@ -131,6 +132,8 @@ const SPAN: Record<Largura, string> = {
   45: "sm:col-span-2 lg:col-span-45",
   60: "sm:col-span-2 lg:col-span-60",
 }
+const spanDe = (w: WidgetLayout) =>
+  cn(w.id.startsWith("kpi-") ? "col-span-1" : "col-span-2", SPAN[w.largura])
 
 const TITULO = new Map(CATALOGO.map((w) => [w.id as string, w.titulo]))
 
@@ -487,7 +490,7 @@ export function DashboardPage() {
           items={visiveis.map((w) => w.id)}
           strategy={rectSortingStrategy}
         >
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-60">
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-60">
             {visiveis.map((w, i) => (
               <Widget
                 key={w.id}
@@ -560,7 +563,7 @@ function Widget({
       style={{ transform: CSS.Translate.toString(transform), transition }}
       className={cn(
         "relative min-w-0 [&>*]:h-full",
-        SPAN[w.largura],
+        spanDe(w),
         editando &&
           "rounded-xl outline-2 outline-offset-2 outline-primary/35 outline-dashed",
         isDragging && "z-20 opacity-80"

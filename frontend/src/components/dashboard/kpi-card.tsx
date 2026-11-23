@@ -3,7 +3,9 @@ import { ArrowDownRight, ArrowUpRight } from "lucide-react"
 import { Valor } from "@/components/common/valor"
 import { AreaTendencia, type CampoSerie } from "@/components/dashboard/graficos"
 import { Card, CardContent } from "@/components/ui/card"
+import { useIsMobile } from "@/hooks/use-mobile"
 import type { SerieBucket } from "@/lib/api/dashboard"
+import { cn } from "@/lib/utils"
 
 /**
  * Variação vs. mesmo período do mês anterior. Pílula **neutra** (identidade sóbria): a direção é
@@ -49,16 +51,36 @@ export function KpiCard({
   serie?: SerieBucket[]
   campo?: CampoSerie
 }) {
-  const temArea = serie != null && campo != null && serie.length > 0
+  // Mobile: card compacto, dois por linha e sem a mini-área (o gráfico nem monta).
+  const compacto = useIsMobile()
+  const temArea =
+    !compacto && serie != null && campo != null && serie.length > 0
   return (
     // Com área: `pb-0` + `overflow-hidden` fazem a área sangrar até a borda inferior arredondada.
-    <Card className={temArea ? "overflow-hidden pb-0" : undefined}>
-      <CardContent className="space-y-3">
+    <Card
+      className={cn(
+        compacto && "gap-0 py-4",
+        temArea && "overflow-hidden pb-0"
+      )}
+    >
+      <CardContent className={cn("space-y-3", compacto && "px-4")}>
         <div className="space-y-1">
-          <p className="truncate text-sm text-muted-foreground">{label}</p>
+          <p
+            className={cn(
+              "truncate text-muted-foreground",
+              compacto ? "text-xs" : "text-sm"
+            )}
+          >
+            {label}
+          </p>
           {/* Valor sempre neutro e forte (identidade da referência): o sinal +/− carrega o
               sentido, nunca a cor — `text-foreground` sobrepõe a cor por sinal do `Valor` (a11y). */}
-          <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1 text-2xl tracking-tight">
+          <div
+            className={cn(
+              "flex flex-wrap items-baseline gap-x-2 gap-y-1 tracking-tight",
+              compacto ? "text-lg" : "text-2xl"
+            )}
+          >
             <Valor
               centavos={centavos}
               sinal={sinal}
