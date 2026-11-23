@@ -38,7 +38,8 @@ export function useDashboardSeries(
 ) {
   return useQuery({
     queryKey: [
-      "dashboard-series",
+      "dashboard",
+      "series",
       periodo?.inicio ?? null,
       periodo?.fim ?? null,
       granularidade,
@@ -61,7 +62,7 @@ export type PatrimonioPonto = components["schemas"]["PatrimonioPonto"]
 /** Evolução patrimonial mês a mês (contas BANK + investimentos), terminando no mês corrente. */
 export function usePatrimonio(meses = 12) {
   return useQuery({
-    queryKey: ["dashboard-patrimonio", meses],
+    queryKey: ["dashboard", "patrimonio", meses],
     queryFn: async (): Promise<PatrimonioPonto[]> => {
       const { data, error } = await api.GET("/api/dashboard/patrimonio", {
         params: { query: { meses } },
@@ -77,7 +78,7 @@ export type CartoesResumo = components["schemas"]["CartoesResumo"]
 /** Painel dos cartões: compras do mês, fatura atual, próximas, limite e resumo do ano. */
 export function useCartoesPainel() {
   return useQuery({
-    queryKey: ["dashboard-cartoes"],
+    queryKey: ["dashboard", "cartoes"],
     queryFn: async (): Promise<CartoesResumo> => {
       const { data, error } = await api.GET("/api/dashboard/cartoes")
       if (error || !data) throw new Error("falha ao carregar os cartões")

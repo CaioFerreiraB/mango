@@ -550,7 +550,8 @@ def test_cartoes_compras_mes_ano_futuras_e_limite(db, usuario):
         repo.create(
             conta_id=credit.id,
             pluggy_transaction_id="antes",
-            date=agora.replace(day=1) - timedelta(days=1),
+            # Último dia do mês anterior no fuso SP (12h UTC = 9h SP), não derivado do UTC.
+            date=datetime(hoje.year, hoje.month, 1, 12, tzinfo=UTC) - timedelta(days=1),
             amount_centavos=4_000,
             currency_code="BRL",
             type="DEBIT",

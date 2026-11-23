@@ -3,7 +3,7 @@ import {
   PanelRightCloseIcon,
   PanelRightOpenIcon,
 } from "lucide-react"
-import { useState, useSyncExternalStore } from "react"
+import { useEffect, useRef, useState, useSyncExternalStore } from "react"
 import { useLocation, useNavigate } from "react-router"
 
 import { AcoesPainel, ChatView } from "@/components/chat/chat-view"
@@ -68,6 +68,21 @@ export function ChatPanel() {
   // Monta o chat só na 1ª abertura e o mantém depois (fechar não perde a conversa nem a animação).
   const [montado, setMontado] = useState(aberto)
   if (aberto && !montado) setMontado(true)
+  // Ao ABRIR (não no 1º render, que pode vir aberto do estado salvo), o foco vai para o campo do
+  // assistente: entre lg e xl a gaveta cobre o botão que a abriu e o foco ficaria escondido.
+  // Sem prender o foco — a gaveta não é modal.
+  const painel = useRef<HTMLElement>(null)
+  const abertoAntes = useRef(aberto)
+  useEffect(() => {
+    if (aberto && !abertoAntes.current) {
+      const id = requestAnimationFrame(() =>
+        painel.current?.querySelector<HTMLElement>("textarea")?.focus()
+      )
+      abertoAntes.current = aberto
+      return () => cancelAnimationFrame(id)
+    }
+    abertoAntes.current = aberto
+  }, [aberto])
   if (me.data?.tipo !== "completo") return null
   const fechar = () => {
     setPainelAberto(false)
@@ -77,6 +92,7 @@ export function ChatPanel() {
     // Abre/fecha animando a largura, como a sidebar (200ms linear); o conteúdo fica ancorado à
     // direita com largura fixa, então desliza para dentro em vez de se espremer. Fechado = inert.
     <aside
+      ref={painel}
       aria-label="Assistente"
       aria-hidden={!aberto}
       inert={!aberto}

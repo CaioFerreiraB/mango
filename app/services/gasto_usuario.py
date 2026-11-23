@@ -171,79 +171,65 @@ class Lancamento(NamedTuple):
     meio: str
 
 
+def _select_transacoes(usuario_id: int, renda: set[str]):
+    """SELECT das transações não-transferência com tudo que `Lancamento` precisa (colunas
+    rotuladas). O chamador acrescenta o recorte de data."""
+    cat = expr_categoria_efetiva(usuario_id)
+    estorno = expr_estorno_cartao(usuario_id, cat, renda)
+    stmt = select(
+        Transacao.date.label("data"),
+        VALOR_USUARIO.label("valor"),
+        Transacao.type.label("tipo"),
+        cat.label("categoria"),
+        Transacao.id.label("transacao_id"),
+        Transacao.conta_id,
+        case((estorno, True), else_=False).label("estorno"),
+        Conta.type.label("conta_tipo"),
+        Transacao.operation_type,
+        TransacaoPagamento.metodo,
+        Transacao.descricao_usuario,
+        Transacao.merchant_nome,
+        TransacaoPagamento.receiver_nome,
+        TransacaoPagamento.payer_nome,
+        Transacao.description,
+    )
+    return (
+        com_divisao(com_assinatura(stmt, usuario_id))
+        .join(Conta, Conta.id == Transacao.conta_id)
+        .outerjoin(TransacaoPagamento, TransacaoPagamento.transacao_id == Transacao.id)
+        .where(Transacao.usuario_id == usuario_id, Transacao.eh_transferencia.is_(False))
+    )
+
+
+def _lancamento_de(r) -> Lancamento:
+    """Linha de `_select_transacoes` → `Lancamento` (estorno de cartão vira DEBIT negativo)."""
+    receita = r.tipo == "CREDIT" and not r.estorno
+    return Lancamento(
+        data=_aware(r.data),
+        valor=-int(r.valor) if r.estorno else int(r.valor),
+        tipo="DEBIT" if r.estorno else r.tipo,
+        categoria=r.categoria,
+        transacao_id=r.transacao_id,
+        divisao_id=None,
+        conta_id=r.conta_id,
+        # Despesa: quem recebeu; receita: quem pagou. Descrição do usuário manda.
+        contraparte=r.descricao_usuario
+        or r.merchant_nome
+        or (r.payer_nome if receita else r.receiver_nome)
+        or r.description,
+        meio=meio_de(r.conta_tipo, r.operation_type, r.metodo),
+    )
+
+
 def lancamentos_do_periodo(
     db: Session, usuario_id: int, ini: datetime, fim_excl: datetime
 ) -> list[Lancamento]:
     """Lançamentos do período sem transferências (§4.2) — base única de dashboard, abas de
     receitas/despesas e orçamento. Agregação em Python: resultado idêntico nos dois bancos."""
-    cat = expr_categoria_efetiva(usuario_id)
-    estorno = expr_estorno_cartao(usuario_id, cat, categorias_renda(db, usuario_id))
-    transacoes = db.execute(
-        com_divisao(
-            com_assinatura(
-                select(
-                    Transacao.date,
-                    VALOR_USUARIO,
-                    Transacao.type,
-                    cat,
-                    Transacao.id,
-                    Transacao.conta_id,
-                    case((estorno, True), else_=False),
-                    Conta.type,
-                    Transacao.operation_type,
-                    TransacaoPagamento.metodo,
-                    Transacao.descricao_usuario,
-                    Transacao.merchant_nome,
-                    TransacaoPagamento.receiver_nome,
-                    TransacaoPagamento.payer_nome,
-                    Transacao.description,
-                ),
-                usuario_id,
-            )
-        )
-        .join(Conta, Conta.id == Transacao.conta_id)
-        .outerjoin(TransacaoPagamento, TransacaoPagamento.transacao_id == Transacao.id)
-        .where(
-            Transacao.usuario_id == usuario_id,
-            Transacao.date >= ini,
-            Transacao.date < fim_excl,
-            Transacao.eh_transferencia.is_(False),
-        )
-    ).all()
-    out = [
-        Lancamento(
-            data=_aware(d),
-            valor=-int(v) if est else int(v),
-            tipo="DEBIT" if est else t,
-            categoria=c,
-            transacao_id=tid,
-            divisao_id=None,
-            conta_id=conta_id,
-            # Despesa: quem recebeu; receita: quem pagou. Descrição do usuário manda.
-            contraparte=desc_u
-            or merchant
-            or (pagador if t == "CREDIT" and not est else recebedor)
-            or desc,
-            meio=meio_de(conta_tipo, op, metodo),
-        )
-        for (
-            d,
-            v,
-            t,
-            c,
-            tid,
-            conta_id,
-            est,
-            conta_tipo,
-            op,
-            metodo,
-            desc_u,
-            merchant,
-            recebedor,
-            pagador,
-            desc,
-        ) in transacoes
-    ]
+    stmt = _select_transacoes(usuario_id, categorias_renda(db, usuario_id)).where(
+        Transacao.date >= ini, Transacao.date < fim_excl
+    )
+    out = [_lancamento_de(r) for r in db.execute(stmt)]
     parcelas = parcelas_divisao(usuario_id).where(
         DivisaoDespesa.data >= ini, DivisaoDespesa.data < fim_excl
     )

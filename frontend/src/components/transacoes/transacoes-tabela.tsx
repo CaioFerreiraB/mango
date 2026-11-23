@@ -137,6 +137,7 @@ export function TransacoesTabela({
   ocultarLinkFatura = false,
   abrirId = null,
   ocultarCategoria = false,
+  parteDoUsuario = false,
 }: {
   items: ItemListagem[]
   /** Repassado ao drawer: esconde "Ir para a fatura" quando já estamos numa fatura. */
@@ -145,7 +146,15 @@ export function TransacoesTabela({
   abrirId?: number | null
   /** Esconde a coluna Categoria (lista já filtrada por uma categoria — coluna redundante). */
   ocultarCategoria?: boolean
+  /** Compra dividida mostra só a parte do usuário (drill-down de gráfico: a lista soma a fatia). */
+  parteDoUsuario?: boolean
 }) {
+  const valorDe = (t: Transacao) => {
+    const v = valorEfetivoCentavos(t)
+    return parteDoUsuario && t.divisao
+      ? Math.sign(v) * t.divisao.minha_parte_centavos
+      : v
+  }
   const contas = useContas()
   const contaNome = new Map(
     (contas.data ?? []).map((c) => [
@@ -162,6 +171,13 @@ export function TransacoesTabela({
   const [selecionadaId, setSelecionadaId] = useState<number | null>(
     abrirId ?? null
   )
+  // Com a tabela já montada, um `abrirId` novo (outra busca) abre a transação pedida; fechar o
+  // drawer não reabre, porque `abrirId` não muda.
+  const [abrirVisto, setAbrirVisto] = useState(abrirId)
+  if (abrirId !== abrirVisto) {
+    setAbrirVisto(abrirId)
+    if (abrirId != null) setSelecionadaId(abrirId)
+  }
   const [divisaoId, setDivisaoId] = useState<number | null>(null)
   const selecionada =
     items.find(
@@ -356,7 +372,7 @@ export function TransacoesTabela({
                   </TableCell>
                   <TableCell>
                     <div className="truncate">
-                      <Valor centavos={valorEfetivoCentavos(t)} sinal neutro />
+                      <Valor centavos={valorDe(t)} sinal neutro />
                     </div>
                   </TableCell>
                   <TableCell className="text-muted-foreground">
@@ -499,7 +515,7 @@ export function TransacoesTabela({
                 </div>
                 <div className="shrink-0 text-right">
                   <Valor
-                    centavos={valorEfetivoCentavos(t)}
+                    centavos={valorDe(t)}
                     sinal
                     className="block text-xs font-semibold"
                   />

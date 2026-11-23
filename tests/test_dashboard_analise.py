@@ -9,6 +9,7 @@ from app.models.orcamento import Orcamento, OrcamentoMensal
 from app.models.transacao import TransacaoPagamento
 from app.repositories.transacao import TransacaoRepository
 from app.services.dashboard import (
+    FiltroLancamentos,
     lancamentos_da_analise,
     montar_analise,
     montar_dashboard,
@@ -142,9 +143,11 @@ def test_analise_despesa_reconcilia_e_quebra(db: Session):
 
     # Drill-down soma o pedaço do gráfico.
     chave = a.contrapartes[0].chave
-    lista = lancamentos_da_analise(db, u.id, "despesa", *FEV, contraparte=chave)
+    lista = lancamentos_da_analise(db, u.id, "despesa", FEV, FiltroLancamentos(contraparte=chave))
     assert sum(x.valor for x in lista) == a.contrapartes[0].total_centavos
-    cartao = lancamentos_da_analise(db, u.id, "despesa", *FEV, meio="Cartão de crédito")
+    cartao = lancamentos_da_analise(
+        db, u.id, "despesa", FEV, FiltroLancamentos(meio="Cartão de crédito")
+    )
     assert sum(x.valor for x in cartao) == 30_000
 
 

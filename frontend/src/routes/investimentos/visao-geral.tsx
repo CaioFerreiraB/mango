@@ -324,7 +324,7 @@ function Kpis({
             variant="ghost"
             size="icon-sm"
             className="-mr-1 text-muted-foreground"
-            aria-label={oculto ? "Mostrar valores" : "Ocultar valores"}
+            aria-label="Ocultar valores"
             aria-pressed={oculto}
             onClick={onToggleOculto}
           >

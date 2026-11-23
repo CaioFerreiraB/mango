@@ -40,7 +40,6 @@ function invalidar(qc: ReturnType<typeof useQueryClient>) {
   qc.invalidateQueries({ queryKey: regrasKeys.all })
   qc.invalidateQueries({ queryKey: ["transacoes"] })
   qc.invalidateQueries({ queryKey: ["dashboard"] })
-  qc.invalidateQueries({ queryKey: ["dashboard-series"] })
   qc.invalidateQueries({ queryKey: ["orcamentos"] })
 }
 

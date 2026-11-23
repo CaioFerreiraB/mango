@@ -1,7 +1,15 @@
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, useSyncExternalStore } from "react"
 
 import { echarts, type EChartsOption } from "@/lib/echart-tema"
 import { cn } from "@/lib/utils"
+
+const MQ_MOVIMENTO = "(prefers-reduced-motion: reduce)"
+const assinarMovimento = (avisar: () => void) => {
+  const mq = window.matchMedia?.(MQ_MOVIMENTO)
+  mq?.addEventListener("change", avisar)
+  return () => mq?.removeEventListener("change", avisar)
+}
+const movimentoReduzido = () => !!window.matchMedia?.(MQ_MOVIMENTO).matches
 
 /**
  * Wrapper único do ECharts: init (SVG), `setOption` sem merge a cada `option` nova, resize
@@ -65,9 +73,23 @@ export function EChart({
     }
   }, [])
 
+  // Preferência de movimento reduzido observada ao vivo (mudar com o gráfico aberto desliga a
+  // animação já no próximo setOption) — vale para todo gráfico, sem cada um assinar.
+  const reduzido = useSyncExternalStore(assinarMovimento, movimentoReduzido)
   useEffect(() => {
-    chartRef.current?.setOption(option, { notMerge: true })
-  }, [option])
+    chartRef.current?.setOption(
+      {
+        ...option,
+        ...(reduzido ? { animation: false } : {}),
+        // O ECharts troca o aria-label do contêiner por uma descrição gerada com os valores
+        // brutos das séries; fixar a descrição mantém o rótulo dado (e não vaza valor oculto).
+        ...(ariaLabel
+          ? { aria: { enabled: true, label: { description: ariaLabel } } }
+          : {}),
+      },
+      { notMerge: true }
+    )
+  }, [option, reduzido, ariaLabel])
 
   return (
     <div

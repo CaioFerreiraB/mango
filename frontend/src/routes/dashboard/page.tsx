@@ -422,6 +422,10 @@ export function DashboardPage() {
       >
         {serieFluxo.isLoading ? (
           <Skeleton className="h-[280px] w-full" />
+        ) : serieFluxo.isError ? (
+          <p className="py-8 text-center text-sm text-muted-foreground">
+            Não foi possível carregar entradas e saídas.
+          </p>
         ) : (
           <GraficoFluxo
             buckets={serieFluxo.data?.buckets ?? []}
@@ -478,7 +482,7 @@ export function DashboardPage() {
                   <Button
                     variant="outline"
                     size="sm"
-                    disabled={ocultos.length === 0}
+                    disabled={ocultos.length === 0 || salvar.isPending}
                   >
                     <Plus aria-hidden />
                     Adicionar visualização
@@ -501,6 +505,7 @@ export function DashboardPage() {
               <Button
                 variant="ghost"
                 size="sm"
+                disabled={salvar.isPending}
                 onClick={() => setRascunho(layoutPadrao())}
               >
                 <RotateCcw aria-hidden />
@@ -509,6 +514,7 @@ export function DashboardPage() {
               <Button
                 variant="ghost"
                 size="sm"
+                disabled={salvar.isPending}
                 onClick={() => setRascunho(null)}
               >
                 Cancelar
@@ -525,8 +531,8 @@ export function DashboardPage() {
                   size="icon-sm"
                   onClick={alternarOculto}
                   aria-pressed={oculto}
-                  aria-label={oculto ? "Mostrar valores" : "Ocultar valores"}
-                  title={oculto ? "Mostrar valores" : "Ocultar valores"}
+                  aria-label="Ocultar valores"
+                  title={oculto ? "Valores ocultos" : "Ocultar valores"}
                 >
                   {oculto ? <EyeOff aria-hidden /> : <Eye aria-hidden />}
                 </Button>
@@ -536,6 +542,8 @@ export function DashboardPage() {
                 <Button
                   variant="outline"
                   size="sm"
+                  // Antes do perfil chegar, "salvo" é o padrão: editar dali sobrescreveria o layout.
+                  disabled={!perfil.data}
                   onClick={() => setRascunho(salvo)}
                 >
                   <LayoutGrid aria-hidden />
@@ -576,6 +584,7 @@ export function DashboardPage() {
                     key={w.id}
                     w={w}
                     editando={editando}
+                    bloqueado={salvar.isPending}
                     primeiro={i === 0}
                     ultimo={i === visiveis.length - 1}
                     onOcultar={() =>
@@ -600,7 +609,11 @@ export function DashboardPage() {
           <EmptyState
             icon={LayoutGrid}
             title="Nenhuma visualização no painel"
-            description="Use “Adicionar visualização” para trazer os blocos de volta."
+            description={
+              editando
+                ? "Use “Adicionar visualização” para trazer os blocos de volta."
+                : "Clique em “Personalizar” e use “Adicionar visualização” para trazer os blocos de volta."
+            }
           />
         ) : null}
       </TabsContent>
@@ -628,6 +641,7 @@ export function DashboardPage() {
 function Widget({
   w,
   editando,
+  bloqueado,
   primeiro,
   ultimo,
   onOcultar,
@@ -637,6 +651,8 @@ function Widget({
 }: {
   w: WidgetLayout
   editando: boolean
+  /** Gravação em andamento: controles travados (mudança agora se perderia no fim do save). */
+  bloqueado: boolean
   primeiro: boolean
   ultimo: boolean
   onOcultar: () => void
@@ -653,7 +669,7 @@ function Widget({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: w.id, disabled: !editando })
+  } = useSortable({ id: w.id, disabled: !editando || bloqueado })
   return (
     <section
       ref={setNodeRef}
@@ -669,7 +685,10 @@ function Widget({
     >
       {children}
       {editando ? (
-        <div className="absolute -top-3 right-3 z-10 flex h-auto! items-center gap-0.5 rounded-lg border bg-popover p-0.5 shadow-sm">
+        <fieldset
+          disabled={bloqueado}
+          className="absolute -top-3 right-3 z-10 flex h-auto! items-center gap-0.5 rounded-lg border bg-popover p-0.5 shadow-sm"
+        >
           <Button
             ref={setActivatorNodeRef}
             variant="ghost"
@@ -719,7 +738,7 @@ function Widget({
           >
             <ArrowDown aria-hidden />
           </Button>
-        </div>
+        </fieldset>
       ) : null}
     </section>
   )

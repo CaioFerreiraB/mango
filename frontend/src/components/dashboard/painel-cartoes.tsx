@@ -170,8 +170,11 @@ function BlocoCartao({ c, cor }: { c: Cartao; cor: string }) {
       : c.fatura_atual_centavos + c.proximas_centavos
   const pct = (v: number) =>
     limite ? Math.min(100, Math.max(0, (v / limite) * 100)) : 0
-  const pctFatura = pct(c.fatura_atual_centavos)
-  const pctProximas = Math.min(100 - pctFatura, pct(c.proximas_centavos))
+  // Barra e texto mostram o MESMO comprometido: a largura total é `usado`; dentro dela, a fatura
+  // atual ocupa até onde couber e o resto do comprometido é o das próximas.
+  const pctUsado = pct(usado)
+  const pctFatura = Math.min(pctUsado, pct(c.fatura_atual_centavos))
+  const pctProximas = pctUsado - pctFatura
   const datas = [
     c.fecha ? `fecha ${ddmm(c.fecha)}` : null,
     c.vence
@@ -207,7 +210,7 @@ function BlocoCartao({ c, cor }: { c: Cartao; cor: string }) {
           <div
             className="flex h-2 overflow-hidden rounded-full bg-muted"
             role="img"
-            aria-label={`${Math.round(pct(usado))}% do limite comprometido`}
+            aria-label={`${Math.round(pctUsado)}% do limite comprometido`}
           >
             <div
               className="h-full bg-primary"
@@ -219,7 +222,7 @@ function BlocoCartao({ c, cor }: { c: Cartao; cor: string }) {
             />
           </div>
           <div className="flex justify-between gap-3 text-xs text-muted-foreground">
-            <span>{Math.round(pct(usado))}% do limite comprometido</span>
+            <span>{Math.round(pctUsado)}% do limite comprometido</span>
             <span>
               Limite <Valor centavos={limite} neutro />
             </span>

@@ -67,6 +67,7 @@ function ListaDialog({
               <TransacoesTabela
                 items={itens}
                 ocultarCategoria={ocultarCategoria}
+                parteDoUsuario
               />
               {total != null && total > itens.length ? (
                 <p className="pt-3 text-center text-xs text-muted-foreground">

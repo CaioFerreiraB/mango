@@ -138,7 +138,14 @@ function Resultados({ fechar }: { fechar: () => void }) {
   const faturas = useFaturas()
   const buscaTx = termoServidor.length >= 2 && !somenteDivisao
   const transacoes = useTransacoes(
-    { busca: termoServidor, limit: MAX_TRANSACOES },
+    // Mesmo recorte padrão da tela de destino: senão o resultado (parcela futura, pagamento de
+    // fatura) some ao abrir `/transacoes?id=` e o drawer não acha a transação.
+    {
+      busca: termoServidor,
+      limit: MAX_TRANSACOES,
+      ocultar_futuras: true,
+      ocultar_pagamento_fatura: true,
+    },
     { enabled: buscaTx }
   )
 
@@ -180,9 +187,12 @@ function Resultados({ fechar }: { fechar: () => void }) {
         )
         .slice(0, 5)
     : []
-  const itensTx = buscaTx
-    ? (transacoes.data?.items ?? []).filter((t) => !ehLancamento(t))
-    : []
+  // Enquanto a consulta do termo novo carrega, o TanStack mantém os itens do termo anterior
+  // (placeholder): não oferecê-los, o `id` de um termo com a `busca` de outro não se acha.
+  const itensTx =
+    buscaTx && !transacoes.isPlaceholderData
+      ? (transacoes.data?.items ?? []).filter((t) => !ehLancamento(t))
+      : []
 
   return (
     <Command shouldFilter={false}>

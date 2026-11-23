@@ -20,6 +20,7 @@ import type {
 import {
   distribuirCategorias,
   ehCategoriaReal,
+  ID_OUTRAS,
   type Distribuicao,
   type GastoEntrada,
 } from "@/lib/categorias-grafico"
@@ -452,6 +453,7 @@ function BarrasLegenda({
                   : undefined
               }
               onFocus={() => onHover(idx)}
+              onBlur={() => onHover(null)}
             >
               <div className="flex items-baseline justify-between gap-3 text-sm">
                 <span className="truncate">{it.nome}</span>
@@ -508,14 +510,30 @@ export function BarrasEmpilhadasCategorias({
       ),
     [buckets, rotulo]
   )
+  // Séries do empilhado: as fatias da rosca + "Outras" para tudo que ficou fora delas — inclusive
+  // categoria de soma ≤ 0 (estorno, ajuste negativo de fatura), que a rosca descarta mas a barra
+  // precisa somar para fechar no total do período.
+  const fatiasPilha = useMemo(() => {
+    const temResto = buckets.some((b) =>
+      b.por_categoria.some(
+        (g) => g.total_centavos !== 0 && dist.slotDe(g.categoria_id) === null
+      )
+    )
+    return temResto && !dist.fatias.some((f) => f.slot === null)
+      ? [
+          ...dist.fatias,
+          { id: ID_OUTRAS, nome: "Outras", valor: 0, slot: null },
+        ]
+      : dist.fatias
+  }, [buckets, dist])
   const option = useMemo<EChartsOption>(() => {
-    const series = dist.fatias.map((f, i) => {
+    const series = fatiasPilha.map((f, i) => {
       const valores = buckets.map((b) =>
         b.por_categoria
           .filter((g) => dist.slotDe(g.categoria_id) === f.slot)
           .reduce((s, g) => s + g.total_centavos, 0)
       )
-      const topo = i === dist.fatias.length - 1
+      const topo = i === fatiasPilha.length - 1
       return {
         name: f.nome,
         type: "bar" as const,
@@ -555,14 +573,14 @@ export function BarrasEmpilhadasCategorias({
       tooltip: { ...opcoesBase(t).tooltip, ...tooltipEixo(formatBRL, true) },
       series,
     }
-  }, [buckets, granularidade, dist, comLegenda, t])
+  }, [buckets, granularidade, dist, fatiasPilha, comLegenda, t])
   return (
     <EChart
       option={option}
       className={comLegenda ? "h-[280px]" : "h-[240px]"}
       ariaLabel="Despesas por categoria em cada período"
       onClique={({ seriesIndex }) => {
-        const f = dist.fatias[seriesIndex]
+        const f = fatiasPilha[seriesIndex]
         if (f && ehCategoriaReal(f.id)) onSelecionar?.(f)
       }}
     />
@@ -586,7 +604,8 @@ export function GraficoPatrimonio({ pontos }: { pontos: PatrimonioPonto[] }) {
     // Duas séries p/ o líquido: real (sólida) e estimada (tracejada), ligadas no ponto de troca.
     const liqReal = pontos.map((p, i) => (est[i] ? null : p.liquido_centavos))
     const liqEst = pontos.map((p, i) =>
-      est[i] || est[i - 1] ? p.liquido_centavos : null
+      // Liga o trecho tracejado aos vizinhos reais nas duas pontas (entrada e saída).
+      est[i] || est[i - 1] || est[i + 1] ? p.liquido_centavos : null
     )
     const COR_TOTAL = t.cat[0]
     const COR_LIQ = t.cat[2]

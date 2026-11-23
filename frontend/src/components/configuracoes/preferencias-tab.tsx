@@ -1,5 +1,6 @@
 import { useRef, useState } from "react"
 import { RotateCcw } from "lucide-react"
+import { useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
@@ -271,21 +272,24 @@ function RevisaoCorteCard({ perfil }: { perfil: Perfil }) {
 function AtalhosCard({ perfil }: { perfil: Perfil }) {
   const me = useMe()
   const atualizar = useAtualizarPerfil()
-  const [ids, setIds] = useState(() =>
-    atalhosEfetivos(perfil.atalhos_mobile).map((a) => a.id)
-  )
+  const qc = useQueryClient()
+  // Seleção otimista só enquanto grava; fora disso os seletores seguem o perfil confirmado (que
+  // pode mudar por outra aba). Uma gravação por vez: os controles travam enquanto ela corre, então
+  // duas trocas rápidas não chegam ao servidor fora de ordem.
+  const [otimista, setOtimista] = useState<string[] | null>(null)
+  const ids =
+    otimista ?? atalhosEfetivos(perfil.atalhos_mobile).map((a) => a.id)
   if (me.data?.tipo === "divisao") return null
 
   function gravar(novos: string[] | null) {
-    const anteriores = ids
-    setIds(atalhosEfetivos(novos).map((a) => a.id)) // otimista; volta se o servidor recusar
+    setOtimista(atalhosEfetivos(novos).map((a) => a.id))
     atualizar.mutate(
       { atalhos_mobile: novos },
       {
-        onError: (err) => {
-          setIds(anteriores)
-          toast.error(err.message)
-        },
+        // Perfil confirmado já no cache antes de soltar o otimista: sem piscar a escolha antiga.
+        onSuccess: (p) => qc.setQueryData(["perfil"], p),
+        onError: (err) => toast.error(err.message),
+        onSettled: () => setOtimista(null),
       }
     )
   }
@@ -328,7 +332,11 @@ function AtalhosCard({ perfil }: { perfil: Perfil }) {
           {ids.map((id, pos) => (
             <div key={pos} className="flex flex-col gap-1.5">
               <Label htmlFor={`atalho-${pos}`}>{pos + 2}º atalho</Label>
-              <Select value={id} onValueChange={(v) => trocar(pos, v)}>
+              <Select
+                value={id}
+                onValueChange={(v) => trocar(pos, v)}
+                disabled={atualizar.isPending}
+              >
                 <SelectTrigger id={`atalho-${pos}`} className="w-full">
                   <SelectValue />
                 </SelectTrigger>
@@ -345,7 +353,12 @@ function AtalhosCard({ perfil }: { perfil: Perfil }) {
           ))}
         </div>
         {padrao ? null : (
-          <Button variant="ghost" size="sm" onClick={() => gravar(null)}>
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={atualizar.isPending}
+            onClick={() => gravar(null)}
+          >
             <RotateCcw aria-hidden />
             Restaurar padrão
           </Button>

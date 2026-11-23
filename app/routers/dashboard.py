@@ -1,5 +1,6 @@
 """Router do dashboard (§4.10). Período padrão = mês corrente (fuso SP)."""
 
+from dataclasses import dataclass
 from datetime import date
 from typing import Literal
 
@@ -21,6 +22,7 @@ from app.schemas.dashboard import (
 from app.schemas.transacao import TransacaoListagem
 from app.security.current_user import get_current_user
 from app.services.dashboard import (
+    FiltroLancamentos,
     lancamentos_da_analise,
     montar_analise,
     montar_cartoes,
@@ -106,30 +108,29 @@ def analise(
     return montar_analise(db, user.id, natureza, *_periodo(inicio, fim))
 
 
+@dataclass
+class _FiltroQuery:
+    """Filtros do drill-down (query string) — agrupados para a assinatura da rota ficar enxuta."""
+
+    categoria_id: str | None = Query(None, min_length=1, max_length=16)
+    contraparte: str | None = Query(None, max_length=255)
+    meio: str | None = Query(None, max_length=64)
+    conta_id: int | None = Query(None)
+
+
 @router.get("/analise/transacoes", response_model=TransacaoListagem)
 def analise_transacoes(
     natureza: Natureza = Query(),
     inicio: date | None = Query(None),
     fim: date | None = Query(None),
-    categoria_id: str | None = Query(None, min_length=1, max_length=16),
-    contraparte: str | None = Query(None, max_length=255),
-    meio: str | None = Query(None, max_length=64),
-    conta_id: int | None = Query(None),
+    f: _FiltroQuery = Depends(),
     db: Session = Depends(get_db),
     user: Usuario = Depends(get_current_user),
 ) -> TransacaoListagem:
     """Transações de um pedaço da análise (categoria, contraparte, meio e/ou conta). Mesmo recorte
     dos gráficos: a soma bate com o valor exibido. Até 200, mais recentes primeiro."""
-    lancs = lancamentos_da_analise(
-        db,
-        user.id,
-        natureza,
-        *_periodo(inicio, fim),
-        categoria_id=categoria_id,
-        contraparte=contraparte,
-        meio=meio,
-        conta_id=conta_id,
-    )
+    filtro = FiltroLancamentos(f.categoria_id, f.contraparte, f.meio, f.conta_id)
+    lancs = lancamentos_da_analise(db, user.id, natureza, _periodo(inicio, fim), filtro)
     pagina = lancs[:_LIMITE_DRILLDOWN]
     ids = [x.transacao_id for x in pagina if x.transacao_id is not None]
     txs = {

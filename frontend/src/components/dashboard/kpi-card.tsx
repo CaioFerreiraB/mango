@@ -200,8 +200,8 @@ export function BotaoOcultar({
       type="button"
       onClick={onClick}
       aria-pressed={oculto}
-      aria-label={oculto ? "Mostrar valores" : "Ocultar valores"}
-      title={oculto ? "Mostrar valores" : "Ocultar valores"}
+      aria-label="Ocultar valores"
+      title={oculto ? "Valores ocultos" : "Ocultar valores"}
       className={cn(
         "flex shrink-0 items-center justify-center rounded-full transition-colors focus-visible:ring-2 focus-visible:outline-none motion-reduce:transition-none",
         className

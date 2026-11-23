@@ -140,7 +140,6 @@ export function useAtualizarTransacao() {
       qc.invalidateQueries({ queryKey: ["dashboard"] })
       // Trocar categoria muda o consumo do orçamento e as séries do dashboard — sem invalidar
       // aqui, a Visão Geral seguia mostrando o número antigo até a próxima navegação.
-      qc.invalidateQueries({ queryKey: ["dashboard-series"] })
       qc.invalidateQueries({ queryKey: ["orcamentos"] })
     },
   })

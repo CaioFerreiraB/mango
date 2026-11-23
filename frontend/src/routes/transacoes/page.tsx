@@ -90,6 +90,15 @@ export function TransacoesPage() {
   // Divididas = transações vinculadas a uma divisão + parcelas de divisão sem transação sua.
   const [divisao, setDivisao] = useState<"todas" | "divididas" | "nao">("todas")
   const [page, setPage] = useState(0)
+  // A busca global navega para `/transacoes?busca=` com a tela já aberta (instância mantida): o
+  // termo novo da URL substitui o campo e volta à 1ª página.
+  const buscaUrl = params.get("busca") ?? ""
+  const [buscaUrlVista, setBuscaUrlVista] = useState(buscaUrl)
+  if (buscaUrl !== buscaUrlVista) {
+    setBuscaUrlVista(buscaUrl)
+    setBusca(buscaUrl)
+    setPage(0)
+  }
 
   const contas = useContas()
   const assinaturas = useAssinaturas()
