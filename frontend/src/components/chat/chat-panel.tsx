@@ -73,7 +73,9 @@ export function ChatPanel() {
       aria-hidden={!aberto}
       inert={!aberto}
       className={cn(
-        "sticky top-0 hidden h-svh shrink-0 overflow-hidden transition-[width] duration-200 ease-linear motion-reduce:transition-none md:block",
+        // < xl não há espaço para encaixar (sidebar + painel deixariam ~150px de página): abre por
+        // cima, como gaveta. ≥ xl encaixa ao lado e a página encolhe.
+        "fixed inset-y-0 right-0 z-40 hidden h-svh shrink-0 overflow-hidden transition-[width] duration-200 ease-linear motion-reduce:transition-none md:block xl:sticky xl:top-0 xl:z-auto",
         aberto ? "w-[360px] lg:w-[420px]" : "w-0"
       )}
       onKeyDown={(e) => {
@@ -83,7 +85,7 @@ export function ChatPanel() {
       }}
     >
       <div className="absolute inset-y-0 right-0 flex w-[360px] py-2 pr-2 lg:w-[420px]">
-        <div className="flex min-h-0 w-full flex-col overflow-hidden rounded-xl bg-background shadow-sm">
+        <div className="flex min-h-0 w-full flex-col overflow-hidden rounded-xl bg-background shadow-2xl ring-1 ring-border xl:shadow-sm xl:ring-0">
           {montado ? (
             <ChatView
               variante="painel"

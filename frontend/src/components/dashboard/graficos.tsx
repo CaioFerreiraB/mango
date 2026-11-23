@@ -35,7 +35,14 @@ const corSlot = (t: TemaGrafico, slot: number | null) =>
 /** Eixos cartesianos do sistema: grid hairline sólido e recessivo, ticks em BRL compacto. */
 function eixos(t: TemaGrafico, rotulos: string[]): EChartsOption {
   return {
-    grid: { left: 4, right: 8, top: 12, bottom: 4, containLabel: true },
+    grid: {
+      left: 4,
+      right: 8,
+      top: 12,
+      bottom: 4,
+      outerBoundsMode: "same",
+      outerBoundsContain: "axisLabel",
+    },
     xAxis: {
       type: "category",
       data: rotulos,
@@ -118,7 +125,14 @@ export function GraficoFluxo({
       ...opcoesBase(t),
       animation: !semMovimento(),
       ...eixos(t, rotulos),
-      grid: { left: 4, right: 8, top: 12, bottom: 32, containLabel: true },
+      grid: {
+        left: 4,
+        right: 8,
+        top: 12,
+        bottom: 32,
+        outerBoundsMode: "same",
+        outerBoundsContain: "axisLabel",
+      },
       tooltip: { ...opcoesBase(t).tooltip, ...tooltipEixo() },
       legend: legenda(t),
       series: [
@@ -454,7 +468,8 @@ export function BarrasEmpilhadasCategorias({
               right: 8,
               top: 12,
               bottom: 32,
-              containLabel: true,
+              outerBoundsMode: "same",
+              outerBoundsContain: "axisLabel",
             },
           }
         : {}),
@@ -517,7 +532,14 @@ export function GraficoPatrimonio({ pontos }: { pontos: PatrimonioPonto[] }) {
       ...opcoesBase(t),
       animation: !semMovimento(),
       ...eixos(t, rotulos),
-      grid: { left: 4, right: 8, top: 12, bottom: 32, containLabel: true },
+      grid: {
+        left: 4,
+        right: 8,
+        top: 12,
+        bottom: 32,
+        outerBoundsMode: "same",
+        outerBoundsContain: "axisLabel",
+      },
       yAxis: {
         type: "value",
         scale: true,

@@ -143,8 +143,8 @@ export function VisaoGeralPage() {
         onToggleOculto={() => setOculto((v) => !v)}
       />
 
-      <div className="grid items-stretch gap-4 lg:grid-cols-3">
-        <div className="h-full lg:col-span-2">
+      <div className="grid items-stretch gap-4 @5xl:grid-cols-3">
+        <div className="h-full @5xl:col-span-2">
           <EvolucaoPatrimonio oculto={oculto} />
         </div>
         <AlocacaoPorTipo
@@ -154,7 +154,7 @@ export function VisaoGeralPage() {
         />
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-3">
+      <div className="grid gap-4 @3xl:grid-cols-2 @5xl:grid-cols-3">
         <MaioresMovers
           titulo="Maiores altas"
           ativos={resumo.data?.renda_variavel ?? []}
@@ -302,7 +302,7 @@ function Kpis({
 }) {
   if (carregando || !resumo) {
     return (
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 @xl:grid-cols-2 @4xl:grid-cols-3">
         {Array.from({ length: 6 }, (_, i) => (
           <Skeleton key={i} className="h-24 w-full" />
         ))}
@@ -315,7 +315,7 @@ function Kpis({
   const nCat = resumo.alocacao.length
 
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    <div className="grid gap-4 @xl:grid-cols-2 @4xl:grid-cols-3">
       <KpiCard
         icon={Wallet}
         label="Patrimônio total"
@@ -965,7 +965,7 @@ function InsightsBar({
           <X className="size-4" />
         </Button>
       </CardHeader>
-      <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <CardContent className="grid gap-3 @xl:grid-cols-2 @4xl:grid-cols-4">
         {insights.map((texto, i) => (
           <div
             key={i}

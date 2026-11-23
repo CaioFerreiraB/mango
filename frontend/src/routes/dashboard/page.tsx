@@ -120,17 +120,20 @@ const PRESETS_RAPIDOS = [
   },
 ]
 
-// Classes estáticas (o Tailwind não enxerga classe montada em runtime). Grid de 60 no `lg`; abaixo
-// dele 2 colunas: até ½ ocupa uma, mais largo ocupa as duas. No mobile só os cards do mês ficam
-// dois por linha (compactos, ver KpiCard); gráfico ocupa a linha toda.
+// Classes estáticas (o Tailwind não enxerga classe montada em runtime). O grid segue a largura
+// DISPONÍVEL (container query: janela − sidebar − chat), não a da janela:
+// - ≥ @6xl (72rem): grid de 60, a largura configurada vale (5 cards ⅕ cabem com folga);
+// - @3xl–@6xl: 6 colunas — até ⅓ vira ⅓, ½ fica ½, mais largo ocupa a linha;
+// - abaixo: 2 colunas — cards do mês lado a lado, o resto em largura total (até ½ vira ½ a partir de
+//   @xl).
 const SPAN: Record<Largura, string> = {
-  12: "sm:col-span-1 lg:col-span-12",
-  15: "sm:col-span-1 lg:col-span-15",
-  20: "sm:col-span-1 lg:col-span-20",
-  30: "sm:col-span-1 lg:col-span-30",
-  40: "sm:col-span-2 lg:col-span-40",
-  45: "sm:col-span-2 lg:col-span-45",
-  60: "sm:col-span-2 lg:col-span-60",
+  12: "@xl:col-span-1 @3xl:col-span-2 @6xl:col-span-12",
+  15: "@xl:col-span-1 @3xl:col-span-2 @6xl:col-span-15",
+  20: "@xl:col-span-1 @3xl:col-span-2 @6xl:col-span-20",
+  30: "@xl:col-span-1 @3xl:col-span-3 @6xl:col-span-30",
+  40: "@xl:col-span-2 @3xl:col-span-6 @6xl:col-span-40",
+  45: "@xl:col-span-2 @3xl:col-span-6 @6xl:col-span-45",
+  60: "@xl:col-span-2 @3xl:col-span-6 @6xl:col-span-60",
 }
 const spanDe = (w: WidgetLayout) =>
   cn(w.id.startsWith("kpi-") ? "col-span-1" : "col-span-2", SPAN[w.largura])
@@ -481,40 +484,43 @@ export function DashboardPage() {
         </Link>
       ) : null}
 
-      <DndContext
-        sensors={sensores}
-        collisionDetection={closestCenter}
-        onDragEnd={aoSoltar}
-      >
-        <SortableContext
-          items={visiveis.map((w) => w.id)}
-          strategy={rectSortingStrategy}
+      {/* @container: o grid lê a largura disponível (ver SPAN). */}
+      <div className="@container">
+        <DndContext
+          sensors={sensores}
+          collisionDetection={closestCenter}
+          onDragEnd={aoSoltar}
         >
-          <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-60">
-            {visiveis.map((w, i) => (
-              <Widget
-                key={w.id}
-                w={w}
-                editando={editando}
-                primeiro={i === 0}
-                ultimo={i === visiveis.length - 1}
-                onOcultar={() =>
-                  alterar(w.id, (x) => ({ ...x, visivel: false }))
-                }
-                onLargura={() =>
-                  alterar(w.id, (x) => ({
-                    ...x,
-                    largura: proximaLargura(x.largura),
-                  }))
-                }
-                onMover={(delta) => moverVisivel(w.id, delta)}
-              >
-                {widgets[w.id as WidgetId]()}
-              </Widget>
-            ))}
-          </div>
-        </SortableContext>
-      </DndContext>
+          <SortableContext
+            items={visiveis.map((w) => w.id)}
+            strategy={rectSortingStrategy}
+          >
+            <div className="grid grid-cols-2 gap-3 sm:gap-4 @3xl:grid-cols-6 @6xl:grid-cols-60">
+              {visiveis.map((w, i) => (
+                <Widget
+                  key={w.id}
+                  w={w}
+                  editando={editando}
+                  primeiro={i === 0}
+                  ultimo={i === visiveis.length - 1}
+                  onOcultar={() =>
+                    alterar(w.id, (x) => ({ ...x, visivel: false }))
+                  }
+                  onLargura={() =>
+                    alterar(w.id, (x) => ({
+                      ...x,
+                      largura: proximaLargura(x.largura),
+                    }))
+                  }
+                  onMover={(delta) => moverVisivel(w.id, delta)}
+                >
+                  {widgets[w.id as WidgetId]()}
+                </Widget>
+              ))}
+            </div>
+          </SortableContext>
+        </DndContext>
+      </div>
       {visiveis.length === 0 ? (
         <EmptyState
           icon={LayoutGrid}
@@ -594,7 +600,7 @@ function Widget({
           <Button
             variant="ghost"
             size="sm"
-            className="hidden gap-1 px-2 lg:inline-flex"
+            className="hidden gap-1 px-2 @6xl:inline-flex"
             aria-label={`Largura de ${titulo}: ${ROTULO_LARGURA[w.largura]}. Alterar`}
             onClick={onLargura}
           >

@@ -59,11 +59,14 @@ export function KpiCard({
     // Com área: `pb-0` + `overflow-hidden` fazem a área sangrar até a borda inferior arredondada.
     <Card
       className={cn(
+        "@container",
         compacto && "gap-0 py-4",
         temArea && "overflow-hidden pb-0"
       )}
     >
-      <CardContent className={cn("space-y-3", compacto && "px-4")}>
+      <CardContent
+        className={cn("space-y-3", compacto ? "px-4" : "px-4 @[13rem]:px-6")}
+      >
         <div className="space-y-1">
           <p
             className={cn(
@@ -78,7 +81,10 @@ export function KpiCard({
           <div
             className={cn(
               "flex flex-wrap items-baseline gap-x-2 gap-y-1 tracking-tight",
-              compacto ? "text-lg" : "text-2xl"
+              // Card estreito (container) reduz o valor em vez de cortá-lo.
+              compacto
+                ? "text-base @[11rem]:text-lg"
+                : "text-base @[11rem]:text-lg @[15rem]:text-2xl"
             )}
           >
             <Valor
@@ -90,7 +96,7 @@ export function KpiCard({
           </div>
         </div>
         {temArea && serie && campo ? (
-          <div className="-mx-6">
+          <div className="-mx-4 @[13rem]:-mx-6">
             <AreaTendencia buckets={serie} campo={campo} />
           </div>
         ) : null}

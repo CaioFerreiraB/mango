@@ -60,7 +60,10 @@ export function EChart({
   return (
     <div
       ref={ref}
-      className={cn("w-full", className)}
+      // @container = contenção de largura: o SVG (largura em px do último resize) não vira largura
+      // mínima dos ancestrais; sem isso, um grid que precisa encolher (ex.: chat abrindo) não
+      // encolhe, o ResizeObserver nunca dispara e o gráfico vaza.
+      className={cn("@container w-full", className)}
       style={{ height: altura, width: largura }}
       role="img"
       aria-label={ariaLabel}
