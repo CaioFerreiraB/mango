@@ -9,8 +9,12 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
+import { Menu } from "lucide-react"
+
 import { ChatToggle } from "@/components/chat/chat-panel"
 import { BuscaGlobal } from "@/components/layout/busca-global"
+import { Button } from "@/components/ui/button"
+import { useSidebar } from "@/components/ui/sidebar"
 
 type RouteHandle = { title?: string }
 
@@ -28,11 +32,23 @@ function useBreadcrumbs() {
 
 export function AppHeader() {
   const crumbs = useBreadcrumbs()
+  const { openMobile, setOpenMobile } = useSidebar()
 
   return (
-    // Mobile: topbar fixa (sticky + safe-area do notch) com o título da página e o assistente.
+    // Mobile: topbar fixa (sticky + safe-area do notch) com ☰, o título da página e o assistente.
     // Desktop: faixa do inset como antes, com o assistente no canto direito.
     <header className="sticky top-0 z-30 flex h-[calc(3.5rem+env(safe-area-inset-top))] shrink-0 items-center gap-2 border-b bg-background/90 px-4 pt-[env(safe-area-inset-top)] backdrop-blur-md md:static md:h-14 md:border-b-0 md:bg-transparent md:pt-0 md:backdrop-blur-none">
+      {/* Mobile: o menu lateral (navegação completa) abre por aqui, por cima da página. */}
+      <Button
+        variant="ghost"
+        size="icon-sm"
+        className="-ml-1.5 md:hidden"
+        aria-label="Abrir menu"
+        aria-expanded={openMobile}
+        onClick={() => setOpenMobile(true)}
+      >
+        <Menu className="size-5" aria-hidden />
+      </Button>
       <Breadcrumb className="min-w-0">
         <BreadcrumbList className="flex-nowrap">
           {crumbs.map((crumb, index) => {

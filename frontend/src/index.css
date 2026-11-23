@@ -33,6 +33,8 @@
   /* Accent legível para texto de dado (números realçados): tom do accent com lightness
        normalizada p/ contraste AA em ambos os temas — ver bloco @supports abaixo. */
   --color-accent-ink: var(--accent-ink);
+  --color-destaque-a: var(--destaque-a);
+  --color-destaque-b: var(--destaque-b);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent: var(--accent);
   --color-muted-foreground: var(--muted-foreground);
@@ -80,6 +82,10 @@
   --accent-ink: oklch(
     0.48 0.16 292.581
   ); /* fallback estático (violeta); accent real no @supports */
+  /* Card de destaque (saldo no mobile): accent em tom escuro, L normalizada p/ texto branco AA em
+     qualquer preset e tema. Fallback estático (violeta); accent real no @supports. */
+  --destaque-a: oklch(0.44 0.17 292.581);
+  --destaque-b: oklch(0.29 0.11 292.581);
   --border: oklch(0.925 0.005 214.3);
   --input: oklch(0.925 0.005 214.3);
   --ring: oklch(0.723 0.014 214.4);
@@ -183,6 +189,8 @@
     --chart-5: oklch(from var(--primary) 0.43 calc(c * 0.86) h);
     --chart-6: oklch(from var(--primary) 0.37 calc(c * 0.75) h);
     --accent-ink: oklch(from var(--primary) 0.48 0.16 h);
+    --destaque-a: oklch(from var(--primary) 0.44 calc(c * 0.75) h);
+    --destaque-b: oklch(from var(--primary) 0.29 calc(c * 0.5) h);
   }
   .dark {
     --sidebar: oklch(from var(--primary) 0.218 0.008 h);

@@ -13771,6 +13771,20 @@
               }
             ],
             "title": "Dashboard Layout"
+          },
+          "atalhos_mobile": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Atalhos Mobile"
           }
         },
         "type": "object",
@@ -13789,7 +13803,8 @@
           "brapi_token_configurado",
           "totp_configurado",
           "totp_login_habilitado",
-          "dashboard_layout"
+          "dashboard_layout",
+          "atalhos_mobile"
         ],
         "title": "PerfilRead"
       },
@@ -13931,6 +13946,22 @@
               }
             ],
             "title": "Dashboard Layout"
+          },
+          "atalhos_mobile": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string",
+                  "pattern": "^[a-z][a-z-]{0,31}$"
+                },
+                "type": "array",
+                "maxItems": 3
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Atalhos Mobile"
           }
         },
         "type": "object",

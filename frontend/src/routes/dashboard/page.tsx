@@ -25,6 +25,7 @@ import {
   MoveHorizontal,
   Plus,
   RotateCcw,
+  SlidersHorizontal,
 } from "lucide-react"
 import { useMemo, useState, type ReactNode } from "react"
 import { Link } from "react-router"
@@ -37,10 +38,20 @@ import {
   GraficoFluxo,
   GraficoPatrimonio,
 } from "@/components/dashboard/graficos"
-import { KpiCard } from "@/components/dashboard/kpi-card"
+import { KpiCard, SaldoDestaque } from "@/components/dashboard/kpi-card"
 import { TransacoesTabela } from "@/components/transacoes/transacoes-tabela"
 import { PainelCartoes } from "@/components/dashboard/painel-cartoes"
 import { PeriodoPicker } from "@/components/dashboard/periodo-picker"
+import {
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
+} from "@/components/ui/drawer"
 import { SyncButton } from "@/components/sync-button"
 import { Button } from "@/components/ui/button"
 import {
@@ -68,6 +79,7 @@ import {
   type Granularidade,
 } from "@/lib/api/dashboard"
 import { useAtualizarPerfil, usePerfil } from "@/lib/api/perfil"
+import { useIsMobile } from "@/hooks/use-mobile"
 import { useTransacoes } from "@/lib/api/transacoes"
 import {
   CATALOGO,
@@ -83,6 +95,7 @@ import {
 } from "@/lib/dashboard-layout"
 import {
   addDias,
+  formatBucketLabel,
   formatDate,
   hojeISO,
   mesAteHoje,
@@ -137,8 +150,14 @@ const SPAN: Record<Largura, string> = {
   45: "@xl:col-span-2 @3xl:col-span-6 @6xl:col-span-45",
   60: "@xl:col-span-2 @3xl:col-span-6 @6xl:col-span-60",
 }
+// Mobile (2 colunas): KPIs dois por linha, mas o saldo — card de destaque — ocupa a linha toda.
 const spanDe = (w: WidgetLayout) =>
-  cn(w.id.startsWith("kpi-") ? "col-span-1" : "col-span-2", SPAN[w.largura])
+  cn(
+    w.id.startsWith("kpi-") && w.id !== "kpi-saldo"
+      ? "col-span-1"
+      : "col-span-2",
+    SPAN[w.largura]
+  )
 
 const TITULO = new Map(CATALOGO.map((w) => [w.id as string, w.titulo]))
 
@@ -163,6 +182,10 @@ export function DashboardPage() {
   const [inicio, setInicio] = useState(mes.inicio)
   const [fim, setFim] = useState(mes.fim)
   const periodo = { inicio, fim }
+  const mudarPeriodo = (i: string, f: string) => {
+    setInicio(i)
+    setFim(f)
+  }
   const rotuloPeriodo = `${formatDate(inicio)} a ${formatDate(fim)}`
 
   const [granFluxo, setGranFluxo] = useState<Granularidade>("semanal")
@@ -179,6 +202,7 @@ export function DashboardPage() {
   })
 
   const contas = useContas()
+  const mobile = useIsMobile()
   const categorias = useCategorias()
   // Estável entre renders: os gráficos memorizam a option por ela (hover não pode resetar).
   const rotulo = useMemo(
@@ -290,7 +314,15 @@ export function DashboardPage() {
     ) : null
 
   const widgets: Record<WidgetId, () => ReactNode> = {
-    "kpi-saldo": () => kpi("Saldo em contas", (r) => r.saldo_total_centavos),
+    "kpi-saldo": () =>
+      mobile && d ? (
+        <SaldoDestaque
+          centavos={d.saldo_total_centavos}
+          contas={contas.data?.filter((c) => c.type === "BANK").length}
+        />
+      ) : (
+        kpi("Saldo em contas", (r) => r.saldo_total_centavos)
+      ),
     "kpi-entradas": () =>
       kpi("Entradas no mês", (r) => r.entradas_centavos, {
         sinal: true,
@@ -432,23 +464,11 @@ export function DashboardPage() {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex flex-wrap items-center gap-2">
-          <FiltrosRapidos
-            inicio={inicio}
-            fim={fim}
-            onChange={(i, f) => {
-              setInicio(i)
-              setFim(f)
-            }}
-          />
-          <PeriodoPicker
-            inicio={inicio}
-            fim={fim}
-            onChange={(i, f) => {
-              setInicio(i)
-              setFim(f)
-            }}
-          />
+        {/* Mobile: o período mora num botão "Filtros" (gaveta), não espalhado pelo topo. */}
+        <FiltrosMobile inicio={inicio} fim={fim} onChange={mudarPeriodo} />
+        <div className="hidden flex-wrap items-center gap-2 md:flex">
+          <FiltrosRapidos inicio={inicio} fim={fim} onChange={mudarPeriodo} />
+          <PeriodoPicker inicio={inicio} fim={fim} onChange={mudarPeriodo} />
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {editando ? (
@@ -499,14 +519,14 @@ export function DashboardPage() {
             </>
           ) : (
             <>
-              <SyncButton />
+              <SyncButton compacto />
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setRascunho(salvo)}
               >
                 <LayoutGrid aria-hidden />
-                Personalizar
+                <span className="max-sm:sr-only">Personalizar</span>
               </Button>
             </>
           )}
@@ -729,6 +749,48 @@ function SeletorGranularidade({
       <ToggleGroupItem value="semanal">Semanal</ToggleGroupItem>
       <ToggleGroupItem value="mensal">Mensal</ToggleGroupItem>
     </ToggleGroup>
+  )
+}
+
+/** Mobile (`< md`): botão com o período atual que abre os filtros numa gaveta inferior. */
+function FiltrosMobile({
+  inicio,
+  fim,
+  onChange,
+}: {
+  inicio: string
+  fim: string
+  onChange: (inicio: string, fim: string) => void
+}) {
+  const resumo = `${formatBucketLabel(inicio, "diaria")} – ${formatBucketLabel(fim, "diaria")}`
+  return (
+    <Drawer>
+      <DrawerTrigger asChild>
+        <Button variant="outline" size="sm" className="md:hidden">
+          <SlidersHorizontal aria-hidden />
+          Filtros
+          <span className="text-muted-foreground tabular-nums">{resumo}</span>
+        </Button>
+      </DrawerTrigger>
+      <DrawerContent className="md:hidden">
+        <DrawerHeader className="group-data-[vaul-drawer-direction=bottom]/drawer-content:text-left">
+          <DrawerTitle>Filtros</DrawerTitle>
+          <DrawerDescription>
+            Período dos gráficos. Os cards “no mês” seguem o mês corrente.
+          </DrawerDescription>
+        </DrawerHeader>
+        <div className="space-y-3 px-4">
+          <p className="text-sm font-medium">Período</p>
+          <FiltrosRapidos inicio={inicio} fim={fim} onChange={onChange} />
+          <PeriodoPicker inicio={inicio} fim={fim} onChange={onChange} />
+        </div>
+        <DrawerFooter className="pb-[calc(1rem+env(safe-area-inset-bottom))]">
+          <DrawerClose asChild>
+            <Button>Pronto</Button>
+          </DrawerClose>
+        </DrawerFooter>
+      </DrawerContent>
+    </Drawer>
   )
 }
 

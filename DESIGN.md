@@ -123,34 +123,28 @@ via `ilustracao(avatar, cena)` de `frontend/src/lib/illustrations.ts` — nunca 
   `SidebarTrigger`, breadcrumb (derivado do `handle` das rotas) e troca de tema no rodapé da
   sidebar. Conteúdo no `Outlet` do React Router. Responsividade **estrutural**
   (colapsar/empilhar), não tipografia fluida.
-- **App shell (mobile, `< md`):** a navegação é a **bottom bar**
-  (`frontend/src/components/layout/bottom-nav.tsx`) — barra fixa no rodapé com as abas de uso
-  diário (ícone `size-6` + rótulo curto) e uma aba **"Mais"**, que abre um `drawer` inferior com o
-  resto da IA, Configurações, tema e Sair. O hambúrguer some do header (sobra o breadcrumb); a
-  sidebar não é alcançável no mobile.
-  - Abas e rótulos curtos vivem em `frontend/src/config/nav.ts` (`bottomNavItems`).
-  - **Drawer "Mais":** cabeçalho (título + `X`) e **lista de linhas**, não grade. Cada menu
-    principal é uma linha **recolhida** — ícone `size-5`, título, descrição e chevron que gira para
-    cima ao abrir — e **expande** (`collapsible`, como na sidebar) revelando os subitens recuados.
-    As seções vêm inteiras de `navSections` + `investimentosSection`, na mesma ordem da sidebar:
-    item novo numa seção aparece lá sozinho. Seção de **um item só** é achatada em linha direta.
-    A descrição de uma seção é **derivada** dos filhos ("Visão Geral e Carteira") — só folha
-    precisa de `descricao` própria em `nav.ts`. No fim, separados da navegação: **Tema** (também
-    recolhido, descrição = tema atual, expande em Claro/Escuro com check) e **Sair** em
-    `text-destructive`.
-  - **Altura fixa** (`h-[80svh]`): expandir uma seção **rola** a lista, nunca cresce ou encolhe o
-    drawer — o cabeçalho fica `shrink-0` e a lista `flex-1 min-h-0 overflow-y-auto`.
-  - A expansão anima em altura pelos keyframes `collapsible-*` do `tw-animate-css`, com
-    `overflow-hidden` no conteúdo. Usar **`motion-safe:`**, não `motion-reduce:animate-none`: o
-    seletor `[data-state]` tem especificidade maior e venceria o desligamento, deixando a animação
-    de pé justamente para quem pediu movimento reduzido.
-  - **Sem token de cor novo:** aba ativa é `text-primary`, inativa `text-muted-foreground` — a
-    barra acompanha os presets de `data-accent` de graça. Rota ativa é **só cor** (sem pílula); o
-    chip `rounded-full bg-primary/10` é exclusivo da aba "Mais" **aberta**, porque ela alterna um
-    painel em vez de navegar. Todos os ícones ficam numa caixa `size-8` para alinhar a linha de base.
-  - **Safe area obrigatória:** `padding-bottom: env(safe-area-inset-bottom)` na barra, e o
-    conteúdo reserva `--bottom-nav-h` + safe area no `pb` do `<main>`, senão a barra `fixed` cobre
-    o fim da página. Toasts usam o mesmo `mobileOffset`.
+- **App shell (mobile, `< md`):** duas peças de navegação.
+  - **Menu ☰ (topbar, à esquerda do título):** abre a própria sidebar como gaveta lateral (sheet
+    do shadcn) — a IA completa, com seções recolhíveis e o menu do usuário (tema, Sair) no rodapé.
+    No mobile as linhas têm 44px e texto 15px, e a linha "Recolher menu" some. Trocar de rota fecha
+    a gaveta.
+  - **Barra de atalhos** (`frontend/src/components/layout/bottom-nav.tsx`): **pílula flutuante**
+    (`inset-x-4`, 0.75rem acima da borda, `rounded-[1.75rem]`, borda neutra suave e sombra **bem
+    leve na cor do accent**), com **Início fixo + 3 atalhos** que o usuário escolhe em
+    Configurações → Preferências (`perfil.atalhos_mobile`; catálogo `ATALHOS` e
+    `atalhosEfetivos()` em `frontend/src/config/nav.ts` — id desconhecido cai, faltante completa
+    com o padrão). Escolher um atalho que já está noutra posição troca os dois de lugar. Conta de
+    divisão tem barra fixa (Divisão + Configurações). Ícone `size-6` + rótulo curto 11px; ativa é
+    `text-accent-ink` (só cor, sem pílula), inativa `text-muted-foreground`.
+  - **Filtros de página** no mobile ficam atrás de um botão "Filtros" (com o resumo do valor atual)
+    que abre um drawer inferior — o topo da página não acumula controles. Botões de ação do topo
+    viram só ícone (`max-sm:sr-only` no rótulo).
+  - **Card de destaque (saldo no dashboard):** degradê `--destaque-a → --destaque-b` (accent com
+    L normalizada 0.44 → 0.29 via RCS), texto branco, ondas SVG decorativas atrás do conteúdo e
+    olho de privacidade. Um por tela, no máximo.
+  - **Safe area obrigatória:** a barra fica `env(safe-area-inset-bottom)` + 0.75rem acima da borda,
+    e o conteúdo reserva `--bottom-nav-h` + safe area + folga no `pb` do `<main>`, senão a barra
+    `fixed` cobre o fim da página. Toasts usam o mesmo `mobileOffset`.
   - Escondida por CSS (`md:hidden`), **nunca** por `useIsMobile()` — o hook começa `false` e
     piscaria a barra no primeiro paint do desktop.
   - **Portal para o `body`**, como todo `fixed` do shadcn (sheet, dialog, drawer): dentro do

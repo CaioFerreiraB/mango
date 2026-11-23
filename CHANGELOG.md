@@ -12,6 +12,15 @@ ainda está se assentando. Cada versão publicada tem uma imagem correspondente 
 
 ### Adicionado
 
+- **Nova navegação no celular:** o menu completo abre pelo ☰ no topo, como uma gaveta lateral, e
+  a barra inferior virou uma pílula flutuante com o Início e mais três atalhos que você escolhe em
+  Configurações → Preferências → Atalhos do celular.
+- **Saldo em destaque no celular:** o saldo em contas ganhou um card na sua cor de destaque, com
+  botão para ocultar o valor; os outros cards ficam dois por linha.
+- **Filtros do dashboard num botão** no celular, em vez de ocupar o topo da página.
+- **Últimas transações no dashboard:** as 10 mais recentes logo abaixo dos cards, com o aviso de
+  transações pendentes acima da tabela.
+
 - **Compra dividida nas transações:** no detalhe de uma saída, "Dividir" cria uma divisão
   pré-preenchida (valor, descrição, categoria, data) ou vincula uma divisão já existente que você
   pagou e ainda não tinha transação. A lista ganhou o marcador de divisão e o filtro "Divisão"
@@ -58,6 +67,8 @@ ainda está se assentando. Cada versão publicada tem uma imagem correspondente 
 
 ### Corrigido
 
+- **Compra de cartão aparecia como entrada (+R$)** na lista e no detalhe de transações; o sinal
+  agora segue o tipo do lançamento.
 - Criar uma divisão "Eu paguei" sem escolher ninguém deixava avançar e falhava no fim; agora o
   wizard exige ao menos uma pessoa.
 

@@ -59,6 +59,8 @@ class Usuario(TimestampMixin, Base):
     avatar: Mapped[int | None] = mapped_column()
     # Widgets do dashboard: [{id, largura, visivel}] na ordem de exibição; nulo = padrão.
     dashboard_layout: Mapped[list[dict] | None] = mapped_column(JSON)
+    # Atalhos da barra inferior do celular (ids do catálogo do frontend; "Início" é fixo).
+    atalhos_mobile: Mapped[list[str] | None] = mapped_column(JSON)
     # % do orçamento de uma categoria (despesa) que dispara o aviso no Telegram — o switch por
     # categoria é `orcamento[_mensal].notificar` (ver `app/services/orcamento_alerta.py`).
     orcamento_alerta_pct: Mapped[int] = mapped_column(Integer, nullable=False, default=80)

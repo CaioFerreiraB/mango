@@ -166,3 +166,32 @@ def test_dashboard_layout_valida_fronteira(client_factory, usuario_a: Usuario) -
         r = client.patch("/api/perfil", json={"dashboard_layout": layout})
         assert r.status_code == 422, layout
     assert client.get("/api/perfil").json()["dashboard_layout"] is None
+
+
+def test_atalhos_mobile_round_trip_e_fronteira(
+    client_factory, usuario_a: Usuario, db: Session
+) -> None:
+    client = client_factory(usuario_a)
+    assert client.get("/api/perfil").json()["atalhos_mobile"] is None  # padrão
+
+    def gravado():
+        db.expire_all()
+        return db.get(Usuario, usuario_a.id).atalhos_mobile
+
+    atalhos = ["chat", "contas", "objetivos"]
+    r = client.patch("/api/perfil", json={"atalhos_mobile": atalhos})
+    assert r.status_code == 200, r.text
+    assert r.json()["atalhos_mobile"] == atalhos
+    assert gravado() == atalhos
+
+    for invalido in (
+        ["chat", "chat"],  # repetido
+        ["a", "b", "c", "d"],  # > 3 (o Início é fixo)
+        ["<script>"],  # fora do padrão
+    ):
+        r = client.patch("/api/perfil", json={"atalhos_mobile": invalido})
+        assert r.status_code == 422, invalido
+    assert gravado() == atalhos
+
+    r = client.patch("/api/perfil", json={"atalhos_mobile": None})
+    assert r.status_code == 200 and gravado() is None

@@ -1,4 +1,5 @@
-import { ArrowDownRight, ArrowUpRight } from "lucide-react"
+import { ArrowDownRight, ArrowUpRight, Eye, EyeOff } from "lucide-react"
+import { useState } from "react"
 
 import { Valor } from "@/components/common/valor"
 import { AreaTendencia, type CampoSerie } from "@/components/dashboard/graficos"
@@ -102,5 +103,72 @@ export function KpiCard({
         ) : null}
       </CardContent>
     </Card>
+  )
+}
+
+/**
+ * Saldo em contas no mobile: card de destaque no tom escuro do accent do usuário (degradê
+ * `--destaque-a → b`, texto branco AA em qualquer preset), ondas decorativas e olho de privacidade.
+ */
+export function SaldoDestaque({
+  centavos,
+  contas,
+}: {
+  centavos: number
+  /** Quantas contas (BANK) somam o saldo; omitido enquanto carrega. */
+  contas?: number
+}) {
+  const [oculto, setOculto] = useState(false)
+  return (
+    <section
+      aria-label="Saldo em contas"
+      className="relative isolate overflow-hidden rounded-2xl bg-destaque-b bg-linear-135 from-destaque-a to-destaque-b px-5 pt-4 pb-5 text-white shadow-[0_12px_28px_-14px_var(--destaque-b)]"
+    >
+      {/* Ondas: decoração pura, atrás do conteúdo (dados sempre por cima). */}
+      <svg
+        viewBox="0 0 320 120"
+        preserveAspectRatio="none"
+        className="pointer-events-none absolute inset-x-0 bottom-0 -z-10 h-3/4 w-full"
+        aria-hidden
+      >
+        <path
+          d="M0 96 C 60 92, 110 70, 170 74 S 270 40, 320 18 V120 H0 Z"
+          fill="white"
+          fillOpacity="0.07"
+        />
+        <path
+          d="M0 112 C 80 108, 130 92, 200 94 S 290 66, 320 54 V120 H0 Z"
+          fill="white"
+          fillOpacity="0.08"
+        />
+      </svg>
+      <div className="flex items-start justify-between gap-3">
+        <p className="pt-1 text-sm text-white/80">Saldo em contas</p>
+        <button
+          type="button"
+          onClick={() => setOculto((v) => !v)}
+          aria-pressed={oculto}
+          aria-label={oculto ? "Mostrar saldo" : "Ocultar saldo"}
+          className="-mr-1 flex size-9 shrink-0 items-center justify-center rounded-full bg-white/12 text-white transition-colors hover:bg-white/20 focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:outline-none motion-reduce:transition-none"
+        >
+          {oculto ? (
+            <EyeOff className="size-4" aria-hidden />
+          ) : (
+            <Eye className="size-4" aria-hidden />
+          )}
+        </button>
+      </div>
+      <Valor
+        centavos={centavos}
+        oculto={oculto}
+        neutro
+        className="mt-1 block text-[1.875rem] leading-tight font-bold tracking-tight text-white"
+      />
+      {contas != null ? (
+        <p className="mt-3 inline-flex rounded-full bg-white/12 px-2.5 py-1 text-xs text-white/90">
+          {contas === 1 ? "1 conta" : `${contas} contas`}
+        </p>
+      ) : null}
+    </section>
   )
 }

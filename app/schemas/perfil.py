@@ -2,7 +2,7 @@
 mass-assignment de `senha_hash`/`totp_secret_cifrado`/`usuario_id` (S4)."""
 
 from datetime import date
-from typing import Literal
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -28,6 +28,15 @@ def _ids_unicos(v: list[WidgetLayout] | None) -> list[WidgetLayout] | None:
     return v
 
 
+IdAtalho = Annotated[str, Field(pattern=r"^[a-z][a-z-]{0,31}$")]
+
+
+def _atalhos_unicos(v: list[str] | None) -> list[str] | None:
+    if v is not None and len(set(v)) != len(v):
+        raise ValueError("atalho repetido")
+    return v
+
+
 class PerfilRead(ORMModel):
     id: int
     nome: str
@@ -48,6 +57,8 @@ class PerfilRead(ORMModel):
     totp_login_habilitado: bool
     # Ordem/largura/visibilidade dos widgets do dashboard; null = layout padrão.
     dashboard_layout: list[WidgetLayout] | None
+    # Atalhos da barra inferior do celular além do "Início" fixo; null = padrão do frontend.
+    atalhos_mobile: list[str] | None
 
 
 class PerfilUpdate(BaseModel):
@@ -66,7 +77,11 @@ class PerfilUpdate(BaseModel):
     # `null` explícito restaura o padrão; teto de 30 itens barra payload inflado.
     dashboard_layout: list[WidgetLayout] | None = Field(default=None, max_length=30)
 
+    # Até 3 atalhos (o "Início" é fixo); ids do catálogo do frontend, que ignora os desconhecidos.
+    atalhos_mobile: list[IdAtalho] | None = Field(default=None, max_length=3)
+
     _layout_unico = field_validator("dashboard_layout")(_ids_unicos)
+    _atalhos_unicos = field_validator("atalhos_mobile")(_atalhos_unicos)
 
     @field_validator("email")
     @classmethod
