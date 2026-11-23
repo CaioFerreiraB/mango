@@ -8,12 +8,14 @@ import {
   AriaComponent,
   GridComponent,
   LegendComponent,
+  MarkLineComponent,
   TooltipComponent,
 } from "echarts/components"
 import type {
   AriaComponentOption,
   GridComponentOption,
   LegendComponentOption,
+  MarkLineComponentOption,
   TooltipComponentOption,
 } from "echarts/components"
 import * as echarts from "echarts/core"
@@ -28,6 +30,7 @@ echarts.use([
   AriaComponent,
   GridComponent,
   LegendComponent,
+  MarkLineComponent,
   TooltipComponent,
   SVGRenderer,
 ])
@@ -41,6 +44,7 @@ export type EChartsOption = echarts.ComposeOption<
   | AriaComponentOption
   | GridComponentOption
   | LegendComponentOption
+  | MarkLineComponentOption
   | TooltipComponentOption
 >
 
@@ -65,15 +69,17 @@ function assinarTema(avisar: () => void) {
   return () => obs.disconnect()
 }
 
-function resolverCores(nomes: readonly string[]): string[] {
+/** Resolve expressões de cor CSS (`var(--x)`, `oklch(...)`, hex) para `rgba(...)`. */
+function resolverCores(exprs: readonly string[]): string[] {
   const probe = document.createElement("span")
   probe.style.display = "none"
   document.body.appendChild(probe)
   const ctx = document.createElement("canvas").getContext("2d", {
     willReadFrequently: true,
   })
-  const cores = nomes.map((nome) => {
-    probe.style.color = `var(${nome})`
+  const cores = exprs.map((expr) => {
+    probe.style.color = ""
+    probe.style.color = expr
     const css = getComputedStyle(probe).color
     if (!ctx) return css
     ctx.clearRect(0, 0, 1, 1)
@@ -121,7 +127,7 @@ export function useTemaGrafico(): TemaGrafico {
   const v = useSyncExternalStore(assinarTema, () => versao)
   return useMemo(() => {
     void v // dependência: re-resolve quando o tema/accent muda
-    const c = resolverCores(TOKENS)
+    const c = resolverCores(TOKENS.map((t) => `var(${t})`))
     return {
       texto: c[0],
       textoSec: c[1],
@@ -168,3 +174,31 @@ export function linhaTooltipHTML(cor: string, nome: string, valor: string) {
     `</div>`
   )
 }
+
+/** Cores arbitrárias (ex.: `config` antigo com `var(--chart-2)`) resolvidas no tema atual. */
+export function useCores(exprs: string[]): string[] {
+  const v = useSyncExternalStore(assinarTema, () => versao)
+  const chave = exprs.join("|")
+  return useMemo(() => {
+    void v
+    return resolverCores(chave ? chave.split("|") : [])
+  }, [chave, v])
+}
+
+/** Troca o alfa de um `rgba(...)` resolvido pelo tema. */
+export const comAlfa = (rgba: string, a: number) =>
+  rgba.replace(/,\s*[\d.]+\)$/, `,${a})`)
+
+/**
+ * Cor fixa por indicador de mercado (a cor segue a entidade em todas as telas): slots da paleta
+ * categórica validada. O ativo/carteira usa o accent; IBOV fica no laranja para não colidir com o
+ * violeta padrão do accent. Indicador desconhecido → neutro.
+ */
+export const COR_INDICADOR: Record<string, string> = {
+  cdi: "var(--chart-cat-3)",
+  selic: "var(--chart-cat-1)",
+  ipca: "var(--chart-cat-4)",
+  ibov: "var(--chart-cat-2)",
+}
+export const corIndicador = (codigo: string) =>
+  COR_INDICADOR[codigo] ?? "var(--chart-cat-outras)"

@@ -42,7 +42,14 @@ Sistema visual da SPA do mango. Os tokens vivem em `frontend/src/index.css` (Tai
   **valores financeiros** — `--positive` e `--negative` (não derivam do accent; badge tem variantes
   `positive`/`negative` em pílula para deltas). Regra: valor nunca depende **só** de cor
   (ver PRODUCT.md / a11y).
-- **Charts:** rampa `--chart-1..5` derivada do accent (monocromática por matiz).
+- **Charts (Apache ECharts):** todo gráfico passa pelo wrapper `components/common/echart.tsx` e
+  pelas peças de `components/common/graficos-base.tsx` (`GraficoLinhas`, `GraficoBarras`, `Rosca`,
+  `Sparkline`); cores vêm dos tokens resolvidos por `useTemaGrafico`/`useCores`
+  (`lib/echart-tema.ts`), que re-renderizam ao trocar tema/accent. Identidade (categoria, classe,
+  indicador) usa a **paleta categórica validada** `--chart-cat-1..8` (ordem fixa, nunca ciclada;
+  9ª+ em `--chart-cat-outras`); indicadores têm cor fixa por entidade (`COR_INDICADOR`). Uma série
+  única/destaque usa o accent; a rampa `--chart-1..6` (derivada do accent) fica para magnitude.
+  Um eixo Y por gráfico (R$ e % viram vistas separadas). Tooltip escapa nomes vindos do usuário.
 
 ## Typography
 

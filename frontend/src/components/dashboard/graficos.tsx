@@ -3,7 +3,9 @@ import { useMemo, useRef, useState } from "react"
 
 import { eixoBRL } from "@/components/dashboard/chart-helpers"
 import { EChart } from "@/components/common/echart"
+import { Sparkline } from "@/components/common/graficos-base"
 import {
+  comAlfa,
   linhaTooltipHTML,
   opcoesBase,
   useTemaGrafico,
@@ -26,10 +28,6 @@ import { cn } from "@/lib/utils"
 const semMovimento = () =>
   typeof window !== "undefined" &&
   window.matchMedia?.("(prefers-reduced-motion: reduce)").matches
-
-/** Troca o alfa de um `rgba(...)` resolvido pelo tema. */
-const comAlfa = (rgba: string, a: number) =>
-  rgba.replace(/,\s*[\d.]+\)$/, `,${a})`)
 
 const corSlot = (t: TemaGrafico, slot: number | null) =>
   slot === null ? t.outras : t.cat[slot]
@@ -191,56 +189,20 @@ export function AreaTendencia({
   buckets: SerieBucket[]
   campo: CampoSerie
 }) {
-  const t = useTemaGrafico()
-  const option = useMemo<EChartsOption>(
-    () => ({
-      ...opcoesBase(t),
-      animation: !semMovimento(),
-      grid: { left: 0, right: 0, top: 4, bottom: 0 },
-      xAxis: {
-        type: "category",
-        show: false,
-        boundaryGap: false,
-        data: buckets.map((b) => formatBucketLabel(b.inicio, "mensal")),
-      },
-      yAxis: { type: "value", show: false, scale: true },
-      tooltip: {
-        ...opcoesBase(t).tooltip,
-        ...tooltipEixo(),
-        axisPointer: { type: "line", lineStyle: { color: t.borda } },
-      },
-      series: [
-        {
-          name: NOME_CAMPO[campo],
-          type: "line",
-          data: buckets.map((b) => b[campo]),
-          smooth: 0.4,
-          showSymbol: false,
-          lineStyle: { color: t.primary, width: 2 },
-          itemStyle: { color: t.primary },
-          areaStyle: {
-            color: {
-              type: "linear",
-              x: 0,
-              y: 0,
-              x2: 0,
-              y2: 1,
-              colorStops: [
-                { offset: 0, color: comAlfa(t.primary, 0.3) },
-                { offset: 1, color: comAlfa(t.primary, 0) },
-              ],
-            },
-          },
-        },
-      ],
-    }),
-    [buckets, campo, t]
+  const dados = useMemo(
+    () =>
+      buckets.map((b) => ({
+        rotulo: formatBucketLabel(b.inicio, "mensal"),
+        valor: b[campo],
+      })),
+    [buckets, campo]
   )
   if (buckets.length === 0) return null
   return (
-    <EChart
-      option={option}
-      className="h-16"
+    <Sparkline
+      dados={dados}
+      nome={NOME_CAMPO[campo]}
+      formatarValor={formatBRL}
       ariaLabel={`Tendência de ${NOME_CAMPO[campo].toLowerCase()} nos últimos meses`}
     />
   )

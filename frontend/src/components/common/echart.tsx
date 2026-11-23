@@ -13,10 +13,15 @@ export function EChart({
   ariaLabel,
   onHover,
   instancia,
+  altura,
+  largura,
 }: {
   option: EChartsOption
   className?: string
   ariaLabel?: string
+  /** px; alternativa a uma classe de altura (tamanhos vindos de props). */
+  altura?: number
+  largura?: number
   onHover?: (dataIndex: number | null) => void
   /** Recebe a instância (para `dispatchAction` vindo de fora, ex.: legenda HTML). */
   instancia?: (chart: echarts.ECharts | null) => void
@@ -56,6 +61,7 @@ export function EChart({
     <div
       ref={ref}
       className={cn("w-full", className)}
+      style={{ height: altura, width: largura }}
       role="img"
       aria-label={ariaLabel}
     />

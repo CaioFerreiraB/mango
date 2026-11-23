@@ -19,9 +19,10 @@ import {
 import type { LucideIcon } from "lucide-react"
 import { useState, type ReactNode } from "react"
 import { Link } from "react-router"
-import { Cell, Line, LineChart, Pie, PieChart, XAxis, YAxis } from "recharts"
 
 import { EmptyState } from "@/components/common/empty-state"
+import { corIndicador } from "@/lib/echart-tema"
+import { GraficoLinhas, Rosca } from "@/components/common/graficos-base"
 import { Valor } from "@/components/common/valor"
 import { eixoBRL } from "@/components/dashboard/chart-helpers"
 import { SyncButton } from "@/components/sync-button"
@@ -34,14 +35,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import {
-  ChartContainer,
-  ChartLegend,
-  ChartLegendContent,
-  ChartTooltip,
-  ChartTooltipContent,
-  type ChartConfig,
-} from "@/components/ui/chart"
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -90,12 +83,6 @@ const PALETA_TIPO = [
 ]
 const COR_OUTROS = "var(--muted-foreground)"
 const corTipo = (i: number) => PALETA_TIPO[i] ?? COR_OUTROS
-
-const COR_BENCH: Record<string, string> = {
-  cdi: "oklch(0.64 0.15 155)",
-  ipca: "oklch(0.75 0.14 75)",
-  ibov: "oklch(0.58 0.19 300)",
-}
 
 /** Pregão B3 aberto: dia útil (fuso SP), das 10h às 18h. ponytail: sem feriados nacionais. */
 function mercadoAberto(): boolean {
@@ -475,43 +462,18 @@ const tickMes = (iso: string) => {
   return `${MESES_CURTOS[Number(mes) - 1]}/${ano.slice(2)}`
 }
 
-// Séries em R$ (eixo esquerdo) vs. em % de crescimento (eixo direito) — decide o formato do tooltip.
-const SERIES_REAIS = new Set(["patrimonio", "investido"])
-
-function linhaEvolucao(
-  valor: unknown,
-  nome: string,
-  cor: string | undefined,
-  config: ChartConfig,
-  oculto: boolean
-) {
-  const texto = SERIES_REAIS.has(nome)
-    ? oculto
-      ? "R$ ••••"
-      : formatBRL(Number(valor))
-    : formatPct(Number(valor))
-  return (
-    <>
-      <span
-        className="mt-0.5 size-2.5 shrink-0 rounded-[2px]"
-        style={{ background: cor }}
-        aria-hidden
-      />
-      <div className="flex flex-1 items-center justify-between gap-2 leading-none">
-        <span className="text-muted-foreground">
-          {config[nome]?.label ?? nome}
-        </span>
-        <span className="font-mono font-medium text-foreground tabular-nums">
-          {texto}
-        </span>
-      </div>
-    </>
-  )
-}
+const mascararEixo = () => "••••"
+const mascararValor = () => "R$ ••••"
+const pctEixo = (v: number) => `${Math.round(v)}%`
+const formatPctValor = (v: number) => formatPct(v)
+const formatarDiaOuTexto = (s: string) =>
+  /^\d{4}-\d{2}-\d{2}$/.test(s) ? formatDataISO(s) : s
 
 function EvolucaoPatrimonio({ oculto }: { oculto: boolean }) {
   const [presetId, setPresetId] = useState("1a")
   const [ocultarBench, setOcultarBench] = useState<Set<string>>(new Set())
+  // Valor (R$) e rentabilidade (%) em vistas separadas: um eixo por gráfico (dataviz), nunca dois.
+  const [vista, setVista] = useState<"valor" | "pct">("valor")
   const preset = PRESETS.find((p) => p.id === presetId) ?? PRESETS[3]
   const fim = hojeISO()
   const inicio = subMeses(fim, preset.meses)
@@ -532,15 +494,15 @@ function EvolucaoPatrimonio({ oculto }: { oculto: boolean }) {
     }
   )
 
-  // Esquerda (R$): patrimônio e capital investido. Direita (% de crescimento): a própria carteira
-  // (indicador do patrimônio) + benchmarks — todos em % acumulado, comparáveis entre si.
-  const config: ChartConfig = {
+  // Valor: patrimônio e capital investido (R$). Rentabilidade: a própria carteira + benchmarks,
+  // todos em % acumulado, comparáveis entre si.
+  const config: Record<string, { label: string; color: string }> = {
     patrimonio: { label: "Patrimônio", color: "var(--primary)" },
     investido: { label: "Investido", color: "var(--muted-foreground)" },
     carteira: { label: "Carteira", color: "var(--accent-ink)" },
-    cdi: { label: "CDI", color: COR_BENCH.cdi },
-    ipca: { label: "IPCA", color: COR_BENCH.ipca },
-    ibov: { label: "Ibovespa", color: COR_BENCH.ibov },
+    cdi: { label: "CDI", color: corIndicador("cdi") },
+    ipca: { label: "IPCA", color: corIndicador("ipca") },
+    ibov: { label: "Ibovespa", color: corIndicador("ibov") },
   }
 
   const porData = new Map<string, Record<string, number | string>>()
@@ -568,10 +530,24 @@ function EvolucaoPatrimonio({ oculto }: { oculto: boolean }) {
         <div>
           <CardTitle className="text-base">Evolução do patrimônio</CardTitle>
           <CardDescription>
-            Valor à esquerda; crescimento vs. mercado à direita
+            {vista === "valor"
+              ? "Patrimônio e capital investido"
+              : "Crescimento acumulado vs. mercado"}
           </CardDescription>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <ToggleGroup
+            type="single"
+            size="sm"
+            variant="outline"
+            spacing={0}
+            value={vista}
+            onValueChange={(v) => v && setVista(v as "valor" | "pct")}
+            aria-label="Vista"
+          >
+            <ToggleGroupItem value="valor">Valor</ToggleGroupItem>
+            <ToggleGroupItem value="pct">Rentabilidade</ToggleGroupItem>
+          </ToggleGroup>
           <ToggleGroup
             type="single"
             size="sm"
@@ -586,7 +562,7 @@ function EvolucaoPatrimonio({ oculto }: { oculto: boolean }) {
               </ToggleGroupItem>
             ))}
           </ToggleGroup>
-          {benchAll.length > 0 ? (
+          {vista === "pct" && benchAll.length > 0 ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
@@ -629,99 +605,60 @@ function EvolucaoPatrimonio({ oculto }: { oculto: boolean }) {
           </p>
         ) : (
           <>
-            <ChartContainer
-              config={config}
-              className="aspect-auto h-[300px] w-full"
-            >
-              <LineChart data={dados} margin={{ left: 4, right: 8, top: 8 }}>
-                <XAxis
-                  dataKey="data"
-                  tickLine={false}
-                  axisLine={false}
-                  tickMargin={8}
-                  minTickGap={40}
-                  tickFormatter={tickMes}
-                />
-                <YAxis
-                  yAxisId="rs"
-                  tickLine={false}
-                  axisLine={false}
-                  width={52}
-                  tickFormatter={eixoBRL}
-                />
-                <YAxis
-                  yAxisId="pct"
-                  orientation="right"
-                  tickLine={false}
-                  axisLine={false}
-                  width={44}
-                  tickFormatter={(v) => `${Math.round(Number(v))}%`}
-                />
-                <ChartTooltip
-                  content={
-                    <ChartTooltipContent
-                      labelFormatter={(v) => {
-                        const s = String(v)
-                        return /^\d{4}-\d{2}-\d{2}$/.test(s)
-                          ? formatDataISO(s)
-                          : s
-                      }}
-                      formatter={(value, name, item) =>
-                        linhaEvolucao(
-                          value,
-                          String(name),
-                          item.color,
-                          config,
-                          oculto
-                        )
-                      }
-                    />
+            <GraficoLinhas
+              dados={dados}
+              x="data"
+              altura={300}
+              legenda
+              formatarX={tickMes}
+              formatarRotulo={formatarDiaOuTexto}
+              {...(vista === "valor"
+                ? {
+                    series: [
+                      {
+                        chave: "patrimonio",
+                        nome: config.patrimonio.label,
+                        cor: config.patrimonio.color,
+                        largura: 2.5,
+                      },
+                      {
+                        chave: "investido",
+                        nome: config.investido.label,
+                        cor: config.investido.color,
+                        largura: 1.5,
+                        tracejada: true,
+                      },
+                    ],
+                    formatarY: oculto ? mascararEixo : eixoBRL,
+                    formatarValor: oculto ? mascararValor : formatBRL,
+                    ariaLabel: "Evolução do patrimônio e do capital investido",
                   }
-                />
-                <ChartLegend content={<ChartLegendContent />} />
-                <Line
-                  yAxisId="rs"
-                  dataKey="patrimonio"
-                  type="monotone"
-                  stroke="var(--color-patrimonio)"
-                  strokeWidth={2.5}
-                  dot={false}
-                />
-                <Line
-                  yAxisId="rs"
-                  dataKey="investido"
-                  type="monotone"
-                  stroke="var(--color-investido)"
-                  strokeWidth={1.5}
-                  strokeDasharray="5 4"
-                  dot={false}
-                />
-                <Line
-                  yAxisId="pct"
-                  dataKey="carteira"
-                  type="monotone"
-                  stroke="var(--color-carteira)"
-                  strokeWidth={2}
-                  dot={false}
-                />
-                {benchVisiveis.map((c) => (
-                  <Line
-                    key={c}
-                    yAxisId="pct"
-                    dataKey={c}
-                    type="monotone"
-                    stroke={`var(--color-${c})`}
-                    strokeWidth={1.5}
-                    strokeDasharray="4 3"
-                    dot={false}
-                    connectNulls
-                  />
-                ))}
-              </LineChart>
-            </ChartContainer>
+                : {
+                    series: [
+                      {
+                        chave: "carteira",
+                        nome: config.carteira.label,
+                        cor: config.carteira.color,
+                      },
+                      ...benchVisiveis.map((c) => ({
+                        chave: c,
+                        nome: config[c].label,
+                        cor: config[c].color,
+                        largura: 1.5,
+                        tracejada: true,
+                        conectarNulos: true,
+                      })),
+                    ],
+                    formatarY: pctEixo,
+                    formatarValor: formatPctValor,
+                    ariaLabel:
+                      "Rentabilidade acumulada da carteira vs. indicadores",
+                  })}
+            />
             <p className="mt-2 text-center text-xs text-muted-foreground">
               No período de {formatDataISO(inicioComum)} até{" "}
-              {formatDataISO(fim)} · crescimento em % acumulado.
+              {formatDataISO(fim)}
+              {vista === "pct" ? " · crescimento em % acumulado." : "."}
             </p>
           </>
         )}
@@ -747,9 +684,6 @@ function AlocacaoPorTipo({
     cor: corTipo(i),
     pct: a.pct,
   }))
-  const config: ChartConfig = Object.fromEntries(
-    fatias.map((f) => [f.nome, { label: f.nome, color: f.cor }])
-  )
 
   return (
     <Card className="h-full">
@@ -762,50 +696,13 @@ function AlocacaoPorTipo({
         ) : (
           <div className="space-y-4">
             <div className="relative mx-auto w-fit">
-              <ChartContainer
-                config={config}
-                className="aspect-square h-[180px]"
-              >
-                <PieChart>
-                  <ChartTooltip
-                    content={
-                      <ChartTooltipContent
-                        hideLabel
-                        formatter={(value, name, item) => (
-                          <>
-                            <span
-                              className="mt-0.5 size-2.5 shrink-0 rounded-[2px]"
-                              style={{ background: item.payload?.cor }}
-                              aria-hidden
-                            />
-                            <div className="flex flex-1 items-center justify-between gap-2 leading-none">
-                              <span className="text-muted-foreground">
-                                {String(name)}
-                              </span>
-                              <span className="font-mono font-medium text-foreground tabular-nums">
-                                {oculto ? "R$ ••••" : formatBRL(Number(value))}
-                              </span>
-                            </div>
-                          </>
-                        )}
-                      />
-                    }
-                  />
-                  <Pie
-                    data={fatias}
-                    dataKey="valor"
-                    nameKey="nome"
-                    innerRadius={58}
-                    outerRadius={84}
-                    paddingAngle={2}
-                    strokeWidth={2}
-                  >
-                    {fatias.map((f) => (
-                      <Cell key={f.nome} fill={f.cor} />
-                    ))}
-                  </Pie>
-                </PieChart>
-              </ChartContainer>
+              <Rosca
+                fatias={fatias}
+                tamanho={180}
+                espessura={0.31}
+                formatarValor={oculto ? mascararValor : formatBRL}
+                ariaLabel="Alocação da carteira por tipo de ativo"
+              />
               <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
                 <span className="text-xs text-muted-foreground">Total</span>
                 <Valor
