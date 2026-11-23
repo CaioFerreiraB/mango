@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 
-from sqlalchemy import and_, case, func, literal, or_, select
+from sqlalchemy import and_, case, func, literal, or_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, aliased
 
@@ -200,21 +200,40 @@ def definir_vinculo(
     db: Session, usuario_id: int, despesa_id: int, payload: DivisaoVinculo
 ) -> DivisaoDespesaRead:
     """Só o pagador (RF02) — a transação vinculada é dele, mesmo que outra pessoa tenha criado."""
-    # Linha travada até o commit: duas trocas simultâneas não leem ambas "sem transação" e a
-    # segunda não sobrescreve a primeira (no SQLite a escrita já é serializada).
-    despesa = DivisaoDespesaRepository(db, usuario_id).obter(despesa_id, para_atualizar=True)
+    despesa = DivisaoDespesaRepository(db, usuario_id).obter(despesa_id)
     if despesa is None:
         raise NotFoundError("despesa não encontrada")
     if despesa.pago_por_usuario_id != usuario_id:
         raise ValidationError("só quem pagou vincula a transação")
     if payload.transacao_id is not None and payload.sem_transacao:
         raise ValidationError("informe a transação ou 'sem transação', não os dois")
-    if payload.transacao_id is not None and payload.transacao_id != despesa.transacao_id:
-        if despesa.transacao_id is not None:
+    lido = despesa.transacao_id
+    valores = {"transacao_id": payload.transacao_id, "sem_transacao": payload.sem_transacao}
+    if payload.transacao_id is not None and payload.transacao_id != lido:
+        if lido is not None:
             raise ConflictError("a divisão já tem transação; desvincule antes")
-        despesa.data = _transacao_vinculavel(db, usuario_id, payload.transacao_id).date
-    despesa.transacao_id = payload.transacao_id
-    despesa.sem_transacao = payload.sem_transacao
+        valores["data"] = _transacao_vinculavel(db, usuario_id, payload.transacao_id).date
+    # Compare-and-set: só grava se o vínculo ainda é o que foi lido. Duas trocas concorrentes
+    # leem o mesmo estado; a segunda não casa o WHERE e vira 409 em vez de sobrescrever a
+    # primeira — vale no SQLite, onde `FOR UPDATE` não trava nada.
+    atual = (
+        DivisaoDespesa.transacao_id.is_(None)
+        if lido is None
+        else DivisaoDespesa.transacao_id == lido
+    )
+    try:
+        alteradas = db.execute(
+            update(DivisaoDespesa)
+            .where(DivisaoDespesa.id == despesa.id, atual)
+            .values(**valores)
+            .execution_options(synchronize_session=False)
+        ).rowcount
+    except IntegrityError as exc:
+        db.rollback()
+        raise ConflictError(_JA_VINCULADA) from exc
+    if alteradas != 1:
+        db.rollback()
+        raise ConflictError("o vínculo da divisão mudou; recarregue e tente de novo")
     _commit_vinculo(db)
     db.refresh(despesa)
     return enriquecer(db, usuario_id, despesa)

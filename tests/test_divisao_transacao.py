@@ -202,6 +202,39 @@ def test_vinculo_regras_de_acesso_e_conflito(client_factory, db, usuario_a, usua
     assert ids == [d2["id"]]
 
 
+def test_vinculo_concorrente_nao_sobrescreve(
+    client_factory, session_factory, db, usuario_a, usuario_b, cenario
+):
+    """Leitura defasada (outra sessão vinculou depois): o compare-and-set recusa com 409 em vez
+    de trocar a transação já vinculada — nos dois bancos."""
+    from app.exceptions import ConflictError
+    from app.models.divisao import DivisaoDespesa
+    from app.schemas.divisao import DivisaoVinculo
+    from app.services import divisao as divisao_service
+
+    tx1 = _tx(db, usuario_a.id, cenario, "tx1", 10000)
+    tx2 = _tx(db, usuario_a.id, cenario, "tx2", 10000)
+    a = client_factory(usuario_a)
+    d = a.post("/api/divisoes-despesa", json=_divisao(usuario_a.id, [usuario_b.id])).json()
+
+    lenta = session_factory()
+    try:
+        assert lenta.get(DivisaoDespesa, d["id"]).transacao_id is None  # leu "sem transação"
+        assert (
+            a.put(
+                f"/api/divisoes-despesa/{d['id']}/vinculo", json={"transacao_id": tx1.id}
+            ).status_code
+            == 200
+        )
+        with pytest.raises(ConflictError):
+            divisao_service.definir_vinculo(
+                lenta, usuario_a.id, d["id"], DivisaoVinculo(transacao_id=tx2.id)
+            )
+    finally:
+        lenta.close()
+    assert a.get(f"/api/divisoes-despesa/{d['id']}").json()["transacao_id"] == tx1.id
+
+
 def test_transacao_apagada_devolve_divisao_a_pendencia(
     client_factory, db, usuario_a, usuario_b, cenario
 ):
