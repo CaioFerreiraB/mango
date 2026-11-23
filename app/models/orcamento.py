@@ -34,7 +34,7 @@ class Orcamento(UserOwnedMixin, TimestampMixin, Base):
     categoria_id: Mapped[str] = mapped_column(
         ForeignKey("categoria.pluggy_id", ondelete="RESTRICT"), nullable=False, index=True
     )
-    tipo: Mapped[str] = mapped_column(String(16), nullable=False)  # despesa | receita
+    tipo: Mapped[str] = mapped_column(String(16), nullable=False)  # despesa|receita|investimento
     limite_padrao_centavos: Mapped[int] = mapped_column(BigInteger, nullable=False)
     recorrente: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     ativo: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
@@ -63,7 +63,7 @@ class OrcamentoMensal(UserOwnedMixin, TimestampMixin, Base):
     # Cópia denormalizada de `orcamento.tipo` no momento da materialização — evita join por
     # linha em `orcamento_consumo` e entra na unicidade (uma categoria pode ter linha de
     # despesa E de receita no mesmo mês).
-    tipo: Mapped[str] = mapped_column(String(16), nullable=False)  # despesa | receita
+    tipo: Mapped[str] = mapped_column(String(16), nullable=False)  # despesa|receita|investimento
     ano: Mapped[int] = mapped_column(Integer, nullable=False)
     mes: Mapped[int] = mapped_column(Integer, nullable=False)
     limite_centavos: Mapped[int] = mapped_column(BigInteger, nullable=False)

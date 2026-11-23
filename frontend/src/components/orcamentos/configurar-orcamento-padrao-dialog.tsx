@@ -37,15 +37,17 @@ import {
   useCategorias,
   type Categoria,
 } from "@/lib/api/categorias"
+import { excluidasDoTipo } from "@/lib/categoria-investimento"
 import {
   useAtualizarOrcamentoPadrao,
   useCriarOrcamento,
   useOrcamentos,
   useRemoverOrcamento,
   type Orcamento,
+  type TipoOrcamento,
 } from "@/lib/api/orcamentos"
 
-type Tipo = "despesa" | "receita"
+type Tipo = TipoOrcamento
 
 type Linha = {
   /** `null` = linha nova, ainda não persistida — só existe no estado local até "Salvar". */
@@ -61,6 +63,11 @@ const SECOES: { tipo: Tipo; titulo: string; vazio: string }[] = [
     tipo: "despesa",
     titulo: "Despesas",
     vazio: "Nenhuma despesa no orçamento padrão ainda.",
+  },
+  {
+    tipo: "investimento",
+    titulo: "Investimentos",
+    vazio: "Nenhuma meta de aporte no orçamento padrão ainda.",
   },
   {
     tipo: "receita",
@@ -95,6 +102,7 @@ export function ConfigurarOrcamentoPadraoDialog({
   const [aberto, setAberto] = useState(false)
   const [linhas, setLinhas] = useState<Record<Tipo, Linha[]>>({
     despesa: [],
+    investimento: [],
     receita: [],
   })
   const [erros, setErros] = useState<Record<string, string>>({})
@@ -113,6 +121,7 @@ export function ConfigurarOrcamentoPadraoDialog({
     if (novoAberto) {
       setLinhas({
         despesa: linhasIniciais(orcamentos, "despesa"),
+        investimento: linhasIniciais(orcamentos, "investimento"),
         receita: linhasIniciais(orcamentos, "receita"),
       })
       setErros({})
@@ -275,7 +284,9 @@ export function ConfigurarOrcamentoPadraoDialog({
       }
     }
     const idsAtuais = new Set(
-      [...linhas.despesa, ...linhas.receita].map((l) => l.orcamentoId)
+      [...linhas.despesa, ...linhas.investimento, ...linhas.receita].map(
+        (l) => l.orcamentoId
+      )
     )
     // Alguma linha original (recorrente) foi removida? Pontuais (recorrente=false) não entram
     // aqui — não fazem parte deste modal.
@@ -309,7 +320,10 @@ export function ConfigurarOrcamentoPadraoDialog({
               vazio={vazio}
               linhas={linhas[tipo]}
               categorias={categorias}
-              excluir={linhas[tipo].map((l) => l.categoriaId)}
+              excluir={[
+                ...linhas[tipo].map((l) => l.categoriaId),
+                ...excluidasDoTipo(categorias, tipo),
+              ]}
               erros={erros}
               onMudarValor={(categoriaId, v) =>
                 mudarValor(tipo, categoriaId, v)

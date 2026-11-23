@@ -245,7 +245,7 @@ function AbaResumo({
                           {d.pago_por_usuario_id === me.data?.id
                             ? "Você pagou"
                             : "Pagou"}{" "}
-                          · {formatDate(d.criado_em)}
+                          · {formatDate(d.data)}
                         </p>
                       </div>
                       <Valor
@@ -356,7 +356,7 @@ function AbaTransacoes({
                     </p>
                   </TableCell>
                   <TableCell className="text-muted-foreground">
-                    {formatDate(d.criado_em)}
+                    {formatDate(d.data)}
                   </TableCell>
                   <TableCell className="text-right">
                     <Valor centavos={d.valor_total_centavos} neutro />
@@ -416,7 +416,7 @@ function LinhaDivisaoMobile({
           {divisao.pago_por_usuario_id === meuId
             ? "Você pagou"
             : `${nomePagador(divisao)} pagou`}{" "}
-          · {formatDate(divisao.criado_em)}
+          · {formatDate(divisao.data)}
         </p>
       </div>
       <div className="text-right">

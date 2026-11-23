@@ -12,7 +12,8 @@ from pydantic import BaseModel, Field
 from app.schemas import ORMModel
 
 ModoDivisao = Literal["igualmente", "integral"]
-EscopoDivisao = Literal["todas", "minhas", "comigo", "arquivadas"]
+# `sem_transacao`: pagas por mim ainda sem transação vinculada (picker "divisão existente").
+EscopoDivisao = Literal["todas", "minhas", "comigo", "arquivadas", "sem_transacao"]
 StatusPessoa = Literal["usuario", "so_divisao"]
 
 
@@ -25,6 +26,19 @@ class DivisaoDespesaCreate(BaseModel):
     # Ids dos usuários que dividem a despesa. No modo `igualmente` inclui quem pagou; no modo
     # `integral` tem exatamente 1 id (o devedor, diferente de quem pagou) — validado no service.
     participantes: list[int] = Field(min_length=1)
+    # Quando aconteceu (padrão: agora). Com `transacao_id`, vale a data da transação.
+    data: datetime | None = None
+    # Transação do pagador que corresponde à despesa (só quando quem cria é quem pagou).
+    transacao_id: int | None = Field(default=None, gt=0)
+    sem_transacao: bool = False
+
+
+class DivisaoVinculo(BaseModel):
+    """Vínculo da divisão com a transação do pagador. `transacao_id` vincula; os dois vazios
+    desvinculam (volta a pendente); `sem_transacao` = "paguei fora do banco"."""
+
+    transacao_id: int | None = Field(default=None, gt=0)
+    sem_transacao: bool = False
 
 
 class DivisaoDespesaUpdate(BaseModel):
@@ -34,6 +48,7 @@ class DivisaoDespesaUpdate(BaseModel):
     pago_por_usuario_id: int | None = None
     modo_divisao: ModoDivisao | None = None
     participantes: list[int] | None = Field(default=None, min_length=1)
+    data: datetime | None = None
 
 
 class DivisaoParticipanteRead(BaseModel):
@@ -53,6 +68,9 @@ class DivisaoDespesaRead(ORMModel):
     modo_divisao: str
     quitada: bool
     arquivada: bool
+    data: datetime
+    transacao_id: int | None
+    sem_transacao: bool
     criado_em: datetime
     atualizado_em: datetime
     # Calculados: linhas de participantes e o saldo do usuário atual nesta despesa

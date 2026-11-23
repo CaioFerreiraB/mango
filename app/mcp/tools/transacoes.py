@@ -32,13 +32,28 @@ def _descricao(t: dict) -> str:
 
 def valor_com_sinal(t: dict) -> int:
     """Despesa negativa, receita positiva. `abs` primeiro: compra de cartão vem DEBIT com valor
-    POSITIVO do Pluggy, ao contrário da conta corrente."""
+    POSITIVO do Pluggy, ao contrário da conta corrente. Lançamento de divisão é sempre saída:
+    a parte do usuário (ou o total, se ainda aguarda a transação dele)."""
+    if t.get("origem") == "divisao":
+        return -(t["valor_total_centavos"] if t["pendente"] else t["minha_parte_centavos"])
     valor = abs(t["amount_centavos"])
     return -valor if t["type"] == "DEBIT" else valor
 
 
+def _situacao_divisao(t: dict) -> str:
+    if t["pendente"]:
+        return "divisão sem transação (vincular)"
+    if t["pago_por_mim"]:
+        return "divisão paga fora do banco"
+    return f"divisão paga por {t['pago_por_nome']}"
+
+
 def _situacao(t: dict) -> str:
+    if t.get("origem") == "divisao":
+        return _situacao_divisao(t)
     marcas = ["revisada" if t["revisada"] else "a revisar"]
+    if t.get("divisao"):
+        marcas.append(f"dividida (sua parte {f.brl(t['divisao']['minha_parte_centavos'])})")
     if t.get("assinatura_id"):
         marcas.append("assinatura")
     if t.get("eh_transferencia"):
@@ -48,9 +63,23 @@ def _situacao(t: dict) -> str:
     return ", ".join(marcas)
 
 
+def _linha_divisao(t: dict, cats: dict) -> list[object]:
+    return [
+        f"divisão {t['divisao_id']}",
+        f.data(t["data"]),
+        t.get("descricao") or "—",
+        "—",
+        cats.get(t.get("categoria_id") or ""),
+        f.brl(valor_com_sinal(t)),
+        _situacao(t),
+    ]
+
+
 def linhas_transacoes(itens: list[dict], cats: dict, cts: dict) -> list[list[object]]:
     return [
-        [
+        _linha_divisao(t, cats)
+        if t.get("origem") == "divisao"
+        else [
             t["id"],
             f.data(t["date"]),
             _descricao(t),

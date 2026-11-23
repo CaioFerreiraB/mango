@@ -10,7 +10,8 @@ from app.schemas.auto import read_model
 OrcamentoRead = read_model(Orcamento)
 OrcamentoMensalRead = read_model(OrcamentoMensal)
 
-Tipo = Literal["despesa", "receita"]
+# investimento = subárvore 03 menos 0306 (aportes líquidos), aba própria no orçamento.
+Tipo = Literal["despesa", "receita", "investimento"]
 
 
 class OrcamentoCreate(BaseModel):
@@ -83,3 +84,4 @@ class OrcamentoConsumoRead(BaseModel):
     # `app.services.orcamento_consumo`). Sem limite: a UI mostra "—" no orçado e 100%.
     nao_planejado_despesa_centavos: int = 0
     nao_planejado_receita_centavos: int = 0
+    nao_planejado_investimento_centavos: int = 0

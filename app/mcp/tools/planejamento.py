@@ -213,8 +213,9 @@ async def listar_orcamentos(
     mes: Annotated[int | None, Field(ge=1, le=12)] = None,
     formato: Formato = "tabela",
 ) -> CallToolResult:
-    """Orçamentos do mês por categoria: limite, quanto já foi gasto (ou recebido, nas metas de
-    receita), percentual e alerta atingido (50/75/90/100%)."""
+    """Orçamentos do mês por categoria, em três tipos: despesa, investimento (aportes − resgates)
+    e receita. Limite, realizado, percentual e alerta atingido (50/75/90/100%, só despesa).
+    Compras divididas contam só a parte do usuário."""
     hoje = hoje_sp()
     ano, mes = ano or hoje.year, mes or hoje.month
     consumo = await api(ctx, "GET", "/orcamentos/consumo", params={"ano": ano, "mes": mes})
@@ -232,7 +233,7 @@ async def listar_orcamentos(
         for i in itens
     ]
     # Gasto/recebido em categorias fora do orçamento do mês — sem limite, então sem uso/alerta.
-    for tipo in ("despesa", "receita"):
+    for tipo in ("despesa", "investimento", "receita"):
         if valor := consumo.get(f"nao_planejado_{tipo}_centavos"):
             linhas.append(["Não planejado", tipo, "—", f.brl(valor), None, None])
     colunas = ["Categoria", "Tipo", "Limite", "Realizado", "Uso", "Alerta"]

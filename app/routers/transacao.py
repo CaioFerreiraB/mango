@@ -24,8 +24,15 @@ from app.repositories.categoria import CategoriaRepository
 from app.repositories.investimento import InvestimentoRepository
 from app.repositories.transacao import TransacaoRepository
 from app.schemas.investimento import InvestimentoTransacaoRead
-from app.schemas.transacao import TransacaoListagem, TransacaoRead, TransacaoUpdate
+from app.schemas.transacao import (
+    DivisaoDaTransacao,
+    DivisaoLancamento,
+    TransacaoListagem,
+    TransacaoRead,
+    TransacaoUpdate,
+)
 from app.security.current_user import get_current_user
+from app.services import divisao as divisao_service
 from app.services import investimento as carteira_service
 from app.services.assinatura_deteccao import normalizar_nome
 from app.services.categoria_resolucao import Contexto, carregar_contexto, resolver
@@ -42,15 +49,44 @@ def _repo(
     return TransacaoRepository(db, user.id)
 
 
-def _read(obj: Transacao, ctx: Contexto, *, parcelas: int = 0) -> TransacaoRead:
+def _read(
+    obj: Transacao,
+    ctx: Contexto,
+    *,
+    parcelas: int = 0,
+    divisao: DivisaoDaTransacao | None = None,
+) -> TransacaoRead:
     categoria, origem = resolver(obj, ctx)
     return TransacaoRead.model_validate(obj).model_copy(
         update={
             "categoria_efetiva_id": categoria,
             "categoria_origem": origem,
             "parcelas_atualizadas": parcelas,
+            "divisao": divisao,
         }
     )
+
+
+def ler_um(db: Session, usuario_id: int, obj: Transacao, *, parcelas: int = 0) -> TransacaoRead:
+    divisao = divisao_service.por_transacao(db, usuario_id, [obj.id]).get(obj.id)
+    return _read(obj, carregar_contexto(db, usuario_id), parcelas=parcelas, divisao=divisao)
+
+
+def ler_itens(
+    db: Session, usuario_id: int, itens: list[Transacao | int], corte
+) -> list[TransacaoRead | DivisaoLancamento]:
+    """Hidrata uma página mista (transação ou id de divisão) com contexto carregado 1× (não por
+    linha): categorias, divisão de cada transação e os lançamentos de divisão."""
+    ctx = carregar_contexto(db, usuario_id)
+    txs = [i for i in itens if isinstance(i, Transacao)]
+    divisoes = divisao_service.por_transacao(db, usuario_id, [t.id for t in txs])
+    lancs = divisao_service.lancamentos(
+        db, usuario_id, [i for i in itens if isinstance(i, int)], corte
+    )
+    return [
+        _read(i, ctx, divisao=divisoes.get(i.id)) if isinstance(i, Transacao) else lancs[i]
+        for i in itens
+    ]
 
 
 @router.get("", response_model=TransacaoListagem)
@@ -71,6 +107,7 @@ def listar(
     assinatura_id: int | None = Query(None),
     tem_assinatura: bool | None = Query(None),
     busca: str | None = Query(None, max_length=200),
+    tem_divisao: bool | None = Query(None),
     order: Literal["date", "amount_centavos"] = Query("date"),
     descendente: bool = Query(True),
     limit: int = Query(50, ge=1, le=200),
@@ -90,6 +127,32 @@ def listar(
     # Cada limite de data é resolvido no fuso SP (§4.10), independente do outro; `ocultar_futuras`
     # entra aqui porque é corte de data, não predicado — a regra mora em `periodo.janela_listagem`.
     ini, fim_dt = janela_listagem(inicio, fim, ocultar_futuras=ocultar_futuras)
+    corte = corte_revisao(user.revisao_desde)
+    # Lançamentos de divisão (RF08/RF09) só entram quando nenhum filtro exclusivo de transação
+    # bancária está ativo.
+    so_de_transacao = (
+        conta_id is not None
+        or fatura_id is not None
+        or assinatura_id is not None
+        or tem_assinatura is True
+        or revisada is not None
+        or eh_transferencia is True
+        or tipo == "CREDIT"
+        or tem_divisao is False
+    )
+    lancamentos = (
+        None
+        if so_de_transacao
+        else divisao_service.select_lancamentos(
+            user.id,
+            corte=corte,
+            inicio=ini,
+            fim=fim_dt,
+            categoria_id=categoria_id,
+            busca=busca,
+            pendente=pendente_revisao,
+        )
+    )
     itens, total = repo.listar_filtrado(
         inicio=ini,
         fim=fim_dt,
@@ -99,20 +162,20 @@ def listar(
         tipo=tipo,
         revisada=revisada,
         pendente_revisao=pendente_revisao,
-        corte_revisao=corte_revisao(user.revisao_desde),
+        corte_revisao=corte,
         eh_transferencia=eh_transferencia,
         ocultar_pagamento_fatura=ocultar_pagamento_fatura,
         assinatura_id=assinatura_id,
         tem_assinatura=tem_assinatura,
         busca=busca,
+        tem_divisao=tem_divisao,
         order=order,
         descendente=descendente,
         limit=limit,
         offset=offset,
+        lancamentos=lancamentos,
     )
-    # Contexto carregado UMA vez por página (duas consultas pequenas), não por linha.
-    ctx = carregar_contexto(repo.db, repo.usuario_id)
-    return TransacaoListagem(items=[_read(t, ctx) for t in itens], total=total)
+    return TransacaoListagem(items=ler_itens(repo.db, user.id, itens, corte), total=total)
 
 
 @router.get("/{transacao_id}", response_model=TransacaoRead)
@@ -120,7 +183,7 @@ def obter(transacao_id: int, repo: TransacaoRepository = Depends(_repo)):
     obj = repo.get(transacao_id)
     if obj is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "transação não encontrada")
-    return _read(obj, carregar_contexto(repo.db, repo.usuario_id))
+    return ler_um(repo.db, repo.usuario_id, obj)
 
 
 @router.get("/{transacao_id}/proventos-sugeridos", response_model=list[InvestimentoTransacaoRead])
@@ -157,7 +220,7 @@ def atualizar(
     if assinatura is not None:
         _aprender_alias(repo.db, assinatura, atualizada)
     parcelas = _propagar_para_parcelas(repo, atualizada) if "categoria_override_id" in dados else 0
-    return _read(atualizada, carregar_contexto(repo.db, repo.usuario_id), parcelas=parcelas)
+    return ler_um(repo.db, repo.usuario_id, atualizada, parcelas=parcelas)
 
 
 def _assinatura_do_vinculo(repo: TransacaoRepository, dados: dict) -> Assinatura | None:

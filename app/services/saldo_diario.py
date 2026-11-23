@@ -19,7 +19,7 @@ from app.models.investimento_saldo_diario import InvestimentoSaldoDiario
 from app.models.saldo_diario import SaldoDiario
 from app.models.transacao import Transacao
 from app.schemas.conta import ContaSaldoSerie, SaldoDiarioPonto
-from app.services.dashboard import _VALOR_EFETIVO
+from app.services.gasto_usuario import VALOR_EFETIVO as _VALOR_EFETIVO
 from app.services.periodo import SP, hoje_sp, limites_sp
 
 

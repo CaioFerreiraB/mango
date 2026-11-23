@@ -3,20 +3,25 @@ de rateio/saldo mora em `app/services/divisao.py`). Rotas estáticas (`/resumo`,
 vêm antes de `/{despesa_id}`, mesmo cuidado de `app/routers/orcamento.py`.
 """
 
+from datetime import datetime
+
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
 from app.models.usuario import Usuario
+from app.routers.transacao import ler_itens
 from app.schemas.divisao import (
     DivisaoDespesaCreate,
     DivisaoDespesaRead,
     DivisaoDespesaUpdate,
+    DivisaoVinculo,
     EscopoDivisao,
     PessoaDivisao,
     ResumoDivisoes,
 )
-from app.security.current_user import get_current_user
+from app.schemas.transacao import TransacaoRead
+from app.security.current_user import exigir_usuario_completo, get_current_user
 from app.services import divisao as divisao_service
 
 router = APIRouter(prefix="/divisoes-despesa", tags=["divisao_despesa"])
@@ -56,6 +61,19 @@ def pessoas(db: Session = Depends(get_db), user: Usuario = Depends(get_current_u
     return divisao_service.pessoas(db, user.id)
 
 
+@router.get("/transacoes-candidatas", response_model=list[TransacaoRead])
+def transacoes_candidatas(
+    valor_centavos: int = Query(gt=0),
+    data: datetime = Query(),
+    db: Session = Depends(get_db),
+    user: Usuario = Depends(exigir_usuario_completo),
+):
+    """Saídas do usuário sem divisão perto da data — mesmo valor primeiro (RF03)."""
+    return ler_itens(
+        db, user.id, divisao_service.transacoes_candidatas(db, user.id, valor_centavos, data), None
+    )
+
+
 @router.get("/{despesa_id}", response_model=DivisaoDespesaRead)
 def obter(
     despesa_id: int, db: Session = Depends(get_db), user: Usuario = Depends(get_current_user)
@@ -81,6 +99,17 @@ def remover(
     despesa_id: int, db: Session = Depends(get_db), user: Usuario = Depends(get_current_user)
 ):
     divisao_service.remover(db, user.id, despesa_id)
+
+
+@router.put("/{despesa_id}/vinculo", response_model=DivisaoDespesaRead)
+def vinculo(
+    despesa_id: int,
+    payload: DivisaoVinculo,
+    db: Session = Depends(get_db),
+    user: Usuario = Depends(get_current_user),
+):
+    """Vincula/desvincula a transação do pagador ou marca "paguei fora do banco" (RF02)."""
+    return divisao_service.definir_vinculo(db, user.id, despesa_id, payload)
 
 
 @router.post("/{despesa_id}/quitar", response_model=DivisaoDespesaRead)

@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { api } from "@/lib/api/client"
 import { mensagemErro } from "@/lib/api/erros"
 import type { components } from "@/lib/api/schema"
+import type { Transacao } from "@/lib/api/transacoes"
 
 export type DivisaoDespesa = components["schemas"]["DivisaoDespesaRead"]
 export type DivisaoDespesaCreate = components["schemas"]["DivisaoDespesaCreate"]
@@ -13,7 +14,9 @@ export type PessoaDivisao = components["schemas"]["PessoaDivisao"]
 export type ModoDivisao = DivisaoDespesaCreate["modo_divisao"]
 /** Espelha `EscopoDivisao` do backend (app/schemas/divisao.py) — não é um schema nomeado no
  *  OpenAPI (é só um parâmetro de query), então não dá pra derivar do `components`. */
-export type EscopoDivisao = "todas" | "minhas" | "comigo" | "arquivadas"
+export type EscopoDivisao =
+  "todas" | "minhas" | "comigo" | "arquivadas" | "sem_transacao"
+export type DivisaoVinculo = components["schemas"]["DivisaoVinculo"]
 
 export const divisoesKeys = {
   all: ["divisoes"] as const,
@@ -23,10 +26,16 @@ export const divisoesKeys = {
   pessoas: ["divisoes", "pessoas"] as const,
 }
 
+/** Divisão mexe também na lista de transações (lançamentos/marcador) e no que conta como gasto
+ *  do usuário — orçamento e dashboard usam só a parte dele. */
 function invalidar(qc: ReturnType<typeof useQueryClient>) {
   qc.invalidateQueries({ queryKey: divisoesKeys.all })
   qc.invalidateQueries({ queryKey: divisoesKeys.resumo })
   qc.invalidateQueries({ queryKey: divisoesKeys.pessoas })
+  qc.invalidateQueries({ queryKey: ["transacoes"] })
+  qc.invalidateQueries({ queryKey: ["orcamentos"] })
+  qc.invalidateQueries({ queryKey: ["dashboard"] })
+  qc.invalidateQueries({ queryKey: ["dashboard-series"] })
 }
 
 export function useResumoDivisoes() {
@@ -52,9 +61,10 @@ export function usePessoasDivisao() {
   })
 }
 
-export function useDivisoes(escopo: EscopoDivisao = "todas") {
+export function useDivisoes(escopo: EscopoDivisao = "todas", enabled = true) {
   return useQuery({
     queryKey: divisoesKeys.lista(escopo),
+    enabled,
     queryFn: async (): Promise<DivisaoDespesa[]> => {
       const { data, error } = await api.GET("/api/divisoes-despesa", {
         params: { query: { escopo } },
@@ -162,6 +172,52 @@ function useMarcarQuitada(path: "quitar" | "reabrir") {
     onSuccess: (_data, id) => {
       invalidar(qc)
       qc.invalidateQueries({ queryKey: divisoesKeys.detalhe(id) })
+    },
+  })
+}
+
+/** Vincula/desvincula a transação do pagador ou marca "paguei fora do banco". */
+export function useDefinirVinculo() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (args: {
+      id: number
+      vinculo: DivisaoVinculo
+    }): Promise<DivisaoDespesa> => {
+      const { data, error } = await api.PUT(
+        "/api/divisoes-despesa/{despesa_id}/vinculo",
+        {
+          params: { path: { despesa_id: args.id } },
+          body: args.vinculo,
+        }
+      )
+      if (error || !data)
+        throw new Error(mensagemErro(error, "falha ao vincular a transação"))
+      return data
+    },
+    onSuccess: (_data, args) => {
+      invalidar(qc)
+      qc.invalidateQueries({ queryKey: divisoesKeys.detalhe(args.id) })
+    },
+  })
+}
+
+/** Saídas do usuário sem divisão perto da data — mesmo valor primeiro. */
+export function useTransacoesCandidatas(
+  valorCentavos: number,
+  data: string,
+  enabled = true
+) {
+  return useQuery({
+    queryKey: ["divisoes", "candidatas", valorCentavos, data],
+    enabled: enabled && valorCentavos > 0 && data !== "",
+    queryFn: async (): Promise<Transacao[]> => {
+      const { data: itens, error } = await api.GET(
+        "/api/divisoes-despesa/transacoes-candidatas",
+        { params: { query: { valor_centavos: valorCentavos, data } } }
+      )
+      if (error || !itens) throw new Error("falha ao buscar transações")
+      return itens
     },
   })
 }

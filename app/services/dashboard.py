@@ -23,6 +23,7 @@ from app.schemas.dashboard import (
     SerieBucket,
 )
 from app.services.categoria_resolucao import com_assinatura, expr_categoria_efetiva
+from app.services.gasto_usuario import VALOR_EFETIVO, linhas_do_periodo
 from app.services.periodo import SP, limites_sp
 from app.services.revisao import expr_pendente_revisao
 
@@ -34,27 +35,19 @@ _FATURAS_GRAFICO = 6
 # Categoria efetiva: a precedência mora em `categoria_resolucao` (fonte única, §4.5) e depende
 # do usuário (assinatura + categorias desativadas), então é montada por query, não em módulo.
 
-# Valor efetivo em reais = valor na moeda da conta (compra internacional), senão o `amount` cru.
-# `amount_in_account_currency_centavos` só vem em transação internacional; nula → doméstica.
-_VALOR_EFETIVO = func.coalesce(
-    Transacao.amount_in_account_currency_centavos, Transacao.amount_centavos
-)
 
-
-def _soma(db: Session, filtros: tuple, tipo: str) -> int:
-    """Soma a GRANDEZA do valor efetivo (em reais) das transações do tipo nos filtros já montados.
-
-    Em módulo, linha a linha: o sinal do `amount` não é confiável por tipo — compra de cartão vem
-    DEBIT com valor POSITIVO do Pluggy (na conta corrente vem negativo), e somar com sinal fazia o
-    gasto no cartão ABATER as saídas. Quem diz se é entrada ou saída é o `type`.
-    """
-    return int(
-        db.scalar(
-            select(func.coalesce(func.sum(func.abs(_VALOR_EFETIVO)), 0)).where(
-                *filtros, Transacao.type == tipo
-            )
-        )
-    )
+def _totais(linhas) -> tuple[int, int, dict[str | None, int]]:
+    """(entradas, saídas, gasto por categoria) das linhas de `gasto_usuario.linhas_do_periodo`
+    — já na parte do usuário (divisão) e em grandeza; quem diz entrada/saída é o `type`."""
+    entradas = saidas = 0
+    por_cat: dict[str | None, int] = {}
+    for _, valor, tipo, cat in linhas:
+        if tipo == "CREDIT":
+            entradas += valor
+        else:
+            saidas += valor
+            por_cat[cat] = por_cat.get(cat, 0) + valor
+    return entradas, saidas, por_cat
 
 
 def _saldo_em_contas(db: Session, usuario_id: int) -> int:
@@ -78,17 +71,10 @@ def _contar_pendentes(db: Session, do_usuario, corte: datetime | None) -> int:
     )
 
 
-def _gasto_por_categoria(db: Session, usuario_id: int, filtros: tuple) -> list[GastoCategoria]:
+def _gasto_por_categoria(por_cat: dict[str | None, int]) -> list[GastoCategoria]:
     """Top-N categorias por gasto no período, pela categoria efetiva (§4.5)."""
-    cat_efetiva = expr_categoria_efetiva(usuario_id)
-    linhas = db.execute(
-        com_assinatura(select(cat_efetiva, func.sum(func.abs(_VALOR_EFETIVO))), usuario_id)
-        .where(*filtros, Transacao.type == "DEBIT")
-        .group_by(cat_efetiva)
-        .order_by(func.sum(func.abs(_VALOR_EFETIVO)).desc())
-        .limit(_TOP_CATEGORIAS)
-    ).all()
-    return [GastoCategoria(categoria_id=cat, total_centavos=int(total)) for cat, total in linhas]
+    top = sorted(por_cat.items(), key=lambda kv: kv[1], reverse=True)[:_TOP_CATEGORIAS]
+    return [GastoCategoria(categoria_id=cat, total_centavos=total) for cat, total in top]
 
 
 def _ultimas_transacoes(db: Session, do_usuario) -> list[Transacao]:
@@ -124,12 +110,7 @@ def montar_dashboard(
 ) -> DashboardResumo:
     ini, fim_excl = limites_sp(inicio, fim)
     do_usuario = Transacao.usuario_id == usuario_id
-    no_periodo = (Transacao.date >= ini, Transacao.date < fim_excl)
-    real = Transacao.eh_transferencia.is_(False)  # exclui transferências (§4.2)
-
-    base = (do_usuario, *no_periodo, real)
-    entradas = _soma(db, base, "CREDIT")
-    saidas = _soma(db, base, "DEBIT")
+    entradas, saidas, por_cat = _totais(linhas_do_periodo(db, usuario_id, ini, fim_excl))
 
     return DashboardResumo(
         saldo_total_centavos=_saldo_em_contas(db, usuario_id),
@@ -137,7 +118,7 @@ def montar_dashboard(
         saidas_centavos=saidas,
         resultado_centavos=entradas - saidas,
         nao_revisadas=_contar_pendentes(db, do_usuario, corte_revisao),
-        gasto_por_categoria=_gasto_por_categoria(db, usuario_id, base),
+        gasto_por_categoria=_gasto_por_categoria(por_cat),
         ultimas_transacoes=_ultimas_transacoes(db, do_usuario),
         faturas_abertas=_faturas_abertas(db, usuario_id),
     )
@@ -183,7 +164,7 @@ def resumo_faturas(
     cat_efetiva = expr_categoria_efetiva(usuario_id)
     linhas = db.execute(
         com_assinatura(
-            select(Transacao.bill_id, cat_efetiva, func.sum(func.abs(_VALOR_EFETIVO))), usuario_id
+            select(Transacao.bill_id, cat_efetiva, func.sum(func.abs(VALOR_EFETIVO))), usuario_id
         )
         .where(
             Transacao.usuario_id == usuario_id,
@@ -246,22 +227,7 @@ def montar_series(
     efetiva) para os totais reconciliarem. Bucketização em Python — resultado idêntico nos dois
     bancos, sem `date_trunc`/`strftime`."""
     ini, fim_excl = limites_sp(inicio, fim)
-    linhas = db.execute(
-        com_assinatura(
-            select(
-                Transacao.date,
-                _VALOR_EFETIVO,
-                Transacao.type,
-                expr_categoria_efetiva(usuario_id),
-            ),
-            usuario_id,
-        ).where(
-            Transacao.usuario_id == usuario_id,
-            Transacao.date >= ini,
-            Transacao.date < fim_excl,
-            Transacao.eh_transferencia.is_(False),
-        )
-    ).all()
+    linhas = linhas_do_periodo(db, usuario_id, ini, fim_excl)
 
     # Buckets vazios de inicio→fim para os gráficos não pularem períodos sem transação.
     buckets: dict[date, dict] = {}
@@ -271,16 +237,14 @@ def montar_series(
         b = _proximo_bucket(b, granularidade)
 
     for dt, valor, tipo, cat in linhas:
-        if dt.tzinfo is None:  # SQLite pode devolver naive; convenção é UTC
-            dt = dt.replace(tzinfo=UTC)
         chave = _inicio_bucket(dt.astimezone(SP).date(), granularidade)
         bal = buckets.setdefault(chave, {"entradas": 0, "saidas": 0, "cat": {}})
-        # Grandeza pelo `type`, não pelo sinal (ver `_soma`: cartão traz DEBIT positivo).
+        # Grandeza já resolvida (e na parte do usuário) por `linhas_do_periodo`.
         if tipo == "CREDIT":
-            bal["entradas"] += abs(valor)
-        elif tipo == "DEBIT":
-            bal["saidas"] += abs(valor)
-            bal["cat"][cat] = bal["cat"].get(cat, 0) + abs(valor)
+            bal["entradas"] += valor
+        else:
+            bal["saidas"] += valor
+            bal["cat"][cat] = bal["cat"].get(cat, 0) + valor
 
     return DashboardSeries(
         buckets=[
