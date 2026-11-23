@@ -2,7 +2,7 @@
 
 from datetime import date, datetime, time
 
-from sqlalchemy import Boolean, Date, DateTime, Integer, String, Time, UniqueConstraint
+from sqlalchemy import Boolean, Date, DateTime, Integer, String, Time, UniqueConstraint, true
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
@@ -23,6 +23,10 @@ class ConfigTelegram(UserOwnedMixin, TimestampMixin, Base):
     ativo: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     notif_nova_transacao: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     notif_nao_revisadas: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    # Seção "Divisões sem transação" do relatório diário (ligada por padrão).
+    notif_divisoes_pendentes: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True, server_default=true()
+    )
     horario_1: Mapped[time | None] = mapped_column(Time)  # 2×/dia
     horario_2: Mapped[time | None] = mapped_column(Time)
     resumo_diario: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)

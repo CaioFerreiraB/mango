@@ -88,11 +88,19 @@ async def _receitas_vs_despesas(ctx: Context, p: _Pedido) -> tuple[dict, Tabela]
     ]
     linhas = [
         [_mes_rotulo(b["inicio"])]
-        + [f.brl(b[k]) for k in ("entradas_centavos", "saidas_centavos", "resultado_centavos")]
+        + [
+            f.brl(b[k])
+            for k in (
+                "entradas_centavos",
+                "saidas_centavos",
+                "resultado_centavos",
+                "investido_centavos",
+            )
+        ]
         for b in buckets
     ]
     spec = vega.barras_agrupadas("Entradas × saídas por mês", dados)
-    return spec, (["Mês", "Entradas", "Saídas", "Resultado"], linhas)
+    return spec, (["Mês", "Entradas", "Saídas", "Resultado", "Investido"], linhas)
 
 
 async def _saldo_contas(ctx: Context, p: _Pedido) -> tuple[dict, Tabela]:

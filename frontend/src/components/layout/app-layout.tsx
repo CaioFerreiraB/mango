@@ -21,11 +21,15 @@ export function AppLayout() {
     <ChatProvider>
       <SidebarProvider>
         <AppSidebar />
-        <SidebarInset>
+        {/* min-w-0: sem ele o item flex não encolhe abaixo do conteúdo (gráficos têm largura em px)
+            e, ao abrir o chat, a página vaza para a direita e empurra o painel para fora da tela. */}
+        <SidebarInset className="min-w-0">
           <AppHeader />
-          {/* pb no mobile: a bottom bar é `fixed` e cobriria o fim do conteúdo. */}
-          <main className="flex-1 p-4 pb-[calc(var(--bottom-nav-h)+env(safe-area-inset-bottom)+1rem)] md:p-6 md:pb-6">
-            <div className="mx-auto w-full max-w-6xl">
+          {/* pb no mobile: a barra de atalhos flutua (`fixed`, 0.75rem acima da borda) e cobriria o fim do conteúdo. */}
+          <main className="flex-1 p-4 pb-[calc(var(--bottom-nav-h)+env(safe-area-inset-bottom)+1.75rem)] md:p-6 md:pb-6">
+            {/* @container: as telas medem o espaço DISPONÍVEL (janela − sidebar − chat) com @xl/@5xl…,
+                em vez de breakpoints da janela, que erram com o chat aberto. */}
+            <div className="@container mx-auto w-full max-w-[100rem]">
               <Outlet />
             </div>
           </main>

@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 from app.db.atomic import commit
 from app.models.divisao import DivisaoDespesa, DivisaoParticipante
 
-EscopoDivisao = str  # "todas" | "minhas" | "comigo" | "arquivadas" (validado no schema/router)
+EscopoDivisao = str  # validado no schema (`app.schemas.divisao.EscopoDivisao`)
 
 
 class DivisaoDespesaRepository:
@@ -37,11 +37,20 @@ class DivisaoDespesaRepository:
     def listar(self, escopo: EscopoDivisao = "todas") -> list[DivisaoDespesa]:
         query = select(DivisaoDespesa).where(self._visivel())
         query = query.where(DivisaoDespesa.arquivada.is_(escopo == "arquivadas"))
+        if escopo == "sem_transacao":
+            query = query.where(
+                DivisaoDespesa.pago_por_usuario_id == self.usuario_id,
+                DivisaoDespesa.transacao_id.is_(None),
+            )
         if escopo == "minhas":
             query = query.where(DivisaoDespesa.criado_por_usuario_id == self.usuario_id)
         elif escopo == "comigo":
             query = query.where(DivisaoDespesa.criado_por_usuario_id != self.usuario_id)
-        return list(self.db.scalars(query.order_by(DivisaoDespesa.id.desc())).all())
+        return list(
+            self.db.scalars(
+                query.order_by(DivisaoDespesa.data.desc(), DivisaoDespesa.id.desc())
+            ).all()
+        )
 
     def obter(self, despesa_id: int) -> DivisaoDespesa | None:
         """Qualquer envolvido (criador, pagador ou participante) pode ver."""

@@ -66,7 +66,7 @@ function janelaPaginas(atual: number, total: number): (number | "gap")[] {
  */
 export function TransacoesPage() {
   const [params] = useSearchParams()
-  const [busca, setBusca] = useState("")
+  const [busca, setBusca] = useState(params.get("busca") ?? "")
   const [contaId, setContaId] = useState<number | null>(
     params.get("conta_id") ? Number(params.get("conta_id")) : null
   )
@@ -87,7 +87,18 @@ export function TransacoesPage() {
   const [ocultarFuturas, setOcultarFuturas] = useState(true)
   // "__todas__" · "__qualquer__" (com assinatura) · "__sem__" (sem) · id da assinatura.
   const [assinaturaFiltro, setAssinaturaFiltro] = useState(TODAS)
+  // Divididas = transações vinculadas a uma divisão + parcelas de divisão sem transação sua.
+  const [divisao, setDivisao] = useState<"todas" | "divididas" | "nao">("todas")
   const [page, setPage] = useState(0)
+  // A busca global navega para `/transacoes?busca=` com a tela já aberta (instância mantida): o
+  // termo novo da URL substitui o campo e volta à 1ª página.
+  const buscaUrl = params.get("busca") ?? ""
+  const [buscaUrlVista, setBuscaUrlVista] = useState(buscaUrl)
+  if (buscaUrl !== buscaUrlVista) {
+    setBuscaUrlVista(buscaUrl)
+    setBusca(buscaUrl)
+    setPage(0)
+  }
 
   const contas = useContas()
   const assinaturas = useAssinaturas()
@@ -121,6 +132,8 @@ export function TransacoesPage() {
     ocultar_futuras: ocultarFuturas || undefined,
     assinatura_id: assinaturaId,
     tem_assinatura: temAssinatura,
+    tem_divisao:
+      divisao === "divididas" ? true : divisao === "nao" ? false : undefined,
     limit: LIMIT,
     offset: page * LIMIT,
   })
@@ -131,6 +144,7 @@ export function TransacoesPage() {
     (tipo !== null ? 1 : 0) +
     (transf !== "todas" ? 1 : 0) +
     (assinaturaFiltro !== TODAS ? 1 : 0) +
+    (divisao !== "todas" ? 1 : 0) +
     (ocultarPagFatura ? 0 : 1) +
     (ocultarFuturas ? 0 : 1)
 
@@ -270,6 +284,22 @@ export function TransacoesPage() {
                   </SelectContent>
                 </Select>
               </div>
+              <div className="space-y-1.5">
+                <Label>Divisão</Label>
+                <Select
+                  value={divisao}
+                  onValueChange={(v) => reset(setDivisao)(v as typeof divisao)}
+                >
+                  <SelectTrigger size="sm" className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todas">Divididas ou não</SelectItem>
+                    <SelectItem value="divididas">Só divididas</SelectItem>
+                    <SelectItem value="nao">Sem divisão</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </PopoverContent>
           </Popover>
         </div>
@@ -316,7 +346,10 @@ export function TransacoesPage() {
         </EmptyState>
       ) : (
         <>
-          <TransacoesTabela items={listagem.data!.items} />
+          <TransacoesTabela
+            items={listagem.data!.items}
+            abrirId={Number(params.get("id")) || null}
+          />
 
           <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-muted-foreground">
             <span>

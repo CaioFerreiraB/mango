@@ -38,12 +38,15 @@ import { useMe } from "@/lib/api/auth"
 import { nomeCategoria, useCategorias } from "@/lib/api/categorias"
 import {
   useAtualizarDivisao,
+  useDefinirVinculo,
   useDivisao,
   useExcluirDivisao,
+  useTransacoesCandidatas,
   type DivisaoDespesa,
   type ModoDivisao,
 } from "@/lib/api/divisoes"
-import { formatDate } from "@/lib/format"
+import { descricaoExibida, valorEfetivoCentavos } from "@/lib/api/transacoes"
+import { formatBRL, formatDate } from "@/lib/format"
 
 export function DivisaoDetalheDialog({
   id,
@@ -119,7 +122,7 @@ function DivisaoVisao({
             </p>
             <p className="text-xs text-muted-foreground">
               {categoria ? nomeCategoria(categoria) : "Sem categoria"} ·{" "}
-              {formatDate(divisao.criado_em)}
+              {formatDate(divisao.data)}
             </p>
           </div>
           <Valor
@@ -134,6 +137,12 @@ function DivisaoVisao({
             ? "Dividir igualmente"
             : "Valor integral"}
         </Badge>
+
+        {/* Conta "somente divisão" não tem transações de banco para vincular. */}
+        {me.data?.id === divisao.pago_por_usuario_id &&
+        me.data?.tipo === "completo" ? (
+          <VinculoTransacao divisao={divisao} />
+        ) : null}
 
         <div className="space-y-1">
           <Label className="text-xs text-muted-foreground">
@@ -208,6 +217,139 @@ function DivisaoVisao({
         </Button>
       </DialogFooter>
     </>
+  )
+}
+
+/** Para quem pagou: a transação do banco que corresponde à despesa (RF02). Sem ela a divisão fica
+ *  pendente de revisão; "fora do banco" encerra a pendência e conta a sua parte no orçamento. */
+function VinculoTransacao({ divisao }: { divisao: DivisaoDespesa }) {
+  const vinculo = useDefinirVinculo()
+  const [escolhendo, setEscolhendo] = useState(false)
+  const candidatas = useTransacoesCandidatas(
+    divisao.valor_total_centavos,
+    divisao.data,
+    escolhendo
+  )
+  const definir = (
+    corpo: { transacao_id?: number | null; sem_transacao: boolean },
+    msg: string
+  ) =>
+    vinculo.mutate(
+      { id: divisao.id, vinculo: corpo },
+      {
+        onSuccess: () => {
+          toast.success(msg)
+          setEscolhendo(false)
+        },
+        onError: (err) => toast.error(err.message),
+      }
+    )
+
+  const estado =
+    divisao.transacao_id !== null
+      ? "Vinculada a uma transação — no orçamento conta só a sua parte."
+      : divisao.sem_transacao
+        ? "Paga fora do banco — sua parte conta no orçamento."
+        : "Sem transação vinculada — pendente de revisão."
+
+  return (
+    <div className="space-y-2 rounded-lg border p-3 text-sm">
+      <p className="font-medium">Transação do banco</p>
+      <p className="text-xs text-muted-foreground">{estado}</p>
+      {escolhendo ? (
+        candidatas.isLoading ? (
+          <Skeleton className="h-16 w-full" />
+        ) : candidatas.isError ? (
+          <p role="alert" className="text-xs text-destructive">
+            Não foi possível buscar as transações.{" "}
+            <button
+              type="button"
+              className="underline underline-offset-4"
+              onClick={() => candidatas.refetch()}
+            >
+              Tentar de novo
+            </button>
+          </p>
+        ) : (candidatas.data ?? []).length === 0 ? (
+          <p className="text-xs text-muted-foreground">
+            Nenhuma saída sem divisão em 7 dias dessa data.
+          </p>
+        ) : (
+          <ul
+            className="max-h-48 divide-y overflow-y-auto rounded-md border"
+            aria-label="Transações candidatas"
+          >
+            {(candidatas.data ?? []).map((t) => (
+              <li key={t.id}>
+                <button
+                  type="button"
+                  disabled={vinculo.isPending}
+                  onClick={() =>
+                    definir(
+                      { transacao_id: t.id, sem_transacao: false },
+                      "Transação vinculada."
+                    )
+                  }
+                  className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left hover:bg-muted/40"
+                >
+                  <span className="min-w-0">
+                    <span className="block truncate">
+                      {descricaoExibida(t) ?? "—"}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      {formatDate(t.date)}
+                    </span>
+                  </span>
+                  <span className="shrink-0 tabular-nums">
+                    {formatBRL(Math.abs(valorEfetivoCentavos(t)))}
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )
+      ) : null}
+      <div className="flex flex-wrap gap-1">
+        {divisao.transacao_id === null && !escolhendo ? (
+          <Button
+            size="xs"
+            variant="secondary"
+            onClick={() => setEscolhendo(true)}
+          >
+            Vincular transação
+          </Button>
+        ) : null}
+        {divisao.transacao_id !== null || divisao.sem_transacao ? (
+          <Button
+            size="xs"
+            variant="ghost"
+            disabled={vinculo.isPending}
+            onClick={() =>
+              definir(
+                { sem_transacao: false },
+                "Divisão pendente de transação."
+              )
+            }
+          >
+            {divisao.transacao_id !== null ? "Desvincular" : "Desfazer"}
+          </Button>
+        ) : (
+          <Button
+            size="xs"
+            variant="ghost"
+            disabled={vinculo.isPending}
+            onClick={() =>
+              definir(
+                { sem_transacao: true },
+                "Marcada como paga fora do banco."
+              )
+            }
+          >
+            Paguei fora do banco
+          </Button>
+        )}
+      </div>
+    </div>
   )
 }
 

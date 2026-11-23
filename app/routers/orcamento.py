@@ -1,5 +1,6 @@
 """Router de orçamento — CRUD com a regra #20 (no service). `orcamento_mensal` é CRUD puro."""
 
+from datetime import UTC, datetime
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -8,19 +9,19 @@ from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.models.usuario import Usuario
 from app.repositories.orcamento import OrcamentoRepository
-from app.routers.transacao import _read as ler_transacao
+from app.routers.transacao import ler_itens
 from app.schemas.orcamento import (
     OrcamentoConsumoRead,
     OrcamentoCreate,
     OrcamentoRead,
     OrcamentoUpdate,
 )
-from app.schemas.transacao import TransacaoListagem
+from app.schemas.transacao import DivisaoLancamento, TransacaoListagem, TransacaoRead
 from app.security.current_user import get_current_user
 from app.services import orcamento as orcamento_service
 from app.services import orcamento_consumo
-from app.services.categoria_resolucao import carregar_contexto
 from app.services.orcamento_mensal import materializar_mes
+from app.services.revisao import corte_revisao
 
 router = APIRouter(prefix="/orcamentos", tags=["orcamento"])
 
@@ -45,6 +46,11 @@ def criar(
     return orcamento_service.criar(db, user.id, payload.model_dump())
 
 
+def _data_do_item(item: TransacaoRead | DivisaoLancamento) -> datetime:
+    quando = item.date if isinstance(item, TransacaoRead) else item.data
+    return quando if quando.tzinfo else quando.replace(tzinfo=UTC)  # SQLite devolve naive (UTC)
+
+
 # Declarado antes de `/{orcamento_id}` para a rota estática não ser capturada pelo path param.
 @router.get("/consumo", response_model=OrcamentoConsumoRead)
 def consumo(
@@ -61,7 +67,7 @@ def consumo(
 def consumo_transacoes(
     ano: int = Query(ge=2000, le=2100),
     mes: int = Query(ge=1, le=12),
-    tipo: Literal["despesa", "receita"] = Query(),
+    tipo: Literal["despesa", "receita", "investimento"] = Query(),
     categoria_id: str | None = Query(None, min_length=1, max_length=16),
     nao_planejado: bool = Query(False),
     db: Session = Depends(get_db),
@@ -74,9 +80,13 @@ def consumo_transacoes(
             status.HTTP_422_UNPROCESSABLE_ENTITY,
             "informe exatamente um entre categoria_id e nao_planejado=true",
         )
-    itens = orcamento_consumo.transacoes_do_item(db, user.id, ano, mes, tipo, categoria_id)
-    ctx = carregar_contexto(db, user.id)
-    return TransacaoListagem(items=[ler_transacao(t, ctx) for t in itens], total=len(itens))
+    transacoes, divisoes = orcamento_consumo.transacoes_do_item(
+        db, user.id, ano, mes, tipo, categoria_id
+    )
+    # Lista curta (teto do drill-down): mistura por data em Python, sem UNION.
+    itens = ler_itens(db, user.id, [*transacoes, *divisoes], corte_revisao(user.revisao_desde))
+    itens.sort(key=_data_do_item, reverse=True)
+    return TransacaoListagem(items=itens, total=len(itens))
 
 
 # Declarado antes de `/{orcamento_id}` pelo mesmo motivo de `/consumo`.

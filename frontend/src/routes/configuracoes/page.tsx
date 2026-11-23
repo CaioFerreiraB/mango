@@ -58,7 +58,7 @@ export function ConfiguracoesPage() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="max-w-5xl space-y-4">
       <h1 className="text-xl font-semibold">Configurações</h1>
       <Tabs value={aba} onValueChange={trocarAba} key={abaPadrao}>
         {/* Faixa rolável: com 7 abas a lista estoura telas estreitas e arrastava a página inteira.

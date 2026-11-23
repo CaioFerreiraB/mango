@@ -1,4 +1,11 @@
-import { Banknote, Divide, User, Users } from "lucide-react"
+import {
+  Banknote,
+  CalendarClock,
+  Divide,
+  Landmark,
+  User,
+  Users,
+} from "lucide-react"
 import { useState } from "react"
 import { toast } from "sonner"
 
@@ -25,27 +32,44 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useMe } from "@/lib/api/auth"
 import { nomeCategoria, useCategorias } from "@/lib/api/categorias"
-import { useCriarDivisao, type ModoDivisao } from "@/lib/api/divisoes"
+import {
+  useCriarDivisao,
+  useTransacoesCandidatas,
+  type ModoDivisao,
+} from "@/lib/api/divisoes"
+import {
+  descricaoExibida,
+  valorEfetivoCentavos,
+  type Transacao,
+} from "@/lib/api/transacoes"
+import { diaCivilSP, formatBRL, formatDate, hojeISO } from "@/lib/format"
+import { cn } from "@/lib/utils"
 
-const PASSOS = [
-  "Sobre a despesa",
-  "Quem pagou?",
-  "Como dividir?",
-  "Com quem?",
-  "Revisar divisão",
-] as const
+const PASSOS: Record<number, string> = {
+  1: "Sobre a despesa",
+  2: "Quem pagou?",
+  3: "Como dividir?",
+  4: "Com quem?",
+  5: "Qual transação?",
+  6: "Revisar divisão",
+}
 
-function estadoInicial() {
+/** Onde a despesa paga por você aparece no banco: uma transação, depois, ou fora do banco. */
+type Vinculo = "depois" | "fora" | number
+
+function estadoInicial(transacao?: Transacao) {
   return {
     passo: 1,
-    descricao: "",
-    categoriaId: null as string | null,
-    valor: 0,
+    descricao: transacao ? (descricaoExibida(transacao) ?? "") : "",
+    categoriaId: transacao?.categoria_efetiva_id ?? null,
+    valor: transacao ? Math.abs(valorEfetivoCentavos(transacao)) : 0,
+    data: transacao ? diaCivilSP(transacao.date) : hojeISO(),
     pagoPorMim: true,
     pagador: null as PessoaSelecionada | null,
     modo: "igualmente" as ModoDivisao,
     participantes: [] as PessoaSelecionada[],
     devedor: null as PessoaSelecionada | null,
+    vinculo: "depois" as Vinculo,
   }
 }
 
@@ -56,13 +80,16 @@ export function NovaDivisaoWizard({
   trigger,
   initialOpen = false,
   onClose,
+  transacao,
 }: {
   trigger: React.ReactNode
   initialOpen?: boolean
   onClose?: () => void
+  /** Divide esta saída: pré-preenche a despesa e fixa "eu paguei" + o vínculo. */
+  transacao?: Transacao
 }) {
   const [aberto, setAberto] = useState(initialOpen)
-  const [form, setForm] = useState(estadoInicial())
+  const [form, setForm] = useState(() => estadoInicial(transacao))
   const me = useMe()
   const categorias = useCategorias()
   const criar = useCriarDivisao()
@@ -70,7 +97,7 @@ export function NovaDivisaoWizard({
   function fechar(v: boolean) {
     setAberto(v)
     if (!v) {
-      setForm(estadoInicial())
+      setForm(estadoInicial(transacao))
       onClose?.()
     }
   }
@@ -90,12 +117,30 @@ export function NovaDivisaoWizard({
         }
       : null
 
+  // Passos ativos: com transação, "quem pagou" é você (pula o 2); o passo da transação só existe
+  // quando você pagou e ela ainda não foi escolhida.
+  const passos = [
+    1,
+    ...(transacao ? [] : [2]),
+    3,
+    4,
+    // Conta "somente divisão" não tem transações de banco para escolher.
+    ...(form.pagoPorMim && !transacao && me.data?.tipo === "completo"
+      ? [5]
+      : []),
+    6,
+  ]
+  const indice = passos.indexOf(form.passo)
+  const ultimo = indice === passos.length - 1
+
   function podeAvancar(): boolean {
     if (form.passo === 1)
-      return form.descricao.trim().length > 0 && form.valor > 0
+      return form.descricao.trim().length > 0 && form.valor > 0 && !!form.data
     if (form.passo === 2) return form.pagoPorMim || form.pagador !== null
     if (form.passo === 4)
-      return form.modo === "igualmente" || form.devedor !== null
+      return form.modo === "igualmente"
+        ? form.participantes.some((p) => p.id !== pagoPorId)
+        : form.devedor !== null
     return true
   }
 
@@ -107,6 +152,11 @@ export function NovaDivisaoWizard({
           ? [form.devedor.id]
           : []
         : form.participantes.map((p) => p.id)
+    const transacaoId =
+      transacao?.id ??
+      (form.pagoPorMim && typeof form.vinculo === "number"
+        ? form.vinculo
+        : null)
     criar.mutate(
       {
         descricao: form.descricao || null,
@@ -115,6 +165,10 @@ export function NovaDivisaoWizard({
         pago_por_usuario_id: pagoPorId,
         modo_divisao: form.modo,
         participantes,
+        // Meio-dia em Brasília: o dia civil escolhido não "vira" por fuso.
+        data: `${form.data}T12:00:00-03:00`,
+        transacao_id: transacaoId,
+        sem_transacao: !transacao && form.pagoPorMim && form.vinculo === "fora",
       },
       {
         onSuccess: () => {
@@ -142,7 +196,7 @@ export function NovaDivisaoWizard({
         <DialogHeader>
           <DialogTitle>Nova divisão de conta</DialogTitle>
           <p className="text-xs text-muted-foreground">
-            {form.passo}. {PASSOS[form.passo - 1]}
+            {indice + 1}. {PASSOS[form.passo]}
           </p>
         </DialogHeader>
 
@@ -166,14 +220,32 @@ export function NovaDivisaoWizard({
                 onChange={(v) => setForm({ ...form, categoriaId: v })}
               />
             </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="valor">Valor total</Label>
-              <CurrencyInput
-                id="valor"
-                value={form.valor}
-                onChange={(c) => setForm({ ...form, valor: c })}
-              />
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="valor">Valor total</Label>
+                <CurrencyInput
+                  id="valor"
+                  value={form.valor}
+                  onChange={(c) => setForm({ ...form, valor: c })}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="data">Data</Label>
+                <Input
+                  id="data"
+                  type="date"
+                  value={form.data}
+                  disabled={!!transacao}
+                  onChange={(e) => setForm({ ...form, data: e.target.value })}
+                />
+              </div>
             </div>
+            {transacao ? (
+              <p className="text-xs text-muted-foreground">
+                Vinculada à transação de {formatDate(transacao.date)}. No
+                orçamento conta só a sua parte.
+              </p>
+            ) : null}
           </div>
         ) : null}
 
@@ -278,6 +350,15 @@ export function NovaDivisaoWizard({
         ) : null}
 
         {form.passo === 5 ? (
+          <PassoTransacao
+            valor={form.valor}
+            data={form.data}
+            vinculo={form.vinculo}
+            onChange={(v) => setForm({ ...form, vinculo: v })}
+          />
+        ) : null}
+
+        {form.passo === 6 ? (
           <div className="space-y-3 rounded-lg border p-3 text-sm">
             <LinhaResumo rotulo="Descrição" valor={form.descricao || "—"} />
             <LinhaResumo rotulo="Categoria" valor={categoriaNome} />
@@ -303,14 +384,26 @@ export function NovaDivisaoWizard({
                   : (form.devedor?.nome ?? "—")
               }
             />
+            {form.pagoPorMim ? (
+              <LinhaResumo
+                rotulo="Transação"
+                valor={
+                  transacao || typeof form.vinculo === "number"
+                    ? "Vinculada"
+                    : form.vinculo === "fora"
+                      ? "Paguei fora do banco"
+                      : "Escolher depois"
+                }
+              />
+            ) : null}
           </div>
         ) : null}
 
         <DialogFooter className="justify-between sm:justify-between">
-          {form.passo > 1 ? (
+          {indice > 0 ? (
             <Button
               variant="outline"
-              onClick={() => setForm({ ...form, passo: form.passo - 1 })}
+              onClick={() => setForm({ ...form, passo: passos[indice - 1] })}
             >
               Voltar
             </Button>
@@ -319,10 +412,10 @@ export function NovaDivisaoWizard({
               <Button variant="ghost">Cancelar</Button>
             </DialogClose>
           )}
-          {form.passo < 5 ? (
+          {!ultimo ? (
             <Button
               disabled={!podeAvancar()}
-              onClick={() => setForm({ ...form, passo: form.passo + 1 })}
+              onClick={() => setForm({ ...form, passo: passos[indice + 1] })}
             >
               Continuar
             </Button>
@@ -334,6 +427,98 @@ export function NovaDivisaoWizard({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  )
+}
+
+/** Passo "Qual transação?" (RF03): saídas candidatas (mesmo valor primeiro, ±7 dias), ou deixar
+ *  para depois (fica pendente de revisão), ou "paguei fora do banco". */
+function PassoTransacao({
+  valor,
+  data,
+  vinculo,
+  onChange,
+}: {
+  valor: number
+  data: string
+  vinculo: Vinculo
+  onChange: (v: Vinculo) => void
+}) {
+  const candidatas = useTransacoesCandidatas(valor, `${data}T12:00:00-03:00`)
+  const itens = candidatas.data ?? []
+  return (
+    <div className="space-y-3">
+      <p className="text-xs text-muted-foreground">
+        Indique a transação do banco para o orçamento contar só a sua parte.
+      </p>
+      {candidatas.isLoading ? (
+        <p className="text-sm text-muted-foreground">Buscando transações…</p>
+      ) : candidatas.isError ? (
+        <p role="alert" className="text-sm text-destructive">
+          Não foi possível buscar as transações.{" "}
+          <button
+            type="button"
+            className="underline underline-offset-4"
+            onClick={() => candidatas.refetch()}
+          >
+            Tentar de novo
+          </button>
+        </p>
+      ) : itens.length > 0 ? (
+        <ul
+          className="max-h-56 divide-y overflow-y-auto rounded-lg border"
+          aria-label="Transações candidatas"
+        >
+          {itens.map((t) => {
+            const selecionada = vinculo === t.id
+            return (
+              <li key={t.id}>
+                <button
+                  type="button"
+                  aria-pressed={selecionada}
+                  onClick={() => onChange(t.id)}
+                  className={cn(
+                    "flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm hover:bg-muted/40",
+                    selecionada && "bg-primary/10"
+                  )}
+                >
+                  <span className="min-w-0">
+                    <span className="block truncate font-medium">
+                      {descricaoExibida(t) ?? "—"}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      {formatDate(t.date)}
+                    </span>
+                  </span>
+                  <span className="shrink-0 tabular-nums">
+                    {formatBRL(Math.abs(valorEfetivoCentavos(t)))}
+                  </span>
+                </button>
+              </li>
+            )
+          })}
+        </ul>
+      ) : (
+        <p className="text-sm text-muted-foreground">
+          Nenhuma saída sem divisão perto dessa data.
+        </p>
+      )}
+      <div className="grid grid-cols-2 gap-2">
+        <OpcaoCard
+          icon={CalendarClock}
+          titulo="Escolher depois"
+          descricao="Fica pendente de revisão"
+          selecionado={vinculo === "depois"}
+          onClick={() => onChange("depois")}
+        />
+        <OpcaoCard
+          icon={Landmark}
+          titulo="Fora do banco"
+          descricao="Dinheiro ou conta não conectada"
+          selecionado={vinculo === "fora"}
+          onClick={() => onChange("fora")}
+        />
+      </div>
+    </div>
   )
 }
 

@@ -2,9 +2,10 @@
 
 from datetime import datetime
 
-from sqlalchemy import func, or_, select
+from sqlalchemy import Select, func, literal, or_, select, union_all
 
 from app.models.categoria import CATEGORIA_PAGAMENTO_FATURA
+from app.models.divisao import DivisaoDespesa
 from app.models.transacao import Transacao
 from app.repositories.base import UserScopedRepository
 from app.services.categoria_resolucao import com_assinatura, expr_categoria_efetiva
@@ -66,13 +67,20 @@ class TransacaoRepository(UserScopedRepository[Transacao]):
         assinatura_id: int | None = None,
         tem_assinatura: bool | None = None,
         busca: str | None = None,
+        tem_divisao: bool | None = None,
         order: str = "date",
         descendente: bool = True,
         limit: int = 50,
         offset: int = 0,
         antes_id: int | None = None,
-    ) -> tuple[list[Transacao], int]:
-        """Listagem filtrada + paginada, sempre dentro do escopo do usuário (S3/S4)."""
+        lancamentos: Select | None = None,
+    ) -> tuple[list[Transacao | int], int]:
+        """Listagem filtrada + paginada, sempre dentro do escopo do usuário (S3/S4).
+
+        `lancamentos` (chaves `origem, id, data, valor` de `divisao.select_lancamentos`, já
+        filtradas) entram na MESMA paginação via UNION ALL; voltam como `int` (id da divisão) na
+        posição certa — quem chama hidrata.
+        """
         filtros = [self._scope() == self.usuario_id]
         if antes_id is not None:
             filtros.append(Transacao.id < antes_id)
@@ -131,6 +139,20 @@ class TransacaoRepository(UserScopedRepository[Transacao]):
                 )
             )
 
+        if tem_divisao is not None:
+            # Só o pagador vincula a própria transação (`divisao.definir_vinculo`).
+            vinculadas = select(DivisaoDespesa.transacao_id).where(
+                DivisaoDespesa.transacao_id.is_not(None),
+                DivisaoDespesa.pago_por_usuario_id == self.usuario_id,
+            )
+            filtros.append(
+                Transacao.id.in_(vinculadas) if tem_divisao else Transacao.id.not_in(vinculadas)
+            )
+        if lancamentos is not None:
+            return self._listar_com_lancamentos(
+                filtros, precisa_assinatura, lancamentos, order, descendente, limit, offset
+            )
+
         contagem = select(func.count()).select_from(Transacao)
         listagem = select(Transacao)
         if precisa_assinatura:
@@ -149,6 +171,40 @@ class TransacaoRepository(UserScopedRepository[Transacao]):
             .offset(offset)
         ).all()
         return list(itens), total or 0
+
+    def _listar_com_lancamentos(
+        self,
+        filtros: list,
+        precisa_assinatura: bool,
+        lancamentos: Select,
+        order: str,
+        descendente: bool,
+        limit: int,
+        offset: int,
+    ) -> tuple[list[Transacao | int], int]:
+        chaves_tx = select(
+            literal(0).label("origem"),
+            Transacao.id.label("id"),
+            Transacao.date.label("data"),
+            _VALOR_EFETIVO.label("valor"),
+        )
+        if precisa_assinatura:
+            chaves_tx = com_assinatura(chaves_tx, self.usuario_id)
+        chaves = union_all(chaves_tx.where(*filtros), lancamentos).subquery()
+        total = self.db.scalar(select(func.count()).select_from(chaves)) or 0
+        coluna = chaves.c.valor if order == "amount_centavos" else chaves.c.data
+        ordem = coluna.desc() if descendente else coluna.asc()
+        pagina = self.db.execute(
+            select(chaves.c.origem, chaves.c.id)
+            .order_by(ordem, chaves.c.origem, chaves.c.id.desc())
+            .limit(limit)
+            .offset(offset)
+        ).all()
+        ids_tx = [i for o, i in pagina if o == 0]
+        transacoes = {
+            t.id: t for t in self.db.scalars(self._scoped().where(Transacao.id.in_(ids_tx)))
+        }
+        return [transacoes[i] if o == 0 else i for o, i in pagina], total
 
     def upsert_by_pluggy_id(self, pluggy_transaction_id: str, **fields) -> Transacao:
         obj = self.get_by_pluggy_id(pluggy_transaction_id)

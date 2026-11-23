@@ -11,6 +11,7 @@ export type Vinculo = components["schemas"]["VinculoRead"]
 
 type Acao =
   | { tipo: "preferencia"; ativo: boolean }
+  | { tipo: "divisoes"; ativo: boolean }
   | { tipo: "vincular" }
   | { tipo: "confirmar"; solicitacaoId: string }
   | { tipo: "desvincular" }
@@ -65,6 +66,10 @@ export function useAcaoTelegram() {
           case "preferencia":
             return api.PATCH("/api/telegram", {
               body: { notif_nao_revisadas: acao.ativo },
+            })
+          case "divisoes":
+            return api.PATCH("/api/telegram", {
+              body: { notif_divisoes_pendentes: acao.ativo },
             })
           case "confirmar":
             return api.POST("/api/telegram/vinculo/confirmar", {

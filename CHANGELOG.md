@@ -10,6 +10,86 @@ ainda está se assentando. Cada versão publicada tem uma imagem correspondente 
 
 ## [Não publicado]
 
+## [0.9.0] — 2026-11-23
+
+### Adicionado
+
+- **Dashboard em abas — Geral, Receitas e Despesas:** a Geral mantém os cards, as últimas
+  transações, entradas e saídas e a evolução patrimonial. **Receitas** traz a evolução por
+  dia/semana/mês/ano, a distribuição por categoria, as principais fontes de receita, previstas
+  (orçamento de receita) × realizadas e o acumulado vs. o período anterior. **Despesas** traz a
+  evolução empilhada por categoria, a rosca de categorias (movida da Geral), os maiores
+  estabelecimentos, despesas × orçamento do mês, o acumulado com o ritmo do orçamento, a média por
+  dia da semana, a divisão por meio de pagamento (com a quebra por conta/cartão) e o painel de
+  cartões (movido da Geral). Clicar numa categoria, fonte, estabelecimento, meio ou categoria do
+  orçamento abre as transações correspondentes, somando exatamente o valor do gráfico. A aba fica
+  na URL (`?aba=receitas`) e os gráficos de série ganharam a granularidade anual.
+- **Nova navegação no celular:** o menu completo abre pelo ☰ no topo, como uma gaveta lateral, e
+  a barra inferior virou uma pílula flutuante com o Início e mais três atalhos que você escolhe em
+  Configurações → Preferências → Atalhos do celular.
+- **Saldo em destaque:** o saldo em contas ganhou um card na sua cor de destaque (celular e
+  computador). O olho dele oculta os valores de todos os cards do painel e fica lembrado neste
+  navegador; no celular, os outros cards ficam dois por linha.
+- **Filtros do dashboard num botão** no celular, em vez de ocupar o topo da página.
+- **Transações de uma categoria num clique:** nos gráficos de despesas por categoria (rosca,
+  barras e empilhado), clicar numa categoria abre a lista das transações dela no período.
+- **Últimas transações no dashboard:** as 10 mais recentes logo abaixo dos cards, com o aviso de
+  transações pendentes acima da tabela.
+
+- **Compra dividida nas transações:** no detalhe de uma saída, "Dividir" cria uma divisão
+  pré-preenchida (valor, descrição, categoria, data) ou vincula uma divisão já existente que você
+  pagou e ainda não tinha transação. A lista ganhou o marcador de divisão e o filtro "Divisão"
+  (só divididas / sem divisão) em "Mais filtros".
+- **Orçamento e dashboard contam só a sua parte:** compra dividida entra pelo valor da sua
+  parcela; a parcela de uma divisão paga por outra pessoa também entra como gasto seu (na data e
+  categoria da divisão) e aparece na lista de transações com "Pago por Fulano".
+- **Divisões sem transação viram pendência:** ao criar uma divisão que você pagou, escolha a
+  transação do banco (sugestões com o mesmo valor em ±7 dias), deixe para depois ou marque "paguei
+  fora do banco". Sem transação, ela aparece em "Só pendentes" e no relatório diário do Telegram,
+  com um interruptor próprio em Configurações → Telegram.
+- **Orçamento em abas — Despesas, Investimentos e Receitas:** aportes em investimentos saem das
+  despesas e ganham aba própria, medida em aportes líquidos (aportes − resgates). Juros e
+  dividendos continuam em Receitas. Orçamentos de despesa em categorias de investimento são
+  migrados automaticamente.
+- **Dashboard personalizável:** "Personalizar" deixa ocultar, reordenar (arrastando ou com ▲ ▼)
+  e mudar a largura de cada bloco (⅕ a inteira); os ocultos voltam por "Adicionar visualização".
+  O layout fica salvo no seu perfil e vale em qualquer dispositivo.
+- **Card "Investido no mês" e evolução patrimonial:** o dashboard mostra os aportes líquidos do
+  mês e um gráfico mês a mês do patrimônio total (contas + investimentos) e líquido (descontado
+  IR/IOF). Cartões ficam de fora.
+- **Despesas por categoria com todas as despesas:** a rosca soma todas as categorias e as barras ao
+  lado servem de legenda, com valor e percentual do período inteiro.
+- **Painel de cartões no dashboard:** visão global (compras no mês, fatura atual, próximas
+  faturas, total do ano e média mensal) e um bloco por cartão com fechamento/vencimento, limite
+  comprometido (fatura atual + parcelas futuras) e disponível.
+- **Busca global:** campo no topo (atalho Ctrl/⌘ K ou /) para achar páginas, configurações,
+  contas, faturas e transações.
+
+### Alterado
+
+- **Investimento não é despesa no dashboard:** aportes em categorias de investimento saem das
+  saídas (e resgates, das entradas) e passam a aparecer em "Investido". O resumo do assistente
+  (MCP, chat e Telegram) segue a mesma regra.
+- Dashboard: cards renomeados para "Saldo em contas" e "… no mês"; gráfico de entradas e saídas
+  com o resultado como linha tracejada na cor de destaque e granularidade semanal por padrão;
+  barras com largura proporcional ao período (dia < semana < mês); seletor de período no topo; o
+  bloco "Período consolidado" saiu.
+- Layout mais largo no desktop e tipografia mais suave: textos e ícones deixaram o quase-preto por
+  tons de ardósia, e o item ativo da barra lateral ganhou a cor de destaque.
+- Todos os gráficos passaram a usar Apache ECharts. Na Visão Geral de investimentos, valor (R$) e
+  rentabilidade (%) viraram vistas separadas em vez de dois eixos no mesmo gráfico, e CDI, SELIC,
+  IPCA e Ibovespa ganharam cores próprias e distinguíveis.
+
+### Corrigido
+
+- **Estorno no cartão abate a despesa:** crédito numa conta de cartão (estorno, crédito de compra)
+  contava como receita, inflando as entradas. Agora reduz a despesa da categoria no dashboard e no
+  orçamento; crédito categorizado como Renda (ex.: cashback) continua receita.
+- **Compra de cartão aparecia como entrada (+R$)** na lista e no detalhe de transações; o sinal
+  agora segue o tipo do lançamento.
+- Criar uma divisão "Eu paguei" sem escolher ninguém deixava avançar e falhava no fim; agora o
+  wizard exige ao menos uma pessoa.
+
 ## [0.8.0] — 2026-11-17
 
 ### Segurança
@@ -268,7 +348,8 @@ Primeira versão publicada. Imagem única servindo API e interface, instalável 
 - Os endpoints de autenticação ainda não têm rate-limiting nem lockout. Ver **Problemas conhecidos**
   em [ROADMAP.md](ROADMAP.md) antes de expor a instância à internet aberta.
 
-[Não publicado]: https://github.com/CaioFerreiraB/mango/compare/v0.8.0...HEAD
+[Não publicado]: https://github.com/CaioFerreiraB/mango/compare/v0.9.0...HEAD
+[0.9.0]: https://github.com/CaioFerreiraB/mango/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/CaioFerreiraB/mango/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/CaioFerreiraB/mango/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/CaioFerreiraB/mango/compare/v0.5.0...v0.6.0

@@ -249,3 +249,69 @@ def test_b_nao_acessa_conversa_nem_proposta_de_a(
     assert detalhe["titulo"] == "privada" and detalhe["proposta"]["operacao_id"] == "op-de-a"
     db.refresh(db.get(OperacaoIntegracao, "op-de-a"))
     assert db.get(OperacaoIntegracao, "op-de-a").status == "pendente"
+
+
+def test_rotas_do_dashboard_nao_vazam_entre_usuarios(
+    client_factory, db: Session, usuario_a: Usuario, usuario_b: Usuario
+) -> None:
+    """Rotas de leitura do dashboard (sem id): B nunca soma contas, cartões, investimentos nem
+    lançamentos de A; A continua vendo os próprios."""
+    from datetime import UTC, datetime
+
+    from app.models.investimento_saldo_diario import InvestimentoSaldoDiario
+    from app.repositories.transacao import TransacaoRepository
+    from app.services.periodo import hoje_sp
+    from tests.helpers import criar_conta_no_item, criar_prereqs_conta
+
+    inst, item = criar_prereqs_conta(db, usuario_a.id)
+    conta = criar_conta_no_item(db, usuario_a.id, item, inst, "conta-isolamento-dash")
+    cartao = criar_conta_no_item(
+        db, usuario_a.id, item, inst, "cartao-isolamento-dash", type="CREDIT", saldo_centavos=-7_000
+    )
+    inv = Investimento(
+        usuario_id=usuario_a.id,
+        item_id=conta.item_id,
+        pluggy_investment_id="investimento-isolamento-dash",
+        type="FIXED_INCOME",
+        saldo_centavos=30_000,
+    )
+    db.add(inv)
+    db.commit()
+    db.add(
+        InvestimentoSaldoDiario(
+            usuario_id=usuario_a.id, investimento_id=inv.id, data=hoje_sp(), valor_centavos=30_000
+        )
+    )
+    TransacaoRepository(db, usuario_a.id).create(
+        conta_id=cartao.id,
+        pluggy_transaction_id="tx-isolamento-dash",
+        date=datetime.now(UTC),
+        amount_centavos=-2_500,
+        currency_code="BRL",
+        type="DEBIT",
+        status="POSTED",
+        merchant_nome="Loja A",
+    )
+    db.commit()
+    client_a, client_b = client_factory(usuario_a), client_factory(usuario_b)
+
+    def coleta(c):
+        patrimonio = c.get("/api/dashboard/patrimonio", params={"meses": 1}).json()["pontos"][-1]
+        cartoes = c.get("/api/dashboard/cartoes").json()
+        analise = c.get("/api/dashboard/analise", params={"natureza": "despesa"}).json()
+        lista = c.get("/api/dashboard/analise/transacoes", params={"natureza": "despesa"}).json()
+        return patrimonio, cartoes, analise, lista
+
+    patrimonio, cartoes, analise, lista = coleta(client_b)
+    assert patrimonio["investimentos_centavos"] == 0
+    assert patrimonio["contas_centavos"] == 0
+    assert cartoes["cartoes"] == [] and cartoes["compras_mes_centavos"] == 0
+    assert analise["total_centavos"] == 0 and analise["contrapartes"] == []
+    assert lista == {"items": [], "total": 0}
+
+    patrimonio, cartoes, analise, lista = coleta(client_a)
+    assert patrimonio["investimentos_centavos"] == 30_000
+    assert [c["conta_id"] for c in cartoes["cartoes"]] == [cartao.id]
+    assert cartoes["compras_mes_centavos"] == 2_500
+    assert analise["total_centavos"] == 2_500
+    assert lista["total"] == 1

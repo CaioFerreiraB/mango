@@ -12,16 +12,31 @@ import type { InvestimentoTransacao } from "@/lib/api/investimentos"
 import type { components } from "@/lib/api/schema"
 
 export type Transacao = components["schemas"]["TransacaoRead"]
+/** Divisão na lista de transações sem ser transação do usuário: paga por outra pessoa (a parte
+ *  dele) ou paga por ele sem transação (pendente / fora do banco). */
+export type DivisaoLancamento = components["schemas"]["DivisaoLancamento"]
+export type ItemListagem = Transacao | DivisaoLancamento
 export type TransacaoListagem = components["schemas"]["TransacaoListagem"]
+
+export const ehLancamento = (i: ItemListagem): i is DivisaoLancamento =>
+  i.origem === "divisao"
+
+/** O que o lançamento representa como saída: o total enquanto aguarda a transação do usuário,
+ *  depois só a parte dele. */
+export const valorLancamento = (l: DivisaoLancamento): number =>
+  -(l.pendente ? l.valor_total_centavos : l.minha_parte_centavos)
 export type TransacaoUpdate = components["schemas"]["TransacaoUpdate"]
 
 /**
  * Valor em reais para exibir: em compra internacional o `amount_centavos` é a moeda estrangeira;
  * o valor convertido que entrou na conta/fatura vem em `amount_in_account_currency_centavos`
  * (nulo → transação doméstica, cai no `amount_centavos`).
+ * Sinal pelo `type` (DEBIT negativo): compra de cartão vem DEBIT com valor POSITIVO do Pluggy.
  */
-export const valorEfetivoCentavos = (t: Transacao): number =>
-  t.amount_in_account_currency_centavos ?? t.amount_centavos
+export const valorEfetivoCentavos = (t: Transacao): number => {
+  const v = Math.abs(t.amount_in_account_currency_centavos ?? t.amount_centavos)
+  return t.type === "DEBIT" ? -v : v
+}
 
 /** Texto do banco: o normalizado do Pluggy e, se o conector não mandar, o cru do extrato. */
 export const descricaoBanco = (t: Transacao): string | null =>
@@ -55,6 +70,8 @@ export type TransacaoFiltro = {
   ocultar_futuras?: boolean
   assinatura_id?: number
   tem_assinatura?: boolean
+  /** Divididas (vinculadas + lançamentos de divisão) / não divididas. */
+  tem_divisao?: boolean
   busca?: string
   order?: "date" | "amount_centavos"
   descendente?: boolean
@@ -62,9 +79,13 @@ export type TransacaoFiltro = {
   offset?: number
 }
 
-export function useTransacoes(filtro: TransacaoFiltro = {}) {
+export function useTransacoes(
+  filtro: TransacaoFiltro = {},
+  { enabled = true }: { enabled?: boolean } = {}
+) {
   return useQuery({
     queryKey: ["transacoes", filtro],
+    enabled,
     placeholderData: keepPreviousData, // paginação sem "piscar" a tabela
     queryFn: async (): Promise<TransacaoListagem> => {
       const { data, error } = await api.GET("/api/transacoes", {
@@ -119,7 +140,6 @@ export function useAtualizarTransacao() {
       qc.invalidateQueries({ queryKey: ["dashboard"] })
       // Trocar categoria muda o consumo do orçamento e as séries do dashboard — sem invalidar
       // aqui, a Visão Geral seguia mostrando o número antigo até a próxima navegação.
-      qc.invalidateQueries({ queryKey: ["dashboard-series"] })
       qc.invalidateQueries({ queryKey: ["orcamentos"] })
     },
   })

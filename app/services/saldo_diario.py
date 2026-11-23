@@ -19,7 +19,7 @@ from app.models.investimento_saldo_diario import InvestimentoSaldoDiario
 from app.models.saldo_diario import SaldoDiario
 from app.models.transacao import Transacao
 from app.schemas.conta import ContaSaldoSerie, SaldoDiarioPonto
-from app.services.dashboard import _VALOR_EFETIVO
+from app.services.gasto_usuario import VALOR_EFETIVO as _VALOR_EFETIVO
 from app.services.periodo import SP, hoje_sp, limites_sp
 
 
@@ -49,6 +49,8 @@ def registrar_snapshot_investimento(db: Session, inv: Investimento) -> None:
     reconstrução retroativa (a Pluggy não dá cotação histórica). Idempotente; sem commit."""
     hoje = hoje_sp()
     valor = inv.amount_centavos if inv.amount_centavos is not None else inv.saldo_centavos
+    # Mesma regra de `investimento._liquido`: bruto − IR − IOF (renda variável: impostos nulos).
+    liquido = valor - (inv.taxes_centavos or 0) - (inv.taxes2_centavos or 0)
     existente = db.scalars(
         select(InvestimentoSaldoDiario).where(
             InvestimentoSaldoDiario.investimento_id == inv.id,
@@ -62,11 +64,13 @@ def registrar_snapshot_investimento(db: Session, inv: Investimento) -> None:
                 investimento_id=inv.id,
                 data=hoje,
                 valor_centavos=valor,
+                liquido_centavos=liquido,
             )
         )
         db.flush()
     else:
         existente.valor_centavos = valor
+        existente.liquido_centavos = liquido
 
 
 def series(db: Session, usuario_id: int, dias: int = 30) -> list[ContaSaldoSerie]:

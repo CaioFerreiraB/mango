@@ -120,6 +120,7 @@ def ler(db: Session, usuario_id: int) -> TelegramRead:
         solicitacao_id=config.solicitacao_id if valido else None,
         vinculo_expira_em=_aware(config.vinculo_expira_em) if valido else None,
         notif_nao_revisadas=config.notif_nao_revisadas,
+        notif_divisoes_pendentes=config.notif_divisoes_pendentes,
         ultimo_envio_em=_aware(config.ultimo_envio_em) if config.ultimo_envio_em else None,
         erro=config.erro or geral.telegram_erro or (ultima.erro if ultima else None),
         sync_automatico=geral.sync_automatico,
@@ -356,17 +357,22 @@ def desvincular(db: Session, usuario_id: int) -> None:
     db.commit()
 
 
-def preferencia(db: Session, usuario_id: int, habilitar: bool) -> TelegramRead:
-    if habilitar and db.get(Usuario, usuario_id).tipo != "completo":
-        raise ConflictError("relatório disponível somente para contas completas")
+def preferencia(
+    db: Session, usuario_id: int, habilitar: bool | None, divisoes: bool | None = None
+) -> TelegramRead:
     config = config_usuario(db, usuario_id)
-    if habilitar and not (config.ativo and config.telegram_usuario_id):
-        raise ConflictError("vincule seu Telegram primeiro")
-    config.notif_nao_revisadas = habilitar
-    if habilitar:
-        config.erro = None
-    else:
-        cancelar_pendentes(db, usuario_id)
+    if divisoes is not None:
+        config.notif_divisoes_pendentes = divisoes  # seção do relatório; não exige vínculo
+    if habilitar is not None:
+        if habilitar and db.get(Usuario, usuario_id).tipo != "completo":
+            raise ConflictError("relatório disponível somente para contas completas")
+        if habilitar and not (config.ativo and config.telegram_usuario_id):
+            raise ConflictError("vincule seu Telegram primeiro")
+        config.notif_nao_revisadas = habilitar
+        if habilitar:
+            config.erro = None
+        else:
+            cancelar_pendentes(db, usuario_id)
     db.commit()
     return ler(db, usuario_id)
 

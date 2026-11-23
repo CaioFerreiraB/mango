@@ -225,6 +225,32 @@ export function TelegramTab() {
                   }}
                 />
               </Field>
+              <Field
+                orientation="horizontal"
+                data-disabled={!dados.notif_nao_revisadas}
+              >
+                <FieldContent>
+                  <FieldLabel htmlFor="telegram-divisoes">
+                    Incluir divisões sem transação
+                  </FieldLabel>
+                  <FieldDescription id="telegram-divisoes-desc">
+                    Despesas divididas que você pagou e ainda não vinculou a uma
+                    transação do banco entram no mesmo relatório.
+                  </FieldDescription>
+                </FieldContent>
+                <Switch
+                  id="telegram-divisoes"
+                  aria-describedby="telegram-divisoes-desc"
+                  checked={dados.notif_divisoes_pendentes}
+                  disabled={!dados.notif_nao_revisadas || acao.isPending}
+                  onCheckedChange={(ativo) => {
+                    acao.mutate(
+                      { tipo: "divisoes", ativo },
+                      { onError: falhou }
+                    )
+                  }}
+                />
+              </Field>
               <div className="flex flex-col gap-1 text-sm text-muted-foreground">
                 <p>
                   {dados.sync_automatico

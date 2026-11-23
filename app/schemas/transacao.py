@@ -1,5 +1,8 @@
 """Schemas de `transacao` (Pluggy-owned): leitura + update estreito (flags/override §4.5)."""
 
+from datetime import datetime
+from typing import Annotated, Literal
+
 from pydantic import BaseModel, Field, field_validator
 
 from app.models.transacao import Transacao
@@ -7,6 +10,31 @@ from app.schemas.auto import read_model
 from app.services.categoria_resolucao import Origem
 
 _TransacaoColunas = read_model(Transacao)
+
+
+class DivisaoDaTransacao(BaseModel):
+    """Resumo da divisão vinculada a uma transação (só o pagador vê — a transação é dele)."""
+
+    id: int
+    valor_total_centavos: int
+    minha_parte_centavos: int  # o que conta no orçamento/dashboard
+
+
+class DivisaoLancamento(BaseModel):
+    """Divisão que entra na lista de transações sem ser uma transação do usuário (RF08): paga
+    por outra pessoa (minha parte) ou paga por mim sem transação (pendente / fora do banco)."""
+
+    origem: Literal["divisao"] = "divisao"
+    divisao_id: int
+    data: datetime
+    descricao: str | None
+    categoria_id: str | None
+    valor_total_centavos: int
+    minha_parte_centavos: int
+    pago_por_nome: str
+    pago_por_mim: bool
+    sem_transacao: bool
+    pendente: bool
 
 
 class TransacaoRead(_TransacaoColunas):  # type: ignore[misc, valid-type]
@@ -25,6 +53,8 @@ class TransacaoRead(_TransacaoColunas):  # type: ignore[misc, valid-type]
     # "aplicada a todas as parcelas" era emitido só por `total_installments > 1`, e mentia quando
     # o agrupamento não achava irmã nenhuma.
     parcelas_atualizadas: int = 0
+    origem: Literal["transacao"] = "transacao"
+    divisao: DivisaoDaTransacao | None = None
 
 
 class TransacaoUpdate(BaseModel):
@@ -55,8 +85,12 @@ class TransacaoUpdate(BaseModel):
         return v.strip() or None if v is not None else None
 
 
-class TransacaoListagem(BaseModel):
-    """Página server-side p/ a tabela (§5.3): itens + total para a paginação."""
+ItemListagem = Annotated[TransacaoRead | DivisaoLancamento, Field(discriminator="origem")]
 
-    items: list[TransacaoRead]
+
+class TransacaoListagem(BaseModel):
+    """Página server-side p/ a tabela (§5.3): itens + total para a paginação. Mistura transações
+    e lançamentos de divisão (`origem`) numa ordem só."""
+
+    items: list[ItemListagem]
     total: int

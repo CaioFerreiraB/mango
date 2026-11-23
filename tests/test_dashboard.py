@@ -321,3 +321,261 @@ def test_compra_de_cartao_com_debit_positivo_conta_como_saida(db, usuario):
     serie = montar_series(db, usuario.id, date(2026, 3, 1), date(2026, 3, 31), "mensal")
     assert serie.buckets[0].saidas_centavos == 40_000
     assert serie.buckets[0].por_categoria[0].total_centavos == 40_000
+
+
+def test_investimento_nao_e_despesa_nem_receita(db, usuario):
+    """Aporte/resgate em categoria de investimento (subárvore 03 menos 0306) sai de saídas,
+    entradas e gasto por categoria e vai para `investido` (aporte − resgate). Rendimento (0306)
+    continua entrada. Série reconcilia com o resumo."""
+    db.add_all(
+        [
+            Categoria(pluggy_id="03000000", description="Investimentos"),
+            Categoria(pluggy_id="03010000", description="Renda fixa", parent_id="03000000"),
+            Categoria(pluggy_id="03060000", description="Juros", parent_id="03000000"),
+            Categoria(pluggy_id="07010000", description="Telefone"),
+        ]
+    )
+    db.commit()
+    bank, _credit = _contas(db, usuario.id)
+    repo = TransacaoRepository(db, usuario.id)
+    _tx(repo, bank, "sal", 500_000)
+    _tx(repo, bank, "vivo", -10_000, cat="07010000")
+    _tx(repo, bank, "aporte", -200_000, cat="03010000")
+    _tx(repo, bank, "resgate", 50_000, cat="03010000")
+    _tx(repo, bank, "juros", 3_000, cat="03060000")
+
+    d = montar_dashboard(db, usuario.id, *mes_corrente())
+
+    assert d.entradas_centavos == 503_000  # salário + juros; resgate fora
+    assert d.saidas_centavos == 10_000  # aporte fora
+    assert d.resultado_centavos == 493_000
+    assert d.investido_centavos == 150_000
+    assert {g.categoria_id for g in d.gasto_por_categoria} == {"07010000"}
+
+    s = montar_series(db, usuario.id, *mes_corrente(), "semanal")
+    assert sum(b.investido_centavos for b in s.buckets) == 150_000
+    assert sum(b.saidas_centavos for b in s.buckets) == 10_000
+    assert sum(b.entradas_centavos for b in s.buckets) == 503_000
+
+
+def test_investido_negativo_quando_resgata_mais(db, usuario):
+    db.add(Categoria(pluggy_id="03000000", description="Investimentos"))
+    db.commit()
+    bank, _credit = _contas(db, usuario.id)
+    repo = TransacaoRepository(db, usuario.id)
+    _tx(repo, bank, "aporte", -10_000, cat="03000000")
+    _tx(repo, bank, "resgate", 40_000, cat="03000000")
+
+    d = montar_dashboard(db, usuario.id, *mes_corrente())
+
+    assert d.investido_centavos == -30_000
+    assert d.entradas_centavos == 0 and d.saidas_centavos == 0
+
+
+def test_gasto_por_categoria_traz_todas(db, usuario):
+    """Sem corte de top-N: a rosca do dashboard mostra todas as despesas."""
+    cats = [f"07{i:02d}0000" for i in range(1, 13)]
+    db.add_all([Categoria(pluggy_id=c, description=c) for c in cats])
+    db.commit()
+    bank, _credit = _contas(db, usuario.id)
+    repo = TransacaoRepository(db, usuario.id)
+    for i, c in enumerate(cats):
+        _tx(repo, bank, f"t{i}", -(1_000 + i), cat=c)
+
+    d = montar_dashboard(db, usuario.id, *mes_corrente())
+
+    assert len(d.gasto_por_categoria) == 12
+    assert d.gasto_por_categoria[0].categoria_id == cats[-1]  # maior primeiro
+
+
+# --- evolução patrimonial -------------------------------------------------------------------
+
+
+def _investimento(db, usuario_id, bank, pid, bruto, ir=None):
+    from app.models.investimento import Investimento
+
+    inv = Investimento(
+        usuario_id=usuario_id,
+        item_id=bank.item_id,
+        pluggy_investment_id=pid,
+        type="FIXED_INCOME",
+        saldo_centavos=bruto,
+        amount_centavos=bruto,
+        taxes_centavos=ir,
+    )
+    db.add(inv)
+    db.commit()
+    return inv
+
+
+def _snap(db, inv, dia, valor, liquido=None):
+    from app.models.investimento_saldo_diario import InvestimentoSaldoDiario
+
+    db.add(
+        InvestimentoSaldoDiario(
+            usuario_id=inv.usuario_id,
+            investimento_id=inv.id,
+            data=dia,
+            valor_centavos=valor,
+            liquido_centavos=liquido,
+        )
+    )
+    db.commit()
+
+
+def test_patrimonio_contas_bank_reconstruidas_e_investimentos_por_snapshot(db, usuario):
+    """Conta BANK no fecho de cada mês (saldo atual − movimento posterior); cartão fora;
+    investimento só a partir do 1º snapshot; líquido gravado vs. estimado pela razão atual."""
+    from app.services.dashboard import montar_patrimonio
+    from app.services.periodo import hoje_sp
+
+    bank, _credit = _contas(db, usuario.id)  # BANK 100_000; CREDIT −5_000 (ignorado)
+    TransacaoRepository(db, usuario.id).create(
+        conta_id=bank.id,
+        pluggy_transaction_id="hoje",
+        date=datetime.now(UTC),
+        amount_centavos=30_000,
+        currency_code="BRL",
+        type="CREDIT",
+        status="POSTED",
+    )
+    hoje = hoje_sp()
+    mes_passado = hoje.replace(day=1) - timedelta(days=1)
+    inv = _investimento(db, usuario.id, bank, "cdb", bruto=200_000, ir=20_000)  # razão 0,9
+    _snap(db, inv, mes_passado, 100_000)  # antigo, sem líquido → estimado 90_000
+    _snap(db, inv, hoje, 200_000, liquido=185_000)
+
+    pontos = montar_patrimonio(db, usuario.id, meses=3).pontos
+
+    assert [p.mes for p in pontos][-1] == hoje.strftime("%Y-%m")
+    retrasado, passado, atual = pontos
+    assert retrasado.tem_investimentos is False
+    assert retrasado.investimentos_centavos == 0
+    assert retrasado.contas_centavos == 70_000  # antes do crédito de hoje
+    assert passado.contas_centavos == 70_000
+    assert passado.investimentos_centavos == 100_000
+    assert passado.investimentos_liquido_centavos == 90_000
+    assert passado.liquido_estimado is True
+    assert passado.total_centavos == 170_000 and passado.liquido_centavos == 160_000
+    assert atual.contas_centavos == 100_000  # só BANK (o cartão −5_000 não entra)
+    assert atual.total_centavos == 300_000
+    assert atual.liquido_centavos == 285_000
+    assert atual.liquido_estimado is False
+
+
+def test_patrimonio_isola_usuario(db, usuario):
+    from app.services.dashboard import montar_patrimonio
+    from app.services.periodo import hoje_sp
+
+    outro = _usuario(db, "outro@mango.test")
+    bank_outro, _ = _contas(db, outro.id)
+    inv = _investimento(db, outro.id, bank_outro, "alheio", bruto=999_000)
+    _snap(db, inv, hoje_sp(), 999_000, liquido=999_000)
+
+    atual = montar_patrimonio(db, usuario.id, meses=1).pontos[-1]
+
+    assert atual.total_centavos == 0 and atual.tem_investimentos is False
+
+
+def test_patrimonio_valida_meses(client_factory, usuario):
+    c = client_factory(usuario)
+    assert c.get("/api/dashboard/patrimonio", params={"meses": 0}).status_code == 422
+    assert c.get("/api/dashboard/patrimonio", params={"meses": 37}).status_code == 422
+    r = c.get("/api/dashboard/patrimonio", params={"meses": 2})
+    assert r.status_code == 200 and len(r.json()["pontos"]) == 2
+
+
+def test_snapshot_investimento_grava_liquido(db, usuario):
+    from app.services.saldo_diario import registrar_snapshot_investimento
+
+    bank, _ = _contas(db, usuario.id)
+    inv = _investimento(db, usuario.id, bank, "cdb2", bruto=50_000, ir=4_000)
+    registrar_snapshot_investimento(db, inv)
+    db.commit()
+    from app.models.investimento_saldo_diario import InvestimentoSaldoDiario
+
+    snap = db.scalars(select(InvestimentoSaldoDiario)).one()
+    assert (snap.valor_centavos, snap.liquido_centavos) == (50_000, 46_000)
+
+
+# --- painel de cartões ------------------------------------------------------------------------
+
+
+def test_cartoes_compras_mes_ano_futuras_e_limite(db, usuario):
+    from app.services.dashboard import montar_cartoes
+    from app.services.periodo import hoje_sp
+
+    _bank, credit = _contas(db, usuario.id)  # CREDIT saldo −5_000 → fatura atual 5_000
+    db.add(
+        Cartao(
+            conta_id=credit.id,
+            credit_limit_centavos=100_000,
+            available_credit_limit_centavos=80_000,
+        )
+    )
+    db.commit()
+    repo = TransacaoRepository(db, usuario.id)
+    agora = datetime.now(UTC)
+    hoje = hoje_sp()
+    _tx(repo, credit, "mes", 3_000, quando=agora)  # DEBIT com amount positivo (Pluggy)
+    repo.create(
+        conta_id=credit.id,
+        pluggy_transaction_id="mes-debit",
+        date=agora,
+        amount_centavos=2_000,
+        currency_code="BRL",
+        type="DEBIT",
+        status="POSTED",
+    )
+    repo.create(
+        conta_id=credit.id,
+        pluggy_transaction_id="parcela-futura",
+        date=agora + timedelta(days=40),
+        amount_centavos=7_000,
+        currency_code="BRL",
+        type="DEBIT",
+        status="POSTED",
+    )
+    repo.create(
+        conta_id=credit.id,
+        pluggy_transaction_id="pgto",
+        date=agora,
+        amount_centavos=-9_999,
+        currency_code="BRL",
+        type="DEBIT",
+        status="POSTED",
+        eh_transferencia=True,  # pagamento de fatura não é compra
+    )
+    if hoje.month > 1:  # compra de um mês anterior do mesmo ano: entra só no total do ano
+        repo.create(
+            conta_id=credit.id,
+            pluggy_transaction_id="antes",
+            # Último dia do mês anterior no fuso SP (12h UTC = 9h SP), não derivado do UTC.
+            date=datetime(hoje.year, hoje.month, 1, 12, tzinfo=UTC) - timedelta(days=1),
+            amount_centavos=4_000,
+            currency_code="BRL",
+            type="DEBIT",
+            status="POSTED",
+        )
+
+    r = montar_cartoes(db, usuario.id)
+
+    (c,) = r.cartoes
+    assert c.limite_centavos == 100_000 and c.disponivel_centavos == 80_000
+    assert c.fatura_atual_centavos == 5_000
+    assert c.proximas_centavos == 7_000
+    # `_tx` com valor positivo vira CREDIT (estorno) e não conta; só o DEBIT de 2_000 é compra.
+    assert c.compras_mes_centavos == 2_000
+    ano = 2_000 + (4_000 if hoje.month > 1 else 0)
+    assert r.total_ano_centavos == ano
+    assert r.media_mes_centavos == round(ano / hoje.month)
+    assert r.compras_mes_centavos == 2_000 and r.proximas_centavos == 7_000
+
+
+def test_cartoes_vazio_e_isolado(db, usuario):
+    from app.services.dashboard import montar_cartoes
+
+    outro = _usuario(db, "outro-cartao@mango.test")
+    _contas(db, outro.id)  # o cartão é do outro
+    r = montar_cartoes(db, usuario.id)
+    assert r.cartoes == [] and r.total_ano_centavos == 0

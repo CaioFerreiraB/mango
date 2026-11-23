@@ -13,7 +13,6 @@ import {
 import type { LucideIcon } from "lucide-react"
 import { useState } from "react"
 import { Link } from "react-router"
-import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts"
 
 import { PeriodoPicker } from "@/components/dashboard/periodo-picker"
 import {
@@ -46,16 +45,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { corIndicador } from "@/lib/echart-tema"
+import { GraficoLinhas } from "@/components/common/graficos-base"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
-import {
-  ChartContainer,
-  ChartLegend,
-  ChartLegendContent,
-  ChartTooltip,
-  ChartTooltipContent,
-  type ChartConfig,
-} from "@/components/ui/chart"
 import { useMe } from "@/lib/api/auth"
 import { useIndicadores, useIndicadoresSerie } from "@/lib/api/indicadores"
 import {
@@ -648,13 +641,6 @@ const PRESETS_PERIODO = [
   },
 ]
 
-const COR_INDICADOR: Record<string, string> = {
-  cdi: "var(--chart-2)",
-  selic: "var(--chart-3)",
-  ipca: "var(--chart-4)",
-  ibov: "var(--chart-5)",
-}
-
 function ComparacaoMercado({ subtypes }: { subtypes: string[] }) {
   const [[inicio, fim], setPeriodo] = useState<readonly [string, string]>(
     PRESETS_PERIODO[1].range()
@@ -673,13 +659,13 @@ function ComparacaoMercado({ subtypes }: { subtypes: string[] }) {
     { inicio: inicioComum, fim }
   )
 
-  const config: ChartConfig = {
+  const config: Record<string, { label: string; color: string }> = {
     carteira: { label: "Carteira", color: "var(--primary)" },
   }
   for (const i of indicadores.data ?? []) {
     config[i.codigo] = {
       label: i.nome,
-      color: COR_INDICADOR[i.codigo] ?? "var(--chart-5)",
+      color: corIndicador(i.codigo),
     }
   }
 
@@ -816,73 +802,30 @@ function ComparacaoMercado({ subtypes }: { subtypes: string[] }) {
             </p>
           </div>
         ) : (
-          <ChartContainer
-            config={config}
-            className="aspect-auto h-[280px] w-full"
-          >
-            <LineChart data={dadosChart}>
-              <CartesianGrid vertical={false} strokeDasharray="3 3" />
-              <XAxis
-                dataKey="data"
-                tickLine={false}
-                axisLine={false}
-                tickMargin={8}
-                minTickGap={32}
-                tickFormatter={tickDia}
-              />
-              <YAxis
-                tickLine={false}
-                axisLine={false}
-                width={52}
-                tickFormatter={(v: number) => pctTexto(v)}
-              />
-              <ChartTooltip
-                content={
-                  <ChartTooltipContent
-                    labelFormatter={(_, payload) =>
-                      formatDate(String(payload?.[0]?.payload?.data ?? ""))
-                    }
-                    formatter={(value, name, item) => (
-                      <>
-                        <span
-                          className="mt-0.5 size-2.5 shrink-0 rounded-[2px]"
-                          style={{ background: item.color }}
-                          aria-hidden
-                        />
-                        <div className="flex flex-1 items-center justify-between gap-2 leading-none">
-                          <span className="text-muted-foreground">
-                            {config[String(name)]?.label ?? name}
-                          </span>
-                          <span className="font-mono font-medium text-foreground tabular-nums">
-                            {pctTexto(Number(value))}
-                          </span>
-                        </div>
-                      </>
-                    )}
-                  />
-                }
-              />
-              <ChartLegend content={<ChartLegendContent />} />
-              <Line
-                dataKey="carteira"
-                stroke="var(--color-carteira)"
-                strokeWidth={2}
-                dot={false}
-                isAnimationActive={false}
-              />
-              {selecionados.map((codigo) => (
-                <Line
-                  key={codigo}
-                  dataKey={codigo}
-                  stroke={`var(--color-${codigo})`}
-                  strokeWidth={1.5}
-                  strokeDasharray="4 3"
-                  dot={false}
-                  isAnimationActive={false}
-                />
-              ))}
-            </LineChart>
-          </ChartContainer>
+          <GraficoLinhas
+            dados={dadosChart}
+            x="data"
+            altura={280}
+            legenda
+            formatarX={tickDia}
+            formatarRotulo={formatDate}
+            formatarY={pctTexto}
+            series={[
+              {
+                chave: "carteira",
+                nome: config.carteira.label,
+                cor: config.carteira.color,
+              },
+              ...selecionados.map((codigo) => ({
+                chave: codigo,
+                nome: config[codigo]?.label ?? codigo,
+                cor: config[codigo]?.color ?? corIndicador(codigo),
+                largura: 1.5,
+                tracejada: true,
+              })),
+            ]}
+            ariaLabel="Rentabilidade acumulada da carteira vs. indicadores"
+          />
         )}
       </CardContent>
     </Card>
