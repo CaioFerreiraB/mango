@@ -204,7 +204,8 @@ export function AppSidebar() {
             <SidebarMenu>
               <BotaoRecolher />
             </SidebarMenu>
-            <SidebarSeparator className="my-2" />
+            {/* Recolhida, os botões são `size-8` alinhados à esquerda: a linha acompanha. */}
+            <SidebarSeparator className="my-2 group-data-[collapsible=icon]:mx-0 group-data-[collapsible=icon]:w-8!" />
             <SidebarMenu>
               {!somenteDivisao && (
                 <NavItemButton item={dashboardItem} pathname={pathname} />
