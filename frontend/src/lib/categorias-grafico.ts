@@ -9,7 +9,12 @@
 
 export const SLOTS_CATEGORICOS = 8
 export const ID_OUTRAS = "__outras__"
-const SEM = "__sem__"
+export const ID_SEM = "__sem__"
+const SEM = ID_SEM
+
+/** Fatia/linha que vira filtro de transações: uma categoria de verdade (nem "Outras", que junta
+ *  várias, nem "Sem categoria", que a listagem não filtra). */
+export const ehCategoriaReal = (id: string) => id !== ID_OUTRAS && id !== ID_SEM
 
 export type GastoEntrada = {
   categoria_id: string | null

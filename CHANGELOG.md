@@ -19,6 +19,8 @@ ainda está se assentando. Cada versão publicada tem uma imagem correspondente 
   computador). O olho dele oculta os valores de todos os cards do painel e fica lembrado neste
   navegador; no celular, os outros cards ficam dois por linha.
 - **Filtros do dashboard num botão** no celular, em vez de ocupar o topo da página.
+- **Transações de uma categoria num clique:** nos gráficos de despesas por categoria (rosca,
+  barras e empilhado), clicar numa categoria abre a lista das transações dela no período.
 - **Últimas transações no dashboard:** as 10 mais recentes logo abaixo dos cards, com o aviso de
   transações pendentes acima da tabela.
 

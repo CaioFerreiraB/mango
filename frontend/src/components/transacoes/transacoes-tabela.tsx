@@ -136,12 +136,15 @@ export function TransacoesTabela({
   items,
   ocultarLinkFatura = false,
   abrirId = null,
+  ocultarCategoria = false,
 }: {
   items: ItemListagem[]
   /** Repassado ao drawer: esconde "Ir para a fatura" quando já estamos numa fatura. */
   ocultarLinkFatura?: boolean
   /** Transação cujo drawer nasce aberto (link da busca global). */
   abrirId?: number | null
+  /** Esconde a coluna Categoria (lista já filtrada por uma categoria — coluna redundante). */
+  ocultarCategoria?: boolean
 }) {
   const contas = useContas()
   const contaNome = new Map(
@@ -170,9 +173,11 @@ export function TransacoesTabela({
       <div className="hidden rounded-lg border md:block">
         <Table className="table-fixed">
           <colgroup>
-            {larguras.map((w, i) => (
-              <col key={i} style={{ width: w }} />
-            ))}
+            {larguras.map((w, i) =>
+              ocultarCategoria && i === 4 ? null : (
+                <col key={i} style={{ width: w }} />
+              )
+            )}
           </colgroup>
           <TableHeader>
             <TableRow>
@@ -192,10 +197,12 @@ export function TransacoesTabela({
                 Conta
                 <AlcaResize aoIniciar={iniciar(3)} />
               </TableHead>
-              <TableHead className="relative">
-                Categoria
-                <AlcaResize aoIniciar={iniciar(4)} />
-              </TableHead>
+              {ocultarCategoria ? null : (
+                <TableHead className="relative">
+                  Categoria
+                  <AlcaResize aoIniciar={iniciar(4)} />
+                </TableHead>
+              )}
               <TableHead className="text-right">Status</TableHead>
             </TableRow>
           </TableHeader>
@@ -249,19 +256,21 @@ export function TransacoesTabela({
                     <TableCell className="text-sm text-muted-foreground">
                       —
                     </TableCell>
-                    <TableCell>
-                      {catL ? (
-                        <Badge
-                          variant="secondary"
-                          className="max-w-full font-normal"
-                        >
-                          <IconeL className="size-3.5 shrink-0" aria-hidden />
-                          <span className="min-w-0 truncate">{catL}</span>
-                        </Badge>
-                      ) : (
-                        <span className="text-muted-foreground">—</span>
-                      )}
-                    </TableCell>
+                    {ocultarCategoria ? null : (
+                      <TableCell>
+                        {catL ? (
+                          <Badge
+                            variant="secondary"
+                            className="max-w-full font-normal"
+                          >
+                            <IconeL className="size-3.5 shrink-0" aria-hidden />
+                            <span className="min-w-0 truncate">{catL}</span>
+                          </Badge>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
+                      </TableCell>
+                    )}
                     <TableCell className="text-right">
                       <BadgeLancamento lancamento={t} />
                     </TableCell>
@@ -361,19 +370,21 @@ export function TransacoesTabela({
                       {contaNome.get(t.conta_id) ?? "—"}
                     </div>
                   </TableCell>
-                  <TableCell>
-                    {catNome ? (
-                      <Badge
-                        variant="secondary"
-                        className="max-w-full font-normal"
-                      >
-                        <IconeCat className="size-3.5 shrink-0" aria-hidden />
-                        <span className="min-w-0 truncate">{catNome}</span>
-                      </Badge>
-                    ) : (
-                      <span className="text-muted-foreground">—</span>
-                    )}
-                  </TableCell>
+                  {ocultarCategoria ? null : (
+                    <TableCell>
+                      {catNome ? (
+                        <Badge
+                          variant="secondary"
+                          className="max-w-full font-normal"
+                        >
+                          <IconeCat className="size-3.5 shrink-0" aria-hidden />
+                          <span className="min-w-0 truncate">{catNome}</span>
+                        </Badge>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
+                  )}
                   <TableCell className="text-right">
                     <StatusBadge
                       estado={estadoRevisao(

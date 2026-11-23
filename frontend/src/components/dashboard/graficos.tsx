@@ -1,5 +1,5 @@
 import type { ECharts } from "echarts/core"
-import { useMemo, useRef, useState } from "react"
+import { useMemo, useRef, useState, type ComponentProps } from "react"
 
 import { eixoBRL } from "@/components/dashboard/chart-helpers"
 import { EChart } from "@/components/common/echart"
@@ -19,6 +19,7 @@ import type {
 } from "@/lib/api/dashboard"
 import {
   distribuirCategorias,
+  ehCategoriaReal,
   type Distribuicao,
   type GastoEntrada,
 } from "@/lib/categorias-grafico"
@@ -292,12 +293,17 @@ function SemDados() {
  * lado barras horizontais — uma por categoria, todas — que servem de legenda: mesma cor do
  * segmento, valor e %. Hover numa realça a outra. Totais do período inteiro (não dos buckets).
  */
+/** Categoria escolhida num gráfico (clique) — abre as transações dela no período. */
+export type CategoriaSelecionada = { id: string; nome: string }
+
 export function DistribuicaoCategorias({
   gastos,
   rotulo,
+  onSelecionar,
 }: {
   gastos: GastoEntrada[]
   rotulo: Map<string, string>
+  onSelecionar?: (c: CategoriaSelecionada) => void
 }) {
   const t = useTemaGrafico()
   const dist = useMemo(
@@ -336,6 +342,10 @@ export function DistribuicaoCategorias({
           ariaLabel="Distribuição das despesas por categoria no período"
           instancia={(c) => (chart.current = c)}
           onHover={setAtiva}
+          onClique={({ dataIndex }) => {
+            const f = fatias[dataIndex]
+            if (f && ehCategoriaReal(f.id)) onSelecionar?.(f)
+          }}
         />
         {/* Total no miolo: pointer-events-none para não roubar o hover da rosca. */}
         <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
@@ -352,8 +362,28 @@ export function DistribuicaoCategorias({
         ativa={ativa}
         fatiaDoItem={fatiaDoItem}
         onHover={realcar}
+        onSelecionar={onSelecionar}
       />
     </div>
+  )
+}
+
+/** `<button>` quando clicável, senão `<div>` — mesmo visual, sem botão morto no tab. */
+function LinhaLegenda({
+  onClick,
+  ...props
+}: Omit<ComponentProps<"div">, "onClick"> & { onClick?: () => void }) {
+  if (!onClick) return <div {...props} />
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      {...(props as ComponentProps<"button">)}
+      className={cn(
+        props.className,
+        "cursor-pointer hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+      )}
+    />
   )
 }
 
@@ -364,6 +394,7 @@ function BarrasLegenda({
   ativa,
   fatiaDoItem,
   onHover,
+  onSelecionar,
 }: {
   dist: Distribuicao
   t: TemaGrafico
@@ -371,6 +402,7 @@ function BarrasLegenda({
   ativa: number | null
   fatiaDoItem: (slot: number | null) => number
   onHover: (idx: number | null) => void
+  onSelecionar?: (c: CategoriaSelecionada) => void
 }) {
   return (
     <ul
@@ -382,33 +414,40 @@ function BarrasLegenda({
         const idx = fatiaDoItem(it.slot)
         const apagada = ativa !== null && ativa !== idx
         return (
-          <li
-            key={it.id}
-            onMouseEnter={() => onHover(idx)}
-            className={cn(
-              "rounded-md px-2 py-1.5 transition-opacity duration-150",
-              apagada && "opacity-45",
-              ativa === idx && "bg-muted/60"
-            )}
-          >
-            <div className="flex items-baseline justify-between gap-3 text-sm">
-              <span className="truncate">{it.nome}</span>
-              <span className="shrink-0 tabular-nums">
-                {formatBRL(it.valor)}
-                <span className="ml-1.5 text-xs text-muted-foreground">
-                  {Math.round((it.valor / dist.total) * 100)}%
+          <li key={it.id} onMouseEnter={() => onHover(idx)}>
+            {/* Categoria real vira botão (abre as transações); "Outras"/"Sem categoria" não. */}
+            <LinhaLegenda
+              className={cn(
+                "block w-full rounded-md px-2 py-1.5 text-left transition-opacity duration-150",
+                apagada && "opacity-45",
+                ativa === idx && "bg-muted/60"
+              )}
+              onClick={
+                onSelecionar && ehCategoriaReal(it.id)
+                  ? () => onSelecionar(it)
+                  : undefined
+              }
+              onFocus={() => onHover(idx)}
+            >
+              <div className="flex items-baseline justify-between gap-3 text-sm">
+                <span className="truncate">{it.nome}</span>
+                <span className="shrink-0 tabular-nums">
+                  {formatBRL(it.valor)}
+                  <span className="ml-1.5 text-xs text-muted-foreground">
+                    {Math.round((it.valor / dist.total) * 100)}%
+                  </span>
                 </span>
-              </span>
-            </div>
-            <div className="mt-1 h-1.5 rounded-full bg-muted" aria-hidden>
-              <div
-                className="h-full rounded-full"
-                style={{
-                  width: `${Math.max((it.valor / max) * 100, 1)}%`,
-                  background: corSlot(t, it.slot),
-                }}
-              />
-            </div>
+              </div>
+              <div className="mt-1 h-1.5 rounded-full bg-muted" aria-hidden>
+                <div
+                  className="h-full rounded-full"
+                  style={{
+                    width: `${Math.max((it.valor / max) * 100, 1)}%`,
+                    background: corSlot(t, it.slot),
+                  }}
+                />
+              </div>
+            </LinhaLegenda>
           </li>
         )
       })}
@@ -422,19 +461,25 @@ export function BarrasEmpilhadasCategorias({
   granularidade,
   rotulo,
   comLegenda = true,
+  onSelecionar,
 }: {
   buckets: SerieBucket[]
   granularidade: Granularidade
   rotulo: Map<string, string>
   /** No dashboard as barras-legenda acima já identificam as cores. */
   comLegenda?: boolean
+  onSelecionar?: (c: CategoriaSelecionada) => void
 }) {
   const t = useTemaGrafico()
+  const dist = useMemo(
+    () =>
+      distribuirCategorias(
+        buckets.flatMap((b) => b.por_categoria),
+        rotulo
+      ),
+    [buckets, rotulo]
+  )
   const option = useMemo<EChartsOption>(() => {
-    const dist = distribuirCategorias(
-      buckets.flatMap((b) => b.por_categoria),
-      rotulo
-    )
     const series = dist.fatias.map((f, i) => {
       const valores = buckets.map((b) =>
         b.por_categoria
@@ -481,12 +526,16 @@ export function BarrasEmpilhadasCategorias({
       tooltip: { ...opcoesBase(t).tooltip, ...tooltipEixo() },
       series,
     }
-  }, [buckets, granularidade, rotulo, comLegenda, t])
+  }, [buckets, granularidade, dist, comLegenda, t])
   return (
     <EChart
       option={option}
       className={comLegenda ? "h-[280px]" : "h-[240px]"}
       ariaLabel="Despesas por categoria em cada período"
+      onClique={({ seriesIndex }) => {
+        const f = dist.fatias[seriesIndex]
+        if (f && ehCategoriaReal(f.id)) onSelecionar?.(f)
+      }}
     />
   )
 }

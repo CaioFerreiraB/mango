@@ -31,7 +31,7 @@ export function PainelCartoes({
   saidasMes: number | undefined
 }) {
   const q = useCartoesPainel()
-  const [recolhido, setRecolhido] = useState(false)
+  const [recolhido, setRecolhido] = useState(true)
 
   if (q.isLoading) return <Skeleton className="h-40 w-full" />
   if (q.isError || !q.data)

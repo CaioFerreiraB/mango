@@ -38,8 +38,10 @@ import {
   DistribuicaoCategorias,
   GraficoFluxo,
   GraficoPatrimonio,
+  type CategoriaSelecionada,
 } from "@/components/dashboard/graficos"
 import { KpiCard, SaldoDestaque } from "@/components/dashboard/kpi-card"
+import { TransacoesCategoriaDialog } from "@/components/dashboard/transacoes-categoria-dialog"
 import { TransacoesTabela } from "@/components/transacoes/transacoes-tabela"
 import { PainelCartoes } from "@/components/dashboard/painel-cartoes"
 import { PeriodoPicker } from "@/components/dashboard/periodo-picker"
@@ -195,6 +197,9 @@ export function DashboardPage() {
   const [granCat, setGranCat] = useState<Granularidade>("semanal")
   const serieCat = useDashboardSeries(periodo, granCat)
   const dashPeriodo = useDashboard(periodo)
+  // Clique numa categoria (rosca, barras-legenda ou empilhado) → transações dela no período.
+  const [categoriaAberta, setCategoriaAberta] =
+    useState<CategoriaSelecionada | null>(null)
   const patrimonio = usePatrimonio(12)
   // Mesmo recorte padrão da tela de transações (sem pagamento de fatura nem parcelas futuras).
   const ultimas = useTransacoes({
@@ -439,6 +444,7 @@ export function DashboardPage() {
             <DistribuicaoCategorias
               gastos={dashPeriodo.data?.gasto_por_categoria ?? []}
               rotulo={rotulo}
+              onSelecionar={setCategoriaAberta}
             />
           )}
           <div className="space-y-2">
@@ -453,6 +459,7 @@ export function DashboardPage() {
                 granularidade={granCat}
                 rotulo={rotulo}
                 comLegenda={false}
+                onSelecionar={setCategoriaAberta}
               />
             )}
           </div>
@@ -622,6 +629,12 @@ export function DashboardPage() {
           </SortableContext>
         </DndContext>
       </div>
+      <TransacoesCategoriaDialog
+        categoria={categoriaAberta}
+        inicio={inicio}
+        fim={fim}
+        onFechar={() => setCategoriaAberta(null)}
+      />
       {visiveis.length === 0 ? (
         <EmptyState
           icon={LayoutGrid}
