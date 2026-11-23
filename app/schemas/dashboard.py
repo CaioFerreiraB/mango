@@ -54,3 +54,20 @@ class FaturaResumoBucket(BaseModel):
 
 class FaturasResumo(BaseModel):
     buckets: list[FaturaResumoBucket]
+
+
+class PatrimonioPonto(BaseModel):
+    """Fecho de um mês (o corrente fecha hoje). Contas = só BANK (cartão fica fora)."""
+
+    mes: str  # YYYY-MM
+    contas_centavos: int
+    investimentos_centavos: int  # bruto
+    investimentos_liquido_centavos: int  # bruto − IR − IOF
+    total_centavos: int  # contas + investimentos (bruto)
+    liquido_centavos: int  # contas + investimentos líquido
+    liquido_estimado: bool  # algum snapshot do mês sem líquido gravado → estimado
+    tem_investimentos: bool  # False antes do 1º snapshot da carteira (sem dado, não zero)
+
+
+class PatrimonioSerie(BaseModel):
+    pontos: list[PatrimonioPonto]

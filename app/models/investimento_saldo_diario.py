@@ -27,3 +27,5 @@ class InvestimentoSaldoDiario(UserOwnedMixin, Base):
     )
     data: Mapped[date] = mapped_column(Date, nullable=False)  # dia civil no fuso SP
     valor_centavos: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    # Valor de resgate do dia (bruto − IR − IOF). Nulo em snapshots anteriores à coluna.
+    liquido_centavos: Mapped[int | None] = mapped_column(BigInteger)

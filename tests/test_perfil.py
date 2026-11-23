@@ -122,3 +122,47 @@ def test_brapi_token_removido(client_factory, usuario_a: Usuario, db: Session) -
     assert client.get("/api/perfil").json()["brapi_token_configurado"] is False
     db.expire_all()
     assert token_brapi(db, usuario_a.id) == settings.brapi_token
+
+
+def test_dashboard_layout_round_trip_e_restaurar(
+    client_factory, usuario_a: Usuario, db: Session
+) -> None:
+    client = client_factory(usuario_a)
+    assert client.get("/api/perfil").json()["dashboard_layout"] is None  # padrão
+
+    def gravado():
+        # O /perfil do harness devolve o objeto injetado; a persistência real se lê do banco.
+        db.expire_all()
+        return db.get(Usuario, usuario_a.id).dashboard_layout
+
+    layout = [
+        {"id": "fluxo", "largura": 60, "visivel": True},
+        {"id": "kpi-saldo", "largura": 12, "visivel": False},
+    ]
+    r = client.patch("/api/perfil", json={"dashboard_layout": layout})
+    assert r.status_code == 200, r.text
+    assert r.json()["dashboard_layout"] == layout
+    assert gravado() == layout
+
+    # Outro campo no PATCH não mexe no layout (exclude_unset).
+    client.patch("/api/perfil", json={"accent": "verde"})
+    assert gravado() == layout
+
+    r = client.patch("/api/perfil", json={"dashboard_layout": None})
+    assert r.status_code == 200 and r.json()["dashboard_layout"] is None
+    assert gravado() is None
+
+
+def test_dashboard_layout_valida_fronteira(client_factory, usuario_a: Usuario) -> None:
+    client = client_factory(usuario_a)
+    w = {"id": "fluxo", "largura": 60, "visivel": True}
+    invalidos = [
+        [w, w],  # id repetido
+        [{**w, "largura": 6}],  # largura fora do enum (grid antigo de 12)
+        [{**w, "id": "<script>"}],  # id fora do padrão
+        [{**w, "id": f"w-{chr(97 + i % 26)}{'a' * (i // 26)}"} for i in range(31)],  # > 30
+    ]
+    for layout in invalidos:
+        r = client.patch("/api/perfil", json={"dashboard_layout": layout})
+        assert r.status_code == 422, layout
+    assert client.get("/api/perfil").json()["dashboard_layout"] is None

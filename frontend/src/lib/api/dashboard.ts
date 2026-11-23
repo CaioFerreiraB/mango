@@ -47,3 +47,19 @@ export function useDashboardSeries(
     },
   })
 }
+
+export type PatrimonioPonto = components["schemas"]["PatrimonioPonto"]
+
+/** Evolução patrimonial mês a mês (contas BANK + investimentos), terminando no mês corrente. */
+export function usePatrimonio(meses = 12) {
+  return useQuery({
+    queryKey: ["dashboard-patrimonio", meses],
+    queryFn: async (): Promise<PatrimonioPonto[]> => {
+      const { data, error } = await api.GET("/api/dashboard/patrimonio", {
+        params: { query: { meses } },
+      })
+      if (error || !data) throw new Error("falha ao carregar o patrimônio")
+      return data.pontos
+    },
+  })
+}

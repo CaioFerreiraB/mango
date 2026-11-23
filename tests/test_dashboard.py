@@ -386,3 +386,113 @@ def test_gasto_por_categoria_traz_todas(db, usuario):
 
     assert len(d.gasto_por_categoria) == 12
     assert d.gasto_por_categoria[0].categoria_id == cats[-1]  # maior primeiro
+
+
+# --- evolução patrimonial -------------------------------------------------------------------
+
+
+def _investimento(db, usuario_id, bank, pid, bruto, ir=None):
+    from app.models.investimento import Investimento
+
+    inv = Investimento(
+        usuario_id=usuario_id,
+        item_id=bank.item_id,
+        pluggy_investment_id=pid,
+        type="FIXED_INCOME",
+        saldo_centavos=bruto,
+        amount_centavos=bruto,
+        taxes_centavos=ir,
+    )
+    db.add(inv)
+    db.commit()
+    return inv
+
+
+def _snap(db, inv, dia, valor, liquido=None):
+    from app.models.investimento_saldo_diario import InvestimentoSaldoDiario
+
+    db.add(
+        InvestimentoSaldoDiario(
+            usuario_id=inv.usuario_id,
+            investimento_id=inv.id,
+            data=dia,
+            valor_centavos=valor,
+            liquido_centavos=liquido,
+        )
+    )
+    db.commit()
+
+
+def test_patrimonio_contas_bank_reconstruidas_e_investimentos_por_snapshot(db, usuario):
+    """Conta BANK no fecho de cada mês (saldo atual − movimento posterior); cartão fora;
+    investimento só a partir do 1º snapshot; líquido gravado vs. estimado pela razão atual."""
+    from app.services.dashboard import montar_patrimonio
+    from app.services.periodo import hoje_sp
+
+    bank, _credit = _contas(db, usuario.id)  # BANK 100_000; CREDIT −5_000 (ignorado)
+    TransacaoRepository(db, usuario.id).create(
+        conta_id=bank.id,
+        pluggy_transaction_id="hoje",
+        date=datetime.now(UTC),
+        amount_centavos=30_000,
+        currency_code="BRL",
+        type="CREDIT",
+        status="POSTED",
+    )
+    hoje = hoje_sp()
+    mes_passado = hoje.replace(day=1) - timedelta(days=1)
+    inv = _investimento(db, usuario.id, bank, "cdb", bruto=200_000, ir=20_000)  # razão 0,9
+    _snap(db, inv, mes_passado, 100_000)  # antigo, sem líquido → estimado 90_000
+    _snap(db, inv, hoje, 200_000, liquido=185_000)
+
+    pontos = montar_patrimonio(db, usuario.id, meses=3).pontos
+
+    assert [p.mes for p in pontos][-1] == hoje.strftime("%Y-%m")
+    retrasado, passado, atual = pontos
+    assert retrasado.tem_investimentos is False
+    assert retrasado.investimentos_centavos == 0
+    assert retrasado.contas_centavos == 70_000  # antes do crédito de hoje
+    assert passado.contas_centavos == 70_000
+    assert passado.investimentos_centavos == 100_000
+    assert passado.investimentos_liquido_centavos == 90_000
+    assert passado.liquido_estimado is True
+    assert passado.total_centavos == 170_000 and passado.liquido_centavos == 160_000
+    assert atual.contas_centavos == 100_000  # só BANK (o cartão −5_000 não entra)
+    assert atual.total_centavos == 300_000
+    assert atual.liquido_centavos == 285_000
+    assert atual.liquido_estimado is False
+
+
+def test_patrimonio_isola_usuario(db, usuario):
+    from app.services.dashboard import montar_patrimonio
+    from app.services.periodo import hoje_sp
+
+    outro = _usuario(db, "outro@mango.test")
+    bank_outro, _ = _contas(db, outro.id)
+    inv = _investimento(db, outro.id, bank_outro, "alheio", bruto=999_000)
+    _snap(db, inv, hoje_sp(), 999_000, liquido=999_000)
+
+    atual = montar_patrimonio(db, usuario.id, meses=1).pontos[-1]
+
+    assert atual.total_centavos == 0 and atual.tem_investimentos is False
+
+
+def test_patrimonio_valida_meses(client_factory, usuario):
+    c = client_factory(usuario)
+    assert c.get("/api/dashboard/patrimonio", params={"meses": 0}).status_code == 422
+    assert c.get("/api/dashboard/patrimonio", params={"meses": 37}).status_code == 422
+    r = c.get("/api/dashboard/patrimonio", params={"meses": 2})
+    assert r.status_code == 200 and len(r.json()["pontos"]) == 2
+
+
+def test_snapshot_investimento_grava_liquido(db, usuario):
+    from app.services.saldo_diario import registrar_snapshot_investimento
+
+    bank, _ = _contas(db, usuario.id)
+    inv = _investimento(db, usuario.id, bank, "cdb2", bruto=50_000, ir=4_000)
+    registrar_snapshot_investimento(db, inv)
+    db.commit()
+    from app.models.investimento_saldo_diario import InvestimentoSaldoDiario
+
+    snap = db.scalars(select(InvestimentoSaldoDiario)).one()
+    assert (snap.valor_centavos, snap.liquido_centavos) == (50_000, 46_000)

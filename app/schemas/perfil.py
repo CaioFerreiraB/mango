@@ -12,6 +12,21 @@ from app.schemas.setup import _normalizar_email
 Accent = Literal["violeta", "manga", "verde", "azul", "rosa", "teal"]
 
 
+class WidgetLayout(BaseModel):
+    """Um widget do dashboard: id do catálogo do frontend, largura em colunas de um grid de 60
+    (⅕ ¼ ⅓ ½ ⅔ ¾ inteira) e visibilidade. Id desconhecido é aceito (o frontend ignora) — o catálogo mora no cliente."""
+
+    id: str = Field(pattern=r"^[a-z][a-z-]{0,31}$")
+    largura: Literal[12, 15, 20, 30, 40, 45, 60]
+    visivel: bool
+
+
+def _ids_unicos(v: list[WidgetLayout] | None) -> list[WidgetLayout] | None:
+    if v is not None and len({w.id for w in v}) != len(v):
+        raise ValueError("widget repetido no layout")
+    return v
+
+
 class PerfilRead(ORMModel):
     id: int
     nome: str
@@ -30,6 +45,8 @@ class PerfilRead(ORMModel):
     # 2FA opcional (§5.2, #15): booleanos derivados, o segredo nunca é devolvido.
     totp_configurado: bool
     totp_login_habilitado: bool
+    # Ordem/largura/visibilidade dos widgets do dashboard; null = layout padrão.
+    dashboard_layout: list[WidgetLayout] | None
 
 
 class PerfilUpdate(BaseModel):
@@ -45,6 +62,10 @@ class PerfilUpdate(BaseModel):
     # `int` (não `int | None`): a coluna é NOT NULL, então `null` explícito vira 422 na fronteira
     # em vez de IntegrityError no commit. O default None só marca "não enviado" (exclude_unset).
     orcamento_alerta_pct: int = Field(default=None, ge=1, le=100)
+    # `null` explícito restaura o padrão; teto de 30 itens barra payload inflado.
+    dashboard_layout: list[WidgetLayout] | None = Field(default=None, max_length=30)
+
+    _layout_unico = field_validator("dashboard_layout")(_ids_unicos)
 
     @field_validator("email")
     @classmethod

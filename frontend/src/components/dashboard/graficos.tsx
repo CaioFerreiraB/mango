@@ -10,7 +10,11 @@ import {
   type EChartsOption,
   type TemaGrafico,
 } from "@/lib/echart-tema"
-import type { Granularidade, SerieBucket } from "@/lib/api/dashboard"
+import type {
+  Granularidade,
+  PatrimonioPonto,
+  SerieBucket,
+} from "@/lib/api/dashboard"
 import {
   distribuirCategorias,
   type Distribuicao,
@@ -318,13 +322,13 @@ export function RoscaEntradasSaidas({
   if (fatias.length === 0) return <SemDados />
   const total = entradas + saidas
   return (
-    <div className="flex flex-col items-center gap-4 sm:flex-row">
+    <div className="flex flex-col items-center gap-4 @md:flex-row">
       <EChart
         option={option}
         className="size-[160px] shrink-0"
         ariaLabel="Distribuição de entradas e saídas no período"
       />
-      <ul className="w-full space-y-1.5 text-sm sm:flex-1">
+      <ul className="w-full space-y-1.5 text-sm @md:flex-1">
         {fatias.map((f) => (
           <li key={f.nome} className="flex items-center justify-between gap-3">
             <span className="flex items-center gap-2">
@@ -388,7 +392,7 @@ export function DistribuicaoCategorias({
   const max = dist.itens[0].valor
 
   return (
-    <div className="grid items-center gap-6 lg:grid-cols-[minmax(180px,260px)_1fr]">
+    <div className="grid items-center gap-6 @2xl:grid-cols-[minmax(180px,260px)_1fr]">
       <div className="relative mx-auto aspect-square w-full max-w-[260px]">
         <EChart
           option={option}
@@ -545,6 +549,115 @@ export function BarrasEmpilhadasCategorias({
       option={option}
       className={comLegenda ? "h-[280px]" : "h-[240px]"}
       ariaLabel="Despesas por categoria em cada período"
+    />
+  )
+}
+
+// --- Evolução patrimonial -----------------------------------------------------------------------
+
+/**
+ * Patrimônio total (contas + investimentos brutos) e líquido (descontado IR/IOF), mês a mês.
+ * Trecho do líquido estimado (snapshot antigo sem líquido) sai tracejado; mês antes do 1º
+ * snapshot da carteira avisa no tooltip que só há contas.
+ */
+export function GraficoPatrimonio({ pontos }: { pontos: PatrimonioPonto[] }) {
+  const t = useTemaGrafico()
+  const option = useMemo<EChartsOption>(() => {
+    const rotulos = pontos.map((p) =>
+      formatBucketLabel(`${p.mes}-01`, "mensal")
+    )
+    const est = pontos.map((p) => p.liquido_estimado)
+    // Duas séries p/ o líquido: real (sólida) e estimada (tracejada), ligadas no ponto de troca.
+    const liqReal = pontos.map((p, i) => (est[i] ? null : p.liquido_centavos))
+    const liqEst = pontos.map((p, i) =>
+      est[i] || est[i - 1] ? p.liquido_centavos : null
+    )
+    const COR_TOTAL = t.cat[0]
+    const COR_LIQ = t.cat[2]
+    const linha = (
+      nome: string,
+      cor: string,
+      dados: (number | null)[],
+      tracejada = false
+    ) => ({
+      name: nome,
+      type: "line" as const,
+      data: dados,
+      smooth: false,
+      symbol: "circle",
+      symbolSize: 8,
+      showSymbol: false,
+      lineStyle: {
+        color: cor,
+        width: 2,
+        type: tracejada ? [6, 4] : ("solid" as const),
+      },
+      itemStyle: { color: cor, borderColor: t.superficie, borderWidth: 2 },
+    })
+    return {
+      ...opcoesBase(t),
+      animation: !semMovimento(),
+      ...eixos(t, rotulos),
+      grid: { left: 4, right: 8, top: 12, bottom: 32, containLabel: true },
+      yAxis: {
+        type: "value",
+        scale: true,
+        axisLabel: { color: t.textoSec, formatter: (v: number) => eixoBRL(v) },
+        splitLine: { lineStyle: { color: t.borda } },
+      },
+      legend: {
+        ...legenda(t),
+        data: ["Patrimônio total", "Patrimônio líquido"],
+      },
+      tooltip: {
+        ...opcoesBase(t).tooltip,
+        trigger: "axis",
+        axisPointer: { type: "line", lineStyle: { color: t.borda } },
+        formatter: (params) => {
+          const i = (Array.isArray(params) ? params[0] : params).dataIndex ?? 0
+          const p = pontos[i]
+          const nota = !p.tem_investimentos
+            ? "Sem dados de investimento neste mês (só contas)"
+            : p.liquido_estimado
+              ? "Líquido estimado (IR/IOF da posição atual)"
+              : ""
+          return (
+            `<div style="margin-bottom:4px;font-weight:500">${rotulos[i]}</div>` +
+            linhaTooltipHTML(
+              COR_TOTAL,
+              "Patrimônio total",
+              formatBRL(p.total_centavos)
+            ) +
+            linhaTooltipHTML(
+              COR_LIQ,
+              `Patrimônio líquido${p.liquido_estimado ? " (estimado)" : ""}`,
+              formatBRL(p.liquido_centavos)
+            ) +
+            `<div style="margin-top:6px;opacity:.7">Contas ${formatBRL(p.contas_centavos)} · Investimentos ${formatBRL(p.investimentos_centavos)}</div>` +
+            (nota ? `<div style="margin-top:2px;opacity:.7">${nota}</div>` : "")
+          )
+        },
+      },
+      series: [
+        {
+          ...linha(
+            "Patrimônio total",
+            COR_TOTAL,
+            pontos.map((p) => p.total_centavos)
+          ),
+          areaStyle: { color: comAlfa(COR_TOTAL, 0.08) },
+        },
+        linha("Patrimônio líquido", COR_LIQ, liqReal),
+        linha("Patrimônio líquido", COR_LIQ, liqEst, true),
+      ],
+    }
+  }, [pontos, t])
+  if (pontos.length === 0) return <SemDados />
+  return (
+    <EChart
+      option={option}
+      className="h-[280px]"
+      ariaLabel="Evolução do patrimônio total e líquido, mês a mês"
     />
   )
 }

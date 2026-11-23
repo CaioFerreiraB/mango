@@ -13,6 +13,8 @@ from sqlalchemy.orm import Session
 
 from app.models.cartao_fatura import Fatura
 from app.models.conta import Conta
+from app.models.investimento import Investimento
+from app.models.investimento_saldo_diario import InvestimentoSaldoDiario
 from app.models.transacao import Transacao
 from app.schemas.dashboard import (
     DashboardResumo,
@@ -20,8 +22,11 @@ from app.schemas.dashboard import (
     FaturaResumoBucket,
     FaturasResumo,
     GastoCategoria,
+    PatrimonioPonto,
+    PatrimonioSerie,
     SerieBucket,
 )
+from app.services import saldo_diario
 from app.services.categoria_resolucao import com_assinatura, expr_categoria_efetiva
 from app.services.gasto_usuario import (
     VALOR_EFETIVO,
@@ -29,7 +34,7 @@ from app.services.gasto_usuario import (
     linhas_do_periodo,
     tipo_do_lancamento,
 )
-from app.services.periodo import SP, limites_sp
+from app.services.periodo import SP, hoje_sp, limites_sp
 from app.services.revisao import expr_pendente_revisao
 
 _ULTIMAS = 10
@@ -267,3 +272,82 @@ def montar_series(
             for chave, (ent, sai, inv, cat) in sorted(totais.items())
         ]
     )
+
+
+def _fechos_mensais(hoje: date, meses: int) -> list[tuple[str, date]]:
+    """[(YYYY-MM, último dia do mês)] dos `meses` meses até o corrente, que fecha `hoje`."""
+    fechos: list[tuple[str, date]] = []
+    inicio_mes = hoje.replace(day=1)
+    fim = hoje
+    for _ in range(meses):
+        fechos.append((inicio_mes.strftime("%Y-%m"), fim))
+        fim = inicio_mes - timedelta(days=1)
+        inicio_mes = fim.replace(day=1)
+    fechos.reverse()
+    return fechos
+
+
+def montar_patrimonio(db: Session, usuario_id: int, meses: int = 12) -> PatrimonioSerie:
+    """Evolução patrimonial mês a mês: contas BANK (reconstrução de `saldo_diario`) + carteira
+    (último snapshot de cada investimento até o fecho do mês). Líquido = bruto − IR − IOF; snapshot
+    antigo sem `liquido_centavos` usa a razão líquido/bruto atual do investimento (estimativa)."""
+    hoje = hoje_sp()
+    fechos = _fechos_mensais(hoje, meses)
+    inicio = fechos[0][1].replace(day=1)
+
+    saldo_dia: dict[date, int] = {}
+    for serie in saldo_diario.series(db, usuario_id, (hoje - inicio).days + 1):
+        for p in serie.pontos:
+            saldo_dia[p.data] = saldo_dia.get(p.data, 0) + p.saldo_centavos
+
+    invs = db.scalars(select(Investimento).where(Investimento.usuario_id == usuario_id)).all()
+    razao: dict[int, float] = {}
+    for inv in invs:
+        bruto = inv.amount_centavos if inv.amount_centavos is not None else inv.saldo_centavos
+        liq = bruto - (inv.taxes_centavos or 0) - (inv.taxes2_centavos or 0)
+        razao[inv.id] = liq / bruto if bruto else 1.0
+    snaps: dict[int, list[tuple[date, int, int | None]]] = {}
+    for inv_id, dia, valor, liquido in db.execute(
+        select(
+            InvestimentoSaldoDiario.investimento_id,
+            InvestimentoSaldoDiario.data,
+            InvestimentoSaldoDiario.valor_centavos,
+            InvestimentoSaldoDiario.liquido_centavos,
+        )
+        .where(
+            InvestimentoSaldoDiario.usuario_id == usuario_id, InvestimentoSaldoDiario.data <= hoje
+        )
+        .order_by(InvestimentoSaldoDiario.data)
+    ):
+        snaps.setdefault(inv_id, []).append((dia, valor, liquido))
+
+    pontos: list[PatrimonioPonto] = []
+    for mes, fim in fechos:
+        bruto = liquido = 0
+        estimado = tem = False
+        for inv_id, lista in snaps.items():
+            # ponytail: varredura linear por mês (dezenas de investimentos × ~365 snapshots).
+            ultimo = next((s for s in reversed(lista) if s[0] <= fim), None)
+            if ultimo is None:
+                continue
+            tem = True
+            bruto += ultimo[1]
+            if ultimo[2] is None:
+                estimado = True
+                liquido += round(ultimo[1] * razao.get(inv_id, 1.0))
+            else:
+                liquido += ultimo[2]
+        contas = saldo_dia.get(fim, 0)
+        pontos.append(
+            PatrimonioPonto(
+                mes=mes,
+                contas_centavos=contas,
+                investimentos_centavos=bruto,
+                investimentos_liquido_centavos=liquido,
+                total_centavos=contas + bruto,
+                liquido_centavos=contas + liquido,
+                liquido_estimado=estimado,
+                tem_investimentos=tem,
+            )
+        )
+    return PatrimonioSerie(pontos=pontos)

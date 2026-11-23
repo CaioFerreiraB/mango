@@ -2647,6 +2647,52 @@
         }
       }
     },
+    "/api/dashboard/patrimonio": {
+      "get": {
+        "tags": [
+          "dashboard"
+        ],
+        "summary": "Patrimonio",
+        "description": "Evolução patrimonial mês a mês (contas BANK + investimentos), terminando no mês corrente.",
+        "operationId": "patrimonio_api_dashboard_patrimonio_get",
+        "parameters": [
+          {
+            "name": "meses",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 36,
+              "minimum": 1,
+              "default": 12,
+              "title": "Meses"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PatrimonioSerie"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/orcamentos": {
       "get": {
         "tags": [
@@ -13383,6 +13429,71 @@
         "type": "object",
         "title": "OrcamentoUpdate"
       },
+      "PatrimonioPonto": {
+        "properties": {
+          "mes": {
+            "type": "string",
+            "title": "Mes"
+          },
+          "contas_centavos": {
+            "type": "integer",
+            "title": "Contas Centavos"
+          },
+          "investimentos_centavos": {
+            "type": "integer",
+            "title": "Investimentos Centavos"
+          },
+          "investimentos_liquido_centavos": {
+            "type": "integer",
+            "title": "Investimentos Liquido Centavos"
+          },
+          "total_centavos": {
+            "type": "integer",
+            "title": "Total Centavos"
+          },
+          "liquido_centavos": {
+            "type": "integer",
+            "title": "Liquido Centavos"
+          },
+          "liquido_estimado": {
+            "type": "boolean",
+            "title": "Liquido Estimado"
+          },
+          "tem_investimentos": {
+            "type": "boolean",
+            "title": "Tem Investimentos"
+          }
+        },
+        "type": "object",
+        "required": [
+          "mes",
+          "contas_centavos",
+          "investimentos_centavos",
+          "investimentos_liquido_centavos",
+          "total_centavos",
+          "liquido_centavos",
+          "liquido_estimado",
+          "tem_investimentos"
+        ],
+        "title": "PatrimonioPonto",
+        "description": "Fecho de um mês (o corrente fecha hoje). Contas = só BANK (cartão fica fora)."
+      },
+      "PatrimonioSerie": {
+        "properties": {
+          "pontos": {
+            "items": {
+              "$ref": "#/components/schemas/PatrimonioPonto"
+            },
+            "type": "array",
+            "title": "Pontos"
+          }
+        },
+        "type": "object",
+        "required": [
+          "pontos"
+        ],
+        "title": "PatrimonioSerie"
+      },
       "PerfilRead": {
         "properties": {
           "id": {
@@ -13499,6 +13610,20 @@
           "totp_login_habilitado": {
             "type": "boolean",
             "title": "Totp Login Habilitado"
+          },
+          "dashboard_layout": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/WidgetLayout"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dashboard Layout"
           }
         },
         "type": "object",
@@ -13516,7 +13641,8 @@
           "revisao_desde",
           "brapi_token_configurado",
           "totp_configurado",
-          "totp_login_habilitado"
+          "totp_login_habilitado",
+          "dashboard_layout"
         ],
         "title": "PerfilRead"
       },
@@ -13643,6 +13769,21 @@
             "maximum": 100.0,
             "minimum": 1.0,
             "title": "Orcamento Alerta Pct"
+          },
+          "dashboard_layout": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/WidgetLayout"
+                },
+                "type": "array",
+                "maxItems": 30
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dashboard Layout"
           }
         },
         "type": "object",
@@ -16114,6 +16255,40 @@
           "dividendos_mes_centavos"
         ],
         "title": "VisaoGeralInvestimentos"
+      },
+      "WidgetLayout": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z-]{0,31}$",
+            "title": "Id"
+          },
+          "largura": {
+            "type": "integer",
+            "enum": [
+              12,
+              15,
+              20,
+              30,
+              40,
+              45,
+              60
+            ],
+            "title": "Largura"
+          },
+          "visivel": {
+            "type": "boolean",
+            "title": "Visivel"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "largura",
+          "visivel"
+        ],
+        "title": "WidgetLayout",
+        "description": "Um widget do dashboard: id do catálogo do frontend, largura em colunas de um grid de 60\n(⅕ ¼ ⅓ ½ ⅔ ¾ inteira) e visibilidade. Id desconhecido é aceito (o frontend ignora) — o catálogo mora no cliente."
       }
     }
   }

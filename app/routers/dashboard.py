@@ -8,9 +8,9 @@ from sqlalchemy.orm import Session
 
 from app.db.session import get_db
 from app.models.usuario import Usuario
-from app.schemas.dashboard import DashboardResumo, DashboardSeries
+from app.schemas.dashboard import DashboardResumo, DashboardSeries, PatrimonioSerie
 from app.security.current_user import get_current_user
-from app.services.dashboard import montar_dashboard, montar_series
+from app.services.dashboard import montar_dashboard, montar_patrimonio, montar_series
 from app.services.periodo import mes_corrente
 from app.services.revisao import corte_revisao
 
@@ -40,3 +40,13 @@ def series(
     if inicio is None or fim is None:
         inicio, fim = mes_corrente()
     return montar_series(db, user.id, inicio, fim, granularidade)
+
+
+@router.get("/patrimonio", response_model=PatrimonioSerie)
+def patrimonio(
+    meses: int = Query(12, ge=1, le=36),
+    db: Session = Depends(get_db),
+    user: Usuario = Depends(get_current_user),
+) -> PatrimonioSerie:
+    """Evolução patrimonial mês a mês (contas BANK + investimentos), terminando no mês corrente."""
+    return montar_patrimonio(db, user.id, meses)
