@@ -14,7 +14,8 @@ Accent = Literal["violeta", "manga", "verde", "azul", "rosa", "teal"]
 
 class WidgetLayout(BaseModel):
     """Um widget do dashboard: id do catálogo do frontend, largura em colunas de um grid de 60
-    (⅕ ¼ ⅓ ½ ⅔ ¾ inteira) e visibilidade. Id desconhecido é aceito (o frontend ignora) — o catálogo mora no cliente."""
+    (⅕ ¼ ⅓ ½ ⅔ ¾ inteira) e visibilidade. Id desconhecido é aceito (o frontend ignora) — o
+    catálogo mora no cliente."""
 
     id: str = Field(pattern=r"^[a-z][a-z-]{0,31}$")
     largura: Literal[12, 15, 20, 30, 40, 45, 60]

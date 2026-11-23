@@ -27,6 +27,30 @@ ainda está se assentando. Cada versão publicada tem uma imagem correspondente 
   despesas e ganham aba própria, medida em aportes líquidos (aportes − resgates). Juros e
   dividendos continuam em Receitas. Orçamentos de despesa em categorias de investimento são
   migrados automaticamente.
+- **Dashboard personalizável:** "Personalizar" deixa ocultar, reordenar (arrastando ou com ▲ ▼)
+  e mudar a largura de cada bloco (⅕ a inteira); os ocultos voltam por "Adicionar visualização".
+  O layout fica salvo no seu perfil e vale em qualquer dispositivo.
+- **Card "Investido no mês" e evolução patrimonial:** o dashboard mostra os aportes líquidos do
+  mês e um gráfico mês a mês do patrimônio total (contas + investimentos) e líquido (descontado
+  IR/IOF). Cartões ficam de fora.
+- **Despesas por categoria com todas as despesas:** a rosca soma todas as categorias e as barras ao
+  lado servem de legenda, com valor e percentual do período inteiro.
+- **Busca global:** campo no topo (atalho Ctrl/⌘ K ou /) para achar páginas, configurações,
+  contas, faturas e transações.
+
+### Alterado
+
+- **Investimento não é despesa no dashboard:** aportes em categorias de investimento saem das
+  saídas (e resgates, das entradas) e passam a aparecer em "Investido". O resumo do assistente
+  (MCP, chat e Telegram) segue a mesma regra.
+- Dashboard: cards renomeados para "Saldo em contas" e "… no mês"; gráfico de entradas e saídas
+  com o resultado como linha tracejada e granularidade semanal por padrão; seletor de período no
+  topo.
+- Layout mais largo no desktop e tipografia mais suave: textos e ícones deixaram o quase-preto por
+  tons de ardósia, e o item ativo da barra lateral ganhou a cor de destaque.
+- Todos os gráficos passaram a usar Apache ECharts. Na Visão Geral de investimentos, valor (R$) e
+  rentabilidade (%) viraram vistas separadas em vez de dois eixos no mesmo gráfico, e CDI, SELIC,
+  IPCA e Ibovespa ganharam cores próprias e distinguíveis.
 
 ### Corrigido
 
