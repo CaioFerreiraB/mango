@@ -27,7 +27,7 @@ PERIODICIDADE = ("mensal", "trimestral", "semestral", "anual", "irregular")
 MODO_DIVISAO = ("igualmente", "integral")
 
 # §4.6 orcamento — tipo do orçamento (categoria não carrega tipo, o orçamento sim)
-TIPO_ORCAMENTO = ("despesa", "receita")
+TIPO_ORCAMENTO = ("despesa", "receita", "investimento")
 
 # §4.5 regra_categorizacao — como o texto da regra casa o nome da transação:
 # "exato" = nome normalizado idêntico; "contem" = texto da regra é substring do nome.

@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 
 import { api } from "@/lib/api/client"
 import type { components } from "@/lib/api/schema"
-import type { Transacao } from "@/lib/api/transacoes"
+import type { ItemListagem } from "@/lib/api/transacoes"
 
 export type Orcamento = components["schemas"]["OrcamentoRead"]
 export type OrcamentoCreate = components["schemas"]["OrcamentoCreate"]
@@ -12,6 +12,7 @@ export type OrcamentoMensalCreate =
   components["schemas"]["OrcamentoMensalCreate"]
 export type OrcamentoConsumo = components["schemas"]["OrcamentoConsumoRead"]
 export type OrcamentoConsumoItem = components["schemas"]["OrcamentoConsumoItem"]
+export type TipoOrcamento = OrcamentoCreate["tipo"]
 
 export const orcamentosKeys = {
   all: ["orcamentos"] as const,
@@ -37,7 +38,7 @@ export function useConsumoOrcamentos(ano: number, mes: number) {
 /** Linha da Visão Geral cujas transações o usuário abriu: uma categoria orçada ou o
  *  "Não planejado" (`categoriaId: null`) daquele tipo. */
 export type AlvoDrilldown = {
-  tipo: "despesa" | "receita"
+  tipo: TipoOrcamento
   categoriaId: string | null
 }
 
@@ -52,7 +53,7 @@ export function useTransacoesDoOrcamento(
   return useQuery({
     queryKey: ["orcamentos", "consumo", ano, mes, "transacoes", alvo],
     enabled: alvo !== null,
-    queryFn: async (): Promise<Transacao[]> => {
+    queryFn: async (): Promise<ItemListagem[]> => {
       const { tipo, categoriaId } = alvo!
       const { data, error } = await api.GET(
         "/api/orcamentos/consumo/transacoes",

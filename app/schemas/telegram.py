@@ -22,6 +22,7 @@ class TelegramRead(BaseModel):
     solicitacao_id: str | None
     vinculo_expira_em: datetime | None
     notif_nao_revisadas: bool
+    notif_divisoes_pendentes: bool
     ultimo_envio_em: datetime | None
     erro: str | None
     sync_automatico: bool
@@ -30,8 +31,19 @@ class TelegramRead(BaseModel):
 
 
 class TelegramUpdate(BaseModel):
+    """`notif_nao_revisadas` liga o relatório diário; `notif_divisoes_pendentes`, só a seção de
+    divisões sem transação dentro dele. Os dois opcionais (PATCH parcial), nunca nulos."""
+
     model_config = ConfigDict(extra="forbid")
-    notif_nao_revisadas: bool
+    notif_nao_revisadas: bool | None = None
+    notif_divisoes_pendentes: bool | None = None
+
+    @model_validator(mode="after")
+    def campos_nao_nulos(self):
+        for campo in self.model_fields_set:
+            if getattr(self, campo) is None:
+                raise ValueError(f"{campo} não pode ser nulo")
+        return self
 
 
 class VinculoRead(BaseModel):

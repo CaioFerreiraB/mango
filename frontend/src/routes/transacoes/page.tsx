@@ -87,6 +87,8 @@ export function TransacoesPage() {
   const [ocultarFuturas, setOcultarFuturas] = useState(true)
   // "__todas__" · "__qualquer__" (com assinatura) · "__sem__" (sem) · id da assinatura.
   const [assinaturaFiltro, setAssinaturaFiltro] = useState(TODAS)
+  // Divididas = transações vinculadas a uma divisão + parcelas de divisão sem transação sua.
+  const [divisao, setDivisao] = useState<"todas" | "divididas" | "nao">("todas")
   const [page, setPage] = useState(0)
 
   const contas = useContas()
@@ -121,6 +123,8 @@ export function TransacoesPage() {
     ocultar_futuras: ocultarFuturas || undefined,
     assinatura_id: assinaturaId,
     tem_assinatura: temAssinatura,
+    tem_divisao:
+      divisao === "divididas" ? true : divisao === "nao" ? false : undefined,
     limit: LIMIT,
     offset: page * LIMIT,
   })
@@ -131,6 +135,7 @@ export function TransacoesPage() {
     (tipo !== null ? 1 : 0) +
     (transf !== "todas" ? 1 : 0) +
     (assinaturaFiltro !== TODAS ? 1 : 0) +
+    (divisao !== "todas" ? 1 : 0) +
     (ocultarPagFatura ? 0 : 1) +
     (ocultarFuturas ? 0 : 1)
 
@@ -267,6 +272,22 @@ export function TransacoesPage() {
                         {a.nome}
                       </SelectItem>
                     ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Divisão</Label>
+                <Select
+                  value={divisao}
+                  onValueChange={(v) => reset(setDivisao)(v as typeof divisao)}
+                >
+                  <SelectTrigger size="sm" className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todas">Divididas ou não</SelectItem>
+                    <SelectItem value="divididas">Só divididas</SelectItem>
+                    <SelectItem value="nao">Sem divisão</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

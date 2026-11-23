@@ -17,6 +17,7 @@ from app.models.usuario import Usuario
 from app.pluggy.client import PluggyError
 from app.repositories.transacao import TransacaoRepository
 from app.security.current_user import _aware
+from app.services import divisao as divisao_service
 from app.services import telegram
 from app.services.periodo import SP, limites_sp
 from app.services.revisao import corte_revisao
@@ -44,7 +45,17 @@ def recuperar(*, session_factory=SessionLocal, momento: datetime | None = None) 
         db.commit()
 
 
-def relatorio(db, usuario: Usuario, momento: datetime) -> str | None:
+def _moeda(centavos: int) -> str:
+    reais, resto = divmod(abs(centavos), 100)
+    return f"{reais:,}".replace(",", ".") + f",{resto:02d}"
+
+
+def _texto(*opcoes: str | None) -> str:
+    texto = next((o for o in opcoes if o), None) or "Sem descrição"
+    return " ".join(texto.split())[:100]
+
+
+def _secao_transacoes(db, usuario: Usuario, momento: datetime) -> list[str]:
     fim = limites_sp(momento.astimezone(SP).date(), momento.astimezone(SP).date())[1]
     itens, total = TransacaoRepository(db, usuario.id).listar_filtrado(
         fim=fim,
@@ -54,32 +65,56 @@ def relatorio(db, usuario: Usuario, momento: datetime) -> str | None:
         limit=10,
     )
     if not total:
-        return None
+        return []
     plural = "transação" if total == 1 else "transações"
-    linhas = ["**Mango · revisão pendente**", f"{total} {plural} para revisar", ""]
+    linhas = [f"{total} {plural} para revisar", ""]
     for transacao in itens:
-        descricao = (
-            transacao.descricao_usuario
-            or transacao.description
-            or transacao.description_raw
-            or "Sem descrição"
+        descricao = _texto(
+            transacao.descricao_usuario, transacao.description, transacao.description_raw
         )
-        descricao = " ".join(descricao.split())[:100]
         valor = transacao.amount_in_account_currency_centavos
         if valor is None:
             valor = transacao.amount_centavos
         sinal = {"DEBIT": "−", "CREDIT": "+"}.get(transacao.type, "") if valor else ""
-        reais, centavos = divmod(abs(valor), 100)
-        moeda = f"{reais:,}".replace(",", ".") + f",{centavos:02d}"
         data = _aware(transacao.date).astimezone(SP).strftime("%d/%m")
-        linhas.append(f"{data} · {descricao} · {sinal}R$ {moeda}")
-    linhas.extend(
-        [
-            "",
-            f"Mostrando {len(itens)} de {total}",
-            f"Atualizado em {momento.astimezone(SP):%d/%m/%Y %H:%M} (Brasília)",
-        ]
+        linhas.append(f"{data} · {descricao} · {sinal}R$ {_moeda(valor)}")
+    linhas.extend(["", f"Mostrando {len(itens)} de {total}"])
+    return linhas
+
+
+def _secao_divisoes(db, usuario: Usuario, momento: datetime) -> list[str]:
+    """Divisões que o usuário pagou e ainda não têm transação vinculada (RF11), até o fim do dia
+    de `momento` — mesmo corte da seção de transações."""
+    fim = limites_sp(momento.astimezone(SP).date(), momento.astimezone(SP).date())[1]
+    itens, total = divisao_service.pendentes(
+        db, usuario.id, corte_revisao(usuario.revisao_desde), fim, limite=5
     )
+    if not total:
+        return []
+    plural = "divisão" if total == 1 else "divisões"
+    linhas = [f"**Divisões sem transação** · {total} {plural}", ""]
+    for divisao in itens:
+        data = _aware(divisao.data).astimezone(SP).strftime("%d/%m")
+        linhas.append(
+            f"{data} · {_texto(divisao.descricao)} · R$ {_moeda(divisao.valor_total_centavos)}"
+        )
+    if total > len(itens):
+        linhas.extend(["", f"Mostrando {len(itens)} de {total}"])
+    return linhas
+
+
+def relatorio(db, usuario: Usuario, momento: datetime, *, divisoes: bool = True) -> str | None:
+    secoes = [_secao_transacoes(db, usuario, momento)]
+    if divisoes:
+        secoes.append(_secao_divisoes(db, usuario, momento))
+    secoes = [s for s in secoes if s]
+    if not secoes:
+        return None
+    linhas = ["**Mango · revisão pendente**"]
+    for secao in secoes:
+        linhas.extend(secao)
+        linhas.append("")
+    linhas.append(f"Atualizado em {momento.astimezone(SP):%d/%m/%Y %H:%M} (Brasília)")
     return "\n".join(linhas)
 
 
@@ -132,7 +167,7 @@ def _enviar(db, usuario_id: int, registro: ExecucaoDiaria, momento: datetime) ->
                 registro.envio_status = "ignorado"
                 db.commit()
             return
-        texto = relatorio(db, usuario, momento)
+        texto = relatorio(db, usuario, momento, divisoes=config.notif_divisoes_pendentes)
         if texto is None:
             registro.envio_status, registro.proxima_tentativa = "vazio", None
             db.commit()

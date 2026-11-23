@@ -1,7 +1,14 @@
-import { ArrowRightLeft, CreditCard, Repeat, StickyNote } from "lucide-react"
+import {
+  ArrowRightLeft,
+  CreditCard,
+  Repeat,
+  StickyNote,
+  Users,
+} from "lucide-react"
 import { useState, type PointerEvent as ReactPointerEvent } from "react"
 
 import { Valor } from "@/components/common/valor"
+import { DivisaoDetalheDialog } from "@/components/divisoes/divisao-detalhe-dialog"
 import { StatusBadge } from "@/components/transacoes/status-badge"
 import { TransacaoDetalhe } from "@/components/transacoes/transacao-detalhe"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -20,11 +27,15 @@ import { useContas } from "@/lib/api/contas"
 import { usePerfil } from "@/lib/api/perfil"
 import {
   descricaoExibida,
+  ehLancamento,
   subtituloTransacao,
   valorEfetivoCentavos,
+  valorLancamento,
+  type DivisaoLancamento,
+  type ItemListagem,
   type Transacao,
 } from "@/lib/api/transacoes"
-import { formatDate } from "@/lib/format"
+import { formatBRL, formatDate } from "@/lib/format"
 import { estadoRevisao } from "@/lib/revisao"
 import { cn } from "@/lib/utils"
 
@@ -33,6 +44,49 @@ function corTile(type: string) {
   return type === "CREDIT"
     ? "bg-positive/15 text-positive"
     : "bg-negative/15 text-negative"
+}
+
+/** Marcador de transação dividida: a parte do usuário é o que conta no orçamento. */
+function MarcadorDivisao({
+  transacao,
+  className,
+}: {
+  transacao: Transacao
+  className: string
+}) {
+  if (!transacao.divisao) return null
+  const texto = `Dividida: sua parte ${formatBRL(transacao.divisao.minha_parte_centavos)} de ${formatBRL(transacao.divisao.valor_total_centavos)}`
+  return (
+    <Users className={className} aria-label={texto}>
+      <title>{texto}</title>
+    </Users>
+  )
+}
+
+/** Linha secundária de um lançamento de divisão: quem pagou e o que conta para o usuário. */
+function subtituloLancamento(l: DivisaoLancamento): string {
+  if (l.pendente) return "Você pagou · vincule a transação"
+  const parte = `sua parte de ${formatBRL(l.valor_total_centavos)}`
+  return l.pago_por_mim
+    ? `Você pagou fora do banco · ${parte}`
+    : `Pago por ${l.pago_por_nome} · ${parte}`
+}
+
+function BadgeLancamento({
+  lancamento,
+  className,
+}: {
+  lancamento: DivisaoLancamento
+  className?: string
+}) {
+  if (lancamento.pendente)
+    return <StatusBadge estado="pendente" className={className} />
+  return (
+    <Badge variant="secondary" className={cn("gap-1 font-medium", className)}>
+      <Users className="size-3" aria-hidden />
+      Dividida
+    </Badge>
+  )
 }
 
 /** Larguras de coluna arrastáveis (px). Sem persistência — reset ao recarregar. */
@@ -82,7 +136,7 @@ export function TransacoesTabela({
   items,
   ocultarLinkFatura = false,
 }: {
-  items: Transacao[]
+  items: ItemListagem[]
   /** Repassado ao drawer: esconde "Ir para a fatura" quando já estamos numa fatura. */
   ocultarLinkFatura?: boolean
 }) {
@@ -99,7 +153,11 @@ export function TransacoesTabela({
   // Descrição · Valor · Data · Conta · Categoria · Status
   const { larguras, iniciar } = useLarguras([300, 120, 110, 160, 180, 120])
   const [selecionadaId, setSelecionadaId] = useState<number | null>(null)
-  const selecionada = items.find((t) => t.id === selecionadaId) ?? null
+  const [divisaoId, setDivisaoId] = useState<number | null>(null)
+  const selecionada =
+    items.find(
+      (t): t is Transacao => !ehLancamento(t) && t.id === selecionadaId
+    ) ?? null
 
   return (
     <>
@@ -137,6 +195,73 @@ export function TransacoesTabela({
           </TableHeader>
           <TableBody>
             {items.map((t) => {
+              if (ehLancamento(t)) {
+                const IconeL = iconeCategoria(t.categoria_id)
+                const catL = t.categoria_id
+                  ? mapaCategorias.get(t.categoria_id)
+                  : undefined
+                return (
+                  <TableRow
+                    key={`d-${t.divisao_id}`}
+                    className="cursor-pointer even:bg-muted/40"
+                    onClick={() => setDivisaoId(t.divisao_id)}
+                  >
+                    <TableCell>
+                      <div className="flex min-w-0 items-center gap-3">
+                        <Avatar className="size-8 shrink-0 after:hidden">
+                          <AvatarFallback className={corTile("DEBIT")}>
+                            <IconeL className="size-4" aria-hidden />
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="min-w-0">
+                          <button
+                            className="flex w-full min-w-0 items-center gap-2 text-left hover:text-primary"
+                            onClick={() => setDivisaoId(t.divisao_id)}
+                          >
+                            <span className="min-w-0 truncate font-medium">
+                              {t.descricao ?? "Divisão"}
+                            </span>
+                            <Users
+                              className="size-3.5 shrink-0 text-muted-foreground"
+                              aria-label="divisão"
+                            />
+                          </button>
+                          <p className="truncate text-xs text-muted-foreground">
+                            {subtituloLancamento(t)}
+                          </p>
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="truncate">
+                        <Valor centavos={valorLancamento(t)} sinal neutro />
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      <div className="truncate">{formatDate(t.data)}</div>
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      —
+                    </TableCell>
+                    <TableCell>
+                      {catL ? (
+                        <Badge
+                          variant="secondary"
+                          className="max-w-full font-normal"
+                        >
+                          <IconeL className="size-3.5 shrink-0" aria-hidden />
+                          <span className="min-w-0 truncate">{catL}</span>
+                        </Badge>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <BadgeLancamento lancamento={t} />
+                    </TableCell>
+                  </TableRow>
+                )
+              }
               const catId = t.categoria_efetiva_id
               const catNome = catId ? mapaCategorias.get(catId) : undefined
               const IconeCat = iconeCategoria(catId)
@@ -144,7 +269,7 @@ export function TransacoesTabela({
               const subtitulo = subtituloTransacao(t)
               return (
                 <TableRow
-                  key={t.id}
+                  key={`t-${t.id}`}
                   className="cursor-pointer even:bg-muted/40"
                   onClick={() => setSelecionadaId(t.id)}
                 >
@@ -190,6 +315,10 @@ export function TransacoesTabela({
                               aria-label="na fatura"
                             />
                           ) : null}
+                          <MarcadorDivisao
+                            transacao={t}
+                            className="size-3.5 shrink-0 text-muted-foreground"
+                          />
                           {t.total_installments ? (
                             <Badge
                               variant="secondary"
@@ -257,12 +386,60 @@ export function TransacoesTabela({
 
       <ul className="divide-y rounded-lg border md:hidden">
         {items.map((t) => {
+          if (ehLancamento(t)) {
+            const IconeL = iconeCategoria(t.categoria_id)
+            return (
+              <li key={`d-${t.divisao_id}`}>
+                <button
+                  className="flex w-full items-center gap-3 px-3 py-3 text-left hover:bg-muted/40"
+                  onClick={() => setDivisaoId(t.divisao_id)}
+                >
+                  <div
+                    className={cn(
+                      "flex size-10 shrink-0 items-center justify-center rounded-full",
+                      corTile("DEBIT")
+                    )}
+                  >
+                    <IconeL className="size-5" aria-hidden />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="flex min-w-0 items-center gap-1.5 text-xs font-semibold">
+                      <span className="min-w-0 truncate">
+                        {t.descricao ?? "Divisão"}
+                      </span>
+                      <Users
+                        className="size-3 shrink-0 text-muted-foreground"
+                        aria-label="divisão"
+                      />
+                    </p>
+                    <p className="truncate text-[11px] text-muted-foreground">
+                      {subtituloLancamento(t)}
+                    </p>
+                    <BadgeLancamento
+                      lancamento={t}
+                      className="mt-1 px-1.5 py-0 text-[10px]"
+                    />
+                  </div>
+                  <div className="shrink-0 text-right">
+                    <Valor
+                      centavos={valorLancamento(t)}
+                      sinal
+                      className="block text-xs font-semibold"
+                    />
+                    <p className="text-[11px] text-muted-foreground">
+                      {formatDate(t.data)}
+                    </p>
+                  </div>
+                </button>
+              </li>
+            )
+          }
           const catId = t.categoria_efetiva_id
           const IconeCat = iconeCategoria(catId)
           const titulo = descricaoExibida(t)
           const subtitulo = subtituloTransacao(t)
           return (
-            <li key={t.id}>
+            <li key={`t-${t.id}`}>
               <button
                 className="flex w-full items-center gap-3 px-3 py-3 text-left hover:bg-muted/40"
                 onClick={() => setSelecionadaId(t.id)}
@@ -284,6 +461,10 @@ export function TransacoesTabela({
                         aria-label="tem observações"
                       />
                     ) : null}
+                    <MarcadorDivisao
+                      transacao={t}
+                      className="size-3 shrink-0 text-muted-foreground"
+                    />
                   </p>
                   {subtitulo ? (
                     <p className="truncate text-[11px] text-muted-foreground">
@@ -320,6 +501,12 @@ export function TransacoesTabela({
         onOpenChange={(o) => !o && setSelecionadaId(null)}
         ocultarLinkFatura={ocultarLinkFatura}
       />
+      {divisaoId !== null ? (
+        <DivisaoDetalheDialog
+          id={divisaoId}
+          onClose={() => setDivisaoId(null)}
+        />
+      ) : null}
     </>
   )
 }

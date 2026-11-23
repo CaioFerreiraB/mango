@@ -28,7 +28,7 @@ from __future__ import annotations
 
 from datetime import date, timedelta
 
-from sqlalchemy import and_, func, or_, select
+from sqlalchemy import and_, or_, select
 from sqlalchemy.orm import Session
 
 from app.models.categoria import CATEGORIA_PAGAMENTO_FATURA
@@ -38,16 +38,17 @@ from app.schemas.orcamento import OrcamentoConsumoItem, OrcamentoConsumoRead
 from app.services.categoria_arvore import com_descendentes
 from app.services.categoria_arvore import subarvores as montar_subarvores
 from app.services.categoria_resolucao import com_assinatura, expr_categoria_efetiva
+from app.services.gasto_usuario import linhas_do_periodo, parcelas_divisao
 from app.services.orcamento_mensal import materializar_mes
 from app.services.periodo import hoje_sp, limites_sp
 
 # Do maior para o menor: o primeiro que o percentual cruza é o alerta a exibir.
 _LIMIARES = (100, 90, 75, 50)
 
-# Valor efetivo em reais: valor na moeda da conta (internacional), senão o `amount` cru (§4.6).
-_VALOR_EFETIVO = func.coalesce(
-    Transacao.amount_in_account_currency_centavos, Transacao.amount_centavos
-)
+# Investimento = subárvore 03 menos os rendimentos (0306 juros/dividendos), que são receita.
+RAIZ_INVESTIMENTO = "03000000"
+RAIZ_RENDIMENTOS = "03060000"
+TIPOS = ("despesa", "receita", "investimento")
 
 
 def _intervalo_mes(ano: int, mes: int) -> tuple[date, date]:
@@ -56,7 +57,17 @@ def _intervalo_mes(ano: int, mes: int) -> tuple[date, date]:
     return inicio, prox - timedelta(days=1)
 
 
-_TIPO_TX = {"despesa": "DEBIT", "receita": "CREDIT"}
+def categorias_investimento(db: Session, usuario_id: int) -> set[str]:
+    """Categorias cujo realizado vai para a aba Investimentos (pela árvore: pega personalizadas)."""
+    arv = montar_subarvores(db, usuario_id, {RAIZ_INVESTIMENTO, RAIZ_RENDIMENTOS})
+    return arv[RAIZ_INVESTIMENTO] - arv[RAIZ_RENDIMENTOS]
+
+
+def tipo_do_lancamento(cat: str | None, tipo_tx: str, investimento: set[str]) -> str:
+    if cat in investimento:
+        return "investimento"
+    return "despesa" if tipo_tx == "DEBIT" else "receita"
+
 
 # ponytail: uma categoria num mês raramente passa de dezenas de linhas; paginar se um dia estourar.
 _LIMITE_DRILLDOWN = 500
@@ -74,26 +85,19 @@ def _filtros_mes(usuario_id: int, ano: int, mes: int) -> tuple:
 
 
 def _valores_por_categoria(
-    db: Session, usuario_id: int, ano: int, mes: int
+    db: Session, usuario_id: int, ano: int, mes: int, investimento: set[str]
 ) -> dict[tuple[str | None, str], int]:
-    """{(categoria_efetiva | None, 'despesa'|'receita'): total_centavos} das transações do mês.
-
-    `abs` por LINHA, não do total: a compra de cartão vem DEBIT com `amount` positivo e o débito
-    em conta vem negativo — somar com sinal e tirar o módulo depois fazia os dois se anularem na
-    mesma categoria (mesma correção do dashboard). `None` = sem categoria (entra no não planejado).
-    """
-    cat_efetiva = expr_categoria_efetiva(usuario_id)
-    rows = db.execute(
-        com_assinatura(
-            select(cat_efetiva, Transacao.type, func.sum(func.abs(_VALOR_EFETIVO))), usuario_id
-        )
-        .where(*_filtros_mes(usuario_id, ano, mes), Transacao.type.in_(tuple(_TIPO_TX.values())))
-        .group_by(cat_efetiva, Transacao.type)
-    ).all()
-    return {
-        (cat, "despesa" if tipo_tx == "DEBIT" else "receita"): int(total)
-        for cat, tipo_tx, total in rows
-    }
+    """{(categoria_efetiva | None, tipo): total_centavos} do mês, já na parte do usuário quando a
+    compra foi dividida (`gasto_usuario`). Investimento é líquido: aporte (DEBIT) − resgate
+    (CREDIT), podendo ficar negativo. `None` = sem categoria (entra no não planejado)."""
+    valores: dict[tuple[str | None, str], int] = {}
+    for _, valor, tipo_tx, cat in linhas_do_periodo(
+        db, usuario_id, *limites_sp(*_intervalo_mes(ano, mes))
+    ):
+        tipo = tipo_do_lancamento(cat, tipo_tx, investimento)
+        sinal = -1 if tipo == "investimento" and tipo_tx == "CREDIT" else 1
+        valores[(cat, tipo)] = valores.get((cat, tipo), 0) + sinal * valor
+    return valores
 
 
 def _mensais(db: Session, usuario_id: int, ano: int, mes: int) -> list[OrcamentoMensal]:
@@ -112,7 +116,7 @@ def _cobertas(
     mensais: list[OrcamentoMensal], subarvores: dict[str, set[str]]
 ) -> dict[str, set[str]]:
     """Categorias "no orçamento" do mês, por tipo: subárvores das linhas não suprimidas."""
-    cobertas: dict[str, set[str]] = {"despesa": set(), "receita": set()}
+    cobertas: dict[str, set[str]] = {t: set() for t in TIPOS}
     for m in mensais:
         if not m.suprimido:
             cobertas[m.tipo] |= subarvores[m.categoria_id]
@@ -130,7 +134,8 @@ def consumo_do_mes(db: Session, usuario_id: int, ano: int, mes: int) -> Orcament
     # Meses passados/futuros: só lê o que já existe — nunca materializa sob demanda.
     mensais = _mensais(db, usuario_id, ano, mes)
 
-    valores = _valores_por_categoria(db, usuario_id, ano, mes)
+    investimento = categorias_investimento(db, usuario_id)
+    valores = _valores_por_categoria(db, usuario_id, ano, mes, investimento)
     subarvores = montar_subarvores(db, usuario_id, {m.categoria_id for m in mensais})
     # (ordem, recorrente) do orçamento padrão — "Editar mês" usa `recorrente` pra saber se
     # remover é "suprimir só este mês" (padrão) ou "apagar de vez" (pontual, ver `criar_pontual`).
@@ -147,9 +152,10 @@ def consumo_do_mes(db: Session, usuario_id: int, ano: int, mes: int) -> Orcament
     for m in mensais:
         realizado = sum(valores.get((c, m.tipo), 0) for c in subarvores[m.categoria_id])
         limite = m.limite_centavos
-        # Sem limite (0), qualquer realizado já é 100%; sem realizado, 0%.
-        percentual = (
-            round(realizado / limite * 100) if limite > 0 else (100 if realizado > 0 else 0)
+        # Sem limite (0), qualquer realizado já é 100%; sem realizado, 0%. Piso 0: investimento
+        # líquido negativo (resgatou mais que aportou) não vira percentual negativo.
+        percentual = max(
+            0, round(realizado / limite * 100) if limite > 0 else (100 if realizado > 0 else 0)
         )
         # Alerta de estouro só existe pra despesa — bater/passar de uma meta de receita é
         # notícia boa, não um alerta.
@@ -177,7 +183,7 @@ def consumo_do_mes(db: Session, usuario_id: int, ano: int, mes: int) -> Orcament
     # Ordem definida pelo usuário no modal padrão — não reordena sozinho conforme o gasto muda.
     itens.sort(key=lambda i: (i.tipo, orcamentos_info.get(i.orcamento_id, (0, True))[0]))
     cobertas = _cobertas(mensais, subarvores)
-    nao_planejado = {"despesa": 0, "receita": 0}
+    nao_planejado = dict.fromkeys(TIPOS, 0)
     for (cat, tipo), valor in valores.items():
         if _eh_nao_planejado(cat, cobertas[tipo]):
             nao_planejado[tipo] += valor
@@ -187,29 +193,62 @@ def consumo_do_mes(db: Session, usuario_id: int, ano: int, mes: int) -> Orcament
         itens=itens,
         nao_planejado_despesa_centavos=nao_planejado["despesa"],
         nao_planejado_receita_centavos=nao_planejado["receita"],
+        nao_planejado_investimento_centavos=nao_planejado["investimento"],
     )
 
 
 def transacoes_do_item(
     db: Session, usuario_id: int, ano: int, mes: int, tipo: str, categoria_id: str | None
-) -> list[Transacao]:
-    """Transações que compõem uma linha do consumo: a subárvore de `categoria_id`, ou — com
-    `categoria_id=None` — o não planejado do tipo. Mesmo recorte de `consumo_do_mes`."""
-    cat = expr_categoria_efetiva(usuario_id)
+) -> tuple[list[Transacao], list[int]]:
+    """(transações, ids de divisão) que compõem uma linha do consumo: a subárvore de
+    `categoria_id`, ou — com `categoria_id=None` — o não planejado do tipo. Mesmo recorte de
+    `consumo_do_mes`, inclusive as parcelas de divisão (`gasto_usuario.parcelas_divisao`)."""
+    investimento = categorias_investimento(db, usuario_id)
     if categoria_id is not None:
-        filtro_cat = cat.in_(com_descendentes(db, usuario_id, categoria_id))
+        alvo = com_descendentes(db, usuario_id, categoria_id)
+
+        def no_item(cat):
+            return cat.in_(alvo)
+
     else:
         mensais = _mensais(db, usuario_id, ano, mes)
         subarvores = montar_subarvores(db, usuario_id, {m.categoria_id for m in mensais})
         cobertas = _cobertas(mensais, subarvores)[tipo]
-        # Espelha `_eh_nao_planejado` em SQL.
-        filtro_cat = or_(
-            cat.is_(None), and_(cat.not_in(cobertas), cat != CATEGORIA_PAGAMENTO_FATURA)
-        )
+
+        def no_item(cat):  # espelha `_eh_nao_planejado` em SQL
+            return or_(cat.is_(None), and_(cat.not_in(cobertas), cat != CATEGORIA_PAGAMENTO_FATURA))
+
+    def do_tipo(cat, tipo_tx: str | None):
+        if tipo == "investimento":
+            return cat.in_(investimento)
+        fora = or_(cat.is_(None), cat.not_in(investimento))
+        return fora if tipo_tx is None else and_(fora, Transacao.type == tipo_tx)
+
+    cat = expr_categoria_efetiva(usuario_id)
     stmt = (
         com_assinatura(select(Transacao), usuario_id)
-        .where(*_filtros_mes(usuario_id, ano, mes), Transacao.type == _TIPO_TX[tipo], filtro_cat)
+        .where(
+            *_filtros_mes(usuario_id, ano, mes),
+            Transacao.type.in_(("DEBIT", "CREDIT")),
+            do_tipo(cat, {"despesa": "DEBIT", "receita": "CREDIT"}.get(tipo)),
+            no_item(cat),
+        )
         .order_by(Transacao.date.desc(), Transacao.id.desc())
         .limit(_LIMITE_DRILLDOWN)
     )
-    return list(db.scalars(stmt).all())
+    transacoes = list(db.scalars(stmt).all())
+    if tipo == "receita":
+        return transacoes, []  # parcela de divisão é sempre saída
+    parcelas = parcelas_divisao(usuario_id).subquery()
+    ini, fim_excl = limites_sp(*_intervalo_mes(ano, mes))
+    divisoes = db.scalars(
+        select(parcelas.c.divisao_id)
+        .where(
+            parcelas.c.data >= ini,
+            parcelas.c.data < fim_excl,
+            do_tipo(parcelas.c.categoria_id, None),
+            no_item(parcelas.c.categoria_id),
+        )
+        .order_by(parcelas.c.data.desc())
+    ).all()
+    return transacoes, list(divisoes)

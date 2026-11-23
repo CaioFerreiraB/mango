@@ -19,16 +19,18 @@ import {
 import { Switch } from "@/components/ui/switch"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { useIconeCategoria } from "@/lib/api/categoria-icones"
-import { useMapaCategorias } from "@/lib/api/categorias"
+import { useCategorias, useMapaCategorias } from "@/lib/api/categorias"
+import { excluidasDoTipo } from "@/lib/categoria-investimento"
 import {
   useAtualizarLimiteMensal,
   useCriarLimiteMensal,
   useCriarOrcamento,
   useRemoverOrcamento,
   type OrcamentoConsumoItem,
+  type TipoOrcamento,
 } from "@/lib/api/orcamentos"
 
-type Tipo = "despesa" | "receita"
+type Tipo = TipoOrcamento
 
 type Nova = {
   categoriaId: string
@@ -39,6 +41,7 @@ type Nova = {
 
 const SECOES: { tipo: Tipo; titulo: string }[] = [
   { tipo: "despesa", titulo: "Despesas" },
+  { tipo: "investimento", titulo: "Investimentos" },
   { tipo: "receita", titulo: "Receitas" },
 ]
 
@@ -66,11 +69,13 @@ export function EditarMesDialog({
   const [notifEdits, setNotifEdits] = useState<Record<number, boolean>>({})
   const [novas, setNovas] = useState<Record<Tipo, Nova[]>>({
     despesa: [],
+    investimento: [],
     receita: [],
   })
   const [erros, setErros] = useState<Record<string, string>>({})
   const [salvando, setSalvando] = useState(false)
   const nomes = useMapaCategorias()
+  const categorias = useCategorias().data ?? []
   const isMobile = useIsMobile()
   const iconeCategoria = useIconeCategoria()
 
@@ -84,7 +89,7 @@ export function EditarMesDialog({
     if (novoAberto) {
       setEdits({})
       setNotifEdits({})
-      setNovas({ despesa: [], receita: [] })
+      setNovas({ despesa: [], investimento: [], receita: [] })
       setErros({})
     }
   }
@@ -234,6 +239,7 @@ export function EditarMesDialog({
     Object.keys(edits).length > 0 ||
     Object.keys(notifEdits).length > 0 ||
     novas.despesa.length > 0 ||
+    novas.investimento.length > 0 ||
     novas.receita.length > 0
 
   return (
@@ -265,6 +271,7 @@ export function EditarMesDialog({
                 .filter((i) => i.tipo === tipo)
                 .map((i) => i.categoria_id),
               ...novas[tipo].map((n) => n.categoriaId),
+              ...excluidasDoTipo(categorias, tipo),
             ]
             if (
               ativos.length === 0 &&

@@ -10,6 +10,29 @@ ainda está se assentando. Cada versão publicada tem uma imagem correspondente 
 
 ## [Não publicado]
 
+### Adicionado
+
+- **Compra dividida nas transações:** no detalhe de uma saída, "Dividir" cria uma divisão
+  pré-preenchida (valor, descrição, categoria, data) ou vincula uma divisão já existente que você
+  pagou e ainda não tinha transação. A lista ganhou o marcador de divisão e o filtro "Divisão"
+  (só divididas / sem divisão) em "Mais filtros".
+- **Orçamento e dashboard contam só a sua parte:** compra dividida entra pelo valor da sua
+  parcela; a parcela de uma divisão paga por outra pessoa também entra como gasto seu (na data e
+  categoria da divisão) e aparece na lista de transações com "Pago por Fulano".
+- **Divisões sem transação viram pendência:** ao criar uma divisão que você pagou, escolha a
+  transação do banco (sugestões com o mesmo valor em ±7 dias), deixe para depois ou marque "paguei
+  fora do banco". Sem transação, ela aparece em "Só pendentes" e no relatório diário do Telegram,
+  com um interruptor próprio em Configurações → Telegram.
+- **Orçamento em abas — Despesas, Investimentos e Receitas:** aportes em investimentos saem das
+  despesas e ganham aba própria, medida em aportes líquidos (aportes − resgates). Juros e
+  dividendos continuam em Receitas. Orçamentos de despesa em categorias de investimento são
+  migrados automaticamente.
+
+### Corrigido
+
+- Criar uma divisão "Eu paguei" sem escolher ninguém deixava avançar e falhava no fim; agora o
+  wizard exige ao menos uma pessoa.
+
 ## [0.8.0] — 2026-11-17
 
 ### Segurança

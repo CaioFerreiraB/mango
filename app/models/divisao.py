@@ -7,7 +7,18 @@ participante — por isso o repositório (`app/repositories/divisao.py`) não é
 `UserScopedRepository`.
 """
 
-from sqlalchemy import BigInteger, Boolean, ForeignKey, String, Text, UniqueConstraint
+from datetime import datetime
+
+from sqlalchemy import (
+    BigInteger,
+    Boolean,
+    CheckConstraint,
+    DateTime,
+    ForeignKey,
+    String,
+    Text,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
@@ -17,7 +28,10 @@ from app.models.mixins import TimestampMixin
 
 class DivisaoDespesa(TimestampMixin, Base):
     __tablename__ = "divisao_despesa"
-    __table_args__ = (check_in("modo_divisao", MODO_DIVISAO, "modo_divisao"),)
+    __table_args__ = (
+        check_in("modo_divisao", MODO_DIVISAO, "modo_divisao"),
+        CheckConstraint("NOT (transacao_id IS NOT NULL AND sem_transacao)", name="vinculo"),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
     criado_por_usuario_id: Mapped[int] = mapped_column(
@@ -34,6 +48,18 @@ class DivisaoDespesa(TimestampMixin, Base):
     modo_divisao: Mapped[str] = mapped_column(String(24), nullable=False)
     quitada: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     arquivada: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    # Quando a despesa aconteceu (ordena a lista de transações e cai no mês do orçamento).
+    # Vincular a uma transação copia a data dela.
+    data: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    # Transação bancária do PAGADOR que corresponde à despesa (1 ↔ 1). Orçamento/dashboard do
+    # pagador contam só a parte dele nessa transação. SET NULL: resync que apaga a transação
+    # devolve a divisão à pendência.
+    transacao_id: Mapped[int | None] = mapped_column(
+        ForeignKey("transacao.id", ondelete="SET NULL"), unique=True
+    )
+    # "Paguei fora do banco": sem transação a vincular — sai da pendência e a parte do pagador
+    # conta como lançamento próprio, igual à parcela de quem não pagou.
+    sem_transacao: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
 
 class DivisaoParticipante(Base):

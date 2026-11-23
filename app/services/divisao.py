@@ -7,28 +7,34 @@ Nada de `HTTPException`: erros de domínio (`app/exceptions.py`), traduzidos a H
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
-from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy import and_, case, func, literal, or_, select, update
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session, aliased
 
 from app.db.atomic import commit
-from app.exceptions import NotFoundError, ValidationError
+from app.exceptions import ConflictError, NotFoundError, ValidationError
 from app.models.categoria import Categoria
 from app.models.convite import ConviteUsuario
 from app.models.divisao import DivisaoDespesa, DivisaoParticipante
+from app.models.transacao import Transacao
 from app.models.usuario import Usuario
 from app.repositories.divisao import DivisaoDespesaRepository, EscopoDivisao
+from app.repositories.transacao import TransacaoRepository, _escape_like
 from app.schemas.divisao import (
     DivisaoDespesaCreate,
     DivisaoDespesaRead,
     DivisaoDespesaUpdate,
     DivisaoParticipanteRead,
+    DivisaoVinculo,
     PessoaDivisao,
     ResumoDivisoes,
 )
+from app.schemas.transacao import DivisaoDaTransacao, DivisaoLancamento
 from app.services import configuracao as configuracao_service
 from app.services import divisao_otimizacao
+from app.services.gasto_usuario import categoria_da_divisao
 
 
 def _validar_participantes(
@@ -124,31 +130,150 @@ def obter(db: Session, usuario_id: int, despesa_id: int) -> DivisaoDespesaRead |
     return None if despesa is None else enriquecer(db, usuario_id, despesa)
 
 
+def _transacao_vinculavel(db: Session, usuario_id: int, transacao_id: int) -> Transacao:
+    """Transação do próprio usuário que pode representar uma despesa dividida (RF01)."""
+    tx = TransacaoRepository(db, usuario_id).get(transacao_id)
+    if tx is None:
+        raise NotFoundError("transação não encontrada")
+    if tx.type != "DEBIT" or tx.eh_transferencia:
+        raise ValidationError("só uma saída que não seja transferência pode ser dividida")
+    return tx
+
+
+_JA_VINCULADA = "essa transação já está vinculada a outra divisão"
+
+
+def _commit_vinculo(db: Session) -> None:
+    """`transacao_id` é único: corrida entre dois vínculos da mesma transação vira 409."""
+    try:
+        commit(db)
+    except IntegrityError as exc:
+        db.rollback()
+        raise ConflictError(_JA_VINCULADA) from exc
+
+
 def criar(db: Session, usuario_id: int, payload: DivisaoDespesaCreate) -> DivisaoDespesaRead:
     ids_validados = _validar_participantes(
         db, payload.pago_por_usuario_id, payload.modo_divisao, payload.participantes
     )
     _validar_categoria(db, payload.categoria_id)
+    data = payload.data or datetime.now(UTC)
+    if payload.transacao_id is not None or payload.sem_transacao:
+        if payload.pago_por_usuario_id != usuario_id:
+            raise ValidationError("só quem pagou indica a transação")
+        if payload.transacao_id is not None and payload.sem_transacao:
+            raise ValidationError("informe a transação ou 'sem transação', não os dois")
+    if payload.transacao_id is not None:
+        data = _transacao_vinculavel(db, usuario_id, payload.transacao_id).date
     repo = DivisaoDespesaRepository(db, usuario_id)
-    despesa = repo.criar(
-        pago_por_usuario_id=payload.pago_por_usuario_id,
-        descricao=payload.descricao,
-        categoria_id=payload.categoria_id,
-        valor_total_centavos=payload.valor_total_centavos,
-        modo_divisao=payload.modo_divisao,
-        quitada=False,
-        arquivada=False,
-    )
     linhas = _rateio(
         payload.valor_total_centavos,
         payload.modo_divisao,
         payload.pago_por_usuario_id,
         ids_validados,
     )
-    repo.definir_participantes(despesa.id, linhas)
-    commit(db)
+    # Os `flush` de `criar`/`definir_participantes` já esbarram no UNIQUE de `transacao_id`:
+    # o 409 cobre o bloco inteiro, não só o commit (divisão e participantes ficam atômicos).
+    try:
+        despesa = repo.criar(
+            pago_por_usuario_id=payload.pago_por_usuario_id,
+            descricao=payload.descricao,
+            categoria_id=payload.categoria_id,
+            valor_total_centavos=payload.valor_total_centavos,
+            modo_divisao=payload.modo_divisao,
+            quitada=False,
+            arquivada=False,
+            data=data,
+            transacao_id=payload.transacao_id,
+            sem_transacao=payload.sem_transacao,
+        )
+        repo.definir_participantes(despesa.id, linhas)
+    except IntegrityError as exc:
+        db.rollback()
+        raise ConflictError(_JA_VINCULADA) from exc
+    _commit_vinculo(db)
     db.refresh(despesa)
     return enriquecer(db, usuario_id, despesa)
+
+
+def definir_vinculo(
+    db: Session, usuario_id: int, despesa_id: int, payload: DivisaoVinculo
+) -> DivisaoDespesaRead:
+    """Só o pagador (RF02) — a transação vinculada é dele, mesmo que outra pessoa tenha criado."""
+    despesa = DivisaoDespesaRepository(db, usuario_id).obter(despesa_id)
+    if despesa is None:
+        raise NotFoundError("despesa não encontrada")
+    if despesa.pago_por_usuario_id != usuario_id:
+        raise ValidationError("só quem pagou vincula a transação")
+    if payload.transacao_id is not None and payload.sem_transacao:
+        raise ValidationError("informe a transação ou 'sem transação', não os dois")
+    lido = despesa.transacao_id
+    valores = {"transacao_id": payload.transacao_id, "sem_transacao": payload.sem_transacao}
+    if payload.transacao_id is not None and payload.transacao_id != lido:
+        if lido is not None:
+            raise ConflictError("a divisão já tem transação; desvincule antes")
+        valores["data"] = _transacao_vinculavel(db, usuario_id, payload.transacao_id).date
+    # Compare-and-set: só grava se o vínculo ainda é o que foi lido. Duas trocas concorrentes
+    # leem o mesmo estado; a segunda não casa o WHERE e vira 409 em vez de sobrescrever a
+    # primeira — vale no SQLite, onde `FOR UPDATE` não trava nada.
+    atual = (
+        DivisaoDespesa.transacao_id.is_(None)
+        if lido is None
+        else DivisaoDespesa.transacao_id == lido
+    )
+    try:
+        alteradas = db.execute(
+            update(DivisaoDespesa)
+            .where(DivisaoDespesa.id == despesa.id, atual)
+            .values(**valores)
+            .execution_options(synchronize_session=False)
+        ).rowcount
+    except IntegrityError as exc:
+        db.rollback()
+        raise ConflictError(_JA_VINCULADA) from exc
+    if alteradas != 1:
+        db.rollback()
+        raise ConflictError("o vínculo da divisão mudou; recarregue e tente de novo")
+    _commit_vinculo(db)
+    db.refresh(despesa)
+    return enriquecer(db, usuario_id, despesa)
+
+
+# ponytail: janela/teto fixos — a lista é sugestão; o usuário ainda pode deixar para depois.
+_JANELA_CANDIDATAS = timedelta(days=7)
+_LIMITE_CANDIDATAS = 20
+
+
+def transacoes_candidatas(
+    db: Session, usuario_id: int, valor_centavos: int, data: datetime
+) -> list[Transacao]:
+    """Saídas do usuário ainda sem divisão em ±7 dias da data: mesmo valor primeiro, depois as
+    mais próximas da data (RF03)."""
+    valor = func.abs(
+        func.coalesce(Transacao.amount_in_account_currency_centavos, Transacao.amount_centavos)
+    )
+    vinculadas = select(DivisaoDespesa.transacao_id).where(DivisaoDespesa.transacao_id.is_not(None))
+    linhas = db.scalars(
+        select(Transacao)
+        .where(
+            Transacao.usuario_id == usuario_id,
+            Transacao.type == "DEBIT",
+            Transacao.eh_transferencia.is_(False),
+            Transacao.date >= data - _JANELA_CANDIDATAS,
+            Transacao.date <= data + _JANELA_CANDIDATAS,
+            Transacao.id.not_in(vinculadas),
+        )
+        .order_by(case((valor == valor_centavos, 0), else_=1), Transacao.date.desc())
+        .limit(_LIMITE_CANDIDATAS * 5)
+    ).all()
+    alvo = data if data.tzinfo else data.replace(tzinfo=UTC)
+
+    def chave(tx: Transacao) -> tuple[bool, timedelta]:
+        quando = tx.date if tx.date.tzinfo else tx.date.replace(tzinfo=UTC)
+        efetivo = tx.amount_in_account_currency_centavos or tx.amount_centavos
+        return abs(efetivo) != valor_centavos, abs(quando - alvo)
+
+    return sorted(linhas, key=chave)[:_LIMITE_CANDIDATAS]
 
 
 def atualizar(
@@ -170,6 +295,11 @@ def atualizar(
     ids_validados = _validar_participantes(
         db, pago_por_usuario_id, modo_divisao, participantes_payload
     )
+    if campos.get("data", despesa.data) is None:
+        campos.pop("data")  # `data` é NOT NULL: null no PATCH = "não mexer"
+    if pago_por_usuario_id != despesa.pago_por_usuario_id:
+        # A transação vinculada era do pagador anterior — não representa mais a despesa.
+        campos["transacao_id"], campos["sem_transacao"] = None, False
     if "categoria_id" in campos:
         _validar_categoria(db, campos["categoria_id"])
     repo.atualizar(despesa, **campos)
@@ -178,6 +308,165 @@ def atualizar(
     commit(db)
     db.refresh(despesa)
     return enriquecer(db, usuario_id, despesa)
+
+
+# --- divisão na lista de transações (RF08–RF10) --------------------------------------------
+
+
+def por_transacao(
+    db: Session, usuario_id: int, transacao_ids: list[int]
+) -> dict[int, DivisaoDaTransacao]:
+    """{transacao_id: resumo da divisão} das transações da página (uma consulta)."""
+    if not transacao_ids:
+        return {}
+    minha = aliased(DivisaoParticipante)
+    linhas = db.execute(
+        select(
+            DivisaoDespesa.transacao_id,
+            DivisaoDespesa.id,
+            DivisaoDespesa.valor_total_centavos,
+            func.coalesce(minha.valor_centavos, 0),
+        )
+        .outerjoin(
+            minha, and_(minha.divisao_id == DivisaoDespesa.id, minha.usuario_id == usuario_id)
+        )
+        .where(
+            DivisaoDespesa.transacao_id.in_(transacao_ids),
+            DivisaoDespesa.pago_por_usuario_id == usuario_id,
+        )
+    ).all()
+    return {
+        tx_id: DivisaoDaTransacao(id=d_id, valor_total_centavos=total, minha_parte_centavos=parte)
+        for tx_id, d_id, total, parte in linhas
+    }
+
+
+def expr_pendente(usuario_id: int, corte: datetime | None):
+    """Divisão paga por mim, sem transação e sem "fora do banco" (RF10)."""
+    cond = and_(
+        DivisaoDespesa.pago_por_usuario_id == usuario_id,
+        DivisaoDespesa.transacao_id.is_(None),
+        DivisaoDespesa.sem_transacao.is_(False),
+    )
+    return cond if corte is None else and_(cond, DivisaoDespesa.data >= corte)
+
+
+def select_lancamentos(
+    usuario_id: int,
+    *,
+    corte: datetime | None,
+    inicio: datetime | None = None,
+    fim: datetime | None = None,
+    categoria_id: str | None = None,
+    busca: str | None = None,
+    pendente: bool | None = None,
+):
+    """Chaves (origem=1, id, data, valor p/ ordenar) dos lançamentos de divisão do usuário: pagas
+    por outra pessoa com parte minha > 0, e pagas por mim sem transação (pendentes ou "fora do
+    banco"). O valor de ordenação segue a convenção de saída (negativo)."""
+    minha = aliased(DivisaoParticipante, name="minha_linha")
+    parte = func.coalesce(minha.valor_centavos, 0)
+    pendente_expr = expr_pendente(usuario_id, None)
+    exibido = case((pendente_expr, DivisaoDespesa.valor_total_centavos), else_=parte)
+    stmt = (
+        select(
+            literal(1).label("origem"),
+            DivisaoDespesa.id.label("id"),
+            DivisaoDespesa.data.label("data"),
+            (-exibido).label("valor"),
+        )
+        .outerjoin(
+            minha, and_(minha.divisao_id == DivisaoDespesa.id, minha.usuario_id == usuario_id)
+        )
+        .where(
+            DivisaoDespesa.arquivada.is_(False),
+            or_(
+                and_(DivisaoDespesa.pago_por_usuario_id != usuario_id, parte > 0),
+                and_(
+                    DivisaoDespesa.pago_por_usuario_id == usuario_id,
+                    DivisaoDespesa.transacao_id.is_(None),
+                ),
+            ),
+        )
+    )
+    if inicio is not None:
+        stmt = stmt.where(DivisaoDespesa.data >= inicio)
+    if fim is not None:
+        stmt = stmt.where(DivisaoDespesa.data < fim)
+    if categoria_id is not None:
+        stmt = stmt.outerjoin(Categoria, Categoria.pluggy_id == DivisaoDespesa.categoria_id).where(
+            categoria_da_divisao(usuario_id) == categoria_id
+        )
+    if busca:
+        stmt = stmt.where(DivisaoDespesa.descricao.ilike(f"%{_escape_like(busca)}%", escape="\\"))
+    if pendente is not None:
+        cond = expr_pendente(usuario_id, corte)
+        stmt = stmt.where(cond if pendente else ~cond)
+    return stmt
+
+
+def lancamentos(
+    db: Session, usuario_id: int, ids: list[int], corte: datetime | None
+) -> dict[int, DivisaoLancamento]:
+    """Hidrata os lançamentos da página (ids vindos de `select_lancamentos`)."""
+    if not ids:
+        return {}
+    minha = aliased(DivisaoParticipante, name="minha_linha")
+    linhas = db.execute(
+        select(
+            DivisaoDespesa,
+            func.coalesce(minha.valor_centavos, 0),
+            Usuario.nome,
+            categoria_da_divisao(usuario_id),
+        )
+        .outerjoin(
+            minha, and_(minha.divisao_id == DivisaoDespesa.id, minha.usuario_id == usuario_id)
+        )
+        .join(Usuario, Usuario.id == DivisaoDespesa.pago_por_usuario_id)
+        .outerjoin(Categoria, Categoria.pluggy_id == DivisaoDespesa.categoria_id)
+        .where(DivisaoDespesa.id.in_(ids))
+    ).all()
+    corte_aware = corte if corte is None or corte.tzinfo else corte.replace(tzinfo=UTC)
+    resultado = {}
+    for d, parte, pagador, categoria in linhas:
+        data = d.data if d.data.tzinfo else d.data.replace(tzinfo=UTC)
+        pago_por_mim = d.pago_por_usuario_id == usuario_id
+        resultado[d.id] = DivisaoLancamento(
+            divisao_id=d.id,
+            data=data,
+            descricao=d.descricao,
+            categoria_id=categoria,
+            valor_total_centavos=d.valor_total_centavos,
+            minha_parte_centavos=parte,
+            pago_por_nome=pagador,
+            pago_por_mim=pago_por_mim,
+            sem_transacao=d.sem_transacao,
+            pendente=pago_por_mim
+            and d.transacao_id is None
+            and not d.sem_transacao
+            and (corte_aware is None or data >= corte_aware),
+        )
+    return resultado
+
+
+def pendentes(
+    db: Session, usuario_id: int, corte: datetime | None, fim: datetime, limite: int
+) -> tuple[list[DivisaoDespesa], int]:
+    """Divisões pendentes de vínculo (RF10/RF11) com data antes de `fim` (mesmo corte de "hoje"
+    da seção de transações), mais recentes primeiro, + total."""
+    filtros = (
+        DivisaoDespesa.arquivada.is_(False),
+        DivisaoDespesa.data < fim,
+        expr_pendente(usuario_id, corte),
+    )
+    total = db.scalar(select(func.count()).select_from(DivisaoDespesa).where(*filtros)) or 0
+    itens = db.scalars(
+        select(DivisaoDespesa)
+        .where(*filtros)
+        .order_by(DivisaoDespesa.data.desc(), DivisaoDespesa.id.desc())
+        .limit(limite)
+    ).all()
+    return list(itens), total
 
 
 def remover(db: Session, usuario_id: int, despesa_id: int) -> None:

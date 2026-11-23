@@ -21,6 +21,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   Table,
   TableBody,
@@ -38,6 +39,7 @@ import {
   useTransacoesDoOrcamento,
   type AlvoDrilldown,
   type OrcamentoConsumoItem,
+  type TipoOrcamento,
 } from "@/lib/api/orcamentos"
 import { formatMesAno, hojeISO } from "@/lib/format"
 import { cn } from "@/lib/utils"
@@ -51,6 +53,50 @@ function corAlerta(alerta: number | null): string {
   if (alerta >= 75) return "bg-orange-500"
   return "bg-yellow-500"
 }
+
+/** Rótulos por aba: despesa tem teto (limite/gasto); receita e investimento são metas a atingir. */
+const ROTULOS: Record<
+  TipoOrcamento,
+  {
+    aba: string
+    orcado: string
+    orcadoTotal: string
+    realizado: string
+    realizadoTotal: string
+    restanteTotal: string
+    anel: string
+  }
+> = {
+  despesa: {
+    aba: "Despesas",
+    orcado: "Orçado",
+    orcadoTotal: "Total orçado",
+    realizado: "Gasto",
+    realizadoTotal: "Gasto até agora",
+    restanteTotal: "Restante",
+    anel: "utilizado",
+  },
+  investimento: {
+    aba: "Investimentos",
+    orcado: "Meta",
+    orcadoTotal: "Meta de aporte",
+    realizado: "Aportado",
+    realizadoTotal: "Aportado até agora",
+    restanteTotal: "Restante pra meta",
+    anel: "aportado",
+  },
+  receita: {
+    aba: "Receitas",
+    orcado: "Meta",
+    orcadoTotal: "Meta total",
+    realizado: "Recebido",
+    realizadoTotal: "Recebido até agora",
+    restanteTotal: "Restante pra meta",
+    anel: "recebido",
+  },
+}
+
+const TIPOS: TipoOrcamento[] = ["despesa", "investimento", "receita"]
 
 export function OrcamentosPage() {
   const hoje = hojeISO()
@@ -76,8 +122,11 @@ export function OrcamentosPage() {
   // (pra oferecer "restaurar"); a Visão Geral (resumo + tabela) as esconde.
   const itens = consumo.data?.itens ?? []
   const visiveis = itens.filter((i) => !i.suprimido)
-  const despesas = visiveis.filter((i) => i.tipo === "despesa")
-  const receitas = visiveis.filter((i) => i.tipo === "receita")
+  const naoPlanejado: Record<TipoOrcamento, number> = {
+    despesa: consumo.data?.nao_planejado_despesa_centavos ?? 0,
+    investimento: consumo.data?.nao_planejado_investimento_centavos ?? 0,
+    receita: consumo.data?.nao_planejado_receita_centavos ?? 0,
+  }
   const secao = { ano, mes, rotuloMes, alvo, onAlvo: setAlvo }
 
   return (
@@ -166,22 +215,28 @@ export function OrcamentosPage() {
               <ConfigurarOrcamentoPadraoDialog />
             </EmptyState>
           )}
-          {/* Sem linha visível ainda pode haver gasto/receita fora do orçamento: a seção
-              aparece só com o "Não planejado" (SecaoOrcamento devolve null se não houver). */}
-          <SecaoOrcamento
-            tipo="despesa"
-            titulo="Despesas"
-            itens={despesas}
-            naoPlanejado={consumo.data?.nao_planejado_despesa_centavos ?? 0}
-            {...secao}
-          />
-          <SecaoOrcamento
-            tipo="receita"
-            titulo="Receitas"
-            itens={receitas}
-            naoPlanejado={consumo.data?.nao_planejado_receita_centavos ?? 0}
-            {...secao}
-          />
+          {/* Sem linha visível ainda pode haver gasto/receita fora do orçamento: cada aba
+              mostra ao menos o "Não planejado". Investimentos (aportes − resgates) ficam
+              fora de Despesas e Receitas. */}
+          <Tabs defaultValue="despesa">
+            <TabsList>
+              {TIPOS.map((t) => (
+                <TabsTrigger key={t} value={t}>
+                  {ROTULOS[t].aba}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+            {TIPOS.map((t) => (
+              <TabsContent key={t} value={t} className="mt-4">
+                <SecaoOrcamento
+                  tipo={t}
+                  itens={visiveis.filter((i) => i.tipo === t)}
+                  naoPlanejado={naoPlanejado[t]}
+                  {...secao}
+                />
+              </TabsContent>
+            ))}
+          </Tabs>
           {visiveis.length === 0 ? null : (
             <ConfigurarOrcamentoPadraoDialog
               trigger={
@@ -235,7 +290,6 @@ type LinhaVisao = {
 
 function SecaoOrcamento({
   tipo,
-  titulo,
   itens,
   naoPlanejado,
   ano,
@@ -244,8 +298,7 @@ function SecaoOrcamento({
   alvo,
   onAlvo,
 }: {
-  tipo: "despesa" | "receita"
-  titulo: string
+  tipo: TipoOrcamento
   itens: OrcamentoConsumoItem[]
   naoPlanejado: number
   ano: number
@@ -257,7 +310,12 @@ function SecaoOrcamento({
   const nomes = useMapaCategorias()
   const iconeCategoria = useIconeCategoria()
   const isMobile = useIsMobile()
-  if (itens.length === 0 && naoPlanejado === 0) return null
+  if (itens.length === 0 && naoPlanejado === 0)
+    return (
+      <p className="py-6 text-center text-sm text-muted-foreground">
+        Nada em {ROTULOS[tipo].aba.toLowerCase()} neste mês.
+      </p>
+    )
 
   const despesa = tipo === "despesa"
   const linhas: LinhaVisao[] = itens.map((item) => ({
@@ -270,7 +328,8 @@ function SecaoOrcamento({
     percentual: item.percentual,
     cor: despesa ? corAlerta(item.alerta_atingido) : "bg-primary",
   }))
-  if (naoPlanejado > 0)
+  // Investimento líquido pode ser negativo (resgatou mais do que aportou).
+  if (naoPlanejado !== 0)
     linhas.push({
       key: "nao-planejado",
       categoriaId: null,
@@ -306,10 +365,10 @@ function SecaoOrcamento({
 
   return (
     <section className="space-y-3">
-      <h2 className="text-base font-semibold">{titulo}</h2>
+      <h2 className="sr-only">{ROTULOS[tipo].aba}</h2>
 
       <ResumoSecao
-        despesa={despesa}
+        tipo={tipo}
         totalOrcado={totalOrcado}
         totalRealizado={totalRealizado}
         restanteTotal={restanteTotal}
@@ -324,7 +383,7 @@ function SecaoOrcamento({
         />
       ) : (
         <TabelaLinhas
-          despesa={despesa}
+          tipo={tipo}
           linhas={linhas}
           abertaKey={abertaKey}
           onAlternar={alternar}
@@ -353,58 +412,50 @@ type PropsLinhas = {
 }
 
 function ResumoSecao({
-  despesa,
+  tipo,
   totalOrcado,
   totalRealizado,
   restanteTotal,
   percentualTotal,
 }: {
-  despesa: boolean
+  tipo: TipoOrcamento
   totalOrcado: number
   totalRealizado: number
   restanteTotal: number
   percentualTotal: number
 }) {
+  const despesa = tipo === "despesa"
+  const r = ROTULOS[tipo]
   return (
     <Card>
       <CardContent className="flex flex-wrap items-center justify-between gap-6 py-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:gap-8">
           <div>
-            <p className="text-sm text-muted-foreground">
-              {despesa ? "Total orçado" : "Meta total"}
-            </p>
+            <p className="text-sm text-muted-foreground">{r.orcadoTotal}</p>
             <p className="text-lg font-semibold">
               <Valor centavos={totalOrcado} neutro />
             </p>
           </div>
           <div>
-            <p className="text-sm text-muted-foreground">
-              {despesa ? "Gasto até agora" : "Recebido até agora"}
-            </p>
+            <p className="text-sm text-muted-foreground">{r.realizadoTotal}</p>
             <p className="text-lg font-semibold">
               <Valor centavos={totalRealizado} neutro />
             </p>
           </div>
           <div>
-            <p className="text-sm text-muted-foreground">
-              {despesa ? "Restante" : "Restante pra meta"}
-            </p>
+            <p className="text-sm text-muted-foreground">{r.restanteTotal}</p>
             <p className="text-lg font-semibold">
               {/* Nunca mostra "-": despesa mantém a cor do sinal real (vermelho se estourou),
-                  só sem o sinal de menos no texto; receita usa o valor já em módulo — bater
-                  ou passar da meta é notícia boa, nunca um alerta. */}
+                  só sem o sinal de menos no texto. Nas metas (receita/investimento), passar
+                  da meta zera o restante — o excedente não é "o que falta". */}
               <Valor
-                centavos={despesa ? restanteTotal : Math.abs(restanteTotal)}
+                centavos={despesa ? restanteTotal : Math.max(restanteTotal, 0)}
                 absoluto={despesa}
               />
             </p>
           </div>
         </div>
-        <AnelProgresso
-          pct={percentualTotal}
-          tamanho={96}
-          rotulo={despesa ? "utilizado" : "recebido"}
-        />
+        <AnelProgresso pct={percentualTotal} tamanho={96} rotulo={r.anel} />
       </CardContent>
     </Card>
   )
@@ -494,22 +545,21 @@ function RealizadoDeLimite({ linha }: { linha: LinhaVisao }) {
 }
 
 function TabelaLinhas({
-  despesa,
+  tipo,
   linhas,
   abertaKey,
   onAlternar,
-}: PropsLinhas & { despesa: boolean }) {
+}: PropsLinhas & { tipo: TipoOrcamento }) {
+  const despesa = tipo === "despesa"
   return (
     <div className="overflow-x-auto rounded-lg border">
       <Table>
         <TableHeader>
           <TableRow>
             <TableHead>Categoria</TableHead>
+            <TableHead className="text-right">{ROTULOS[tipo].orcado}</TableHead>
             <TableHead className="text-right">
-              {despesa ? "Orçado" : "Meta"}
-            </TableHead>
-            <TableHead className="text-right">
-              {despesa ? "Gasto" : "Recebido"}
+              {ROTULOS[tipo].realizado}
             </TableHead>
             <TableHead className="text-right">Restante</TableHead>
             <TableHead className="w-36">%</TableHead>
@@ -585,7 +635,7 @@ function LinhaTabela({
           <SemValor />
         ) : (
           <Valor
-            centavos={despesa ? restante : Math.abs(restante)}
+            centavos={despesa ? restante : Math.max(restante, 0)}
             absoluto={despesa}
           />
         )}

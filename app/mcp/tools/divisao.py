@@ -1,5 +1,6 @@
 """Tools da divisão de contas: pessoas, saldos, criar/quitar/excluir (docs/mcp.md §1.1)."""
 
+from datetime import date, datetime, time
 from typing import Annotated, Literal
 
 from mcp.server.mcpserver import Context
@@ -20,6 +21,7 @@ from app.mcp.servidor import (
     resolver_categoria,
     servidor,
 )
+from app.services.periodo import SP
 
 # --- divisão de contas ----------------------------------------------------------------------
 
@@ -222,6 +224,7 @@ async def criar_divisao(
     ] = "eu",
     modo: Literal["igualmente", "integral"] = "igualmente",
     categoria: NomeOuId | None = None,
+    data: Annotated[date | None, Field(description="Quando aconteceu (padrão: hoje)")] = None,
 ) -> CallToolResult:
     """Cria uma despesa dividida (rachar uma conta). 'igualmente' divide em partes iguais entre
     quem pagou e os participantes; 'integral' faz um participante dever o valor inteiro."""
@@ -236,6 +239,8 @@ async def criar_divisao(
         "participantes": ids,
         "categoria_id": await resolver_categoria(ctx, categoria) if categoria is not None else None,
     }
+    if data is not None:
+        corpo["data"] = datetime.combine(data, time(12), SP).isoformat()
     d = await api(ctx, "POST", "/divisoes-despesa", corpo=corpo)
     partes = "\n".join(f"- {p['nome']}: {f.brl(p['valor_centavos'])}" for p in d["participantes"])
     return ok(

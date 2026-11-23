@@ -13,6 +13,7 @@ from app.exceptions import ConflictError, NotFoundError, ValidationError
 from app.models.categoria import Categoria
 from app.models.orcamento import Orcamento, OrcamentoMensal
 from app.repositories.orcamento import OrcamentoRepository
+from app.services.orcamento_consumo import categorias_investimento
 from app.services.periodo import hoje_sp
 
 
@@ -79,6 +80,13 @@ def criar(db: Session, usuario_id: int, dados: dict) -> Orcamento:
     ).first()
     if ja_existe is not None:
         raise ConflictError("já existe orçamento para esta categoria e tipo")
+    eh_investimento = dados["categoria_id"] in categorias_investimento(db, usuario_id)
+    if eh_investimento != (dados["tipo"] == "investimento"):
+        raise ValidationError(
+            "categoria de investimento só entra no orçamento de investimentos"
+            if eh_investimento
+            else "orçamento de investimentos só aceita categorias de investimento"
+        )
     dados["ordem"] = _proximo_ordem(db, usuario_id, dados["tipo"])  # sempre anexa ao fim
     _validar_regra_20(
         db, usuario_id, dados["categoria_id"], dados["tipo"], dados["limite_padrao_centavos"]

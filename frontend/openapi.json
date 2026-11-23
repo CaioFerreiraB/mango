@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "mango",
-    "version": "0.6.0"
+    "version": "0.8.0"
   },
   "paths": {
     "/health": {
@@ -2805,7 +2805,8 @@
             "schema": {
               "enum": [
                 "despesa",
-                "receita"
+                "receita",
+                "investimento"
               ],
               "type": "string",
               "title": "Tipo"
@@ -3461,6 +3462,22 @@
                 }
               ],
               "title": "Busca"
+            }
+          },
+          {
+            "name": "tem_divisao",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Tem Divisao"
             }
           },
           {
@@ -5191,7 +5208,8 @@
                 "todas",
                 "minhas",
                 "comigo",
-                "arquivadas"
+                "arquivadas",
+                "sem_transacao"
               ],
               "type": "string",
               "default": "todas",
@@ -5332,6 +5350,64 @@
         }
       }
     },
+    "/api/divisoes-despesa/transacoes-candidatas": {
+      "get": {
+        "tags": [
+          "divisao_despesa"
+        ],
+        "summary": "Transacoes Candidatas",
+        "description": "Saídas do usuário sem divisão perto da data — mesmo valor primeiro (RF03).",
+        "operationId": "transacoes_candidatas_api_divisoes_despesa_transacoes_candidatas_get",
+        "parameters": [
+          {
+            "name": "valor_centavos",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "title": "Valor Centavos"
+            }
+          },
+          {
+            "name": "data",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "title": "Data"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TransacaoRead"
+                  },
+                  "title": "Response Transacoes Candidatas Api Divisoes Despesa Transacoes Candidatas Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/divisoes-despesa/{despesa_id}": {
       "get": {
         "tags": [
@@ -5443,6 +5519,59 @@
         "responses": {
           "204": {
             "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/divisoes-despesa/{despesa_id}/vinculo": {
+      "put": {
+        "tags": [
+          "divisao_despesa"
+        ],
+        "summary": "Vinculo",
+        "description": "Vincula/desvincula a transação do pagador ou marca \"paguei fora do banco\" (RF02).",
+        "operationId": "vinculo_api_divisoes_despesa__despesa_id__vinculo_put",
+        "parameters": [
+          {
+            "name": "despesa_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Despesa Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DivisaoVinculo"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DivisaoDespesaRead"
+                }
+              }
+            }
           },
           "422": {
             "description": "Validation Error",
@@ -9958,6 +10087,30 @@
         ],
         "title": "DashboardSeries"
       },
+      "DivisaoDaTransacao": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "valor_total_centavos": {
+            "type": "integer",
+            "title": "Valor Total Centavos"
+          },
+          "minha_parte_centavos": {
+            "type": "integer",
+            "title": "Minha Parte Centavos"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "valor_total_centavos",
+          "minha_parte_centavos"
+        ],
+        "title": "DivisaoDaTransacao",
+        "description": "Resumo da divisão vinculada a uma transação (só o pagador vê — a transação é dele)."
+      },
       "DivisaoDespesaCreate": {
         "properties": {
           "descricao": {
@@ -10007,6 +10160,35 @@
             "type": "array",
             "minItems": 1,
             "title": "Participantes"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data"
+          },
+          "transacao_id": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Transacao Id"
+          },
+          "sem_transacao": {
+            "type": "boolean",
+            "title": "Sem Transacao",
+            "default": false
           }
         },
         "type": "object",
@@ -10070,6 +10252,26 @@
             "type": "boolean",
             "title": "Arquivada"
           },
+          "data": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Data"
+          },
+          "transacao_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Transacao Id"
+          },
+          "sem_transacao": {
+            "type": "boolean",
+            "title": "Sem Transacao"
+          },
           "criado_em": {
             "type": "string",
             "format": "date-time",
@@ -10105,6 +10307,9 @@
           "modo_divisao",
           "quitada",
           "arquivada",
+          "data",
+          "transacao_id",
+          "sem_transacao",
           "criado_em",
           "atualizado_em"
         ],
@@ -10187,10 +10392,102 @@
               }
             ],
             "title": "Participantes"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data"
           }
         },
         "type": "object",
         "title": "DivisaoDespesaUpdate"
+      },
+      "DivisaoLancamento": {
+        "properties": {
+          "origem": {
+            "type": "string",
+            "const": "divisao",
+            "title": "Origem",
+            "default": "divisao"
+          },
+          "divisao_id": {
+            "type": "integer",
+            "title": "Divisao Id"
+          },
+          "data": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Data"
+          },
+          "descricao": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Descricao"
+          },
+          "categoria_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Categoria Id"
+          },
+          "valor_total_centavos": {
+            "type": "integer",
+            "title": "Valor Total Centavos"
+          },
+          "minha_parte_centavos": {
+            "type": "integer",
+            "title": "Minha Parte Centavos"
+          },
+          "pago_por_nome": {
+            "type": "string",
+            "title": "Pago Por Nome"
+          },
+          "pago_por_mim": {
+            "type": "boolean",
+            "title": "Pago Por Mim"
+          },
+          "sem_transacao": {
+            "type": "boolean",
+            "title": "Sem Transacao"
+          },
+          "pendente": {
+            "type": "boolean",
+            "title": "Pendente"
+          }
+        },
+        "type": "object",
+        "required": [
+          "divisao_id",
+          "data",
+          "descricao",
+          "categoria_id",
+          "valor_total_centavos",
+          "minha_parte_centavos",
+          "pago_por_nome",
+          "pago_por_mim",
+          "sem_transacao",
+          "pendente"
+        ],
+        "title": "DivisaoLancamento",
+        "description": "Divisão que entra na lista de transações sem ser uma transação do usuário (RF08): paga\npor outra pessoa (minha parte) ou paga por mim sem transação (pendente / fora do banco)."
       },
       "DivisaoParticipanteRead": {
         "properties": {
@@ -10226,6 +10523,30 @@
           "valor_centavos"
         ],
         "title": "DivisaoParticipanteRead"
+      },
+      "DivisaoVinculo": {
+        "properties": {
+          "transacao_id": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Transacao Id"
+          },
+          "sem_transacao": {
+            "type": "boolean",
+            "title": "Sem Transacao",
+            "default": false
+          }
+        },
+        "type": "object",
+        "title": "DivisaoVinculo",
+        "description": "Vínculo da divisão com a transação do pagador. `transacao_id` vincula; os dois vazios\ndesvinculam (volta a pendente); `sem_transacao` = \"paguei fora do banco\"."
       },
       "FaturaRead": {
         "properties": {
@@ -12587,7 +12908,8 @@
             "type": "string",
             "enum": [
               "despesa",
-              "receita"
+              "receita",
+              "investimento"
             ],
             "title": "Tipo"
           },
@@ -12670,6 +12992,11 @@
             "type": "integer",
             "title": "Nao Planejado Receita Centavos",
             "default": 0
+          },
+          "nao_planejado_investimento_centavos": {
+            "type": "integer",
+            "title": "Nao Planejado Investimento Centavos",
+            "default": 0
           }
         },
         "type": "object",
@@ -12692,7 +13019,8 @@
             "type": "string",
             "enum": [
               "despesa",
-              "receita"
+              "receita",
+              "investimento"
             ],
             "title": "Tipo"
           },
@@ -12741,7 +13069,8 @@
             "type": "string",
             "enum": [
               "despesa",
-              "receita"
+              "receita",
+              "investimento"
             ],
             "title": "Tipo"
           },
@@ -14269,6 +14598,22 @@
             "title": "Parcelas Atualizadas",
             "default": 0
           },
+          "origem": {
+            "type": "string",
+            "const": "transacao",
+            "title": "Origem",
+            "default": "transacao"
+          },
+          "divisao": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DivisaoDaTransacao"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "versao": {
             "type": "string",
             "title": "Versao"
@@ -14776,6 +15121,10 @@
             "type": "boolean",
             "title": "Notif Nao Revisadas"
           },
+          "notif_divisoes_pendentes": {
+            "type": "boolean",
+            "title": "Notif Divisoes Pendentes"
+          },
           "ultimo_envio_em": {
             "anyOf": [
               {
@@ -14832,6 +15181,7 @@
           "solicitacao_id",
           "vinculo_expira_em",
           "notif_nao_revisadas",
+          "notif_divisoes_pendentes",
           "ultimo_envio_em",
           "erro",
           "sync_automatico",
@@ -14843,16 +15193,32 @@
       "TelegramUpdate": {
         "properties": {
           "notif_nao_revisadas": {
-            "type": "boolean",
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Notif Nao Revisadas"
+          },
+          "notif_divisoes_pendentes": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notif Divisoes Pendentes"
           }
         },
         "additionalProperties": false,
         "type": "object",
-        "required": [
-          "notif_nao_revisadas"
-        ],
-        "title": "TelegramUpdate"
+        "title": "TelegramUpdate",
+        "description": "`notif_nao_revisadas` liga o relatório diário; `notif_divisoes_pendentes`, só a seção de\ndivisões sem transação dentro dele. Os dois opcionais (PATCH parcial), nunca nulos."
       },
       "TokenMcp": {
         "properties": {
@@ -14944,7 +15310,21 @@
         "properties": {
           "items": {
             "items": {
-              "$ref": "#/components/schemas/TransacaoRead"
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/TransacaoRead"
+                },
+                {
+                  "$ref": "#/components/schemas/DivisaoLancamento"
+                }
+              ],
+              "discriminator": {
+                "propertyName": "origem",
+                "mapping": {
+                  "divisao": "#/components/schemas/DivisaoLancamento",
+                  "transacao": "#/components/schemas/TransacaoRead"
+                }
+              }
             },
             "type": "array",
             "title": "Items"
@@ -14960,7 +15340,7 @@
           "total"
         ],
         "title": "TransacaoListagem",
-        "description": "Página server-side p/ a tabela (§5.3): itens + total para a paginação."
+        "description": "Página server-side p/ a tabela (§5.3): itens + total para a paginação. Mistura transações\ne lançamentos de divisão (`origem`) numa ordem só."
       },
       "TransacaoRead": {
         "properties": {
@@ -15364,6 +15744,22 @@
             "type": "integer",
             "title": "Parcelas Atualizadas",
             "default": 0
+          },
+          "origem": {
+            "type": "string",
+            "const": "transacao",
+            "title": "Origem",
+            "default": "transacao"
+          },
+          "divisao": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DivisaoDaTransacao"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",

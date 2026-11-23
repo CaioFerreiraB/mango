@@ -12,7 +12,19 @@ import type { InvestimentoTransacao } from "@/lib/api/investimentos"
 import type { components } from "@/lib/api/schema"
 
 export type Transacao = components["schemas"]["TransacaoRead"]
+/** Divisão na lista de transações sem ser transação do usuário: paga por outra pessoa (a parte
+ *  dele) ou paga por ele sem transação (pendente / fora do banco). */
+export type DivisaoLancamento = components["schemas"]["DivisaoLancamento"]
+export type ItemListagem = Transacao | DivisaoLancamento
 export type TransacaoListagem = components["schemas"]["TransacaoListagem"]
+
+export const ehLancamento = (i: ItemListagem): i is DivisaoLancamento =>
+  i.origem === "divisao"
+
+/** O que o lançamento representa como saída: o total enquanto aguarda a transação do usuário,
+ *  depois só a parte dele. */
+export const valorLancamento = (l: DivisaoLancamento): number =>
+  -(l.pendente ? l.valor_total_centavos : l.minha_parte_centavos)
 export type TransacaoUpdate = components["schemas"]["TransacaoUpdate"]
 
 /**
@@ -55,6 +67,8 @@ export type TransacaoFiltro = {
   ocultar_futuras?: boolean
   assinatura_id?: number
   tem_assinatura?: boolean
+  /** Divididas (vinculadas + lançamentos de divisão) / não divididas. */
+  tem_divisao?: boolean
   busca?: string
   order?: "date" | "amount_centavos"
   descendente?: boolean

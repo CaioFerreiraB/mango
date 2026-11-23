@@ -63,7 +63,9 @@ def atualizar(
     payload: TelegramUpdate, db: Session = Depends(get_db), user: Usuario = Depends(_usuario)
 ):
     with service.lock:
-        return service.preferencia(db, user.id, payload.notif_nao_revisadas)
+        return service.preferencia(
+            db, user.id, payload.notif_nao_revisadas, payload.notif_divisoes_pendentes
+        )
 
 
 @router.post("/vinculo", response_model=VinculoRead)

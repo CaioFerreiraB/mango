@@ -1,8 +1,10 @@
-import { Check, Coins, CreditCard, Link2, Repeat, X } from "lucide-react"
+import { Check, Coins, CreditCard, Link2, Repeat, Users, X } from "lucide-react"
 import { useState } from "react"
 import { Link } from "react-router"
 import { toast } from "sonner"
 
+import { DivisaoDetalheDialog } from "@/components/divisoes/divisao-detalhe-dialog"
+import { NovaDivisaoWizard } from "@/components/divisoes/nova-divisao-wizard"
 import { AssinaturaSelect } from "@/components/transacoes/assinatura-select"
 import { CampoCategoria } from "@/components/transacoes/campo-categoria"
 import { StatusBadge } from "@/components/transacoes/status-badge"
@@ -19,10 +21,18 @@ import {
   DrawerTitle,
 } from "@/components/ui/drawer"
 import { Label } from "@/components/ui/label"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { useAssinaturas } from "@/lib/api/assinaturas"
 import { useContas } from "@/lib/api/contas"
+import { useDefinirVinculo, useDivisoes } from "@/lib/api/divisoes"
 import { usePerfil } from "@/lib/api/perfil"
 import {
   descricaoBanco,
@@ -33,7 +43,12 @@ import {
   type Transacao,
 } from "@/lib/api/transacoes"
 import { sugerir } from "@/lib/assinatura-sugestao"
-import { formatDateTime, formatMoeda } from "@/lib/format"
+import {
+  formatBRL,
+  formatDate,
+  formatDateTime,
+  formatMoeda,
+} from "@/lib/format"
 import { estadoRevisao } from "@/lib/revisao"
 
 /** Sem isto o último campo do bottom sheet fica sob a barra de gestos. */
@@ -165,6 +180,7 @@ export function TransacaoDetalhe({
                   />
                 </label>
                 <AssinaturaCampo key={t.id} transacao={t} />
+                <DivisaoCampo key={`div-${t.id}`} transacao={t} />
                 {t.type === "CREDIT" ? (
                   <ProventoCampo key={`prov-${t.id}`} transacao={t} />
                 ) : null}
@@ -335,6 +351,125 @@ function AssinaturaCampo({ transacao }: { transacao: Transacao }) {
             atualizar.mutate({ id: transacao.id, patch: { assinatura_id: v } })
           }
         />
+      ) : null}
+    </div>
+  )
+}
+
+/** Compra dividida (RF01): vinculada mostra a parte do usuário (o que conta no orçamento); sem
+ *  vínculo, cria uma divisão a partir desta saída ou usa uma divisão já paga por ele sem
+ *  transação. Só saídas que não são transferência. */
+function DivisaoCampo({ transacao }: { transacao: Transacao }) {
+  const vinculo = useDefinirVinculo()
+  const elegivel = transacao.type === "DEBIT" && !transacao.eh_transferencia
+  const existentes = useDivisoes(
+    "sem_transacao",
+    elegivel && !transacao.divisao
+  )
+  const [verId, setVerId] = useState<number | null>(null)
+  const divisao = transacao.divisao
+
+  if (divisao) {
+    return (
+      <div className="space-y-2">
+        <div className="flex items-start justify-between gap-2 text-sm">
+          <span className="flex items-start gap-1.5">
+            <Users
+              className="mt-0.5 size-4 shrink-0 text-muted-foreground"
+              aria-hidden
+            />
+            <span>
+              Compra dividida
+              <span className="block text-xs text-muted-foreground">
+                Sua parte {formatBRL(divisao.minha_parte_centavos)} de{" "}
+                {formatBRL(divisao.valor_total_centavos)} — é o que conta no
+                orçamento.
+              </span>
+            </span>
+          </span>
+        </div>
+        <div className="flex gap-1">
+          <Button
+            size="xs"
+            variant="secondary"
+            onClick={() => setVerId(divisao.id)}
+          >
+            Ver divisão
+          </Button>
+          <Button
+            size="xs"
+            variant="ghost"
+            disabled={vinculo.isPending}
+            onClick={() =>
+              vinculo.mutate(
+                { id: divisao.id, vinculo: { sem_transacao: false } },
+                {
+                  onSuccess: () =>
+                    toast.success(
+                      "Desvinculada. A divisão ficou pendente de transação."
+                    ),
+                  onError: (err) => toast.error(err.message),
+                }
+              )
+            }
+          >
+            Desvincular
+          </Button>
+        </div>
+        {verId !== null ? (
+          <DivisaoDetalheDialog id={verId} onClose={() => setVerId(null)} />
+        ) : null}
+      </div>
+    )
+  }
+  if (!elegivel) return null
+  const opcoes = existentes.data ?? []
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between gap-2 text-sm">
+        Compra dividida
+        <NovaDivisaoWizard
+          transacao={transacao}
+          trigger={
+            <Button size="xs" variant="secondary">
+              <Users className="size-3.5" aria-hidden /> Dividir
+            </Button>
+          }
+        />
+      </div>
+      {opcoes.length > 0 ? (
+        <Select
+          value=""
+          disabled={vinculo.isPending}
+          onValueChange={(v) =>
+            vinculo.mutate(
+              {
+                id: Number(v),
+                vinculo: { transacao_id: transacao.id, sem_transacao: false },
+              },
+              {
+                onSuccess: () => toast.success("Divisão vinculada."),
+                onError: (err) => toast.error(err.message),
+              }
+            )
+          }
+        >
+          <SelectTrigger
+            size="sm"
+            className="w-full"
+            aria-label="Usar divisão existente"
+          >
+            <SelectValue placeholder="Ou usar uma divisão sem transação" />
+          </SelectTrigger>
+          <SelectContent>
+            {opcoes.map((d) => (
+              <SelectItem key={d.id} value={String(d.id)}>
+                {d.descricao || "Sem descrição"} ·{" "}
+                {formatBRL(d.valor_total_centavos)} · {formatDate(d.data)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       ) : null}
     </div>
   )
