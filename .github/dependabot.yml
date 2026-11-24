@@ -33,6 +33,14 @@ updates:
     groups:
       npm-minor-e-patch:
         update-types: ["minor", "patch"]
+    ignore:
+      # TS 7 é o compilador nativo, sem a API JS que o typescript-eslint usa (eslint quebra com
+      # "reading 'Cjs'"). Rever quando o typescript-eslint declarar suporte ao TS 7.
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
+      # Os tipos acompanham o Node do build (`.nvmrc` / Dockerfile), não a última versão do Node.
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: "github-actions"
     directory: "/"
