@@ -2,6 +2,7 @@
 pessoa "só divisão" — endpoints e regras que a suíte genérica de isolamento não cobre (o
 scaffold anterior não tinha nenhum teste)."""
 
+import pytest
 from sqlalchemy.orm import Session
 
 from app.models.usuario import Usuario
@@ -361,3 +362,81 @@ def test_buscar_usuarios_exclui_a_si_mesmo(client_factory, usuario_a, usuario_b)
     ids = {u["id"] for u in resp.json()}
     assert usuario_b.id in ids
     assert usuario_a.id not in ids
+
+
+# --- porcentagem e valor --------------------------------------------------------------------
+
+
+def _despesa_partes(pago_por: int, modo: str, partes: dict[int, int], total: int = 10000) -> dict:
+    return {
+        "descricao": "Mercado",
+        "valor_total_centavos": total,
+        "pago_por_usuario_id": pago_por,
+        "modo_divisao": modo,
+        "partes": [{"usuario_id": u, "valor": v} for u, v in partes.items()],
+    }
+
+
+def _valores(corpo: dict) -> dict[int, int]:
+    return {p["usuario_id"]: p["valor_centavos"] for p in corpo["participantes"]}
+
+
+def test_porcentagem_soma_o_total_e_guarda_os_percentuais(client_factory, db, usuario_a, usuario_b):
+    """33,33% / 66,67% de R$ 100,01: centavos que sobram do arredondamento vão para o maior resto,
+    e a soma bate exatamente com o total."""
+    a = client_factory(usuario_a)
+    resp = a.post(
+        "/api/divisoes-despesa",
+        json=_despesa_partes(
+            usuario_a.id, "porcentagem", {usuario_a.id: 3333, usuario_b.id: 6667}, 10001
+        ),
+    )
+    assert resp.status_code == 201, resp.text
+    corpo = resp.json()
+    assert _valores(corpo) == {usuario_a.id: 3333, usuario_b.id: 6668}
+    assert {p["usuario_id"]: p["percentual_bp"] for p in corpo["participantes"]} == {
+        usuario_a.id: 3333,
+        usuario_b.id: 6667,
+    }
+    assert corpo["meu_saldo_centavos"] == 6668
+
+    # Total novo sem redigitar: as porcentagens guardadas seguem valendo.
+    resp = a.patch(f"/api/divisoes-despesa/{corpo['id']}", json={"valor_total_centavos": 20000})
+    assert resp.status_code == 200, resp.text
+    assert _valores(resp.json()) == {usuario_a.id: 6666, usuario_b.id: 13334}
+
+
+def test_valor_por_pessoa(client_factory, db, usuario_a, usuario_b):
+    a = client_factory(usuario_a)
+    resp = a.post(
+        "/api/divisoes-despesa",
+        json=_despesa_partes(usuario_a.id, "valor", {usuario_a.id: 3000, usuario_b.id: 7000}),
+    )
+    assert resp.status_code == 201, resp.text
+    assert _valores(resp.json()) == {usuario_a.id: 3000, usuario_b.id: 7000}
+
+    # Total novo sem partes novas: a soma deixa de bater e o PATCH é recusado.
+    resp = a.patch(
+        f"/api/divisoes-despesa/{resp.json()['id']}", json={"valor_total_centavos": 12000}
+    )
+    assert resp.status_code == 422
+
+
+@pytest.mark.parametrize(
+    ("modo", "partes_fn", "total"),
+    [
+        ("porcentagem", lambda a, b: {a: 5000, b: 4000}, 10000),  # soma 90%
+        ("valor", lambda a, b: {a: 5000, b: 4000}, 10000),  # soma ≠ total
+        ("valor", lambda a, b: {a: 10000, b: 0}, 10000),  # só quem pagou
+        ("porcentagem", lambda a, b: {}, 10000),  # sem partes
+    ],
+)
+def test_partes_invalidas_sao_recusadas(
+    client_factory, db, usuario_a, usuario_b, modo, partes_fn, total
+):
+    a = client_factory(usuario_a)
+    resp = a.post(
+        "/api/divisoes-despesa",
+        json=_despesa_partes(usuario_a.id, modo, partes_fn(usuario_a.id, usuario_b.id), total),
+    )
+    assert resp.status_code == 422, resp.text

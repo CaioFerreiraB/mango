@@ -11,10 +11,18 @@ from pydantic import BaseModel, Field
 
 from app.schemas import ORMModel
 
-ModoDivisao = Literal["igualmente", "integral"]
+ModoDivisao = Literal["igualmente", "integral", "porcentagem", "valor"]
 # `sem_transacao`: pagas por mim ainda sem transação vinculada (picker "divisão existente").
 EscopoDivisao = Literal["todas", "minhas", "comigo", "arquivadas", "sem_transacao"]
 StatusPessoa = Literal["usuario", "so_divisao"]
+
+
+class ParteDivisao(BaseModel):
+    """Fatia de uma pessoa nos modos `porcentagem` (centésimos de ponto percentual: 2500 = 25%,
+    somando 10000) e `valor` (centavos, somando o total). Inclui quem pagou, se ele tem parte."""
+
+    usuario_id: int
+    valor: int = Field(ge=0)
 
 
 class DivisaoDespesaCreate(BaseModel):
@@ -23,22 +31,29 @@ class DivisaoDespesaCreate(BaseModel):
     valor_total_centavos: int = Field(gt=0)
     pago_por_usuario_id: int
     modo_divisao: ModoDivisao
-    # Ids dos usuários que dividem a despesa. No modo `igualmente` inclui quem pagou; no modo
-    # `integral` tem exatamente 1 id (o devedor, diferente de quem pagou) — validado no service.
-    participantes: list[int] = Field(min_length=1)
+    # Ids dos usuários que dividem a despesa (`igualmente`/`integral`). No modo `igualmente` inclui
+    # quem pagou; no modo `integral` tem exatamente 1 id (o devedor, diferente de quem pagou).
+    participantes: list[int] = []
+    # Fatias de cada pessoa (`porcentagem`/`valor`) — validado no service.
+    partes: list[ParteDivisao] | None = None
     # Quando aconteceu (padrão: agora). Com `transacao_id`, vale a data da transação.
     data: datetime | None = None
     # Transação do pagador que corresponde à despesa (só quando quem cria é quem pagou).
     transacao_id: int | None = Field(default=None, gt=0)
     sem_transacao: bool = False
+    # Transação com valor diferente do total: True recalcula a divisão para o valor dela; False
+    # mantém a divisão e o orçamento conta a transação menos a parte dos outros.
+    reajustar: bool = False
 
 
 class DivisaoVinculo(BaseModel):
     """Vínculo da divisão com a transação do pagador. `transacao_id` vincula; os dois vazios
-    desvinculam (volta a pendente); `sem_transacao` = "paguei fora do banco"."""
+    desvinculam (volta a pendente); `sem_transacao` = "paguei fora do banco". `reajustar`: ver
+    `DivisaoDespesaCreate`."""
 
     transacao_id: int | None = Field(default=None, gt=0)
     sem_transacao: bool = False
+    reajustar: bool = False
 
 
 class DivisaoDespesaUpdate(BaseModel):
@@ -48,6 +63,7 @@ class DivisaoDespesaUpdate(BaseModel):
     pago_por_usuario_id: int | None = None
     modo_divisao: ModoDivisao | None = None
     participantes: list[int] | None = Field(default=None, min_length=1)
+    partes: list[ParteDivisao] | None = None
     data: datetime | None = None
 
 
@@ -56,6 +72,7 @@ class DivisaoParticipanteRead(BaseModel):
     nome: str
     avatar: int | None
     valor_centavos: int
+    percentual_bp: int | None = None
 
 
 class DivisaoDespesaRead(ORMModel):

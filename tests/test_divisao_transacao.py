@@ -117,6 +117,7 @@ def test_vincular_conta_so_a_minha_parte(client_factory, db, usuario_a, usuario_
     assert detalhe["divisao"] == {
         "id": corpo["id"],
         "valor_total_centavos": 10000,
+        "outros_centavos": 5000,
         "minha_parte_centavos": 5000,
     }
 
@@ -433,3 +434,84 @@ def test_investimento_liquido_e_separado_de_despesa(
         params={"ano": 2026, "mes": 6, "tipo": "investimento", "categoria_id": INVEST},
     ).json()
     assert {i["pluggy_transaction_id"] for i in drill["items"]} == {"aporte", "resgate"}
+
+
+def test_vincular_transacao_maior_mantem_divisao_e_resto_fica_no_orcamento(
+    client_factory, db, usuario_a, usuario_b, cenario
+):
+    """Divisão de 100 (50/50) vinculada a uma transação de 150: a divisão não muda (B continua
+    devendo 50) e o orçamento conta 150 − 50 = 100."""
+    tx = _tx(db, usuario_a.id, cenario, "jantar", 15000)
+    a = client_factory(usuario_a)
+    _orcar(a)
+    d = a.post("/api/divisoes-despesa", json=_divisao(usuario_a.id, [usuario_b.id])).json()
+
+    resp = a.put(f"/api/divisoes-despesa/{d['id']}/vinculo", json={"transacao_id": tx.id})
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["valor_total_centavos"] == 10000
+    assert resp.json()["meu_saldo_centavos"] == 5000
+    db.expire_all()
+    assert _realizado(db, usuario_a.id, ALIMENTACAO) == 10000
+    assert a.get(f"/api/transacoes/{tx.id}").json()["divisao"] == {
+        "id": d["id"],
+        "valor_total_centavos": 10000,
+        "outros_centavos": 5000,
+        "minha_parte_centavos": 10000,
+    }
+
+
+def test_vincular_com_reajuste_recalcula_a_divisao(
+    client_factory, db, usuario_a, usuario_b, cenario
+):
+    tx = _tx(db, usuario_a.id, cenario, "jantar", 15000)
+    a = client_factory(usuario_a)
+    _orcar(a)
+    d = a.post("/api/divisoes-despesa", json=_divisao(usuario_a.id, [usuario_b.id])).json()
+
+    resp = a.put(
+        f"/api/divisoes-despesa/{d['id']}/vinculo",
+        json={"transacao_id": tx.id, "reajustar": True},
+    )
+    assert resp.status_code == 200, resp.text
+    corpo = resp.json()
+    assert corpo["valor_total_centavos"] == 15000
+    assert {p["usuario_id"]: p["valor_centavos"] for p in corpo["participantes"]} == {
+        usuario_a.id: 7500,
+        usuario_b.id: 7500,
+    }
+    db.expire_all()
+    assert _realizado(db, usuario_a.id, ALIMENTACAO) == 7500
+
+
+def test_reajuste_por_valor_escala_na_proporcao_ao_criar(
+    client_factory, db, usuario_a, usuario_b, cenario
+):
+    tx = _tx(db, usuario_a.id, cenario, "jantar", 15000)
+    a = client_factory(usuario_a)
+    payload = _divisao(usuario_a.id, [], transacao_id=tx.id, data=None, reajustar=True)
+    payload |= {
+        "modo_divisao": "valor",
+        "partes": [
+            {"usuario_id": usuario_a.id, "valor": 3000},
+            {"usuario_id": usuario_b.id, "valor": 7000},
+        ],
+    }
+    resp = a.post("/api/divisoes-despesa", json=payload)
+    assert resp.status_code == 201, resp.text
+    assert resp.json()["valor_total_centavos"] == 15000
+    assert {p["usuario_id"]: p["valor_centavos"] for p in resp.json()["participantes"]} == {
+        usuario_a.id: 4500,
+        usuario_b.id: 10500,
+    }
+
+
+def test_transacao_menor_que_a_parte_dos_outros_conta_zero(
+    client_factory, db, usuario_a, usuario_b, cenario
+):
+    tx = _tx(db, usuario_a.id, cenario, "jantar", 3000)
+    a = client_factory(usuario_a)
+    _orcar(a)
+    d = a.post("/api/divisoes-despesa", json=_divisao(usuario_a.id, [usuario_b.id])).json()
+    a.put(f"/api/divisoes-despesa/{d['id']}/vinculo", json={"transacao_id": tx.id})
+    db.expire_all()
+    assert _realizado(db, usuario_a.id, ALIMENTACAO) == 0

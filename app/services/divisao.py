@@ -34,7 +34,12 @@ from app.schemas.divisao import (
 from app.schemas.transacao import DivisaoDaTransacao, DivisaoLancamento
 from app.services import configuracao as configuracao_service
 from app.services import divisao_otimizacao
-from app.services.gasto_usuario import categoria_da_divisao
+from app.services.gasto_usuario import VALOR_EFETIVO, categoria_da_divisao
+
+# (usuario_id, valor_centavos, percentual_bp | None) — uma linha de `divisao_participante`.
+Linha = tuple[int, int, int | None]
+MODOS_COM_PARTES = ("porcentagem", "valor")
+CEM_POR_CENTO_BP = 10_000
 
 
 def _validar_participantes(
@@ -52,13 +57,15 @@ def _validar_participantes(
     else:
         # "igualmente" sempre inclui quem pagou — todos pagam partes iguais (§4.11).
         ids_a_validar = set(participantes_ids) | {pago_por_usuario_id}
+    _exigir_usuarios(db, ids_a_validar)
+    return [devedor_id] if modo == "integral" else sorted(ids_a_validar)
 
-    existentes = set(db.scalars(select(Usuario.id).where(Usuario.id.in_(ids_a_validar))).all())
-    faltando = ids_a_validar - existentes
+
+def _exigir_usuarios(db: Session, ids: set[int]) -> None:
+    existentes = set(db.scalars(select(Usuario.id).where(Usuario.id.in_(ids))).all())
+    faltando = ids - existentes
     if faltando:
         raise NotFoundError(f"usuário(s) inexistente(s): {sorted(faltando)}")
-
-    return [devedor_id] if modo == "integral" else sorted(ids_a_validar)
 
 
 def _validar_categoria(db: Session, categoria_id: str | None) -> None:
@@ -66,15 +73,83 @@ def _validar_categoria(db: Session, categoria_id: str | None) -> None:
         raise NotFoundError("categoria não encontrada")
 
 
-def _rateio(
-    valor_total_centavos: int, modo: str, pago_por_usuario_id: int, participantes_ids: list[int]
-) -> list[tuple[int, int]]:
-    """[(usuario_id, valor_centavos)] — resto da divisão vai para os primeiros ids (decisão)."""
+def _proporcional(total: int, pesos: list[tuple[int, int]]) -> list[tuple[int, int]]:
+    """Reparte `total` centavos na proporção dos pesos, somando exatamente o total: cada um leva
+    o piso da sua fatia e os centavos que sobram vão para os maiores restos (empate: menor id)."""
+    soma = sum(p for _, p in pesos)
+    fatias = [(uid, total * p // soma, total * p % soma) for uid, p in pesos]
+    sobra = total - sum(base for _, base, _ in fatias)
+    extra = {uid for uid, _, _ in sorted(fatias, key=lambda f: (-f[2], f[0]))[:sobra]}
+    return [(uid, base + (uid in extra)) for uid, base, _ in fatias]
+
+
+def _linhas_por_partes(
+    db: Session, pago_por_usuario_id: int, modo: str, total: int, partes: list[tuple[int, int]]
+) -> list[Linha]:
+    """Valida as fatias (`porcentagem`: somam 100%; `valor`: somam o total) e devolve as linhas.
+    Fatia zero não vira linha; precisa sobrar alguém além de quem pagou."""
+    ids = [uid for uid, _ in partes]
+    if len(set(ids)) != len(ids):
+        raise ValidationError("cada pessoa aparece uma vez só na divisão")
+    partes = sorted((uid, v) for uid, v in partes if v > 0)
+    if not any(uid != pago_por_usuario_id for uid, _ in partes):
+        raise ValidationError("a divisão precisa de alguém além de quem pagou")
+    soma = sum(v for _, v in partes)
+    if modo == "porcentagem":
+        if soma != CEM_POR_CENTO_BP:
+            raise ValidationError(f"as porcentagens somam {soma / 100:g}%, e não 100%")
+    elif soma != total:
+        raise ValidationError("a soma dos valores tem de ser igual ao valor total")
+    _exigir_usuarios(db, {uid for uid, _ in partes} | {pago_por_usuario_id})
+    if modo == "valor":
+        return [(uid, v, None) for uid, v in partes]
+    bp = dict(partes)
+    return [(uid, v, bp[uid]) for uid, v in _proporcional(total, partes)]
+
+
+def _rateio(valor_total_centavos: int, modo: str, participantes_ids: list[int]) -> list[Linha]:
+    """Linhas de `igualmente`/`integral` — resto da divisão vai para os primeiros ids (decisão)."""
     if modo == "integral":
-        return [(participantes_ids[0], valor_total_centavos)]
+        return [(participantes_ids[0], valor_total_centavos, None)]
     ids = sorted(participantes_ids)
     base, resto = divmod(valor_total_centavos, len(ids))
-    return [(uid, base + 1 if i < resto else base) for i, uid in enumerate(ids)]
+    return [(uid, base + 1 if i < resto else base, None) for i, uid in enumerate(ids)]
+
+
+def _linhas(
+    db: Session,
+    pago_por_usuario_id: int,
+    modo: str,
+    total: int,
+    participantes: list[int],
+    partes: list[tuple[int, int]] | None,
+) -> list[Linha]:
+    if modo in MODOS_COM_PARTES:
+        if not partes:
+            raise ValidationError("informe a parte de cada pessoa")
+        return _linhas_por_partes(db, pago_por_usuario_id, modo, total, partes)
+    if not participantes:
+        raise ValidationError("informe com quem dividir")
+    ids = _validar_participantes(db, pago_por_usuario_id, modo, participantes)
+    return _rateio(total, modo, ids)
+
+
+def _reajustar(linhas: list[Linha], modo: str, total: int) -> list[Linha]:
+    """Mesmas pessoas, novo total: igualmente divide de novo; porcentagem segue as porcentagens;
+    integral e valor escalam na proporção das partes atuais."""
+    if modo == "igualmente":
+        return _rateio(total, modo, [uid for uid, _, _ in linhas])
+    pesos = [(uid, bp if modo == "porcentagem" else v) for uid, v, bp in sorted(linhas)]
+    bps = {uid: bp for uid, _, bp in linhas}
+    return [(uid, v, bps[uid]) for uid, v in _proporcional(total, pesos)]
+
+
+def _valor_da_transacao(tx: Transacao) -> int:
+    return abs(
+        tx.amount_in_account_currency_centavos
+        if tx.amount_in_account_currency_centavos is not None
+        else tx.amount_centavos
+    )
 
 
 def enriquecer(db: Session, usuario_id: int, despesa: DivisaoDespesa) -> DivisaoDespesaRead:
@@ -95,6 +170,7 @@ def enriquecer(db: Session, usuario_id: int, despesa: DivisaoDespesa) -> Divisao
             nome=usuarios[linha.usuario_id].nome,
             avatar=usuarios[linha.usuario_id].avatar,
             valor_centavos=linha.valor_centavos,
+            percentual_bp=linha.percentual_bp,
         )
         for linha in linhas
         if linha.usuario_id in usuarios
@@ -153,25 +229,29 @@ def _commit_vinculo(db: Session) -> None:
 
 
 def criar(db: Session, usuario_id: int, payload: DivisaoDespesaCreate) -> DivisaoDespesaRead:
-    ids_validados = _validar_participantes(
-        db, payload.pago_por_usuario_id, payload.modo_divisao, payload.participantes
+    linhas = _linhas(
+        db,
+        payload.pago_por_usuario_id,
+        payload.modo_divisao,
+        payload.valor_total_centavos,
+        payload.participantes,
+        [(p.usuario_id, p.valor) for p in payload.partes] if payload.partes else None,
     )
     _validar_categoria(db, payload.categoria_id)
     data = payload.data or datetime.now(UTC)
+    total = payload.valor_total_centavos
     if payload.transacao_id is not None or payload.sem_transacao:
         if payload.pago_por_usuario_id != usuario_id:
             raise ValidationError("só quem pagou indica a transação")
         if payload.transacao_id is not None and payload.sem_transacao:
             raise ValidationError("informe a transação ou 'sem transação', não os dois")
     if payload.transacao_id is not None:
-        data = _transacao_vinculavel(db, usuario_id, payload.transacao_id).date
+        tx = _transacao_vinculavel(db, usuario_id, payload.transacao_id)
+        data = tx.date
+        if payload.reajustar and _valor_da_transacao(tx) != total:
+            total = _valor_da_transacao(tx)
+            linhas = _reajustar(linhas, payload.modo_divisao, total)
     repo = DivisaoDespesaRepository(db, usuario_id)
-    linhas = _rateio(
-        payload.valor_total_centavos,
-        payload.modo_divisao,
-        payload.pago_por_usuario_id,
-        ids_validados,
-    )
     # Os `flush` de `criar`/`definir_participantes` já esbarram no UNIQUE de `transacao_id`:
     # o 409 cobre o bloco inteiro, não só o commit (divisão e participantes ficam atômicos).
     try:
@@ -179,7 +259,7 @@ def criar(db: Session, usuario_id: int, payload: DivisaoDespesaCreate) -> Divisa
             pago_por_usuario_id=payload.pago_por_usuario_id,
             descricao=payload.descricao,
             categoria_id=payload.categoria_id,
-            valor_total_centavos=payload.valor_total_centavos,
+            valor_total_centavos=total,
             modo_divisao=payload.modo_divisao,
             quitada=False,
             arquivada=False,
@@ -209,10 +289,24 @@ def definir_vinculo(
         raise ValidationError("informe a transação ou 'sem transação', não os dois")
     lido = despesa.transacao_id
     valores = {"transacao_id": payload.transacao_id, "sem_transacao": payload.sem_transacao}
+    reajustadas = None
     if payload.transacao_id is not None and payload.transacao_id != lido:
         if lido is not None:
             raise ConflictError("a divisão já tem transação; desvincule antes")
-        valores["data"] = _transacao_vinculavel(db, usuario_id, payload.transacao_id).date
+        tx = _transacao_vinculavel(db, usuario_id, payload.transacao_id)
+        valores["data"] = tx.date
+        novo_total = _valor_da_transacao(tx)
+        if payload.reajustar and novo_total != despesa.valor_total_centavos:
+            # Reajustar muda quanto os outros devem: decisão de quem criou a divisão (como editar).
+            if despesa.criado_por_usuario_id != usuario_id:
+                raise ValidationError("só quem criou a divisão pode reajustá-la")
+            repo = DivisaoDespesaRepository(db, usuario_id)
+            atuais = [
+                (p.usuario_id, p.valor_centavos, p.percentual_bp)
+                for p in repo.participantes(despesa.id)
+            ]
+            reajustadas = _reajustar(atuais, despesa.modo_divisao, novo_total)
+            valores["valor_total_centavos"] = novo_total
     # Compare-and-set: só grava se o vínculo ainda é o que foi lido. Duas trocas concorrentes
     # leem o mesmo estado; a segunda não casa o WHERE e vira 409 em vez de sobrescrever a
     # primeira — vale no SQLite, onde `FOR UPDATE` não trava nada.
@@ -234,6 +328,8 @@ def definir_vinculo(
     if alteradas != 1:
         db.rollback()
         raise ConflictError("o vínculo da divisão mudou; recarregue e tente de novo")
+    if reajustadas is not None:
+        repo.definir_participantes(despesa.id, reajustadas)  # mesmo commit do vínculo
     _commit_vinculo(db)
     db.refresh(despesa)
     return enriquecer(db, usuario_id, despesa)
@@ -289,11 +385,27 @@ def atualizar(
     modo_divisao = campos.get("modo_divisao", despesa.modo_divisao)
     valor_total_centavos = campos.get("valor_total_centavos", despesa.valor_total_centavos)
     participantes_payload = campos.pop("participantes", None)
+    partes_payload = campos.pop("partes", None)
+    atuais = repo.participantes(despesa.id)
+    partes = [(p["usuario_id"], p["valor"]) for p in partes_payload] if partes_payload else None
+    if modo_divisao in MODOS_COM_PARTES and partes is None:
+        # Sem fatias novas: só dá para reaproveitar as atuais no mesmo modo e mesmas pessoas. Em
+        # `porcentagem` elas seguem valendo para um total novo; em `valor` a soma é revalidada.
+        if modo_divisao != despesa.modo_divisao or participantes_payload is not None:
+            raise ValidationError("informe a parte de cada pessoa")
+        partes = [
+            (p.usuario_id, p.percentual_bp if modo_divisao == "porcentagem" else p.valor_centavos)
+            for p in atuais
+        ]
     if participantes_payload is None:
-        participantes_payload = [p.usuario_id for p in repo.participantes(despesa.id)]
-
-    ids_validados = _validar_participantes(
-        db, pago_por_usuario_id, modo_divisao, participantes_payload
+        participantes_payload = [p.usuario_id for p in atuais]
+    linhas = _linhas(
+        db,
+        pago_por_usuario_id,
+        modo_divisao,
+        valor_total_centavos,
+        participantes_payload,
+        partes,
     )
     if campos.get("data", despesa.data) is None:
         campos.pop("data")  # `data` é NOT NULL: null no PATCH = "não mexer"
@@ -303,7 +415,6 @@ def atualizar(
     if "categoria_id" in campos:
         _validar_categoria(db, campos["categoria_id"])
     repo.atualizar(despesa, **campos)
-    linhas = _rateio(valor_total_centavos, modo_divisao, pago_por_usuario_id, ids_validados)
     repo.definir_participantes(despesa.id, linhas)
     commit(db)
     db.refresh(despesa)
@@ -319,25 +430,39 @@ def por_transacao(
     """{transacao_id: resumo da divisão} das transações da página (uma consulta)."""
     if not transacao_ids:
         return {}
-    minha = aliased(DivisaoParticipante)
+    outros = aliased(DivisaoParticipante)
     linhas = db.execute(
         select(
             DivisaoDespesa.transacao_id,
             DivisaoDespesa.id,
             DivisaoDespesa.valor_total_centavos,
-            func.coalesce(minha.valor_centavos, 0),
+            func.coalesce(func.sum(outros.valor_centavos), 0),
+            VALOR_EFETIVO,
         )
+        .join(Transacao, Transacao.id == DivisaoDespesa.transacao_id)
         .outerjoin(
-            minha, and_(minha.divisao_id == DivisaoDespesa.id, minha.usuario_id == usuario_id)
+            outros, and_(outros.divisao_id == DivisaoDespesa.id, outros.usuario_id != usuario_id)
         )
         .where(
             DivisaoDespesa.transacao_id.in_(transacao_ids),
             DivisaoDespesa.pago_por_usuario_id == usuario_id,
         )
+        .group_by(
+            DivisaoDespesa.transacao_id,
+            DivisaoDespesa.id,
+            DivisaoDespesa.valor_total_centavos,
+            VALOR_EFETIVO,
+        )
     ).all()
+    # Mesma conta de `gasto_usuario.VALOR_USUARIO`: transação − parte dos outros, mínimo 0.
     return {
-        tx_id: DivisaoDaTransacao(id=d_id, valor_total_centavos=total, minha_parte_centavos=parte)
-        for tx_id, d_id, total, parte in linhas
+        tx_id: DivisaoDaTransacao(
+            id=d_id,
+            valor_total_centavos=total,
+            outros_centavos=int(dos_outros),
+            minha_parte_centavos=max(abs(valor) - int(dos_outros), 0),
+        )
+        for tx_id, d_id, total, dos_outros, valor in linhas
     }
 
 

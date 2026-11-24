@@ -24,7 +24,7 @@ PERIODICIDADE = ("mensal", "trimestral", "semestral", "anual", "irregular")
 
 # §4.11 divisao_despesa — "quem pagou" é campo próprio (pago_por_usuario_id); aqui só "como
 # divide": entre N participantes (incl. quem pagou) ou o valor cheio p/ 1 único devedor.
-MODO_DIVISAO = ("igualmente", "integral")
+MODO_DIVISAO = ("igualmente", "integral", "porcentagem", "valor")
 
 # §4.6 orcamento — tipo do orçamento (categoria não carrega tipo, o orçamento sim)
 TIPO_ORCAMENTO = ("despesa", "receita", "investimento")
