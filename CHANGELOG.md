@@ -10,6 +10,8 @@ ainda está se assentando. Cada versão publicada tem uma imagem correspondente 
 
 ## [Não publicado]
 
+## [0.10.0] — 2026-11-24
+
 ### Adicionado
 
 - **Visão competência × caixa no dashboard:** um seletor no topo troca os cards, os gráficos e as
@@ -377,7 +379,8 @@ Primeira versão publicada. Imagem única servindo API e interface, instalável 
 - Os endpoints de autenticação ainda não têm rate-limiting nem lockout. Ver **Problemas conhecidos**
   em [ROADMAP.md](ROADMAP.md) antes de expor a instância à internet aberta.
 
-[Não publicado]: https://github.com/CaioFerreiraB/mango/compare/v0.9.0...HEAD
+[Não publicado]: https://github.com/CaioFerreiraB/mango/compare/v0.10.0...HEAD
+[0.10.0]: https://github.com/CaioFerreiraB/mango/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/CaioFerreiraB/mango/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/CaioFerreiraB/mango/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/CaioFerreiraB/mango/compare/v0.6.0...v0.7.0
