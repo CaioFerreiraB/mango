@@ -75,6 +75,7 @@ import {
   usePatrimonio,
   PERIODO_LABEL,
   type Granularidade,
+  type Visao,
 } from "@/lib/api/dashboard"
 import { useAtualizarPerfil, usePerfil } from "@/lib/api/perfil"
 import { useTransacoes } from "@/lib/api/transacoes"
@@ -159,19 +160,43 @@ function variacao(atual: number, anterior: number | undefined): number | null {
 }
 
 const CHAVE_OCULTO = "mango:dashboard-oculto"
+const CHAVE_VISAO = "mango:dashboard-visao"
 
 const ABAS = ["geral", "receitas", "despesas"] as const
 type Aba = (typeof ABAS)[number]
 
 export function DashboardPage() {
+  // Competência × caixa: vale para KPIs, gráficos e abas. Lembrado neste navegador.
+  const [visao, setVisao] = useState<Visao>(() => {
+    try {
+      return localStorage.getItem(CHAVE_VISAO) === "caixa"
+        ? "caixa"
+        : "competencia"
+    } catch {
+      return "competencia"
+    }
+  })
+  const trocarVisao = (v: Visao) => {
+    setVisao(v)
+    try {
+      localStorage.setItem(CHAVE_VISAO, v)
+    } catch {
+      // armazenamento bloqueado (aba privada): vale só nesta visita
+    }
+  }
   // Cards "no mês": sempre mês corrente até hoje, comparados ao mesmo período do mês anterior.
   const mes = mesAteHoje()
-  const dashMes = useDashboard(mes)
+  const dashMes = useDashboard(mes, visao)
   const dashMesAnterior = useDashboard(
-    mesmoPeriodoMesAnterior(mes.inicio, mes.fim)
+    mesmoPeriodoMesAnterior(mes.inicio, mes.fim),
+    visao
   )
   // Tendência dos cards: mesma métrica nos últimos 6 meses completos (uma query compartilhada).
-  const tendencia = useDashboardSeries(ultimos6MesesCompletos(), "mensal")
+  const tendencia = useDashboardSeries(
+    ultimos6MesesCompletos(),
+    "mensal",
+    visao
+  )
   const buckets6m = tendencia.data?.buckets ?? []
 
   // Seletor de período: manda nos gráficos de período, não nos cards "no mês" nem no patrimônio.
@@ -185,7 +210,7 @@ export function DashboardPage() {
   const rotuloPeriodo = `${formatDate(inicio)} a ${formatDate(fim)}`
 
   const [granFluxo, setGranFluxo] = useState<Granularidade>("semanal")
-  const serieFluxo = useDashboardSeries(periodo, granFluxo)
+  const serieFluxo = useDashboardSeries(periodo, granFluxo, visao)
   // Aba na URL (?aba=receitas): o voltar do navegador e um link direto funcionam.
   const [params, setParams] = useSearchParams()
   const aba = ABAS.includes(params.get("aba") as Aba)
@@ -525,6 +550,28 @@ export function DashboardPage() {
             </>
           ) : (
             <>
+              <ToggleGroup
+                type="single"
+                size="sm"
+                variant="outline"
+                spacing={0}
+                value={visao}
+                onValueChange={(v) => v && trocarVisao(v as Visao)}
+                aria-label="Visão dos valores"
+              >
+                <ToggleGroupItem
+                  value="competencia"
+                  title="Compras no cartão na data da compra; pagamento de fatura fica de fora"
+                >
+                  Competência
+                </ToggleGroupItem>
+                <ToggleGroupItem
+                  value="caixa"
+                  title="Só o que saiu da conta: pagamento de fatura no lugar das compras no cartão"
+                >
+                  Caixa
+                </ToggleGroupItem>
+              </ToggleGroup>
               {geral && visiveis.some((w) => w.id === "kpi-saldo") ? null : (
                 <Button
                   variant="outline"
@@ -623,6 +670,7 @@ export function DashboardPage() {
           rotuloPeriodo={rotuloPeriodo}
           rotulo={rotulo}
           oculto={oculto}
+          visao={visao}
         />
       </TabsContent>
       <TabsContent value="despesas" className="@container">
@@ -631,6 +679,7 @@ export function DashboardPage() {
           rotuloPeriodo={rotuloPeriodo}
           rotulo={rotulo}
           oculto={oculto}
+          visao={visao}
         />
       </TabsContent>
     </Tabs>

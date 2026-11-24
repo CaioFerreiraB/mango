@@ -64,7 +64,7 @@ def _tx(repo, conta, pid, amount, *, cat=None, dia=15, **extra):
         date=datetime(2026, 6, dia),
         amount_centavos=amount,
         currency_code="BRL",
-        type="CREDIT" if amount > 0 else "DEBIT",
+        type=extra.pop("type", "CREDIT" if amount > 0 else "DEBIT"),  # antes do **extra
         status="POSTED",
         categoria_pluggy_id=cat,
         **extra,
@@ -152,3 +152,47 @@ def test_valor_diferente_nao_pareia(db, cenario):
 
     assert saida.contraparte_id is None
     assert entrada.contraparte_id is None
+
+
+def _cartao(db, cenario):
+    conta = cenario.a
+    return ContaRepository(db, cenario.usuario.id).upsert_by_pluggy_id(
+        "card",
+        item_id=conta.item_id,
+        instituicao_id=conta.instituicao_id,
+        type="CREDIT",
+        subtype="CREDIT_CARD",
+        saldo_centavos=0,
+        currency_code="BRL",
+    )
+
+
+def test_pareia_pagamento_de_fatura_banco_e_cartao(db, cenario):
+    """Banco chama o pagamento de outra coisa; o "pagamento recebido" do cartão é que diz que é
+    fatura (sinal do cartão invertido: valor comparado em módulo). Ambas as pernas saem."""
+    db.add(Categoria(pluggy_id="05010000", description="boleto"))
+    cartao = _cartao(db, cenario)
+    deb = _tx(cenario.repo, cenario.a, "boleto", -30_000, cat="05010000", dia=10)
+    cre = _tx(cenario.repo, cartao, "recebido", -30_000, cat="05100000", dia=11, type="CREDIT")
+    outro = _tx(cenario.repo, cenario.a, "mercado", -30_000, cat="07010000", dia=10)
+
+    aplicar_regras_transferencia(db, cenario.usuario.id)
+    for t in (deb, cre, outro):
+        db.refresh(t)
+
+    assert deb.eh_transferencia and cre.eh_transferencia
+    assert deb.contraparte_id == cre.id and cre.contraparte_id == deb.id
+    assert not outro.eh_transferencia  # o crédito do cartão já foi usado pelo primeiro débito
+
+
+def test_banco_e_cartao_sem_categoria_de_fatura_nao_pareiam(db, cenario):
+    """Mesmo valor por coincidência (ex.: estorno no cartão e um débito qualquer) não basta."""
+    cartao = _cartao(db, cenario)
+    deb = _tx(cenario.repo, cenario.a, "deb", -30_000, cat="07010000")
+    cre = _tx(cenario.repo, cartao, "estorno", 30_000, cat="07010000")
+
+    aplicar_regras_transferencia(db, cenario.usuario.id)
+    db.refresh(deb)
+    db.refresh(cre)
+
+    assert not deb.eh_transferencia and not cre.eh_transferencia

@@ -37,6 +37,7 @@ import {
   PERIODO_LABEL,
   type Granularidade,
   type Natureza,
+  type Visao,
 } from "@/lib/api/dashboard"
 import { useConsumoOrcamentos, type AlvoDrilldown } from "@/lib/api/orcamentos"
 import {
@@ -89,13 +90,19 @@ function Kpis({
   natureza,
   analise,
   oculto,
+  visao,
 }: {
   natureza: Natureza
   analise: ReturnType<typeof useAnalise>
   oculto: boolean
+  visao: Visao
 }) {
   // Tendência de 6 meses: mesma query compartilhada com os cards da aba Geral.
-  const tendencia = useDashboardSeries(ultimos6MesesCompletos(), "mensal")
+  const tendencia = useDashboardSeries(
+    ultimos6MesesCompletos(),
+    "mensal",
+    visao
+  )
   const a = analise.data
   const grade = "grid grid-cols-2 gap-3 sm:gap-4 @3xl:grid-cols-4"
   if (analise.isError)
@@ -672,12 +679,14 @@ function DiaDaSemana({ a }: { a: AnaliseNatureza }) {
 function EvolucaoReceitas({
   periodo,
   rotuloPeriodo,
+  visao,
 }: {
   periodo: Periodo
   rotuloPeriodo: string
+  visao: Visao
 }) {
   const [gran, setGran] = useState<Granularidade>("semanal")
-  const serie = useDashboardSeries(periodo, gran)
+  const serie = useDashboardSeries(periodo, gran, visao)
   const dados = useMemo(
     () =>
       (serie.data?.buckets ?? []).map((b) => ({
@@ -726,14 +735,16 @@ function EvolucaoDespesas({
   rotuloPeriodo,
   rotulo,
   onSelecionar,
+  visao,
 }: {
   periodo: Periodo
   rotuloPeriodo: string
   rotulo: Map<string, string>
   onSelecionar: (c: CategoriaSelecionada) => void
+  visao: Visao
 }) {
   const [gran, setGran] = useState<Granularidade>("semanal")
-  const serie = useDashboardSeries(periodo, gran)
+  const serie = useDashboardSeries(periodo, gran, visao)
   return (
     <CardGrafico
       titulo="Evolução das despesas"
@@ -761,22 +772,33 @@ export function AbaReceitas({
   rotuloPeriodo,
   rotulo,
   oculto,
+  visao,
 }: {
   periodo: Periodo
   rotuloPeriodo: string
   rotulo: Map<string, string>
   oculto: boolean
+  visao: Visao
 }) {
-  const analise = useAnalise("receita", periodo)
+  const analise = useAnalise("receita", periodo, visao)
   const a = analise.data
   const [filtro, setFiltro] = useState<FiltroAnalise | null>(null)
   const estado = { carregando: analise.isLoading, erro: analise.isError }
   return (
     <div className="space-y-4">
-      <Kpis natureza="receita" analise={analise} oculto={oculto} />
+      <Kpis
+        natureza="receita"
+        analise={analise}
+        oculto={oculto}
+        visao={visao}
+      />
       <div className="grid gap-4 @5xl:grid-cols-2">
         <div className="@5xl:col-span-2">
-          <EvolucaoReceitas periodo={periodo} rotuloPeriodo={rotuloPeriodo} />
+          <EvolucaoReceitas
+            periodo={periodo}
+            rotuloPeriodo={rotuloPeriodo}
+            visao={visao}
+          />
         </div>
         <CardGrafico
           titulo="Receitas por categoria"
@@ -833,6 +855,7 @@ export function AbaReceitas({
         filtro={filtro}
         inicio={periodo.inicio}
         fim={periodo.fim}
+        visao={visao}
         onFechar={() => setFiltro(null)}
       />
     </div>
@@ -844,13 +867,15 @@ export function AbaDespesas({
   rotuloPeriodo,
   rotulo,
   oculto,
+  visao,
 }: {
   periodo: Periodo
   rotuloPeriodo: string
   rotulo: Map<string, string>
   oculto: boolean
+  visao: Visao
 }) {
-  const analise = useAnalise("despesa", periodo)
+  const analise = useAnalise("despesa", periodo, visao)
   const a = analise.data
   const dashMes = useDashboard(mesAteHoje())
   const [filtro, setFiltro] = useState<FiltroAnalise | null>(null)
@@ -880,7 +905,12 @@ export function AbaDespesas({
   }, [a])
   return (
     <div className="space-y-4">
-      <Kpis natureza="despesa" analise={analise} oculto={oculto} />
+      <Kpis
+        natureza="despesa"
+        analise={analise}
+        oculto={oculto}
+        visao={visao}
+      />
       <div className="grid gap-4 @5xl:grid-cols-2">
         <div className="@5xl:col-span-2">
           <EvolucaoDespesas
@@ -888,6 +918,7 @@ export function AbaDespesas({
             rotuloPeriodo={rotuloPeriodo}
             rotulo={rotulo}
             onSelecionar={porCategoria}
+            visao={visao}
           />
         </div>
         <CardGrafico
@@ -905,8 +936,8 @@ export function AbaDespesas({
           </Estado>
         </CardGrafico>
         <CardGrafico
-          titulo="Maiores estabelecimentos"
-          descricao="Para quem mais foi dinheiro no período"
+          titulo="Maiores despesas"
+          descricao="Somadas pela descrição da transação no período"
         >
           <Estado {...estado}>
             {a ? (
@@ -970,6 +1001,7 @@ export function AbaDespesas({
         filtro={filtro}
         inicio={periodo.inicio}
         fim={periodo.fim}
+        visao={visao}
         onFechar={() => setFiltro(null)}
       />
     </div>

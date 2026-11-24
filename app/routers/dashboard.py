@@ -30,6 +30,7 @@ from app.services.dashboard import (
     montar_patrimonio,
     montar_series,
 )
+from app.services.gasto_usuario import VISAO_PADRAO, Visao
 from app.services.periodo import mes_corrente
 from app.services.revisao import corte_revisao
 
@@ -40,12 +41,13 @@ router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 def obter(
     inicio: date | None = Query(None),
     fim: date | None = Query(None),
+    visao: Visao = Query(VISAO_PADRAO),
     db: Session = Depends(get_db),
     user: Usuario = Depends(get_current_user),
 ) -> DashboardResumo:
     if inicio is None or fim is None:
         inicio, fim = mes_corrente()
-    return montar_dashboard(db, user.id, inicio, fim, corte_revisao(user.revisao_desde))
+    return montar_dashboard(db, user.id, inicio, fim, corte_revisao(user.revisao_desde), visao)
 
 
 @router.get("/series", response_model=DashboardSeries)
@@ -53,12 +55,13 @@ def series(
     inicio: date | None = Query(None),
     fim: date | None = Query(None),
     granularidade: Literal["diaria", "semanal", "mensal", "anual"] = Query("semanal"),
+    visao: Visao = Query(VISAO_PADRAO),
     db: Session = Depends(get_db),
     user: Usuario = Depends(get_current_user),
 ) -> DashboardSeries:
     if inicio is None or fim is None:
         inicio, fim = mes_corrente()
-    return montar_series(db, user.id, inicio, fim, granularidade)
+    return montar_series(db, user.id, inicio, fim, granularidade, visao)
 
 
 @router.get("/patrimonio", response_model=PatrimonioSerie)
@@ -100,12 +103,13 @@ def analise(
     natureza: Natureza = Query(),
     inicio: date | None = Query(None),
     fim: date | None = Query(None),
+    visao: Visao = Query(VISAO_PADRAO),
     db: Session = Depends(get_db),
     user: Usuario = Depends(get_current_user),
 ) -> AnaliseNatureza:
     """Abas Receitas/Despesas: totais vs período anterior, categorias, maiores contrapartes, meios
     de pagamento, dia da semana, acumulado diário e orçamento (previsto) × realizado."""
-    return montar_analise(db, user.id, natureza, *_periodo(inicio, fim))
+    return montar_analise(db, user.id, natureza, *_periodo(inicio, fim), visao)
 
 
 @dataclass
@@ -124,13 +128,14 @@ def analise_transacoes(
     inicio: date | None = Query(None),
     fim: date | None = Query(None),
     f: _FiltroQuery = Depends(),
+    visao: Visao = Query(VISAO_PADRAO),
     db: Session = Depends(get_db),
     user: Usuario = Depends(get_current_user),
 ) -> TransacaoListagem:
     """Transações de um pedaço da análise (categoria, contraparte, meio e/ou conta). Mesmo recorte
     dos gráficos: a soma bate com o valor exibido. Até 200, mais recentes primeiro."""
     filtro = FiltroLancamentos(f.categoria_id, f.contraparte, f.meio, f.conta_id)
-    lancs = lancamentos_da_analise(db, user.id, natureza, _periodo(inicio, fim), filtro)
+    lancs = lancamentos_da_analise(db, user.id, natureza, _periodo(inicio, fim), filtro, visao)
     pagina = lancs[:_LIMITE_DRILLDOWN]
     ids = [x.transacao_id for x in pagina if x.transacao_id is not None]
     txs = {

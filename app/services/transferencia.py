@@ -5,7 +5,10 @@ Duas responsabilidades, ambas respeitando o override do usuário (`transferencia
 
 1. **Pagamento de fatura (05100000):** débito na conta corrente categorizado como
    "Pagamento de cartão de crédito" é caixa, não competência → marca `eh_transferencia`
-   para não recontabilizar o gasto (que já entra pela fatura do cartão, §4.2).
+   para não recontabilizar o gasto (que já entra pela fatura do cartão, §4.2). Se só UMA
+   ponta tem essa categoria (o banco chama de boleto/PIX, ou o "pagamento recebido" do cartão
+   vem sem categoria), o débito na conta BANK e o crédito no cartão de mesmo valor e data
+   próxima são ligados como as duas pernas do mesmo pagamento.
 2. **Pareamento de duas pernas:** transferência entre duas contas do próprio usuário
    (ambas conectadas) aparece como duas transações. Casa saída↔entrada por valor oposto,
    data próxima e contas distintas, com sinal forte de "mesma titularidade" (categoria
@@ -22,6 +25,7 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.models.categoria import CATEGORIA_PAGAMENTO_FATURA, PREFIXO_MESMA_TITULARIDADE
+from app.models.conta import Conta
 from app.models.transacao import Transacao, TransacaoPagamento
 from app.repositories.transacao import TransacaoRepository
 
@@ -32,6 +36,7 @@ def aplicar_regras_transferencia(
     repo = TransacaoRepository(db, usuario_id)
     txs = _carregar(db, usuario_id, desde)
     _detectar_pagamento_fatura(repo, txs)
+    _parear_pagamento_fatura(db, repo, usuario_id, txs)
     _parear_transferencias(db, repo, txs)
 
 
@@ -64,6 +69,44 @@ def _detectar_pagamento_fatura(repo: TransacaoRepository, txs: list[Transacao]) 
             continue
         if _cat_efetiva(t) == CATEGORIA_PAGAMENTO_FATURA and not t.eh_transferencia:
             repo.update(t, eh_transferencia=True, transferencia_origem="auto")
+
+
+def _parear_pagamento_fatura(
+    db: Session, repo: TransacaoRepository, usuario_id: int, txs: list[Transacao]
+) -> None:
+    """Débito BANK ↔ crédito no cartão (CREDIT) de mesmo valor, data próxima, com ao menos uma
+    ponta categorizada como pagamento de fatura. Valor em módulo: o sinal do `amount` no cartão
+    vem invertido em relação ao banco, dependendo do conector."""
+    tipos = dict(
+        db.execute(select(Conta.id, Conta.type).where(Conta.usuario_id == usuario_id)).all()
+    )
+
+    def livres(tipo_conta: str, tipo_tx: str) -> list[Transacao]:
+        return [
+            t
+            for t in txs
+            if tipos.get(t.conta_id) == tipo_conta
+            and t.type == tipo_tx
+            and t.contraparte_id is None
+            and t.transferencia_origem != "manual"
+            and t.amount_centavos != 0
+        ]
+
+    cartao = livres("CREDIT", "CREDIT")
+    janela = settings.sync_pareamento_dias * 86400
+    for deb in livres("BANK", "DEBIT"):
+        for cre in cartao:
+            if (
+                abs(deb.amount_centavos) == abs(cre.amount_centavos)
+                and abs((deb.date - cre.date).total_seconds()) <= janela
+                and CATEGORIA_PAGAMENTO_FATURA in (_cat_efetiva(deb), _cat_efetiva(cre))
+            ):
+                for a, b in ((deb, cre), (cre, deb)):
+                    repo.update(
+                        a, contraparte_id=b.id, eh_transferencia=True, transferencia_origem="auto"
+                    )
+                cartao.remove(cre)
+                break
 
 
 def _parear_transferencias(db: Session, repo: TransacaoRepository, txs: list[Transacao]) -> None:

@@ -43,7 +43,9 @@ from app.services.categoria_arvore import subarvores as montar_subarvores
 from app.services.categoria_resolucao import com_assinatura, expr_categoria_efetiva
 from app.services.gasto_usuario import (
     VALOR_EFETIVO,
+    VISAO_PADRAO,
     Lancamento,
+    Visao,
     categorias_investimento,
     lancamentos_do_periodo,
     linhas_do_periodo,
@@ -137,11 +139,13 @@ def montar_dashboard(
     inicio: date,
     fim: date,
     corte_revisao: datetime | None = None,
+    visao: Visao = VISAO_PADRAO,
 ) -> DashboardResumo:
     ini, fim_excl = limites_sp(inicio, fim)
     do_usuario = Transacao.usuario_id == usuario_id
     entradas, saidas, investido, por_cat = _totais(
-        linhas_do_periodo(db, usuario_id, ini, fim_excl), categorias_investimento(db, usuario_id)
+        linhas_do_periodo(db, usuario_id, ini, fim_excl, visao),
+        categorias_investimento(db, usuario_id),
     )
 
     return DashboardResumo(
@@ -257,14 +261,19 @@ def _proximo_bucket(inicio: date, granularidade: str) -> date:
 
 
 def montar_series(
-    db: Session, usuario_id: int, inicio: date, fim: date, granularidade: str = "semanal"
+    db: Session,
+    usuario_id: int,
+    inicio: date,
+    fim: date,
+    granularidade: str = "semanal",
+    visao: Visao = VISAO_PADRAO,
 ) -> DashboardSeries:
     """Série temporal de entradas/saídas/resultado e gasto por categoria, agrupada por semana ou
     mês no fuso SP. Mesmas regras dos KPIs (exclui transferências, sinal DEBIT/CREDIT, categoria
     efetiva) para os totais reconciliarem. Bucketização em Python — resultado idêntico nos dois
     bancos, sem `date_trunc`/`strftime`."""
     ini, fim_excl = limites_sp(inicio, fim)
-    linhas = linhas_do_periodo(db, usuario_id, ini, fim_excl)
+    linhas = linhas_do_periodo(db, usuario_id, ini, fim_excl, visao)
 
     # Buckets vazios de inicio→fim para os gráficos não pularem períodos sem transação.
     por_bucket: dict[date, list] = {}
@@ -694,7 +703,12 @@ def _previsto(
 
 
 def montar_analise(
-    db: Session, usuario_id: int, natureza: str, inicio: date, fim: date
+    db: Session,
+    usuario_id: int,
+    natureza: str,
+    inicio: date,
+    fim: date,
+    visao: Visao = VISAO_PADRAO,
 ) -> AnaliseNatureza:
     """Tudo das abas Receitas/Despesas numa leitura só da base de `gasto_usuario` (mesma regra dos
     KPIs e do orçamento): totais vs período anterior, categorias, top contrapartes, meios de
@@ -705,7 +719,7 @@ def montar_analise(
     mes_fim = _menos_meses(date(*meses[-1], 1), -1) - timedelta(days=1)
     ini_dt, fim_excl = limites_sp(min(ant_ini, date(*meses[0], 1)), max(fim, mes_fim))
     lancs = _da_natureza(
-        lancamentos_do_periodo(db, usuario_id, ini_dt, fim_excl),
+        lancamentos_do_periodo(db, usuario_id, ini_dt, fim_excl, visao),
         natureza,
         categorias_investimento(db, usuario_id),
     )
@@ -763,12 +777,13 @@ def lancamentos_da_analise(
     natureza: str,
     periodo: tuple[date, date],
     filtro: FiltroLancamentos,
+    visao: Visao = VISAO_PADRAO,
 ) -> list[Lancamento]:
     """Drill-down de um pedaço da análise — o mesmo recorte de `montar_analise`, então a lista
     soma exatamente o valor do gráfico. Mais recentes primeiro."""
     ini, fim_excl = limites_sp(*periodo)
     lancs = _da_natureza(
-        lancamentos_do_periodo(db, usuario_id, ini, fim_excl),
+        lancamentos_do_periodo(db, usuario_id, ini, fim_excl, visao),
         natureza,
         categorias_investimento(db, usuario_id),
     )

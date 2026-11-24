@@ -10,6 +10,27 @@ ainda está se assentando. Cada versão publicada tem uma imagem correspondente 
 
 ## [Não publicado]
 
+### Adicionado
+
+- **Visão competência × caixa no dashboard:** um seletor no topo troca os cards, os gráficos e as
+  abas Receitas/Despesas entre **Competência** (compra no cartão conta na data da compra, sem o
+  pagamento da fatura) e **Caixa** (só o que saiu da conta: o pagamento da fatura entra, na
+  categoria "Pagamento de cartão", no lugar das compras do cartão). A escolha fica lembrada neste
+  navegador. Orçamento e painel de cartões continuam em competência.
+
+### Corrigido
+
+- **Pagamento de fatura não conta mais duas vezes:** sai das somas também quando a categoria
+  "Pagamento de cartão" vem de uma regra, de uma assinatura ou de uma recategorização recente — não
+  só quando o banco já a informa. E quando o banco chama o pagamento de boleto ou PIX, o débito na
+  conta é ligado ao "pagamento recebido" do cartão (mesmo valor, até 3 dias) e passa a ser tratado
+  como pagamento de fatura.
+
+### Alterado
+
+- Aba Despesas: "Maiores estabelecimentos" virou **"Maiores despesas"**, já que os valores são
+  somados pela descrição da transação.
+
 ## [0.9.0] — 2026-11-23
 
 ### Adicionado
