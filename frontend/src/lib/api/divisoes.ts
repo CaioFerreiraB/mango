@@ -17,6 +17,17 @@ export type ModoDivisao = DivisaoDespesaCreate["modo_divisao"]
 export type EscopoDivisao =
   "todas" | "minhas" | "comigo" | "arquivadas" | "sem_transacao"
 export type DivisaoVinculo = components["schemas"]["DivisaoVinculo"]
+export type ParteDivisao = components["schemas"]["ParteDivisao"]
+
+export const ROTULO_MODO: Record<ModoDivisao, string> = {
+  igualmente: "Dividir igualmente",
+  porcentagem: "Por porcentagem",
+  valor: "Por valor",
+  integral: "Valor integral",
+}
+
+/** Modos em que cada pessoa tem a sua fatia digitada (`partes`). */
+export const MODOS_COM_PARTES: ModoDivisao[] = ["porcentagem", "valor"]
 
 export const divisoesKeys = {
   all: ["divisoes"] as const,
@@ -181,13 +192,13 @@ export function useDefinirVinculo() {
   return useMutation({
     mutationFn: async (args: {
       id: number
-      vinculo: DivisaoVinculo
+      vinculo: Omit<DivisaoVinculo, "reajustar"> & { reajustar?: boolean }
     }): Promise<DivisaoDespesa> => {
       const { data, error } = await api.PUT(
         "/api/divisoes-despesa/{despesa_id}/vinculo",
         {
           params: { path: { despesa_id: args.id } },
-          body: args.vinculo,
+          body: { reajustar: false, ...args.vinculo },
         }
       )
       if (error || !data)

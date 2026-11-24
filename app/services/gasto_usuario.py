@@ -1,9 +1,10 @@
 """Quanto de cada lançamento é do usuário — base única de orçamento e dashboard.
 
-- Transação vinculada a uma divisão (`divisao_despesa.transacao_id`) conta só a parcela do
-  usuário (`divisao_participante.valor_centavos`; sem linha = 0, ex.: modo `integral` em que o
-  outro deve tudo). As demais contam o valor efetivo inteiro, em módulo (o sinal do `amount` não
-  é confiável por tipo — quem diz entrada/saída é o `type`).
+- Transação vinculada a uma divisão (`divisao_despesa.transacao_id`) conta o valor dela menos a
+  parte dos outros participantes (`VALOR_USUARIO`) — com o mesmo valor da divisão é a parcela do
+  usuário (modo `integral`: 0); com valor diferente, a diferença fica com ele. As demais contam
+  o valor efetivo inteiro, em módulo (o sinal do `amount` não é confiável por tipo — quem diz
+  entrada/saída é o `type`).
 - Parcelas de divisão sem transação do usuário — pagas por outra pessoa, ou pagas por ele "fora
   do banco" (`sem_transacao`) — entram como DEBIT na data/categoria da divisão. Categoria
   personalizada de outro usuário não é dele → `None` (sem categoria).
@@ -14,12 +15,12 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from typing import NamedTuple
+from typing import Literal, NamedTuple
 
 from sqlalchemy import and_, case, func, or_, select
 from sqlalchemy.orm import Session, aliased
 
-from app.models.categoria import Categoria
+from app.models.categoria import CATEGORIA_PAGAMENTO_FATURA, Categoria
 from app.models.conta import Conta
 from app.models.divisao import DivisaoDespesa, DivisaoParticipante
 from app.models.transacao import Transacao, TransacaoPagamento
@@ -32,21 +33,34 @@ VALOR_EFETIVO = func.coalesce(
 )
 
 _DivTx = aliased(DivisaoDespesa, name="divisao_tx")
-_PartTx = aliased(DivisaoParticipante, name="participante_tx")
+# Parte dos outros (quem não pagou) por divisão: o que eles devem ao pagador.
+_OutrosTx = (
+    select(
+        DivisaoParticipante.divisao_id.label("divisao_id"),
+        func.sum(DivisaoParticipante.valor_centavos).label("centavos"),
+    )
+    .join(DivisaoDespesa, DivisaoDespesa.id == DivisaoParticipante.divisao_id)
+    .where(DivisaoParticipante.usuario_id != DivisaoDespesa.pago_por_usuario_id)
+    .group_by(DivisaoParticipante.divisao_id)
+    .subquery("outros_tx")
+)
+_RESTANTE = func.abs(VALOR_EFETIVO) - func.coalesce(_OutrosTx.c.centavos, 0)
 
-# Exige `com_divisao` na query.
+# Exige `com_divisao` na query. Transação dividida = o valor dela menos a parte dos outros (que
+# não muda com o vínculo): com o mesmo valor da divisão dá a parte do pagador; com valor maior, a
+# diferença fica com ele. Mínimo 0 (transação menor que o que os outros devem).
 VALOR_USUARIO = case(
-    (_DivTx.id.is_not(None), func.coalesce(_PartTx.valor_centavos, 0)),
-    else_=func.abs(VALOR_EFETIVO),
+    (_DivTx.id.is_(None), func.abs(VALOR_EFETIVO)),
+    (_RESTANTE < 0, 0),
+    else_=_RESTANTE,
 )
 
 
 def com_divisao(stmt):
     """Outerjoins que `VALOR_USUARIO` referencia. Ambos são no máximo 1 linha por transação
-    (`transacao_id` é único; participante é único por divisão+usuário) — não duplica soma."""
+    (`transacao_id` é único; `_OutrosTx` é agrupado por divisão) — não duplica soma."""
     return stmt.outerjoin(_DivTx, _DivTx.transacao_id == Transacao.id).outerjoin(
-        _PartTx,
-        and_(_PartTx.divisao_id == _DivTx.id, _PartTx.usuario_id == Transacao.usuario_id),
+        _OutrosTx, _OutrosTx.c.divisao_id == _DivTx.id
     )
 
 
@@ -171,16 +185,47 @@ class Lancamento(NamedTuple):
     meio: str
 
 
-def _select_transacoes(usuario_id: int, renda: set[str]):
-    """SELECT das transações não-transferência com tudo que `Lancamento` precisa (colunas
+Visao = Literal["competencia", "caixa"]
+VISAO_PADRAO: Visao = "competencia"
+
+_TxCartao = aliased(Transacao, name="tx_cartao")  # alias: sem ele o IN correlaciona com a externa
+
+
+def _recorte_visao(usuario_id: int, cat, visao: Visao) -> tuple[tuple, object]:
+    """(filtros, categoria exibida) de cada visão (§4.2).
+
+    - competência: compra no cartão conta na data da compra; pagamento de fatura fica fora.
+    - caixa: só o que mexe na conta — nada de conta de cartão (compras/estornos/"pagamento
+      recebido"); o pagamento de fatura no banco entra como despesa, sob a categoria de pagamento
+      de fatura mesmo quando o banco chamou de boleto/PIX (pareado com o cartão em
+      `transferencia.py`). Transferência entre contas próprias fica fora nas duas."""
+    if visao == "competencia":
+        return fora_de_transferencia(cat), cat
+    cartoes = select(Conta.id).where(Conta.usuario_id == usuario_id, Conta.type == "CREDIT")
+    pagamento = and_(
+        Transacao.type == "DEBIT",
+        or_(
+            cat == CATEGORIA_PAGAMENTO_FATURA,
+            Transacao.contraparte_id.in_(
+                select(_TxCartao.id).where(_TxCartao.conta_id.in_(cartoes))
+            ),
+        ),
+    )
+    filtros = (Conta.type != "CREDIT", or_(and_(*fora_de_transferencia(cat)), pagamento))
+    return filtros, case((pagamento, CATEGORIA_PAGAMENTO_FATURA), else_=cat)
+
+
+def _select_transacoes(usuario_id: int, renda: set[str], visao: Visao):
+    """SELECT das transações que contam na `visao` com tudo que `Lancamento` precisa (colunas
     rotuladas). O chamador acrescenta o recorte de data."""
     cat = expr_categoria_efetiva(usuario_id)
     estorno = expr_estorno_cartao(usuario_id, cat, renda)
+    filtros, cat_exibida = _recorte_visao(usuario_id, cat, visao)
     stmt = select(
         Transacao.date.label("data"),
         VALOR_USUARIO.label("valor"),
         Transacao.type.label("tipo"),
-        cat.label("categoria"),
+        cat_exibida.label("categoria"),
         Transacao.id.label("transacao_id"),
         Transacao.conta_id,
         case((estorno, True), else_=False).label("estorno"),
@@ -197,7 +242,18 @@ def _select_transacoes(usuario_id: int, renda: set[str]):
         com_divisao(com_assinatura(stmt, usuario_id))
         .join(Conta, Conta.id == Transacao.conta_id)
         .outerjoin(TransacaoPagamento, TransacaoPagamento.transacao_id == Transacao.id)
-        .where(Transacao.usuario_id == usuario_id, Transacao.eh_transferencia.is_(False))
+        .where(Transacao.usuario_id == usuario_id, *filtros)
+    )
+
+
+def fora_de_transferencia(cat) -> tuple:
+    """Fora das somas (§4.2): transferência marcada E pagamento de fatura pela categoria EFETIVA.
+    O flag só nasce da categoria crua no pós-sync (`transferencia.py`); regra/assinatura/override
+    recente que diz "pagamento de fatura" também tem de sair, senão o gasto conta duas vezes
+    (compra no cartão + pagamento da fatura). `is_distinct_from`: categoria NULL continua dentro."""
+    return (
+        Transacao.eh_transferencia.is_(False),
+        cat.is_distinct_from(CATEGORIA_PAGAMENTO_FATURA),
     )
 
 
@@ -222,11 +278,12 @@ def _lancamento_de(r) -> Lancamento:
 
 
 def lancamentos_do_periodo(
-    db: Session, usuario_id: int, ini: datetime, fim_excl: datetime
+    db: Session, usuario_id: int, ini: datetime, fim_excl: datetime, visao: Visao = VISAO_PADRAO
 ) -> list[Lancamento]:
     """Lançamentos do período sem transferências (§4.2) — base única de dashboard, abas de
-    receitas/despesas e orçamento. Agregação em Python: resultado idêntico nos dois bancos."""
-    stmt = _select_transacoes(usuario_id, categorias_renda(db, usuario_id)).where(
+    receitas/despesas e orçamento (este sempre em competência). Agregação em Python: resultado
+    idêntico nos dois bancos."""
+    stmt = _select_transacoes(usuario_id, categorias_renda(db, usuario_id), visao).where(
         Transacao.date >= ini, Transacao.date < fim_excl
     )
     out = [_lancamento_de(r) for r in db.execute(stmt)]
@@ -241,13 +298,13 @@ def lancamentos_do_periodo(
 
 
 def linhas_do_periodo(
-    db: Session, usuario_id: int, ini: datetime, fim_excl: datetime
+    db: Session, usuario_id: int, ini: datetime, fim_excl: datetime, visao: Visao = VISAO_PADRAO
 ) -> list[tuple[datetime, int, str, str | None]]:
     """[(data aware, valor do usuário, 'DEBIT'|'CREDIT', categoria efetiva)] do período — a visão
     enxuta de `lancamentos_do_periodo` (estorno de cartão: DEBIT negativo)."""
     return [
         (x.data, x.valor, x.tipo, x.categoria)
-        for x in lancamentos_do_periodo(db, usuario_id, ini, fim_excl)
+        for x in lancamentos_do_periodo(db, usuario_id, ini, fim_excl, visao)
     ]
 
 

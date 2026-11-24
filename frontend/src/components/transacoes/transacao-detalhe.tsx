@@ -4,6 +4,7 @@ import { Link } from "react-router"
 import { toast } from "sonner"
 
 import { DivisaoDetalheDialog } from "@/components/divisoes/divisao-detalhe-dialog"
+import { EscolhaReajuste } from "@/components/divisoes/escolha-reajuste"
 import { NovaDivisaoWizard } from "@/components/divisoes/nova-divisao-wizard"
 import { AssinaturaSelect } from "@/components/transacoes/assinatura-select"
 import { CampoCategoria } from "@/components/transacoes/campo-categoria"
@@ -32,7 +33,12 @@ import { Switch } from "@/components/ui/switch"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { useAssinaturas } from "@/lib/api/assinaturas"
 import { useContas } from "@/lib/api/contas"
-import { useDefinirVinculo, useDivisoes } from "@/lib/api/divisoes"
+import { useMe } from "@/lib/api/auth"
+import {
+  useDefinirVinculo,
+  useDivisoes,
+  type DivisaoDespesa,
+} from "@/lib/api/divisoes"
 import { usePerfil } from "@/lib/api/perfil"
 import {
   descricaoBanco,
@@ -49,6 +55,7 @@ import {
   formatDateTime,
   formatMoeda,
 } from "@/lib/format"
+import { outrosDaDivisao } from "@/lib/divisao-partes"
 import { estadoRevisao } from "@/lib/revisao"
 
 /** Sem isto o último campo do bottom sheet fica sob a barra de gestos. */
@@ -356,18 +363,43 @@ function AssinaturaCampo({ transacao }: { transacao: Transacao }) {
   )
 }
 
-/** Compra dividida (RF01): vinculada mostra a parte do usuário (o que conta no orçamento); sem
- *  vínculo, cria uma divisão a partir desta saída ou usa uma divisão já paga por ele sem
- *  transação. Só saídas que não são transferência. */
+/** Compra dividida (RF01): vinculada mostra o que conta no orçamento (transação − parte dos
+ *  outros); sem vínculo, cria uma divisão a partir desta saída ou usa uma divisão já paga por ele
+ *  sem transação — se o valor for outro, escolhe manter ou reajustar. Só saídas que não são
+ *  transferência. */
 function DivisaoCampo({ transacao }: { transacao: Transacao }) {
   const vinculo = useDefinirVinculo()
+  const me = useMe()
   const elegivel = transacao.type === "DEBIT" && !transacao.eh_transferencia
   const existentes = useDivisoes(
     "sem_transacao",
     elegivel && !transacao.divisao
   )
   const [verId, setVerId] = useState<number | null>(null)
+  const [diferente, setDiferente] = useState<DivisaoDespesa | null>(null)
+  const [reajustar, setReajustar] = useState(false)
   const divisao = transacao.divisao
+  const valorTx = Math.abs(valorEfetivoCentavos(transacao))
+  const vincular = (id: number, reajusta: boolean) =>
+    vinculo.mutate(
+      {
+        id,
+        vinculo: {
+          transacao_id: transacao.id,
+          sem_transacao: false,
+          reajustar: reajusta,
+        },
+      },
+      {
+        onSuccess: () => {
+          toast.success(
+            reajusta ? "Divisão vinculada e reajustada." : "Divisão vinculada."
+          )
+          setDiferente(null)
+        },
+        onError: (err) => toast.error(err.message),
+      }
+    )
 
   if (divisao) {
     return (
@@ -381,9 +413,24 @@ function DivisaoCampo({ transacao }: { transacao: Transacao }) {
             <span>
               Compra dividida
               <span className="block text-xs text-muted-foreground">
-                Sua parte {formatBRL(divisao.minha_parte_centavos)} de{" "}
-                {formatBRL(divisao.valor_total_centavos)} — é o que conta no
-                orçamento.
+                {valorTx === divisao.valor_total_centavos ? (
+                  <>
+                    Sua parte {formatBRL(divisao.minha_parte_centavos)} de{" "}
+                    {formatBRL(divisao.valor_total_centavos)} — é o que conta no
+                    orçamento.
+                  </>
+                ) : (
+                  <>
+                    Divisão de {formatBRL(divisao.valor_total_centavos)} numa
+                    transação de {formatBRL(valorTx)}. No orçamento:{" "}
+                    {formatBRL(valorTx)} − {formatBRL(divisao.outros_centavos)}{" "}
+                    da parte dos outros ={" "}
+                    <span className="font-medium text-foreground">
+                      {formatBRL(divisao.minha_parte_centavos)}
+                    </span>
+                    .
+                  </>
+                )}
               </span>
             </span>
           </span>
@@ -437,22 +484,46 @@ function DivisaoCampo({ transacao }: { transacao: Transacao }) {
           }
         />
       </div>
-      {opcoes.length > 0 ? (
+      {diferente ? (
+        <div className="space-y-2">
+          <EscolhaReajuste
+            totalDivisao={diferente.valor_total_centavos}
+            valorTransacao={valorTx}
+            outros={outrosDaDivisao(diferente)}
+            podeReajustar={me.data?.id === diferente.criado_por_usuario_id}
+            reajustar={reajustar}
+            onChange={setReajustar}
+          />
+          <div className="flex gap-1">
+            <Button
+              size="xs"
+              disabled={vinculo.isPending}
+              onClick={() => vincular(diferente.id, reajustar)}
+            >
+              Vincular
+            </Button>
+            <Button
+              size="xs"
+              variant="ghost"
+              onClick={() => setDiferente(null)}
+            >
+              Voltar
+            </Button>
+          </div>
+        </div>
+      ) : opcoes.length > 0 ? (
         <Select
           value=""
           disabled={vinculo.isPending}
-          onValueChange={(v) =>
-            vinculo.mutate(
-              {
-                id: Number(v),
-                vinculo: { transacao_id: transacao.id, sem_transacao: false },
-              },
-              {
-                onSuccess: () => toast.success("Divisão vinculada."),
-                onError: (err) => toast.error(err.message),
-              }
-            )
-          }
+          onValueChange={(v) => {
+            const d = opcoes.find((o) => o.id === Number(v))
+            if (!d) return
+            if (d.valor_total_centavos === valorTx) vincular(d.id, false)
+            else {
+              setReajustar(false)
+              setDiferente(d)
+            }
+          }}
         >
           <SelectTrigger
             size="sm"

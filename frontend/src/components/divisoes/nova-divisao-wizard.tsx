@@ -1,8 +1,10 @@
 import {
   Banknote,
   CalendarClock,
+  Coins,
   Divide,
   Landmark,
+  Percent,
   User,
   Users,
 } from "lucide-react"
@@ -11,7 +13,9 @@ import { toast } from "sonner"
 
 import { CurrencyInput } from "@/components/common/currency-input"
 import { Valor } from "@/components/common/valor"
+import { EscolhaReajuste } from "@/components/divisoes/escolha-reajuste"
 import { OpcaoCard } from "@/components/divisoes/opcao-card"
+import { PartesEditor } from "@/components/divisoes/partes-editor"
 import {
   PessoaMultiPicker,
   type PessoaSelecionada,
@@ -33,6 +37,8 @@ import { Label } from "@/components/ui/label"
 import { useMe } from "@/lib/api/auth"
 import { nomeCategoria, useCategorias } from "@/lib/api/categorias"
 import {
+  MODOS_COM_PARTES,
+  ROTULO_MODO,
   useCriarDivisao,
   useTransacoesCandidatas,
   type ModoDivisao,
@@ -43,6 +49,12 @@ import {
   type Transacao,
 } from "@/lib/api/transacoes"
 import { diaCivilSP, formatBRL, formatDate, hojeISO } from "@/lib/format"
+import {
+  partesPayload,
+  partesValidas,
+  proporcional,
+  type Partes,
+} from "@/lib/divisao-partes"
 import { cn } from "@/lib/utils"
 
 const PASSOS: Record<number, string> = {
@@ -69,7 +81,10 @@ function estadoInicial(transacao?: Transacao) {
     modo: "igualmente" as ModoDivisao,
     participantes: [] as PessoaSelecionada[],
     devedor: null as PessoaSelecionada | null,
+    partes: {} as Partes,
     vinculo: "depois" as Vinculo,
+    // Transação escolhida com valor diferente do total: reajustar a divisão a ela?
+    reajustar: false,
   }
 }
 
@@ -117,6 +132,15 @@ export function NovaDivisaoWizard({
         }
       : null
 
+  const comPartes = MODOS_COM_PARTES.includes(form.modo)
+  const modoPartes = form.modo === "valor" ? "valor" : "porcentagem"
+  // Porcentagem/valor: quem pagou também tem fatia (pode ser 0), seguido dos escolhidos.
+  const pagadorPessoa = form.pagoPorMim ? pessoaEu : form.pagador
+  const pessoasPartes = [
+    ...(pagadorPessoa ? [pagadorPessoa] : []),
+    ...form.participantes.filter((p) => p.id !== pagoPorId),
+  ]
+
   // Passos ativos: com transação, "quem pagou" é você (pula o 2); o passo da transação só existe
   // quando você pagou e ela ainda não foi escolhida.
   const passos = [
@@ -137,10 +161,19 @@ export function NovaDivisaoWizard({
     if (form.passo === 1)
       return form.descricao.trim().length > 0 && form.valor > 0 && !!form.data
     if (form.passo === 2) return form.pagoPorMim || form.pagador !== null
-    if (form.passo === 4)
+    if (form.passo === 4) {
+      if (comPartes)
+        return partesValidas(
+          modoPartes,
+          form.valor,
+          pagoPorId,
+          pessoasPartes,
+          form.partes
+        )
       return form.modo === "igualmente"
         ? form.participantes.some((p) => p.id !== pagoPorId)
         : form.devedor !== null
+    }
     return true
   }
 
@@ -151,7 +184,9 @@ export function NovaDivisaoWizard({
         ? form.devedor
           ? [form.devedor.id]
           : []
-        : form.participantes.map((p) => p.id)
+        : comPartes
+          ? []
+          : form.participantes.map((p) => p.id)
     const transacaoId =
       transacao?.id ??
       (form.pagoPorMim && typeof form.vinculo === "number"
@@ -165,10 +200,13 @@ export function NovaDivisaoWizard({
         pago_por_usuario_id: pagoPorId,
         modo_divisao: form.modo,
         participantes,
+        partes: comPartes ? partesPayload(pessoasPartes, form.partes) : null,
         // Meio-dia em Brasília: o dia civil escolhido não "vira" por fuso.
         data: `${form.data}T12:00:00-03:00`,
         transacao_id: transacaoId,
         sem_transacao: !transacao && form.pagoPorMim && form.vinculo === "fora",
+        reajustar:
+          (!!transacao || typeof form.vinculo === "number") && form.reajustar,
       },
       {
         onSuccess: () => {
@@ -316,6 +354,22 @@ export function NovaDivisaoWizard({
               onClick={() => setForm({ ...form, modo: "igualmente" })}
             />
             <OpcaoCard
+              icon={Percent}
+              titulo="Por porcentagem"
+              descricao="Cada um paga uma % (soma 100%)"
+              selecionado={form.modo === "porcentagem"}
+              onClick={() =>
+                setForm({ ...form, modo: "porcentagem", partes: {} })
+              }
+            />
+            <OpcaoCard
+              icon={Coins}
+              titulo="Por valor"
+              descricao="Cada um paga um valor (soma o total)"
+              selecionado={form.modo === "valor"}
+              onClick={() => setForm({ ...form, modo: "valor", partes: {} })}
+            />
+            <OpcaoCard
               icon={Banknote}
               titulo={form.pagoPorMim ? "Eu recebo tudo" : "Ele recebe tudo"}
               descricao="Uma pessoa deve o valor total, sem dividir"
@@ -328,17 +382,35 @@ export function NovaDivisaoWizard({
         {form.passo === 4 ? (
           <div className="space-y-1.5">
             <Label>
-              {form.modo === "igualmente"
-                ? "Selecionar pessoas"
-                : "Quem deve o valor"}
+              {form.modo === "integral"
+                ? "Quem deve o valor"
+                : "Selecionar pessoas"}
             </Label>
-            {form.modo === "igualmente" ? (
-              <PessoaMultiPicker
-                value={form.participantes}
-                onChange={(p) => setForm({ ...form, participantes: p })}
-                excluir={pagoPorId ? [pagoPorId] : []}
-                eu={pessoaEu}
-              />
+            {form.modo !== "integral" ? (
+              <>
+                <PessoaMultiPicker
+                  value={form.participantes}
+                  onChange={(p) => setForm({ ...form, participantes: p })}
+                  excluir={pagoPorId ? [pagoPorId] : []}
+                  eu={pessoaEu}
+                />
+                {comPartes ? (
+                  <div className="space-y-1.5 pt-2">
+                    <Label>
+                      {form.modo === "porcentagem"
+                        ? "Porcentagem de cada um"
+                        : "Valor de cada um"}
+                    </Label>
+                    <PartesEditor
+                      modo={modoPartes}
+                      total={form.valor}
+                      pessoas={pessoasPartes}
+                      partes={form.partes}
+                      onChange={(partes) => setForm({ ...form, partes })}
+                    />
+                  </div>
+                ) : null}
+              </>
             ) : (
               <PessoaSelect
                 value={form.devedor}
@@ -355,6 +427,9 @@ export function NovaDivisaoWizard({
             data={form.data}
             vinculo={form.vinculo}
             onChange={(v) => setForm({ ...form, vinculo: v })}
+            outros={outrosPrevistos(form, pagoPorId, pessoasPartes)}
+            reajustar={form.reajustar}
+            onReajustar={(r) => setForm({ ...form, reajustar: r })}
           />
         ) : null}
 
@@ -367,21 +442,26 @@ export function NovaDivisaoWizard({
               valor={<Valor centavos={form.valor} neutro />}
             />
             <LinhaResumo rotulo="Pago por" valor={pagoPorNome ?? "—"} />
-            <LinhaResumo
-              rotulo="Divisão"
-              valor={
-                form.modo === "igualmente"
-                  ? "Dividir igualmente"
-                  : "Valor integral"
-              }
-            />
+            <LinhaResumo rotulo="Divisão" valor={ROTULO_MODO[form.modo]} />
             <LinhaResumo
               rotulo="Participantes"
               valor={
-                form.modo === "igualmente"
-                  ? form.participantes.map((p) => p.nome).join(", ") ||
-                    "Só você"
-                  : (form.devedor?.nome ?? "—")
+                comPartes
+                  ? pessoasPartes
+                      .filter((p) => (form.partes[p.id] ?? 0) > 0)
+                      .map(
+                        (p) =>
+                          `${p.nome} ${
+                            form.modo === "valor"
+                              ? formatBRL(form.partes[p.id])
+                              : `${((form.partes[p.id] ?? 0) / 100).toLocaleString("pt-BR")}%`
+                          }`
+                      )
+                      .join(", ")
+                  : form.modo === "igualmente"
+                    ? form.participantes.map((p) => p.nome).join(", ") ||
+                      "Só você"
+                    : (form.devedor?.nome ?? "—")
               }
             />
             {form.pagoPorMim ? (
@@ -389,7 +469,9 @@ export function NovaDivisaoWizard({
                 rotulo="Transação"
                 valor={
                   transacao || typeof form.vinculo === "number"
-                    ? "Vinculada"
+                    ? form.reajustar
+                      ? "Vinculada (divisão reajustada ao valor dela)"
+                      : "Vinculada"
                     : form.vinculo === "fora"
                       ? "Paguei fora do banco"
                       : "Escolher depois"
@@ -397,6 +479,19 @@ export function NovaDivisaoWizard({
               />
             ) : null}
           </div>
+        ) : null}
+
+        {/* Começou por uma transação e o total foi mudado no passo 1: mesma escolha do passo 5. */}
+        {form.passo === 6 &&
+        transacao &&
+        form.valor !== Math.abs(valorEfetivoCentavos(transacao)) ? (
+          <EscolhaReajuste
+            totalDivisao={form.valor}
+            valorTransacao={Math.abs(valorEfetivoCentavos(transacao))}
+            outros={outrosPrevistos(form, pagoPorId, pessoasPartes)}
+            reajustar={form.reajustar}
+            onChange={(r) => setForm({ ...form, reajustar: r })}
+          />
         ) : null}
 
         <DialogFooter className="justify-between sm:justify-between">
@@ -437,14 +532,24 @@ function PassoTransacao({
   data,
   vinculo,
   onChange,
+  outros,
+  reajustar,
+  onReajustar,
 }: {
   valor: number
   data: string
   vinculo: Vinculo
   onChange: (v: Vinculo) => void
+  outros: number
+  reajustar: boolean
+  onReajustar: (r: boolean) => void
 }) {
   const candidatas = useTransacoesCandidatas(valor, `${data}T12:00:00-03:00`)
   const itens = candidatas.data ?? []
+  const escolhida = itens.find((t) => t.id === vinculo)
+  const valorEscolhida = escolhida
+    ? Math.abs(valorEfetivoCentavos(escolhida))
+    : null
   return (
     <div className="space-y-3">
       <p className="text-xs text-muted-foreground">
@@ -502,6 +607,15 @@ function PassoTransacao({
           Nenhuma saída sem divisão perto dessa data.
         </p>
       )}
+      {valorEscolhida !== null && valorEscolhida !== valor ? (
+        <EscolhaReajuste
+          totalDivisao={valor}
+          valorTransacao={valorEscolhida}
+          outros={outros}
+          reajustar={reajustar}
+          onChange={onReajustar}
+        />
+      ) : null}
       <div className="grid grid-cols-2 gap-2">
         <OpcaoCard
           icon={CalendarClock}
@@ -520,6 +634,29 @@ function PassoTransacao({
       </div>
     </div>
   )
+}
+
+/** Quanto os outros vão dever, para a prévia do "manter a divisão". Igualmente é aproximado (o
+ *  backend dá o centavo do resto aos primeiros ids); porcentagem usa o mesmo rateio do backend. */
+function outrosPrevistos(
+  form: ReturnType<typeof estadoInicial>,
+  pagoPorId: number | null,
+  pessoasPartes: PessoaSelecionada[]
+) {
+  if (form.modo === "integral") return form.valor
+  if (form.modo === "igualmente") {
+    const n = new Set([...form.participantes.map((p) => p.id), pagoPorId]).size
+    return form.valor - Math.floor(form.valor / n)
+  }
+  if (form.modo === "valor")
+    return pessoasPartes
+      .filter((p) => p.id !== pagoPorId)
+      .reduce((s, p) => s + (form.partes[p.id] ?? 0), 0)
+  const fatias = proporcional(
+    form.valor,
+    pessoasPartes.map((p) => [p.id, form.partes[p.id] ?? 0])
+  )
+  return form.valor - (pagoPorId !== null ? (fatias[pagoPorId] ?? 0) : 0)
 }
 
 function LinhaResumo({

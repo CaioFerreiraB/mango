@@ -10,6 +10,37 @@ ainda está se assentando. Cada versão publicada tem uma imagem correspondente 
 
 ## [Não publicado]
 
+## [0.10.0] — 2026-11-24
+
+### Adicionado
+
+- **Visão competência × caixa no dashboard:** um seletor no topo troca os cards, os gráficos e as
+  abas Receitas/Despesas entre **Competência** (compra no cartão conta na data da compra, sem o
+  pagamento da fatura) e **Caixa** (só o que saiu da conta: o pagamento da fatura entra, na
+  categoria "Pagamento de cartão", no lugar das compras do cartão). A escolha fica lembrada neste
+  navegador. Orçamento e painel de cartões continuam em competência.
+- **Divisão por porcentagem e por valor:** além de "dividir igualmente" e "valor integral", cada
+  pessoa pode ter uma porcentagem (soma 100%) ou um valor (soma o total da despesa). Com duas
+  pessoas, digitar a parte de uma preenche a da outra com o complemento. Na edição, mudar o total de
+  uma divisão por porcentagem recalcula os valores pelas mesmas porcentagens.
+- **Transação com valor diferente da divisão:** ao vincular, escolha entre **manter a divisão** — o
+  orçamento conta o valor da transação menos a parte dos outros (ex.: divisão de R$ 100 em 50/50 numa
+  transação de R$ 150 → R$ 100 no orçamento) e quanto eles devem não muda — ou **reajustar a
+  divisão** ao valor da transação, na mesma proporção. O detalhe da transação mostra a conta.
+
+### Corrigido
+
+- **Pagamento de fatura não conta mais duas vezes:** sai das somas também quando a categoria
+  "Pagamento de cartão" vem de uma regra, de uma assinatura ou de uma recategorização recente — não
+  só quando o banco já a informa. E quando o banco chama o pagamento de boleto ou PIX, o débito na
+  conta é ligado ao "pagamento recebido" do cartão (mesmo valor, até 3 dias) e passa a ser tratado
+  como pagamento de fatura.
+
+### Alterado
+
+- Aba Despesas: "Maiores estabelecimentos" virou **"Maiores despesas"**, já que os valores são
+  somados pela descrição da transação.
+
 ## [0.9.0] — 2026-11-23
 
 ### Adicionado
@@ -348,7 +379,8 @@ Primeira versão publicada. Imagem única servindo API e interface, instalável 
 - Os endpoints de autenticação ainda não têm rate-limiting nem lockout. Ver **Problemas conhecidos**
   em [ROADMAP.md](ROADMAP.md) antes de expor a instância à internet aberta.
 
-[Não publicado]: https://github.com/CaioFerreiraB/mango/compare/v0.9.0...HEAD
+[Não publicado]: https://github.com/CaioFerreiraB/mango/compare/v0.10.0...HEAD
+[0.10.0]: https://github.com/CaioFerreiraB/mango/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/CaioFerreiraB/mango/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/CaioFerreiraB/mango/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/CaioFerreiraB/mango/compare/v0.6.0...v0.7.0

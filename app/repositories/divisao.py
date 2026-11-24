@@ -86,15 +86,21 @@ class DivisaoDespesaRepository:
         self.db.flush()
         return despesa
 
-    def definir_participantes(self, despesa_id: int, linhas: list[tuple[int, int]]) -> None:
-        """Substitui todas as linhas de participantes da despesa pelas informadas."""
+    def definir_participantes(
+        self, despesa_id: int, linhas: list[tuple[int, int, int | None]]
+    ) -> None:
+        """Substitui todas as linhas de participantes da despesa pelas informadas
+        (usuario_id, valor_centavos, percentual_bp)."""
         self.db.execute(
             delete(DivisaoParticipante).where(DivisaoParticipante.divisao_id == despesa_id)
         )
-        for usuario_id, valor_centavos in linhas:
+        for usuario_id, valor_centavos, percentual_bp in linhas:
             self.db.add(
                 DivisaoParticipante(
-                    divisao_id=despesa_id, usuario_id=usuario_id, valor_centavos=valor_centavos
+                    divisao_id=despesa_id,
+                    usuario_id=usuario_id,
+                    valor_centavos=valor_centavos,
+                    percentual_bp=percentual_bp,
                 )
             )
         self.db.flush()

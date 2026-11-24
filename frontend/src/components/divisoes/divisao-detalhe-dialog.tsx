@@ -4,6 +4,8 @@ import { toast } from "sonner"
 
 import { CurrencyInput } from "@/components/common/currency-input"
 import { Valor } from "@/components/common/valor"
+import { EscolhaReajuste } from "@/components/divisoes/escolha-reajuste"
+import { PartesEditor } from "@/components/divisoes/partes-editor"
 import { PessoaAvatar } from "@/components/divisoes/pessoa-avatar"
 import {
   PessoaMultiPicker,
@@ -37,6 +39,8 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { useMe } from "@/lib/api/auth"
 import { nomeCategoria, useCategorias } from "@/lib/api/categorias"
 import {
+  MODOS_COM_PARTES,
+  ROTULO_MODO,
   useAtualizarDivisao,
   useDefinirVinculo,
   useDivisao,
@@ -45,8 +49,18 @@ import {
   type DivisaoDespesa,
   type ModoDivisao,
 } from "@/lib/api/divisoes"
-import { descricaoExibida, valorEfetivoCentavos } from "@/lib/api/transacoes"
+import {
+  descricaoExibida,
+  valorEfetivoCentavos,
+  type Transacao,
+} from "@/lib/api/transacoes"
 import { formatBRL, formatDate } from "@/lib/format"
+import {
+  outrosDaDivisao,
+  partesPayload,
+  partesValidas,
+  type Partes,
+} from "@/lib/divisao-partes"
 
 export function DivisaoDetalheDialog({
   id,
@@ -133,15 +147,13 @@ function DivisaoVisao({
         </div>
 
         <Badge variant="secondary">
-          {divisao.modo_divisao === "igualmente"
-            ? "Dividir igualmente"
-            : "Valor integral"}
+          {ROTULO_MODO[divisao.modo_divisao as ModoDivisao]}
         </Badge>
 
         {/* Conta "somente divisão" não tem transações de banco para vincular. */}
         {me.data?.id === divisao.pago_por_usuario_id &&
         me.data?.tipo === "completo" ? (
-          <VinculoTransacao divisao={divisao} />
+          <VinculoTransacao divisao={divisao} souCriador={souCriador} />
         ) : null}
 
         <div className="space-y-1">
@@ -167,6 +179,9 @@ function DivisaoVisao({
                   <div className="text-right text-sm">
                     <p className={pagou ? "text-positive" : "text-negative"}>
                       {pagou ? "Pagou" : "Deve"}
+                      {p.percentual_bp != null
+                        ? ` · ${(p.percentual_bp / 100).toLocaleString("pt-BR")}%`
+                        : ""}
                     </p>
                     <Valor
                       centavos={p.valor_centavos}
@@ -222,16 +237,29 @@ function DivisaoVisao({
 
 /** Para quem pagou: a transação do banco que corresponde à despesa (RF02). Sem ela a divisão fica
  *  pendente de revisão; "fora do banco" encerra a pendência e conta a sua parte no orçamento. */
-function VinculoTransacao({ divisao }: { divisao: DivisaoDespesa }) {
+function VinculoTransacao({
+  divisao,
+  souCriador,
+}: {
+  divisao: DivisaoDespesa
+  souCriador: boolean
+}) {
   const vinculo = useDefinirVinculo()
   const [escolhendo, setEscolhendo] = useState(false)
+  // Transação de valor diferente: escolhe manter ou reajustar antes de vincular.
+  const [diferente, setDiferente] = useState<Transacao | null>(null)
+  const [reajustar, setReajustar] = useState(false)
   const candidatas = useTransacoesCandidatas(
     divisao.valor_total_centavos,
     divisao.data,
     escolhendo
   )
   const definir = (
-    corpo: { transacao_id?: number | null; sem_transacao: boolean },
+    corpo: {
+      transacao_id?: number | null
+      sem_transacao: boolean
+      reajustar?: boolean
+    },
     msg: string
   ) =>
     vinculo.mutate(
@@ -240,14 +268,26 @@ function VinculoTransacao({ divisao }: { divisao: DivisaoDespesa }) {
         onSuccess: () => {
           toast.success(msg)
           setEscolhendo(false)
+          setDiferente(null)
         },
         onError: (err) => toast.error(err.message),
       }
     )
+  const escolher = (t: Transacao) => {
+    if (Math.abs(valorEfetivoCentavos(t)) === divisao.valor_total_centavos)
+      definir(
+        { transacao_id: t.id, sem_transacao: false },
+        "Transação vinculada."
+      )
+    else {
+      setReajustar(false)
+      setDiferente(t)
+    }
+  }
 
   const estado =
     divisao.transacao_id !== null
-      ? "Vinculada a uma transação — no orçamento conta só a sua parte."
+      ? "Vinculada a uma transação — no orçamento conta o valor dela menos a parte dos outros."
       : divisao.sem_transacao
         ? "Paga fora do banco — sua parte conta no orçamento."
         : "Sem transação vinculada — pendente de revisão."
@@ -256,7 +296,45 @@ function VinculoTransacao({ divisao }: { divisao: DivisaoDespesa }) {
     <div className="space-y-2 rounded-lg border p-3 text-sm">
       <p className="font-medium">Transação do banco</p>
       <p className="text-xs text-muted-foreground">{estado}</p>
-      {escolhendo ? (
+      {diferente ? (
+        <div className="space-y-2">
+          <EscolhaReajuste
+            totalDivisao={divisao.valor_total_centavos}
+            valorTransacao={Math.abs(valorEfetivoCentavos(diferente))}
+            outros={outrosDaDivisao(divisao)}
+            podeReajustar={souCriador}
+            reajustar={reajustar}
+            onChange={setReajustar}
+          />
+          <div className="flex gap-1">
+            <Button
+              size="xs"
+              disabled={vinculo.isPending}
+              onClick={() =>
+                definir(
+                  {
+                    transacao_id: diferente.id,
+                    sem_transacao: false,
+                    reajustar,
+                  },
+                  reajustar
+                    ? "Transação vinculada e divisão reajustada."
+                    : "Transação vinculada."
+                )
+              }
+            >
+              Vincular
+            </Button>
+            <Button
+              size="xs"
+              variant="ghost"
+              onClick={() => setDiferente(null)}
+            >
+              Voltar
+            </Button>
+          </div>
+        </div>
+      ) : escolhendo ? (
         candidatas.isLoading ? (
           <Skeleton className="h-16 w-full" />
         ) : candidatas.isError ? (
@@ -284,12 +362,7 @@ function VinculoTransacao({ divisao }: { divisao: DivisaoDespesa }) {
                 <button
                   type="button"
                   disabled={vinculo.isPending}
-                  onClick={() =>
-                    definir(
-                      { transacao_id: t.id, sem_transacao: false },
-                      "Transação vinculada."
-                    )
-                  }
+                  onClick={() => escolher(t)}
                   className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left hover:bg-muted/40"
                 >
                   <span className="min-w-0">
@@ -309,7 +382,7 @@ function VinculoTransacao({ divisao }: { divisao: DivisaoDespesa }) {
           </ul>
         )
       ) : null}
-      <div className="flex flex-wrap gap-1">
+      <div className="flex flex-wrap gap-1" hidden={diferente !== null}>
         {divisao.transacao_id === null && !escolhendo ? (
           <Button
             size="xs"
@@ -388,6 +461,39 @@ function DivisaoEditarForm({
   const [devedor, setDevedor] = useState<PessoaSelecionada | null>(() =>
     divisao.modo_divisao === "integral" ? (participantes[0] ?? null) : null
   )
+  const [partes, setPartes] = useState<Partes>(() =>
+    Object.fromEntries(
+      divisao.participantes.map((p) => [
+        p.usuario_id,
+        divisao.modo_divisao === "porcentagem"
+          ? (p.percentual_bp ?? 0)
+          : p.valor_centavos,
+      ])
+    )
+  )
+  const comPartes = MODOS_COM_PARTES.includes(modo)
+  const modoPartes = modo === "valor" ? "valor" : "porcentagem"
+  const pessoasPartes = [
+    ...(pagador ? [pagador] : []),
+    ...participantes.filter((p) => p.id !== pagador?.id),
+  ]
+  const trocarModo = (m: ModoDivisao) => {
+    // Fatias de outro modo não servem (unidades diferentes): começa do zero, salvo voltando ao
+    // modo original.
+    if (m !== modo && MODOS_COM_PARTES.includes(m)) setPartes({})
+    setModo(m)
+  }
+  const valido = comPartes
+    ? partesValidas(
+        modoPartes,
+        valor,
+        pagador?.id ?? null,
+        pessoasPartes,
+        partes
+      )
+    : modo === "integral"
+      ? devedor !== null
+      : participantes.length > 0
   const atualizar = useAtualizarDivisao()
   const me = useMe()
   // A busca de pessoas nunca devolve quem está logado — injetada à parte pra aparecer na lista
@@ -403,7 +509,9 @@ function DivisaoEditarForm({
         ? devedor
           ? [devedor.id]
           : []
-        : participantes.map((p) => p.id)
+        : comPartes
+          ? undefined
+          : participantes.map((p) => p.id)
     atualizar.mutate(
       {
         id: divisao.id,
@@ -414,6 +522,7 @@ function DivisaoEditarForm({
           pago_por_usuario_id: pagador.id,
           modo_divisao: modo,
           participantes: listaParticipantes,
+          partes: comPartes ? partesPayload(pessoasPartes, partes) : null,
         },
       },
       {
@@ -456,25 +565,24 @@ function DivisaoEditarForm({
         <div className="space-y-1.5">
           <Label>Divisão</Label>
           <div className="grid grid-cols-2 gap-2">
-            <Button
-              type="button"
-              variant={modo === "igualmente" ? "default" : "outline"}
-              onClick={() => setModo("igualmente")}
-            >
-              Dividir igualmente
-            </Button>
-            <Button
-              type="button"
-              variant={modo === "integral" ? "default" : "outline"}
-              onClick={() => setModo("integral")}
-            >
-              Valor integral
-            </Button>
+            {(["igualmente", "porcentagem", "valor", "integral"] as const).map(
+              (m) => (
+                <Button
+                  key={m}
+                  type="button"
+                  variant={modo === m ? "default" : "outline"}
+                  aria-pressed={modo === m}
+                  onClick={() => trocarModo(m)}
+                >
+                  {ROTULO_MODO[m]}
+                </Button>
+              )
+            )}
           </div>
         </div>
         <div className="space-y-1.5">
           <Label>Participantes</Label>
-          {modo === "igualmente" ? (
+          {modo !== "integral" ? (
             <PessoaMultiPicker
               value={participantes}
               onChange={setParticipantes}
@@ -489,13 +597,29 @@ function DivisaoEditarForm({
             />
           )}
         </div>
+        {comPartes ? (
+          <div className="space-y-1.5">
+            <Label>
+              {modo === "porcentagem"
+                ? "Porcentagem de cada um"
+                : "Valor de cada um"}
+            </Label>
+            <PartesEditor
+              modo={modoPartes}
+              total={valor}
+              pessoas={pessoasPartes}
+              partes={partes}
+              onChange={setPartes}
+            />
+          </div>
+        ) : null}
       </div>
 
       <DialogFooter>
         <Button variant="outline" onClick={onCancelar}>
           Cancelar
         </Button>
-        <Button onClick={salvar} disabled={atualizar.isPending}>
+        <Button onClick={salvar} disabled={atualizar.isPending || !valido}>
           Salvar alterações
         </Button>
       </DialogFooter>

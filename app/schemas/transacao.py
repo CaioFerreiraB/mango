@@ -17,7 +17,11 @@ class DivisaoDaTransacao(BaseModel):
 
     id: int
     valor_total_centavos: int
-    minha_parte_centavos: int  # o que conta no orçamento/dashboard
+    # Parte dos outros participantes (o que eles devem a quem pagou). Nunca muda com o vínculo.
+    outros_centavos: int
+    # O que conta no orçamento/dashboard: valor da transação − parte dos outros (mínimo 0). Igual
+    # à parte do usuário quando a transação tem o valor da divisão; senão a diferença fica com ele.
+    minha_parte_centavos: int
 
 
 class DivisaoLancamento(BaseModel):

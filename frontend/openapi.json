@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "mango",
-    "version": "0.8.0"
+    "version": "0.9.0"
   },
   "paths": {
     "/health": {
@@ -2539,6 +2539,20 @@
               ],
               "title": "Fim"
             }
+          },
+          {
+            "name": "visao",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "competencia",
+                "caixa"
+              ],
+              "type": "string",
+              "default": "competencia",
+              "title": "Visao"
+            }
           }
         ],
         "responses": {
@@ -2621,6 +2635,20 @@
               "type": "string",
               "default": "semanal",
               "title": "Granularidade"
+            }
+          },
+          {
+            "name": "visao",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "competencia",
+                "caixa"
+              ],
+              "type": "string",
+              "default": "competencia",
+              "title": "Visao"
             }
           }
         ],
@@ -2771,6 +2799,20 @@
               ],
               "title": "Fim"
             }
+          },
+          {
+            "name": "visao",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "competencia",
+                "caixa"
+              ],
+              "type": "string",
+              "default": "competencia",
+              "title": "Visao"
+            }
           }
         ],
         "responses": {
@@ -2854,6 +2896,20 @@
             }
           },
           {
+            "name": "visao",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "competencia",
+                "caixa"
+              ],
+              "type": "string",
+              "default": "competencia",
+              "title": "Visao"
+            }
+          },
+          {
             "name": "categoria_id",
             "in": "query",
             "required": false,
@@ -2879,7 +2935,7 @@
               "anyOf": [
                 {
                   "type": "string",
-                  "maxLength": 255
+                  "maxLength": 200
                 },
                 {
                   "type": "null"
@@ -10756,6 +10812,10 @@
             "type": "integer",
             "title": "Valor Total Centavos"
           },
+          "outros_centavos": {
+            "type": "integer",
+            "title": "Outros Centavos"
+          },
           "minha_parte_centavos": {
             "type": "integer",
             "title": "Minha Parte Centavos"
@@ -10765,6 +10825,7 @@
         "required": [
           "id",
           "valor_total_centavos",
+          "outros_centavos",
           "minha_parte_centavos"
         ],
         "title": "DivisaoDaTransacao",
@@ -10808,7 +10869,9 @@
             "type": "string",
             "enum": [
               "igualmente",
-              "integral"
+              "integral",
+              "porcentagem",
+              "valor"
             ],
             "title": "Modo Divisao"
           },
@@ -10817,8 +10880,22 @@
               "type": "integer"
             },
             "type": "array",
-            "minItems": 1,
-            "title": "Participantes"
+            "title": "Participantes",
+            "default": []
+          },
+          "partes": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ParteDivisao"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Partes"
           },
           "data": {
             "anyOf": [
@@ -10848,14 +10925,18 @@
             "type": "boolean",
             "title": "Sem Transacao",
             "default": false
+          },
+          "reajustar": {
+            "type": "boolean",
+            "title": "Reajustar",
+            "default": false
           }
         },
         "type": "object",
         "required": [
           "valor_total_centavos",
           "pago_por_usuario_id",
-          "modo_divisao",
-          "participantes"
+          "modo_divisao"
         ],
         "title": "DivisaoDespesaCreate"
       },
@@ -11028,7 +11109,9 @@
                 "type": "string",
                 "enum": [
                   "igualmente",
-                  "integral"
+                  "integral",
+                  "porcentagem",
+                  "valor"
                 ]
               },
               {
@@ -11051,6 +11134,20 @@
               }
             ],
             "title": "Participantes"
+          },
+          "partes": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ParteDivisao"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Partes"
           },
           "data": {
             "anyOf": [
@@ -11172,6 +11269,17 @@
           "valor_centavos": {
             "type": "integer",
             "title": "Valor Centavos"
+          },
+          "percentual_bp": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Percentual Bp"
           }
         },
         "type": "object",
@@ -11201,11 +11309,16 @@
             "type": "boolean",
             "title": "Sem Transacao",
             "default": false
+          },
+          "reajustar": {
+            "type": "boolean",
+            "title": "Reajustar",
+            "default": false
           }
         },
         "type": "object",
         "title": "DivisaoVinculo",
-        "description": "Vínculo da divisão com a transação do pagador. `transacao_id` vincula; os dois vazios\ndesvinculam (volta a pendente); `sem_transacao` = \"paguei fora do banco\"."
+        "description": "Vínculo da divisão com a transação do pagador. `transacao_id` vincula; os dois vazios\ndesvinculam (volta a pendente); `sem_transacao` = \"paguei fora do banco\". `reajustar`: ver\n`DivisaoDespesaCreate`."
       },
       "FaturaRead": {
         "properties": {
@@ -14062,6 +14175,26 @@
         },
         "type": "object",
         "title": "OrcamentoUpdate"
+      },
+      "ParteDivisao": {
+        "properties": {
+          "usuario_id": {
+            "type": "integer",
+            "title": "Usuario Id"
+          },
+          "valor": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Valor"
+          }
+        },
+        "type": "object",
+        "required": [
+          "usuario_id",
+          "valor"
+        ],
+        "title": "ParteDivisao",
+        "description": "Fatia de uma pessoa nos modos `porcentagem` (centésimos de ponto percentual: 2500 = 25%,\nsomando 10000) e `valor` (centavos, somando o total). Inclui quem pagou, se ele tem parte."
       },
       "PatrimonioPonto": {
         "properties": {

@@ -579,3 +579,57 @@ def test_cartoes_vazio_e_isolado(db, usuario):
     _contas(db, outro.id)  # o cartão é do outro
     r = montar_cartoes(db, usuario.id)
     assert r.cartoes == [] and r.total_ano_centavos == 0
+
+
+def test_pagamento_de_fatura_pela_categoria_efetiva_fica_fora_mesmo_sem_flag(db, usuario):
+    """Regra/override que diz "pagamento de fatura" tira a transação das somas na hora, sem
+    esperar o pós-sync marcar `eh_transferencia` — senão o gasto do cartão conta duas vezes."""
+    for cid in ["05010000", "05100000", "07010000"]:
+        db.add(Categoria(pluggy_id=cid, description=cid))
+    bank, _ = _contas(db, usuario.id)
+    repo = TransacaoRepository(db, usuario.id)
+    _tx(repo, bank, "vivo", -12_000, cat="07010000")
+    por_regra = _tx(repo, bank, "boleto-fatura", -30_000, cat="05010000")
+    repo.update(por_regra, categoria_regra_id="05100000")
+
+    d = montar_dashboard(db, usuario.id, *mes_corrente())
+    assert d.saidas_centavos == 12_000
+    assert {g.categoria_id: g.total_centavos for g in d.gasto_por_categoria} == {"07010000": 12_000}
+
+
+def test_visao_caixa_troca_compras_do_cartao_pelo_pagamento_da_fatura(db, usuario):
+    """Competência: compras no cartão, sem pagamento de fatura. Caixa: só o que saiu da conta —
+    pagamento de fatura entra (inclusive o que o banco chamou de boleto, pareado com o cartão) e
+    as compras/estornos do cartão saem. Transferência entre contas próprias fica fora nas duas."""
+    for cid in ["04020000", "05010000", "05100000", "07010000"]:
+        db.add(Categoria(pluggy_id=cid, description=cid))
+    bank, credit = _contas(db, usuario.id)
+    repo = TransacaoRepository(db, usuario.id)
+    _tx(repo, bank, "sal", 850_000)
+    _tx(repo, bank, "pix", -12_000, cat="07010000")
+    _tx(repo, bank, "pgto", -30_000, cat="05100000", eh=True)
+    _tx(repo, bank, "propria", -40_000, cat="04020000", eh=True)
+    compra = _tx(repo, credit, "compra", 20_000, cat="07010000")
+    repo.update(compra, type="DEBIT")  # cartão: compra DEBIT com amount positivo (Pluggy)
+    recebido = _tx(repo, credit, "recebido", -5_000, cat="05010000", eh=True)
+    repo.update(recebido, type="CREDIT")
+    boleto = _tx(repo, bank, "boleto", -5_000, cat="05010000", eh=True)
+    repo.update(boleto, contraparte_id=recebido.id)
+    repo.update(recebido, contraparte_id=boleto.id)
+
+    comp = montar_dashboard(db, usuario.id, *mes_corrente())
+    assert comp.entradas_centavos == 850_000
+    assert comp.saidas_centavos == 32_000  # pix + compra no cartão
+    assert {g.categoria_id: g.total_centavos for g in comp.gasto_por_categoria} == {
+        "07010000": 32_000
+    }
+
+    caixa = montar_dashboard(db, usuario.id, *mes_corrente(), visao="caixa")
+    assert caixa.entradas_centavos == 850_000
+    assert caixa.saidas_centavos == 47_000  # pix + fatura + boleto pareado com o cartão
+    assert {g.categoria_id: g.total_centavos for g in caixa.gasto_por_categoria} == {
+        "05100000": 35_000,
+        "07010000": 12_000,
+    }
+    serie = montar_series(db, usuario.id, *mes_corrente(), "mensal", "caixa")
+    assert sum(b.saidas_centavos for b in serie.buckets) == 47_000
