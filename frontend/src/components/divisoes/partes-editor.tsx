@@ -8,6 +8,7 @@ import {
   CEM_POR_CENTO,
   comFatia,
   partesIguais,
+  proporcional,
   somaPartes,
   type ModoPartes,
   type Partes,
@@ -37,6 +38,15 @@ export function PartesEditor({
   const soma = somaPartes(pessoas, partes)
   const fmt = modo === "porcentagem" ? pct : formatBRL
   const diferenca = meta - soma
+  // Prévia em R$ da porcentagem com o mesmo arredondamento do backend (soma o total na vírgula);
+  // enquanto não fecha 100%, cada linha arredonda sozinha.
+  const previa =
+    modo === "porcentagem" && soma === CEM_POR_CENTO
+      ? proporcional(
+          total,
+          pessoas.map((p) => [p.id, partes[p.id] ?? 0])
+        )
+      : null
   const status =
     diferenca === 0
       ? `Soma ${fmt(meta)}`
@@ -69,7 +79,11 @@ export function PartesEditor({
               ) : (
                 <span className="flex items-center gap-2">
                   <span className="text-xs text-muted-foreground tabular-nums">
-                    {formatBRL(Math.round((total * v) / CEM_POR_CENTO))}
+                    {formatBRL(
+                      previa
+                        ? (previa[p.id] ?? 0)
+                        : Math.round((total * v) / CEM_POR_CENTO)
+                    )}
                   </span>
                   <span className="relative">
                     <Input

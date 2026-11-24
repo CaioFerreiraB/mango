@@ -144,6 +144,15 @@ def _reajustar(linhas: list[Linha], modo: str, total: int) -> list[Linha]:
     return [(uid, v, bps[uid]) for uid, v in _proporcional(total, pesos)]
 
 
+def _total_reajustado(tx: Transacao) -> int:
+    """Total de uma divisão reajustada à transação — precisa ser positivo (como na criação), senão
+    as partes zeram e o próximo reajuste não teria proporção a seguir."""
+    total = _valor_da_transacao(tx)
+    if total <= 0:
+        raise ValidationError("não dá para reajustar a divisão a uma transação de valor zero")
+    return total
+
+
 def _valor_da_transacao(tx: Transacao) -> int:
     return abs(
         tx.amount_in_account_currency_centavos
@@ -249,7 +258,7 @@ def criar(db: Session, usuario_id: int, payload: DivisaoDespesaCreate) -> Divisa
         tx = _transacao_vinculavel(db, usuario_id, payload.transacao_id)
         data = tx.date
         if payload.reajustar and _valor_da_transacao(tx) != total:
-            total = _valor_da_transacao(tx)
+            total = _total_reajustado(tx)
             linhas = _reajustar(linhas, payload.modo_divisao, total)
     repo = DivisaoDespesaRepository(db, usuario_id)
     # Os `flush` de `criar`/`definir_participantes` já esbarram no UNIQUE de `transacao_id`:
@@ -297,6 +306,7 @@ def definir_vinculo(
         valores["data"] = tx.date
         novo_total = _valor_da_transacao(tx)
         if payload.reajustar and novo_total != despesa.valor_total_centavos:
+            novo_total = _total_reajustado(tx)
             # Reajustar muda quanto os outros devem: decisão de quem criou a divisão (como editar).
             if despesa.criado_por_usuario_id != usuario_id:
                 raise ValidationError("só quem criou a divisão pode reajustá-la")

@@ -6,6 +6,7 @@ import {
   outrosDaDivisao,
   partesIguais,
   partesValidas,
+  proporcional,
 } from "./divisao-partes"
 import type { DivisaoDespesa } from "./api/divisoes"
 
@@ -27,6 +28,22 @@ assert.deepEqual(comFatia(dois, { 1: 1000, 2: 9000 }, 2, 500, 10_000), {
 })
 assert.deepEqual(comFatia(dois, {}, 1, 12_000, 10_000), { 1: 12_000, 2: 0 })
 assert.deepEqual(comFatia(p, { 1: 1000 }, 2, 500, 10_000), { 1: 1000, 2: 500 })
+
+// Prévia em R$ igual ao backend: 50%/50% de R$ 100,01 → 5001 + 5000 (maior resto, menor id).
+assert.deepEqual(
+  proporcional(10_001, [
+    [2, 5000],
+    [1, 5000],
+  ]),
+  { 1: 5001, 2: 5000 }
+)
+assert.deepEqual(
+  proporcional(10_001, [
+    [1, 3333],
+    [2, 6667],
+  ]),
+  { 1: 3333, 2: 6668 }
+)
 
 const d = {
   pago_por_usuario_id: 1,

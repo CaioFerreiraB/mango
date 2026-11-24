@@ -49,7 +49,12 @@ import {
   type Transacao,
 } from "@/lib/api/transacoes"
 import { diaCivilSP, formatBRL, formatDate, hojeISO } from "@/lib/format"
-import { partesPayload, partesValidas, type Partes } from "@/lib/divisao-partes"
+import {
+  partesPayload,
+  partesValidas,
+  proporcional,
+  type Partes,
+} from "@/lib/divisao-partes"
 import { cn } from "@/lib/utils"
 
 const PASSOS: Record<number, string> = {
@@ -200,7 +205,8 @@ export function NovaDivisaoWizard({
         data: `${form.data}T12:00:00-03:00`,
         transacao_id: transacaoId,
         sem_transacao: !transacao && form.pagoPorMim && form.vinculo === "fora",
-        reajustar: typeof form.vinculo === "number" && form.reajustar,
+        reajustar:
+          (!!transacao || typeof form.vinculo === "number") && form.reajustar,
       },
       {
         onSuccess: () => {
@@ -475,6 +481,19 @@ export function NovaDivisaoWizard({
           </div>
         ) : null}
 
+        {/* Começou por uma transação e o total foi mudado no passo 1: mesma escolha do passo 5. */}
+        {form.passo === 6 &&
+        transacao &&
+        form.valor !== Math.abs(valorEfetivoCentavos(transacao)) ? (
+          <EscolhaReajuste
+            totalDivisao={form.valor}
+            valorTransacao={Math.abs(valorEfetivoCentavos(transacao))}
+            outros={outrosPrevistos(form, pagoPorId, pessoasPartes)}
+            reajustar={form.reajustar}
+            onChange={(r) => setForm({ ...form, reajustar: r })}
+          />
+        ) : null}
+
         <DialogFooter className="justify-between sm:justify-between">
           {indice > 0 ? (
             <Button
@@ -618,7 +637,7 @@ function PassoTransacao({
 }
 
 /** Quanto os outros vão dever, para a prévia do "manter a divisão". Igualmente é aproximado (o
- *  backend dá o centavo do resto aos primeiros ids). */
+ *  backend dá o centavo do resto aos primeiros ids); porcentagem usa o mesmo rateio do backend. */
 function outrosPrevistos(
   form: ReturnType<typeof estadoInicial>,
   pagoPorId: number | null,
@@ -629,12 +648,15 @@ function outrosPrevistos(
     const n = new Set([...form.participantes.map((p) => p.id), pagoPorId]).size
     return form.valor - Math.floor(form.valor / n)
   }
-  const dosOutros = pessoasPartes
-    .filter((p) => p.id !== pagoPorId)
-    .reduce((s, p) => s + (form.partes[p.id] ?? 0), 0)
-  return form.modo === "valor"
-    ? dosOutros
-    : Math.round((form.valor * dosOutros) / 10_000)
+  if (form.modo === "valor")
+    return pessoasPartes
+      .filter((p) => p.id !== pagoPorId)
+      .reduce((s, p) => s + (form.partes[p.id] ?? 0), 0)
+  const fatias = proporcional(
+    form.valor,
+    pessoasPartes.map((p) => [p.id, form.partes[p.id] ?? 0])
+  )
+  return form.valor - (pagoPorId !== null ? (fatias[pagoPorId] ?? 0) : 0)
 }
 
 function LinhaResumo({

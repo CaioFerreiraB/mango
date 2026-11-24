@@ -515,3 +515,15 @@ def test_transacao_menor_que_a_parte_dos_outros_conta_zero(
     a.put(f"/api/divisoes-despesa/{d['id']}/vinculo", json={"transacao_id": tx.id})
     db.expire_all()
     assert _realizado(db, usuario_a.id, ALIMENTACAO) == 0
+
+
+def test_reajuste_a_transacao_de_valor_zero_e_recusado(
+    client_factory, db, usuario_a, usuario_b, cenario
+):
+    tx = _tx(db, usuario_a.id, cenario, "zerada", 0)
+    a = client_factory(usuario_a)
+    d = a.post("/api/divisoes-despesa", json=_divisao(usuario_a.id, [usuario_b.id])).json()
+    url = f"/api/divisoes-despesa/{d['id']}/vinculo"
+
+    assert a.put(url, json={"transacao_id": tx.id, "reajustar": True}).status_code == 422
+    assert a.put(url, json={"transacao_id": tx.id}).status_code == 200  # sem reajuste, pode

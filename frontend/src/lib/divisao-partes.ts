@@ -53,6 +53,32 @@ export function comFatia(
   return novas
 }
 
+/** Mesmo rateio do backend (`_proporcional`): cada um leva o piso da sua fatia e os centavos que
+ *  sobram vão para os maiores restos (empate: menor id). Peso zero fica de fora. */
+export function proporcional(
+  total: number,
+  pesos: [number, number][]
+): Record<number, number> {
+  const ordem = pesos.filter(([, p]) => p > 0).sort((a, b) => a[0] - b[0])
+  const soma = ordem.reduce((s, [, p]) => s + p, 0)
+  if (soma === 0) return {}
+  const fatias = ordem.map(([id, p]) => ({
+    id,
+    base: Math.floor((total * p) / soma),
+    resto: (total * p) % soma,
+  }))
+  const sobra = total - fatias.reduce((s, f) => s + f.base, 0)
+  const extra = new Set(
+    [...fatias]
+      .sort((a, b) => b.resto - a.resto || a.id - b.id)
+      .slice(0, sobra)
+      .map((f) => f.id)
+  )
+  return Object.fromEntries(
+    fatias.map((f) => [f.id, f.base + (extra.has(f.id) ? 1 : 0)])
+  )
+}
+
 /** Reparte `alvo` igualmente; o resto vai para os primeiros. */
 export function partesIguais(pessoas: { id: number }[], alvo: number): Partes {
   const base = Math.floor(alvo / pessoas.length)
