@@ -18,7 +18,7 @@ Duas responsabilidades, ambas respeitando o override do usuário (`transferencia
 
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -35,15 +35,19 @@ def aplicar_regras_transferencia(
 ) -> None:
     repo = TransacaoRepository(db, usuario_id)
     txs = _carregar(db, usuario_id, desde)
+    pagamentos = _pagamentos_por_transacao(db, [t.id for t in txs])
     _detectar_pagamento_fatura(repo, txs)
-    _parear_pagamento_fatura(db, repo, usuario_id, txs)
-    _parear_transferencias(db, repo, txs)
+    _parear_pagamento_fatura(db, repo, usuario_id, txs, pagamentos)
+    _parear_transferencias(repo, txs, pagamentos)
 
 
 def _carregar(db: Session, usuario_id: int, desde: date | None) -> list[Transacao]:
+    """Transações a partir de `desde` menos a tolerância do pareamento: a outra perna de uma
+    transação da janela pode ser até `sync_pareamento_dias` anterior ao corte."""
     stmt = select(Transacao).where(Transacao.usuario_id == usuario_id)
     if desde is not None:
-        stmt = stmt.where(Transacao.date >= datetime(desde.year, desde.month, desde.day))
+        corte = datetime(desde.year, desde.month, desde.day)
+        stmt = stmt.where(Transacao.date >= corte - timedelta(days=settings.sync_pareamento_dias))
     return list(db.scalars(stmt).all())
 
 
@@ -72,11 +76,19 @@ def _detectar_pagamento_fatura(repo: TransacaoRepository, txs: list[Transacao]) 
 
 
 def _parear_pagamento_fatura(
-    db: Session, repo: TransacaoRepository, usuario_id: int, txs: list[Transacao]
+    db: Session,
+    repo: TransacaoRepository,
+    usuario_id: int,
+    txs: list[Transacao],
+    pagamentos: dict[int, TransacaoPagamento],
 ) -> None:
     """Débito BANK ↔ crédito no cartão (CREDIT) de mesmo valor, data próxima, com ao menos uma
     ponta categorizada como pagamento de fatura. Valor em módulo: o sinal do `amount` no cartão
-    vem invertido em relação ao banco, dependendo do conector."""
+    vem invertido em relação ao banco, dependendo do conector.
+
+    Débito com par válido entre contas próprias fica para `_parear_transferencias`: senão o
+    crédito da outra conta ficaria sem par e viraria receita. Sem esse par (inclusive débito de
+    fatura que o banco categorizou como mesma titularidade), o cartão é a contraparte."""
     tipos = dict(
         db.execute(select(Conta.id, Conta.type).where(Conta.usuario_id == usuario_id)).all()
     )
@@ -93,8 +105,11 @@ def _parear_pagamento_fatura(
         ]
 
     cartao = livres("CREDIT", "CREDIT")
+    proprias = _candidatos_proprios(txs, pagamentos)
     janela = settings.sync_pareamento_dias * 86400
     for deb in livres("BANK", "DEBIT"):
+        if deb in proprias and any(_par_valido(deb, b, pagamentos) for b in proprias):
+            continue  # `_par_valido` recusa a própria transação (mesma conta)
         for cre in cartao:
             if (
                 abs(deb.amount_centavos) == abs(cre.amount_centavos)
@@ -109,9 +124,11 @@ def _parear_pagamento_fatura(
                 break
 
 
-def _parear_transferencias(db: Session, repo: TransacaoRepository, txs: list[Transacao]) -> None:
-    pagamentos = _pagamentos_por_transacao(db, [t.id for t in txs])
-    candidatos = [
+def _candidatos_proprios(
+    txs: list[Transacao], pagamentos: dict[int, TransacaoPagamento]
+) -> list[Transacao]:
+    """Pernas possíveis de transferência entre contas próprias ainda sem par."""
+    return [
         t
         for t in txs
         if t.contraparte_id is None
@@ -119,6 +136,12 @@ def _parear_transferencias(db: Session, repo: TransacaoRepository, txs: list[Tra
         and _cat_efetiva(t) != CATEGORIA_PAGAMENTO_FATURA
         and (_mesma_titularidade(t) or t.id in pagamentos)
     ]
+
+
+def _parear_transferencias(
+    repo: TransacaoRepository, txs: list[Transacao], pagamentos: dict[int, TransacaoPagamento]
+) -> None:
+    candidatos = _candidatos_proprios(txs, pagamentos)
     usados: set[int] = set()
     for i, a in enumerate(candidatos):
         if a.id in usados:

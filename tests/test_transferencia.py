@@ -3,7 +3,7 @@
 Roda em SQLite e Postgres (fixture `db`).
 """
 
-from datetime import datetime
+from datetime import date, datetime
 from types import SimpleNamespace
 
 import pytest
@@ -196,3 +196,44 @@ def test_banco_e_cartao_sem_categoria_de_fatura_nao_pareiam(db, cenario):
     db.refresh(cre)
 
     assert not deb.eh_transferencia and not cre.eh_transferencia
+
+
+def test_par_entre_contas_proprias_tem_precedencia_sobre_fatura(db, cenario):
+    """Débito com par próprio válido não é consumido pelo cartão de mesmo valor: senão o crédito
+    da outra conta ficaria sem par e viraria receita."""
+    cartao = _cartao(db, cenario)
+    deb = _tx(cenario.repo, cenario.a, "out", -30_000, cat="04020000", dia=10)
+    cre_b = _tx(cenario.repo, cenario.b, "in", 30_000, cat="04020000", dia=10)
+    cre_cartao = _tx(
+        cenario.repo, cartao, "recebido", -30_000, cat="05100000", dia=11, type="CREDIT"
+    )
+
+    aplicar_regras_transferencia(db, cenario.usuario.id)
+    for t in (deb, cre_b, cre_cartao):
+        db.refresh(t)
+
+    assert deb.contraparte_id == cre_b.id and cre_b.contraparte_id == deb.id
+    assert cre_cartao.contraparte_id is None
+
+
+def test_fatura_categorizada_como_mesma_titularidade_pareia_com_cartao(db, cenario):
+    """Sem par próprio, o débito "transferência para mim" é o pagamento da fatura."""
+    cartao = _cartao(db, cenario)
+    deb = _tx(cenario.repo, cenario.a, "out", -30_000, cat="04020000", dia=10)
+    cre = _tx(cenario.repo, cartao, "recebido", -30_000, cat="05100000", dia=11, type="CREDIT")
+
+    aplicar_regras_transferencia(db, cenario.usuario.id)
+    db.refresh(deb)
+
+    assert deb.contraparte_id == cre.id and deb.eh_transferencia
+
+
+def test_janela_inclui_contraparte_anterior_ao_corte(db, cenario):
+    """A outra perna pode ser até `sync_pareamento_dias` anterior ao `desde` do sync."""
+    deb = _tx(cenario.repo, cenario.a, "out", -50_000, cat="04020000", dia=14)
+    cre = _tx(cenario.repo, cenario.b, "in", 50_000, cat="04020000", dia=16)
+
+    aplicar_regras_transferencia(db, cenario.usuario.id, desde=date(2026, 6, 15))
+    db.refresh(deb)
+
+    assert deb.contraparte_id == cre.id
