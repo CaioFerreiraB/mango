@@ -19,6 +19,20 @@ Spec do produto e setup do ambiente em `docs/dev/` (`requisitos.md`, `SETUP.md`,
 > graphiti) entram numa fase futura, quando a base de código justificar. **Ainda não estão
 > instaladas — não tente roteá-las nem chamar seus MCPs.**
 
+## Release (toda versão tem página de release)
+
+Fluxo completo em `CONTRIBUTING.md` §Release (`make release` → PR `dev`→`main` com **merge commit**
+→ `git push origin vX.Y.Z`). **Toda versão publicada precisa da página de release no GitHub** — a
+imagem no GHCR sozinha não basta. Depois do push da tag:
+
+```bash
+uv run python scripts/notas_release.py X.Y.Z > /tmp/notas.md   # seção do CHANGELOG + rodapé
+gh release create vX.Y.Z --verify-tag --title "vX.Y.Z — <tema em poucas palavras>" \
+  --notes-file /tmp/notas.md --latest
+```
+
+Confira com `gh release list` que a nova ficou como **Latest**.
+
 ## Design (accent + ilustrações)
 
 - Cor principal é preferência do usuário (`data-accent` no `<html>`): tokens derivados por relative
