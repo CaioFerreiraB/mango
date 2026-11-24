@@ -13,8 +13,10 @@ ainda está se assentando. Cada versão publicada tem uma imagem correspondente 
 ### Alterado
 
 - Dependências atualizadas: FastAPI 0.165, SQLAlchemy 2.1, Alembic 1.20, uvicorn 0.54, psycopg 3.3.9,
-  React 19.3, Vite 8.3 e o restante dos minor/patch; actions do CI em versões que rodam em Node 24.
-  `@tanstack/react-table`, que não era usado, saiu do frontend.
+  React 19.3, Vite 8.3, React Router 8 e o restante dos minor/patch; actions do CI e do release em
+  versões que rodam em Node 24. `@tanstack/react-table`, que não era usado, saiu do frontend.
+- O build do frontend (imagem Docker e desenvolvimento local) passa do Node 20, fora de suporte desde
+  abril de 2026, para o **Node 24 LTS**. Quem builda localmente precisa do Node ≥ 22.22 (`nvm use`).
 
 ## [0.10.0] — 2026-11-24
 

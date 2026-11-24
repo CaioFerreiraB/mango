@@ -1,4 +1,4 @@
-# Bootstrap e verificação do ambiente. Requer `uv` no PATH e Node 20 para o frontend.
+# Bootstrap e verificação do ambiente. Requer `uv` no PATH e Node 24 para o frontend.
 
 .PHONY: setup doctor test cov lint fmt migrate run revision openapi front-setup front-build \
         gen-keys docker-up docker-down release

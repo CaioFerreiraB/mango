@@ -13,7 +13,7 @@ Spec do produto e setup do ambiente em `docs/dev/` (`requisitos.md`, `SETUP.md`,
   mantenha o padrão minimalista do ponytail. Detector sem-LLM para CI: `npx impeccable detect src/`.
 - **Componentes shadcn/ui: skill `shadcn`** — auto-ativa quando há `frontend/components.json`. Antes de
   escrever UI nova, buscar e compor componentes do registro (`npx shadcn@latest search`) em vez de
-  reescrever — reuso antes de reescrita, alinhado ao ponytail. CLI roda de `frontend/` com Node 20.
+  reescrever — reuso antes de reescrita, alinhado ao ponytail. CLI roda de `frontend/` com Node 24.
 
 > As demais ferramentas do ambiente descrito em `docs/dev/DESENVOLVIMENTO.md` (codegraph, graphify,
 > graphiti) entram numa fase futura, quando a base de código justificar. **Ainda não estão

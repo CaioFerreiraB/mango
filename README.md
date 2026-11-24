@@ -114,7 +114,7 @@ lida antes de expor a instância à internet — está no [`ROADMAP.md`](ROADMAP
 
 ## Desenvolvimento
 
-Requer [uv](https://docs.astral.sh/uv/) e Node 20.
+Requer [uv](https://docs.astral.sh/uv/) e Node 24.
 
 ```bash
 make setup    # dependências, .env, migrations e hooks de pre-commit
