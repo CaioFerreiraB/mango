@@ -15,6 +15,7 @@ from sqlalchemy import (
     CheckConstraint,
     DateTime,
     ForeignKey,
+    Integer,
     String,
     Text,
     UniqueConstraint,
@@ -63,7 +64,8 @@ class DivisaoDespesa(TimestampMixin, Base):
 
 
 class DivisaoParticipante(Base):
-    """Uma linha por pessoa que participa da despesa (inclui quem pagou no modo `igualmente`)."""
+    """Uma linha por pessoa que participa da despesa (inclui quem pagou em `igualmente`, e em
+    `porcentagem`/`valor` quando a parte dele é > 0)."""
 
     __tablename__ = "divisao_participante"
     __table_args__ = (UniqueConstraint("divisao_id", "usuario_id"),)
@@ -76,3 +78,6 @@ class DivisaoParticipante(Base):
         ForeignKey("usuario.id", ondelete="CASCADE"), nullable=False, index=True
     )
     valor_centavos: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    # Só no modo `porcentagem`: a fatia em centésimos de ponto percentual (10000 = 100%). Guardada
+    # para recalcular os centavos quando o total muda sem que o usuário redigite as porcentagens.
+    percentual_bp: Mapped[int | None] = mapped_column(Integer)

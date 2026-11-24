@@ -17,6 +17,14 @@ ainda está se assentando. Cada versão publicada tem uma imagem correspondente 
   pagamento da fatura) e **Caixa** (só o que saiu da conta: o pagamento da fatura entra, na
   categoria "Pagamento de cartão", no lugar das compras do cartão). A escolha fica lembrada neste
   navegador. Orçamento e painel de cartões continuam em competência.
+- **Divisão por porcentagem e por valor:** além de "dividir igualmente" e "valor integral", cada
+  pessoa pode ter uma porcentagem (soma 100%) ou um valor (soma o total da despesa). Com duas
+  pessoas, digitar a parte de uma preenche a da outra com o complemento. Na edição, mudar o total de
+  uma divisão por porcentagem recalcula os valores pelas mesmas porcentagens.
+- **Transação com valor diferente da divisão:** ao vincular, escolha entre **manter a divisão** — o
+  orçamento conta o valor da transação menos a parte dos outros (ex.: divisão de R$ 100 em 50/50 numa
+  transação de R$ 150 → R$ 100 no orçamento) e quanto eles devem não muda — ou **reajustar a
+  divisão** ao valor da transação, na mesma proporção. O detalhe da transação mostra a conta.
 
 ### Corrigido
 

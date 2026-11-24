@@ -31,6 +31,11 @@ export function CurrencyInput({
     }
   }, [texto])
 
+  // Clique/foco também mandam o cursor pro fim: num campo alinhado à direita o clique cai no
+  // começo do texto, e os dígitos entrariam na frente ("1" → R$ 10,00 em vez de R$ 0,01).
+  const paraOFim = (el: HTMLInputElement) =>
+    el.setSelectionRange(el.value.length, el.value.length)
+
   return (
     <Input
       {...props}
@@ -38,6 +43,14 @@ export function CurrencyInput({
       type="text"
       inputMode="numeric"
       value={texto}
+      onClick={(e) => {
+        paraOFim(e.currentTarget)
+        props.onClick?.(e)
+      }}
+      onFocus={(e) => {
+        paraOFim(e.currentTarget)
+        props.onFocus?.(e)
+      }}
       onChange={(e) => {
         const digitos = e.target.value.replace(/\D/g, "")
         const centavos =

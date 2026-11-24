@@ -29,11 +29,13 @@ import { useMe } from "@/lib/api/auth"
 import { nomeCategoria, useCategorias } from "@/lib/api/categorias"
 import { useConfiguracaoSistema } from "@/lib/api/configuracoes"
 import {
+  ROTULO_MODO,
   useDivisoes,
   usePessoasDivisao,
   useResumoDivisoes,
   type DivisaoDespesa,
   type EscopoDivisao,
+  type ModoDivisao,
 } from "@/lib/api/divisoes"
 import { formatDate } from "@/lib/format"
 
@@ -368,9 +370,7 @@ function AbaTransacoes({
                   </TableCell>
                   <TableCell>
                     <Badge variant="secondary">
-                      {d.modo_divisao === "igualmente"
-                        ? "Igualmente"
-                        : "Integral"}
+                      {ROTULO_MODO[d.modo_divisao as ModoDivisao]}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-right">

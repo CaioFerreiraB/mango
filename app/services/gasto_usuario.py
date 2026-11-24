@@ -1,9 +1,10 @@
 """Quanto de cada lançamento é do usuário — base única de orçamento e dashboard.
 
-- Transação vinculada a uma divisão (`divisao_despesa.transacao_id`) conta só a parcela do
-  usuário (`divisao_participante.valor_centavos`; sem linha = 0, ex.: modo `integral` em que o
-  outro deve tudo). As demais contam o valor efetivo inteiro, em módulo (o sinal do `amount` não
-  é confiável por tipo — quem diz entrada/saída é o `type`).
+- Transação vinculada a uma divisão (`divisao_despesa.transacao_id`) conta o valor dela menos a
+  parte dos outros participantes (`VALOR_USUARIO`) — com o mesmo valor da divisão é a parcela do
+  usuário (modo `integral`: 0); com valor diferente, a diferença fica com ele. As demais contam
+  o valor efetivo inteiro, em módulo (o sinal do `amount` não é confiável por tipo — quem diz
+  entrada/saída é o `type`).
 - Parcelas de divisão sem transação do usuário — pagas por outra pessoa, ou pagas por ele "fora
   do banco" (`sem_transacao`) — entram como DEBIT na data/categoria da divisão. Categoria
   personalizada de outro usuário não é dele → `None` (sem categoria).
@@ -32,21 +33,34 @@ VALOR_EFETIVO = func.coalesce(
 )
 
 _DivTx = aliased(DivisaoDespesa, name="divisao_tx")
-_PartTx = aliased(DivisaoParticipante, name="participante_tx")
+# Parte dos outros (quem não pagou) por divisão: o que eles devem ao pagador.
+_OutrosTx = (
+    select(
+        DivisaoParticipante.divisao_id.label("divisao_id"),
+        func.sum(DivisaoParticipante.valor_centavos).label("centavos"),
+    )
+    .join(DivisaoDespesa, DivisaoDespesa.id == DivisaoParticipante.divisao_id)
+    .where(DivisaoParticipante.usuario_id != DivisaoDespesa.pago_por_usuario_id)
+    .group_by(DivisaoParticipante.divisao_id)
+    .subquery("outros_tx")
+)
+_RESTANTE = func.abs(VALOR_EFETIVO) - func.coalesce(_OutrosTx.c.centavos, 0)
 
-# Exige `com_divisao` na query.
+# Exige `com_divisao` na query. Transação dividida = o valor dela menos a parte dos outros (que
+# não muda com o vínculo): com o mesmo valor da divisão dá a parte do pagador; com valor maior, a
+# diferença fica com ele. Mínimo 0 (transação menor que o que os outros devem).
 VALOR_USUARIO = case(
-    (_DivTx.id.is_not(None), func.coalesce(_PartTx.valor_centavos, 0)),
-    else_=func.abs(VALOR_EFETIVO),
+    (_DivTx.id.is_(None), func.abs(VALOR_EFETIVO)),
+    (_RESTANTE < 0, 0),
+    else_=_RESTANTE,
 )
 
 
 def com_divisao(stmt):
     """Outerjoins que `VALOR_USUARIO` referencia. Ambos são no máximo 1 linha por transação
-    (`transacao_id` é único; participante é único por divisão+usuário) — não duplica soma."""
+    (`transacao_id` é único; `_OutrosTx` é agrupado por divisão) — não duplica soma."""
     return stmt.outerjoin(_DivTx, _DivTx.transacao_id == Transacao.id).outerjoin(
-        _PartTx,
-        and_(_PartTx.divisao_id == _DivTx.id, _PartTx.usuario_id == Transacao.usuario_id),
+        _OutrosTx, _OutrosTx.c.divisao_id == _DivTx.id
     )
 
 

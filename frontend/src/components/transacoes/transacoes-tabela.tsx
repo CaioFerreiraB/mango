@@ -55,7 +55,11 @@ function MarcadorDivisao({
   className: string
 }) {
   if (!transacao.divisao) return null
-  const texto = `Dividida: sua parte ${formatBRL(transacao.divisao.minha_parte_centavos)} de ${formatBRL(transacao.divisao.valor_total_centavos)}`
+  const d = transacao.divisao
+  const texto =
+    Math.abs(valorEfetivoCentavos(transacao)) === d.valor_total_centavos
+      ? `Dividida: sua parte ${formatBRL(d.minha_parte_centavos)} de ${formatBRL(d.valor_total_centavos)}`
+      : `Dividida: no orçamento ${formatBRL(d.minha_parte_centavos)} (transação menos ${formatBRL(d.outros_centavos)} da parte dos outros)`
   return (
     <Users className={className} aria-label={texto}>
       <title>{texto}</title>
