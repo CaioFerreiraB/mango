@@ -77,7 +77,7 @@ def consumo_transacoes(
     com `nao_planejado=true`, tudo do tipo que ficou fora do orçamento. Soma = realizado."""
     if (categoria_id is None) == (not nao_planejado):
         raise HTTPException(
-            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
             "informe exatamente um entre categoria_id e nao_planejado=true",
         )
     transacoes, divisoes = orcamento_consumo.transacoes_do_item(
