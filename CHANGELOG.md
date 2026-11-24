@@ -10,6 +10,12 @@ ainda está se assentando. Cada versão publicada tem uma imagem correspondente 
 
 ## [Não publicado]
 
+### Alterado
+
+- Dependências atualizadas: FastAPI 0.165, SQLAlchemy 2.1, Alembic 1.20, uvicorn 0.54, psycopg 3.3.9,
+  React 19.3, Vite 8.3 e o restante dos minor/patch; actions do CI em versões que rodam em Node 24.
+  `@tanstack/react-table`, que não era usado, saiu do frontend.
+
 ## [0.10.0] — 2026-11-24
 
 ### Adicionado
