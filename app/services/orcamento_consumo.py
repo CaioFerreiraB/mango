@@ -42,6 +42,7 @@ from app.services.gasto_usuario import (
     categorias_investimento,
     categorias_renda,
     expr_estorno_cartao,
+    fora_de_transferencia,
     linhas_do_periodo,
     parcelas_divisao,
     tipo_do_lancamento,
@@ -66,13 +67,13 @@ _LIMITE_DRILLDOWN = 500
 
 
 def _filtros_mes(usuario_id: int, ano: int, mes: int) -> tuple:
-    """Recorte do realizado: transações do mês (fuso SP), sem transferência (§4.2)."""
+    """Recorte do realizado: transações do mês (fuso SP). Transferência/pagamento de fatura saem
+    por `fora_de_transferencia` (precisa da categoria efetiva, montada no chamador)."""
     ini, fim_excl = limites_sp(*_intervalo_mes(ano, mes))
     return (
         Transacao.usuario_id == usuario_id,
         Transacao.date >= ini,
         Transacao.date < fim_excl,
-        Transacao.eh_transferencia.is_(False),
     )
 
 
@@ -228,6 +229,7 @@ def transacoes_do_item(
         com_assinatura(select(Transacao), usuario_id)
         .where(
             *_filtros_mes(usuario_id, ano, mes),
+            *fora_de_transferencia(cat),
             Transacao.type.in_(("DEBIT", "CREDIT")),
             do_tipo(cat, natureza),
             no_item(cat),

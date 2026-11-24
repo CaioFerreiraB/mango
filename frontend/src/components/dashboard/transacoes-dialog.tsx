@@ -7,7 +7,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Skeleton } from "@/components/ui/skeleton"
-import { useTransacoesDaAnalise, type FiltroAnalise } from "@/lib/api/dashboard"
+import {
+  useTransacoesDaAnalise,
+  type FiltroAnalise,
+  type Visao,
+} from "@/lib/api/dashboard"
 import {
   useTransacoesDoOrcamento,
   type AlvoDrilldown,
@@ -92,14 +96,16 @@ export function TransacoesAnaliseDialog({
   filtro,
   inicio,
   fim,
+  visao,
   onFechar,
 }: {
   filtro: FiltroAnalise | null
   inicio: string
   fim: string
+  visao: Visao
   onFechar: () => void
 }) {
-  const lista = useTransacoesDaAnalise(filtro, { inicio, fim })
+  const lista = useTransacoesDaAnalise(filtro, { inicio, fim }, visao)
   return (
     <ListaDialog
       aberto={filtro != null}

@@ -8,6 +8,9 @@ export type GastoCategoria = components["schemas"]["GastoCategoria"]
 export type DashboardSeries = components["schemas"]["DashboardSeries"]
 export type SerieBucket = components["schemas"]["SerieBucket"]
 export type Granularidade = "diaria" | "semanal" | "mensal" | "anual"
+/** Competência: compra no cartão conta na data da compra, sem o pagamento da fatura. Caixa: só o
+ *  que saiu/entrou na conta — pagamento da fatura no lugar das compras do cartão. */
+export type Visao = "competencia" | "caixa"
 
 /** "Por {rótulo}" nas descrições dos gráficos. */
 export const PERIODO_LABEL: Record<Granularidade, string> = {
@@ -18,12 +21,22 @@ export const PERIODO_LABEL: Record<Granularidade, string> = {
 }
 
 /** Agregados do período (§4.10). Sem `inicio/fim` o backend usa o mês corrente (fuso SP). */
-export function useDashboard(periodo?: { inicio?: string; fim?: string }) {
+export function useDashboard(
+  periodo?: { inicio?: string; fim?: string },
+  visao: Visao = "competencia"
+) {
   return useQuery({
-    queryKey: ["dashboard", periodo?.inicio ?? null, periodo?.fim ?? null],
+    queryKey: [
+      "dashboard",
+      periodo?.inicio ?? null,
+      periodo?.fim ?? null,
+      visao,
+    ],
     queryFn: async (): Promise<DashboardResumo> => {
       const { data, error } = await api.GET("/api/dashboard", {
-        params: { query: { inicio: periodo?.inicio, fim: periodo?.fim } },
+        params: {
+          query: { inicio: periodo?.inicio, fim: periodo?.fim, visao },
+        },
       })
       if (error || !data) throw new Error("falha ao carregar o dashboard")
       return data
@@ -34,7 +47,8 @@ export function useDashboard(periodo?: { inicio?: string; fim?: string }) {
 /** Série temporal (semanal/mensal) de entradas/saídas/resultado e gasto por categoria. */
 export function useDashboardSeries(
   periodo: { inicio?: string; fim?: string } | undefined,
-  granularidade: Granularidade
+  granularidade: Granularidade,
+  visao: Visao = "competencia"
 ) {
   return useQuery({
     queryKey: [
@@ -43,11 +57,17 @@ export function useDashboardSeries(
       periodo?.inicio ?? null,
       periodo?.fim ?? null,
       granularidade,
+      visao,
     ],
     queryFn: async (): Promise<DashboardSeries> => {
       const { data, error } = await api.GET("/api/dashboard/series", {
         params: {
-          query: { inicio: periodo?.inicio, fim: periodo?.fim, granularidade },
+          query: {
+            inicio: periodo?.inicio,
+            fim: periodo?.fim,
+            granularidade,
+            visao,
+          },
         },
       })
       if (error || !data)
@@ -94,13 +114,21 @@ export type Natureza = "receita" | "despesa"
  *  orçamento × realizado — tudo do mesmo recorte dos KPIs. */
 export function useAnalise(
   natureza: Natureza,
-  periodo: { inicio: string; fim: string }
+  periodo: { inicio: string; fim: string },
+  visao: Visao = "competencia"
 ) {
   return useQuery({
-    queryKey: ["dashboard", "analise", natureza, periodo.inicio, periodo.fim],
+    queryKey: [
+      "dashboard",
+      "analise",
+      natureza,
+      periodo.inicio,
+      periodo.fim,
+      visao,
+    ],
     queryFn: async (): Promise<AnaliseNatureza> => {
       const { data, error } = await api.GET("/api/dashboard/analise", {
-        params: { query: { natureza, ...periodo } },
+        params: { query: { natureza, ...periodo, visao } },
       })
       if (error || !data) throw new Error("falha ao carregar a análise")
       return data
@@ -121,7 +149,8 @@ export type FiltroAnalise = {
 /** Transações de um pedaço da análise — mesmo recorte do servidor, a soma bate com o gráfico. */
 export function useTransacoesDaAnalise(
   filtro: FiltroAnalise | null,
-  periodo: { inicio: string; fim: string }
+  periodo: { inicio: string; fim: string },
+  visao: Visao = "competencia"
 ) {
   return useQuery({
     queryKey: [
@@ -130,6 +159,7 @@ export function useTransacoesDaAnalise(
       filtro,
       periodo.inicio,
       periodo.fim,
+      visao,
     ],
     enabled: filtro !== null,
     queryFn: async () => {
@@ -145,6 +175,7 @@ export function useTransacoesDaAnalise(
               meio,
               conta_id,
               ...periodo,
+              visao,
             },
           },
         }
