@@ -86,14 +86,17 @@ function ObjetivoCard({
 }) {
   const pct = Math.round(objetivo.progresso * 100)
   return (
-    <Card
-      className="cursor-pointer transition-colors hover:border-primary/50"
-      onClick={onAbrir}
-    >
+    // O título é o botão (alvo de teclado/leitor de tela); o ::after dele estica o clique ao card
+    // inteiro. Antes era um <div onClick> — inalcançável sem mouse.
+    <Card className="relative transition-colors hover:border-primary/50 has-[button:focus-visible]:ring-[3px] has-[button:focus-visible]:ring-ring/50">
       <CardHeader className="pb-2">
-        <p className="font-medium [overflow-wrap:anywhere] break-words">
+        <button
+          type="button"
+          onClick={onAbrir}
+          className="text-left font-medium [overflow-wrap:anywhere] break-words outline-none after:absolute after:inset-0 after:rounded-xl"
+        >
           {objetivo.titulo}
-        </p>
+        </button>
         {objetivo.descricao ? (
           <p className="line-clamp-2 text-xs text-muted-foreground">
             {objetivo.descricao}

@@ -1,4 +1,4 @@
-import { Check, ChevronsUpDown } from "lucide-react"
+import { Check, ChevronDown } from "lucide-react"
 import { createElement, useState, type Dispatch } from "react"
 
 import { Button } from "@/components/ui/button"
@@ -83,7 +83,12 @@ export function CategoriaSelect({
           aria-expanded={aberto}
           disabled={disabled}
           size="sm"
-          className={cn("w-full justify-between font-normal", className)}
+          // Mesmo vocabulário do SelectTrigger (fonte 16px no mobile, chevron simples) — ficam lado a
+          // lado nos filtros.
+          className={cn(
+            "w-full justify-between text-base font-normal md:text-sm",
+            className
+          )}
         >
           <span className="flex min-w-0 items-center gap-2">
             {selecionada
@@ -106,11 +111,12 @@ export function CategoriaSelect({
               {rotulo}
             </span>
           </span>
-          <ChevronsUpDown className="size-4 shrink-0 opacity-50" />
+          <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
         </Button>
       </PopoverTrigger>
       <PopoverContent
-        className="w-[var(--radix-popover-trigger-width)] p-0"
+        // Mínimo de 16rem: no mobile o gatilho tem ~170px e os nomes quebravam palavra a palavra.
+        className="w-[max(var(--radix-popover-trigger-width),16rem)] max-w-[calc(100vw-2rem)] p-0"
         align="start"
       >
         <Command>

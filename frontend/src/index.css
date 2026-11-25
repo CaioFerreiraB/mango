@@ -77,8 +77,12 @@
   --accent: oklch(0.963 0.002 197.1);
   --accent-foreground: oklch(0.32 0.016 255);
   --destructive: oklch(0.577 0.245 27.325);
-  --positive: oklch(57.066% 0.21012 267.454);
-  --negative: oklch(68.443% 0.17853 34.962);
+  /* Valores financeiros: texto de 12–14px precisa de AA 4.5:1. Negativo escurecido (era L 0.684 →
+     3.05:1 no branco) para 5.07:1 no branco e 4.55:1 sobre --muted, mantendo o matiz. */
+  --positive: oklch(
+    0.55 0.21 267.454
+  ); /* era L 0.571: 4.2:1 sobre --muted/pílula tintada */
+  --negative: oklch(0.56 0.18 34.962);
   --accent-ink: oklch(
     0.48 0.16 292.581
   ); /* fallback estático (violeta); accent real no @supports */
@@ -133,7 +137,8 @@
   --accent: oklch(0.275 0.011 216.9);
   --accent-foreground: oklch(0.93 0.008 250);
   --destructive: oklch(0.704 0.191 22.216);
-  --positive: oklch(57.066% 0.21012 267.454);
+  /* No escuro o azul original dava 3.7:1 no card; L 0.68 → 5.9:1. Negativo já passava (5.7:1). */
+  --positive: oklch(0.68 0.15 267.454);
   --negative: oklch(68.443% 0.17853 34.962);
   --accent-ink: oklch(
     0.8 0.16 292.759

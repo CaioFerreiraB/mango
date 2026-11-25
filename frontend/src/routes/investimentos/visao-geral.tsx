@@ -58,6 +58,7 @@ import {
 import {
   iconeTipo,
   rotuloSubtype,
+  SUBTYPE_LABEL,
   rotuloTipo,
 } from "@/lib/investimento-taxonomia"
 import {
@@ -233,26 +234,28 @@ function KpiCard({
   acao?: ReactNode
 }) {
   return (
-    <Card>
-      <CardContent className="space-y-2.5">
-        <div className="flex items-center gap-2">
+    // Mobile: grade 2×3 compacta — sem o chip de ícone e sem truncar (valor cortado é número
+    // ambíguo); a partir de @xl volta ao card completo.
+    <Card className="py-4 @xl:py-6">
+      <CardContent className="space-y-2 px-4 @xl:space-y-2.5 @xl:px-6">
+        <div className="flex min-h-8 items-center gap-2">
           <span
             aria-hidden
-            className="grid size-8 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary"
+            className="hidden size-8 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary @xl:grid"
           >
             <Icon className="size-4" />
           </span>
-          <p className="min-w-0 flex-1 truncate text-sm text-muted-foreground">
+          <p className="min-w-0 flex-1 text-sm leading-tight text-muted-foreground @xl:truncate">
             {label}
           </p>
           {acao}
         </div>
         <div>
-          <div className="truncate text-xl font-bold tracking-tight tabular-nums">
+          <div className="text-lg font-bold tracking-tight tabular-nums @xl:truncate @xl:text-xl">
             {valor}
           </div>
           {detalhe ? (
-            <div className="mt-1 truncate text-xs">{detalhe}</div>
+            <div className="mt-1 text-xs @xl:truncate">{detalhe}</div>
           ) : null}
         </div>
       </CardContent>
@@ -302,7 +305,7 @@ function Kpis({
 }) {
   if (carregando || !resumo) {
     return (
-      <div className="grid gap-4 @xl:grid-cols-2 @4xl:grid-cols-3">
+      <div className="grid grid-cols-2 gap-3 @xl:gap-4 @4xl:grid-cols-3">
         {Array.from({ length: 6 }, (_, i) => (
           <Skeleton key={i} className="h-24 w-full" />
         ))}
@@ -315,7 +318,7 @@ function Kpis({
   const nCat = resumo.alocacao.length
 
   return (
-    <div className="grid gap-4 @xl:grid-cols-2 @4xl:grid-cols-3">
+    <div className="grid grid-cols-2 gap-3 @xl:gap-4 @4xl:grid-cols-3">
       <KpiCard
         icon={Wallet}
         label="Patrimônio total"
@@ -371,7 +374,12 @@ function Kpis({
         icon={Coins}
         label="Valor investido"
         valor={
-          <Valor centavos={t.investido_centavos ?? 0} neutro oculto={oculto} />
+          // null = o banco não informou o custo: "—", nunca um R$ 0,00 que parece dado.
+          t.investido_centavos != null ? (
+            <Valor centavos={t.investido_centavos} neutro oculto={oculto} />
+          ) : (
+            <span className="text-muted-foreground">—</span>
+          )
         }
         detalhe={<span className="text-muted-foreground">Total aportado</span>}
       />
@@ -379,7 +387,11 @@ function Kpis({
         icon={TrendingUp}
         label="Resultado"
         valor={
-          <Valor centavos={t.resultado_centavos ?? 0} neutro oculto={oculto} />
+          t.resultado_centavos != null ? (
+            <Valor centavos={t.resultado_centavos} neutro oculto={oculto} />
+          ) : (
+            <span className="text-muted-foreground">—</span>
+          )
         }
         detalhe={<VarPct pct={t.resultado_pct} />}
       />
@@ -679,7 +691,9 @@ function AlocacaoPorTipo({
   oculto: boolean
 }) {
   const fatias = alocacao.map((a, i) => ({
-    nome: rotuloSubtype(a.tipo) ?? rotuloTipo(a.tipo),
+    // rotuloSubtype devolve a chave crua quando não conhece (ex.: EQUITY), então o fallback
+    // para o tipo precisa olhar o dicionário direto.
+    nome: SUBTYPE_LABEL[a.tipo] ?? rotuloTipo(a.tipo),
     valor: a.valor_centavos,
     cor: corTipo(i),
     pct: a.pct,

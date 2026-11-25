@@ -350,7 +350,17 @@ function AbaTransacoes({
                   onClick={() => onAbrirDetalhe(d.id)}
                 >
                   <TableCell>
-                    <p>{d.descricao || "Sem descrição"}</p>
+                    {/* Alvo de teclado; o clique na linha é só conveniência de mouse. */}
+                    <button
+                      type="button"
+                      className="text-left hover:text-primary"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onAbrirDetalhe(d.id)
+                      }}
+                    >
+                      {d.descricao || "Sem descrição"}
+                    </button>
                     <p className="text-xs text-muted-foreground">
                       {d.categoria_id
                         ? (nomesCategoria.get(d.categoria_id) ?? d.categoria_id)

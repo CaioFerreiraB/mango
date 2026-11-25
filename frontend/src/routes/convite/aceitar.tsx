@@ -4,7 +4,7 @@ import { Lock, ShieldCheck } from "lucide-react"
 import { QRCodeSVG } from "qrcode.react"
 import { useState } from "react"
 import { useForm } from "react-hook-form"
-import { useNavigate, useParams } from "react-router"
+import { Link, useNavigate, useParams } from "react-router"
 import { z } from "zod"
 
 import { AuthShell } from "@/components/auth/auth-shell"
@@ -81,20 +81,24 @@ export function AceitarConvitePage() {
     }
   }
 
+  const conviteUtilizavel =
+    !status.isLoading &&
+    status.data &&
+    !status.data.usado &&
+    !status.data.expirado
+
+  // Convite inexistente/usado/expirado não "dá boas-vindas": o título diz o estado e o corpo
+  // oferece a saída (antes o painel do formulário ficava vazio).
   const titulo =
-    step === "form" ? (
+    !status.isLoading && !conviteUtilizavel ? (
+      "Convite indisponível"
+    ) : step === "form" ? (
       <>
         Bem-vindo ao <span className="text-primary">mango</span>!
       </>
     ) : (
       "Verificação em duas etapas"
     )
-
-  const conviteUtilizavel =
-    !status.isLoading &&
-    status.data &&
-    !status.data.usado &&
-    !status.data.expirado
 
   return (
     <AuthShell
@@ -117,7 +121,11 @@ export function AceitarConvitePage() {
                     : "Digite o código de 6 dígitos do app para confirmar que o 2FA está funcionando."
       }
     >
-      {!conviteUtilizavel ? null : step === "form" ? (
+      {status.isLoading ? null : !conviteUtilizavel ? (
+        <Button asChild className="w-full">
+          <Link to="/login">Ir para o login</Link>
+        </Button>
+      ) : step === "form" ? (
         <form
           onSubmit={handleSubmit(onSubmit)}
           className="flex flex-col gap-4"

@@ -49,6 +49,7 @@ import {
   type CarteiraPosicao,
 } from "@/lib/api/investimentos"
 import { formatBRL } from "@/lib/format"
+import { cn } from "@/lib/utils"
 import {
   fmtPct,
   fmtQtd,
@@ -266,23 +267,29 @@ export function CarteiraPage() {
       <Cabecalho />
 
       {/* Resumo (KPIs) — sem "valor disponível para investir" (não existe no modelo). */}
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
         <Kpi
+          className="col-span-2 lg:col-span-1"
           label="Valor da carteira"
           hint={`Líquido ${formatBRL(totais.liquido_centavos)}`}
         >
           <Valor
             centavos={totais.valor_centavos}
             neutro
-            className="text-2xl font-bold"
+            className="text-xl font-bold sm:text-2xl"
           />
         </Kpi>
         <Kpi label="Valor investido">
-          <Valor
-            centavos={totais.investido_centavos ?? 0}
-            neutro
-            className="text-2xl font-bold"
-          />
+          {/* null = o banco não informou o custo: "—", nunca um R$ 0,00 que parece dado. */}
+          {totais.investido_centavos != null ? (
+            <Valor
+              centavos={totais.investido_centavos}
+              neutro
+              className="text-xl font-bold sm:text-2xl"
+            />
+          ) : (
+            <SemDado />
+          )}
         </Kpi>
         <Kpi
           label="Resultado"
@@ -292,11 +299,15 @@ export function CarteiraPage() {
               : undefined
           }
         >
-          <Valor
-            centavos={totais.resultado_centavos ?? 0}
-            sinal
-            className="text-2xl font-bold"
-          />
+          {totais.resultado_centavos != null ? (
+            <Valor
+              centavos={totais.resultado_centavos}
+              sinal
+              className="text-xl font-bold sm:text-2xl"
+            />
+          ) : (
+            <SemDado />
+          )}
         </Kpi>
         <Kpi
           label="Rentabilidade (12M)"
@@ -306,14 +317,14 @@ export function CarteiraPage() {
               : undefined
           }
         >
-          <span className="text-2xl font-bold tabular-nums">
+          <span className="text-xl font-bold tabular-nums sm:text-2xl">
             {visao.data?.rentabilidade_12m_pct != null
               ? pctTexto(visao.data.rentabilidade_12m_pct)
               : "—"}
           </span>
         </Kpi>
         <Kpi label="Nº de ativos">
-          <span className="text-2xl font-bold tabular-nums">
+          <span className="text-xl font-bold tabular-nums sm:text-2xl">
             {totais.quantidade_ativos}
           </span>
         </Kpi>
@@ -381,9 +392,9 @@ export function CarteiraPage() {
 
       <Card className="gap-0 overflow-hidden py-0">
         {/* Abas de classe: sub-navegação da tabela (variante sublinhada). */}
-        {/* overflow-y-hidden + pb-1.5: o sublinhado da aba (after:bottom-[-5px]) vazaria e
-            overflow-x-auto promove overflow-y a auto → scroll vertical. Ver ativo-drawer.tsx. */}
-        <div className="overflow-x-auto overflow-y-hidden border-b px-3 pt-2 pb-1.5">
+        {/* pb-1.5 acomoda o sublinhado da aba (after:bottom-[-5px]); no mobile as abas quebram
+            linha (TabsList é flex-wrap), sem rolagem horizontal. */}
+        <div className="border-b px-3 pt-2 pb-1.5">
           <Tabs value={classe} onValueChange={reiniciar(setClasse)}>
             <TabsList variant="line" className="h-auto justify-start">
               {CLASSES.map((c) => {
@@ -403,7 +414,26 @@ export function CarteiraPage() {
           </Tabs>
         </div>
 
-        <div className="overflow-x-auto">
+        {/* Mobile: lista com o essencial (o detalhe completo está no drawer). A tabela de 10
+            colunas fica para md+, onde cabe sem rolagem horizontal. */}
+        <ul className="divide-y md:hidden">
+          {visiveis.length === 0 ? (
+            <li className="py-10 text-center text-sm text-muted-foreground">
+              Nenhum ativo com esses filtros.
+            </li>
+          ) : (
+            visiveis.map((p) => (
+              <li key={p.chave}>
+                <PosicaoItemMobile
+                  posicao={p}
+                  onAbrir={() => setChaveAberta(p.chave)}
+                />
+              </li>
+            ))
+          )}
+        </ul>
+
+        <div className="hidden md:block">
           <Table>
             <TableHeader>
               <TableRow>
@@ -570,19 +600,31 @@ function Cabecalho() {
   )
 }
 
+function SemDado() {
+  return (
+    <span className="text-xl font-bold text-muted-foreground sm:text-2xl">
+      —<span className="sr-only">não informado pelo banco</span>
+    </span>
+  )
+}
+
 function Kpi({
   label,
   hint,
+  className,
   children,
 }: {
   label: string
   hint?: string
+  className?: string
   children: React.ReactNode
 }) {
   return (
-    <Card>
-      <CardContent className="space-y-1">
-        <p className="truncate text-sm text-muted-foreground">{label}</p>
+    <Card className={cn("py-4 sm:py-6", className)}>
+      <CardContent className="space-y-1 px-4 sm:px-6">
+        <p className="text-sm leading-tight text-muted-foreground sm:truncate">
+          {label}
+        </p>
         <div className="text-foreground [&_*]:text-foreground">{children}</div>
         {hint ? <p className="text-xs text-muted-foreground">{hint}</p> : null}
       </CardContent>
@@ -673,6 +715,60 @@ function AvisoIncompleto({ valor }: { valor?: string }) {
       />
       <span className="sr-only">cálculo parcial, histórico incompleto</span>
     </span>
+  )
+}
+
+function PosicaoItemMobile({
+  posicao: p,
+  onAbrir,
+}: {
+  posicao: CarteiraPosicao
+  onAbrir: () => void
+}) {
+  const Icone = ICONE_TIPO[p.subtype ?? p.type] ?? Coins
+  const nome = nomeAtivo(p.nome)
+  return (
+    <button
+      type="button"
+      onClick={onAbrir}
+      aria-label={`Abrir ${p.code ?? nome ?? "ativo"}`}
+      className="flex w-full items-center gap-3 px-4 py-3 text-left outline-none hover:bg-muted/40 focus-visible:bg-muted/50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+    >
+      <span
+        aria-hidden
+        className="grid size-9 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary"
+      >
+        <Icone className="size-4" />
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-medium">{p.code ?? nome ?? "—"}</p>
+        <p className="truncate text-xs text-muted-foreground">
+          {rotuloClasse(p.type, p.subtype)}
+          {p.instituicao ? ` · ${p.instituicao}` : ""}
+        </p>
+      </div>
+      <div className="shrink-0 text-right">
+        <Valor
+          centavos={p.valor_centavos}
+          neutro
+          className="block text-sm font-semibold"
+        />
+        {p.resultado_pct != null && p.resultado_centavos != null ? (
+          <span
+            className={cn(
+              "text-xs tabular-nums",
+              p.resultado_centavos < 0 ? "text-negative" : "text-positive"
+            )}
+          >
+            {pctTexto(p.resultado_pct)}
+          </span>
+        ) : p.participacao_pct != null ? (
+          <span className="text-xs text-muted-foreground tabular-nums">
+            {fmtPct.format(p.participacao_pct)}% da carteira
+          </span>
+        ) : null}
+      </div>
+    </button>
   )
 }
 

@@ -337,9 +337,9 @@ function CorpoAtivo({
         defaultValue="resumo"
         className={cn("flex flex-col", !rolagemUnica && "min-h-0 flex-1")}
       >
-        {/* overflow-x-auto promove overflow-y a auto (quirk CSS); o sublinhado ativo (after:-5px)
-            vazaria e criaria scroll vertical. pb-1.5 acomoda o sublinhado; overflow-y-hidden trava. */}
-        <div className="overflow-x-auto overflow-y-hidden border-b px-4 pb-1.5">
+        {/* As abas quebram linha no mobile (TabsList é flex-wrap), sem rolagem lateral.
+            pb-1.5 acomoda o sublinhado ativo (after:-5px). */}
+        <div className="border-b px-4 pb-1.5">
           <TabsList variant="line" className="justify-start">
             <TabsTrigger value="resumo">Resumo</TabsTrigger>
             {!ehFII ? (
