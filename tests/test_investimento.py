@@ -1018,16 +1018,27 @@ def test_visao_geral_dashboard(db, usuario, conexao, usuario_b, client_factory, 
     for inv, v0, v1 in ((cdb, 90_000, 100_000), (fii, 45_000, 50_000)):
         _snap(db, inv, dia_base, v0)
         _snap(db, inv, hoje, v1)
-    db.add(
-        InvestimentoTransacao(
-            investimento_id=fii.id,
-            pluggy_id="vg-div",
-            type="DIVIDEND",
-            movement_type="CREDIT",
-            amount_centavos=1_230,
-            date=datetime.combine(hoje, time(12), tzinfo=UTC),
+
+    def _mes(n: int) -> date:  # dia 15 de n meses atrás (atravessa a virada do ano)
+        k = hoje.year * 12 + hoje.month - 1 - n
+        return date(k // 12, k % 12 + 1, 15)
+
+    for pid, dia, valor in (
+        ("vg-div", hoje, 1_230),
+        ("vg-div-ant", _mes(1), 700),  # mês anterior
+        ("vg-div-11", _mes(11), 300),  # 1º mês da janela
+        ("vg-div-12", _mes(12), 9_999),  # fora da janela
+    ):
+        db.add(
+            InvestimentoTransacao(
+                investimento_id=fii.id,
+                pluggy_id=pid,
+                type="DIVIDEND",
+                movement_type="CREDIT",
+                amount_centavos=valor,
+                date=datetime.combine(dia, time(12), tzinfo=UTC),
+            )
         )
-    )
     db.commit()
 
     # CDI mockado (evita rede); série da carteira vem dos snapshots.
@@ -1035,10 +1046,9 @@ def test_visao_geral_dashboard(db, usuario, conexao, usuario_b, client_factory, 
 
     corpo = client_factory(usuario).get("/api/investimentos/visao-geral").json()
     assert corpo["dividendos_mes_centavos"] == 1_230
-    mensais = corpo["proventos_mensais"]
-    assert len(mensais) == 12 and mensais[-1] == {"mes": f"{hoje:%Y-%m}", "centavos": 1_230}
-    assert all(m["centavos"] == 0 for m in mensais[:-1])
-    assert [m["mes"] for m in mensais] == sorted(m["mes"] for m in mensais)
+    esperado = {f"{_mes(n):%Y-%m}": 0 for n in range(11, -1, -1)}
+    esperado |= {f"{hoje:%Y-%m}": 1_230, f"{_mes(1):%Y-%m}": 700, f"{_mes(11):%Y-%m}": 300}
+    assert corpo["proventos_mensais"] == [{"mes": k, "centavos": v} for k, v in esperado.items()]
     assert corpo["rentabilidade_12m_pct"] == pytest.approx(11.11, abs=0.2)  # 150k/135k − 1
     assert corpo["vs_cdi_pp"] == round(corpo["rentabilidade_12m_pct"] - 5.0, 2)
 
@@ -1050,23 +1060,50 @@ def test_visao_geral_dashboard(db, usuario, conexao, usuario_b, client_factory, 
 
 
 def test_serie_sinaliza_custo_incompleto(db, usuario, conexao, client_factory):
-    """Posição com valor e sem custo informado → `investido_completo` falso (o "valor − investido"
-    contaria a posição inteira como rendimento). Resgatada (valor 0) sem custo não conta."""
+    """`investido_completo` usa o mesmo custo do resumo: sem custo (nem do Pluggy nem dos
+    movimentos) → falso; o aporte manual que completa a posição libera; posição já resgatada sem
+    custo que teve valor no período também conta (senão o valor dela vira "rendimento")."""
     hoje = datetime.now(carteira.SP).date()
     cdb = _criar_investimento(
         db, usuario.id, conexao.id, "ic-cdb", amount_centavos=10_000, amount_original_centavos=9_000
     )
     _snap(db, cdb, hoje, 10_000)
+    # Resgatada sem custo e sem valor no período: não conta.
     _criar_investimento(db, usuario.id, conexao.id, "ic-resgatado", amount_centavos=0)
     cliente = client_factory(usuario)
     params = {"recorte": "todos", "inicio": str(hoje - timedelta(days=30)), "fim": str(hoje)}
-    assert cliente.get("/api/investimentos/serie", params=params).json()["investido_completo"]
+
+    def completo(**extra):
+        resp = cliente.get("/api/investimentos/serie", params={**params, **extra})
+        return resp.json()["investido_completo"]
+
+    assert completo()
 
     fii = _criar_investimento(
-        db, usuario.id, conexao.id, "ic-fii", type="EQUITY", amount_centavos=5_000
+        db,
+        usuario.id,
+        conexao.id,
+        "ic-fii",
+        type="EQUITY",
+        subtype="REAL_ESTATE_FUND",
+        code="IC11",
+        quantity=Decimal(10),
+        amount_centavos=5_000,
     )
     _snap(db, fii, hoje, 5_000)
-    corpo = cliente.get("/api/investimentos/serie", params=params).json()
-    assert corpo["investido_completo"] is False
-    rf = cliente.get("/api/investimentos/serie", params={**params, "recorte": "renda_fixa"}).json()
-    assert rf["investido_completo"] is True  # o recorte só olha as próprias posições
+    assert completo() is False
+    assert completo(recorte="renda_fixa") is True  # o recorte só olha as próprias posições
+
+    # Aporte manual cobrindo as 10 cotas → custo conhecido, gráfico liberado.
+    resp = cliente.post(
+        f"/api/investimentos/{fii.id}/aportes",
+        json={"data": str(hoje - timedelta(days=60)), "quantidade": "10", "valor_centavos": 4_500},
+    )
+    assert resp.status_code in (200, 201), resp.text
+    assert completo() is True
+
+    # Já resgatada (valor hoje 0) sem custo, mas com valor DENTRO da janela → incompleto.
+    antiga = _criar_investimento(db, usuario.id, conexao.id, "ic-antiga", amount_centavos=0)
+    _snap(db, antiga, hoje - timedelta(days=10), 3_000)
+    _snap(db, antiga, hoje - timedelta(days=5), 0)
+    assert completo() is False

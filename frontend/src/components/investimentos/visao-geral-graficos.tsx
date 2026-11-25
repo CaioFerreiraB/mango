@@ -203,6 +203,13 @@ export function AportesValorizacao({ oculto }: { oculto: boolean }) {
             </dl>
             <GraficoBarrasAgrupadas
               empilhada
+              // Mês com perda: o trecho negativo é desenhado do topo do aportado para baixo (por
+              // cima dele), na cor de perda — o cinza visível que sobra é o patrimônio.
+              destaque={{
+                serie: 1,
+                cor: "var(--negative)",
+                quando: (i) => meses[i]!.rendimento < 0,
+              }}
               dados={meses}
               x="mes"
               series={[
