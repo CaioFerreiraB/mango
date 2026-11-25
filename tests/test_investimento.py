@@ -1035,9 +1035,14 @@ def test_visao_geral_dashboard(db, usuario, conexao, usuario_b, client_factory, 
 
     corpo = client_factory(usuario).get("/api/investimentos/visao-geral").json()
     assert corpo["dividendos_mes_centavos"] == 1_230
+    mensais = corpo["proventos_mensais"]
+    assert len(mensais) == 12 and mensais[-1] == {"mes": f"{hoje:%Y-%m}", "centavos": 1_230}
+    assert all(m["centavos"] == 0 for m in mensais[:-1])
+    assert [m["mes"] for m in mensais] == sorted(m["mes"] for m in mensais)
     assert corpo["rentabilidade_12m_pct"] == pytest.approx(11.11, abs=0.2)  # 150k/135k − 1
     assert corpo["vs_cdi_pp"] == round(corpo["rentabilidade_12m_pct"] - 5.0, 2)
 
     # isolamento: B tem carteira vazia
     vazio = client_factory(usuario_b).get("/api/investimentos/visao-geral").json()
     assert vazio["dividendos_mes_centavos"] == 0 and vazio["rentabilidade_12m_pct"] is None
+    assert len(vazio["proventos_mensais"]) == 12

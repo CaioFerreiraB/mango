@@ -41,6 +41,7 @@ from app.schemas.investimento import (
     FundamentosFII,
     FundamentosFIIAlocacao,
     InvestimentoTransacaoRead,
+    ProventoMes,
     ProventosFII,
     VisaoGeralInvestimentos,
 )
@@ -1130,16 +1131,20 @@ def visao_geral(db: Session, usuario_id: int) -> VisaoGeralInvestimentos:
         .join(Investimento, InvestimentoTransacao.investimento_id == Investimento.id)
         .where(Investimento.usuario_id == usuario_id)
     ).all()
-    dividendos_mes = 0
+    # Proventos por mês nos 12 meses até o corrente (o do mês corrente é o card "Dividendos").
+    indice = hoje.year * 12 + hoje.month - 1
+    meses = [f"{i // 12:04d}-{i % 12 + 1:02d}" for i in range(indice - 11, indice + 1)]
+    por_mes = dict.fromkeys(meses, 0)
     for m in movimentos:
         if not _eh_provento(m):
             continue
         dia = _dia_sp(m.date or m.trade_date)
-        if dia is not None and dia.year == hoje.year and dia.month == hoje.month:
-            dividendos_mes += m.amount_centavos
+        if dia is not None and (chave := f"{dia:%Y-%m}") in por_mes:
+            por_mes[chave] += m.amount_centavos
 
     return VisaoGeralInvestimentos(
         rentabilidade_12m_pct=rent_12m,
         vs_cdi_pp=vs_cdi,
-        dividendos_mes_centavos=dividendos_mes,
+        dividendos_mes_centavos=por_mes[meses[-1]],
+        proventos_mensais=[ProventoMes(mes=k, centavos=v) for k, v in por_mes.items()],
     )

@@ -341,12 +341,14 @@ export type SerieBarra = { chave: string; nome: string; cor: string }
 /**
  * Colunas agrupadas (2–3 séries lado a lado por período/categoria), mesmo eixo, com legenda.
  * `destaque` repinta as barras de uma série quando a condição vale (ex.: gasto acima do orçado).
+ * `empilhada` empilha as séries numa coluna só (partes de um total, ex.: aportado + rendimento).
  */
 export function GraficoBarrasAgrupadas({
   dados,
   x,
   series,
   destaque,
+  empilhada = false,
   formatarX,
   formatarRotulo = (v) => v,
   formatarY,
@@ -360,6 +362,7 @@ export function GraficoBarrasAgrupadas({
   x: string
   series: SerieBarra[]
   destaque?: { serie: number; cor: string; quando: (i: number) => boolean }
+  empilhada?: boolean
   formatarX?: (v: string) => string
   formatarRotulo?: (v: string) => string
   formatarY: (v: number) => string
@@ -415,7 +418,13 @@ export function GraficoBarrasAgrupadas({
         barMaxWidth: 40,
         barGap: "12%",
         barCategoryGap: "32%",
-        itemStyle: { color: cores[k], borderRadius: [4, 4, 0, 0] },
+        ...(empilhada ? { stack: "total" } : {}),
+        itemStyle: {
+          color: cores[k],
+          // Empilhada: só o topo da pilha arredonda (cantos internos retos).
+          borderRadius:
+            !empilhada || k === series.length - 1 ? [4, 4, 0, 0] : 0,
+        },
         data: dados.map((d, i) =>
           destaque?.serie === k && destaque.quando(i)
             ? { value: num(d[s.chave]), itemStyle: { color: corDestaque } }
@@ -428,6 +437,7 @@ export function GraficoBarrasAgrupadas({
     x,
     series,
     destaque,
+    empilhada,
     cores,
     formatarX,
     formatarRotulo,
