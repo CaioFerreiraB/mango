@@ -99,12 +99,14 @@ def sincronizar_objetivos_ativos(
 
     Trava os ativos (ordem de id) antes do UPDATE: em Read Committed cada instrução tira snapshot
     novo, então o espelho grava o `objetivo_id` confirmado por um vínculo concorrente do mesmo ativo
-    em vez de regravar o valor antigo. Escopo restrito aos ativos afetados → vínculos de ativos
-    diferentes não disputam as mesmas compras."""
+    em vez de regravar o valor antigo. `FOR NO KEY UPDATE` (não `FOR UPDATE`): é o mesmo lock que o
+    UPDATE de `ativo` do vínculo pega, e não conflita com o `KEY SHARE` que a FK põe no ativo quando
+    uma compra é movida para ele — com `FOR UPDATE`, mover + vincular em paralelo dava deadlock.
+    Escopo restrito aos ativos afetados → vínculos de ativos diferentes não disputam as compras."""
     consulta = select(Ativo.id).where(Ativo.usuario_id == usuario_id)
     if ativo_ids is not None:
         consulta = consulta.where(Ativo.id.in_(set(ativo_ids)))
-    ids = db.scalars(consulta.order_by(Ativo.id).with_for_update()).all()
+    ids = db.scalars(consulta.order_by(Ativo.id).with_for_update(key_share=True)).all()
     if not ids:
         return
     db.execute(
