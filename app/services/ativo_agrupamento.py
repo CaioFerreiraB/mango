@@ -23,6 +23,7 @@ from collections.abc import Iterable
 from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
+from app.db.atomic import atomica
 from app.models.ativo import Ativo
 from app.models.investimento import Investimento
 from app.repositories.ativo import AtivoRepository
@@ -46,10 +47,21 @@ def _recorrencia(inv: Investimento) -> tuple | None:
 
 
 def agrupar_renda_fixa(db: Session, usuario_id: int) -> None:
+    # Uma transação só (o `repo.create` do meio não commita → não solta as travas) e ativos
+    # travados ANTES de ler/gravar compras: mesma ordem ativos → compras do PATCH e do vínculo.
+    with atomica(db):
+        travar_ativos(db, usuario_id, None)
+        _agrupar(db, usuario_id)
+        db.flush()
+        sincronizar_objetivos_ativos(db, usuario_id)  # compra nova herda o objetivo do ativo
+
+
+def _agrupar(db: Session, usuario_id: int) -> None:
     posicoes = db.scalars(
         select(Investimento)
         .where(Investimento.usuario_id == usuario_id, Investimento.type.in_(RENDA_FIXA))
         .order_by(Investimento.id)
+        .execution_options(populate_existing=True)  # estado pós-trava, não o do identity map
     ).all()
     nomes = {a.id: a.nome for a in db.scalars(select(Ativo).where(Ativo.usuario_id == usuario_id))}
     por_chave: dict[str, set[int]] = {}  # chave → ativos que já têm compras dela
@@ -86,9 +98,6 @@ def agrupar_renda_fixa(db: Session, usuario_id: int) -> None:
                     nomes[ativo_id] = nome
         inv.ativo_id = ativo_id
         _registrar(inv, chave)
-    db.flush()
-    sincronizar_objetivos_ativos(db, usuario_id)  # compra nova herda o objetivo do ativo
-    db.commit()
 
 
 def travar_ativos(db: Session, usuario_id: int, ativo_ids: Iterable[int] | None) -> list[int]:

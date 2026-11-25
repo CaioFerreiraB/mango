@@ -47,7 +47,7 @@ from app.schemas.investimento import (
     VisaoGeralInvestimentos,
 )
 from app.services import indicadores
-from app.services.ativo_agrupamento import sincronizar_objetivos_ativos
+from app.services.ativo_agrupamento import sincronizar_objetivos_ativos, travar_ativos
 from app.services.brapi import token_brapi
 from app.services.periodo import SP
 
@@ -527,6 +527,7 @@ def definir_objetivo(
         invs = _validar_ids(db, usuario_id, ids)
         ativo_ids = {i.ativo_id for i in invs if i.ativo_id is not None}
         avulsos = {i.id for i in invs if i.ativo_id is None}
+        travar_ativos(db, usuario_id, ativo_ids)  # ordem de id antes do UPDATE (ver travar_ativos)
         for tabela, alvos in ((Ativo, ativo_ids), (Investimento, avulsos)):
             if not alvos:
                 continue
