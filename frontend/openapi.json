@@ -9407,6 +9407,11 @@
               }
             ],
             "title": "Reconstruido Ate"
+          },
+          "investido_completo": {
+            "type": "boolean",
+            "title": "Investido Completo",
+            "default": true
           }
         },
         "type": "object",

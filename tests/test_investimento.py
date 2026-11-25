@@ -1046,3 +1046,27 @@ def test_visao_geral_dashboard(db, usuario, conexao, usuario_b, client_factory, 
     vazio = client_factory(usuario_b).get("/api/investimentos/visao-geral").json()
     assert vazio["dividendos_mes_centavos"] == 0 and vazio["rentabilidade_12m_pct"] is None
     assert len(vazio["proventos_mensais"]) == 12
+    assert all(m["centavos"] == 0 for m in vazio["proventos_mensais"])
+
+
+def test_serie_sinaliza_custo_incompleto(db, usuario, conexao, client_factory):
+    """Posição com valor e sem custo informado → `investido_completo` falso (o "valor − investido"
+    contaria a posição inteira como rendimento). Resgatada (valor 0) sem custo não conta."""
+    hoje = datetime.now(carteira.SP).date()
+    cdb = _criar_investimento(
+        db, usuario.id, conexao.id, "ic-cdb", amount_centavos=10_000, amount_original_centavos=9_000
+    )
+    _snap(db, cdb, hoje, 10_000)
+    _criar_investimento(db, usuario.id, conexao.id, "ic-resgatado", amount_centavos=0)
+    cliente = client_factory(usuario)
+    params = {"recorte": "todos", "inicio": str(hoje - timedelta(days=30)), "fim": str(hoje)}
+    assert cliente.get("/api/investimentos/serie", params=params).json()["investido_completo"]
+
+    fii = _criar_investimento(
+        db, usuario.id, conexao.id, "ic-fii", type="EQUITY", amount_centavos=5_000
+    )
+    _snap(db, fii, hoje, 5_000)
+    corpo = cliente.get("/api/investimentos/serie", params=params).json()
+    assert corpo["investido_completo"] is False
+    rf = cliente.get("/api/investimentos/serie", params={**params, "recorte": "renda_fixa"}).json()
+    assert rf["investido_completo"] is True  # o recorte só olha as próprias posições

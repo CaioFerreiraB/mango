@@ -79,10 +79,12 @@ function SemDados({ children }: { children: React.ReactNode }) {
 export function ProventosPorMes({
   vg,
   carregando,
+  erro,
   oculto,
 }: {
   vg: VisaoGeralInvestimentos | undefined
   carregando: boolean
+  erro: boolean
   oculto: boolean
 }) {
   const meses = vg?.proventos_mensais ?? []
@@ -98,6 +100,8 @@ export function ProventosPorMes({
       <CardContent className="space-y-4">
         {carregando ? (
           <Carregando />
+        ) : erro || !vg ? (
+          <SemDados>Não foi possível carregar os proventos.</SemDados>
         ) : total === 0 ? (
           <SemDados>Nenhum provento recebido nos últimos 12 meses.</SemDados>
         ) : (
@@ -144,7 +148,10 @@ export function ProventosPorMes({
 
 export function AportesValorizacao({ oculto }: { oculto: boolean }) {
   const serie = useSerieLonga()
-  // Últimos 24 fechamentos com custo conhecido: aportado embaixo, rendimento (pode ser < 0) em cima.
+  // Últimos 24 meses (o corrente vale até hoje: é dele que saem os números do topo) com custo
+  // conhecido: aportado embaixo, rendimento (pode ser < 0) em cima.
+  const mesAtual = hojeISO().slice(0, 7)
+  const custoCompleto = serie.data?.investido_completo ?? true
   const meses = fechamentosMensais(serie.data?.pontos ?? [])
     .filter((m) => m.investido != null)
     .slice(-24)
@@ -167,6 +174,12 @@ export function AportesValorizacao({ oculto }: { oculto: boolean }) {
           <Carregando />
         ) : serie.isError ? (
           <SemDados>Não foi possível carregar a evolução da carteira.</SemDados>
+        ) : !custoCompleto ? (
+          <SemDados>
+            Parte da carteira não informa o custo de compra, então não dá para
+            separar aporte de rendimento sem inflar o rendimento. Complete os
+            aportes das posições na Carteira.
+          </SemDados>
         ) : !ultimo ? (
           <SemDados>
             Ainda sem histórico de aportes para comparar. O gráfico aparece
@@ -205,7 +218,9 @@ export function AportesValorizacao({ oculto }: { oculto: boolean }) {
                 },
               ]}
               formatarX={mesCurto}
-              formatarRotulo={(m) => formatMesAno(`${m}-15`)}
+              formatarRotulo={(m) =>
+                formatMesAno(`${m}-15`) + (m === mesAtual ? " (até hoje)" : "")
+              }
               formatarY={oculto ? mascararEixo : eixoBRL}
               formatarValor={oculto ? mascarar : formatBRL}
               altura={240}

@@ -179,6 +179,7 @@ export function VisaoGeralPage() {
         <ProventosPorMes
           vg={vg.data}
           carregando={vg.isLoading}
+          erro={vg.isError}
           oculto={oculto}
         />
         <AportesValorizacao oculto={oculto} />

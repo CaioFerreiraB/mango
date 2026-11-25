@@ -418,7 +418,9 @@ export function GraficoBarrasAgrupadas({
         barMaxWidth: 40,
         barGap: "12%",
         barCategoryGap: "32%",
-        ...(empilhada ? { stack: "total" } : {}),
+        // "all": a parte negativa (ex.: rendimento < 0) desconta do topo da pilha, em vez de
+        // descer a partir do zero (o padrão "samesign" mostraria o aportado inteiro).
+        ...(empilhada ? { stack: "total", stackStrategy: "all" as const } : {}),
         itemStyle: {
           color: cores[k],
           // Empilhada: só o topo da pilha arredonda (cantos internos retos).

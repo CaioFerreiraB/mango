@@ -217,6 +217,9 @@ class CarteiraSerie(BaseModel):
     # Renda fixa sem cotação histórica: pontos até esta data foram estimados (capitalização dos
     # aportes pelo indexador realizado), não medidos. `None` quando nada foi reconstruído.
     reconstruido_ate: date | None = None
+    # Toda posição do recorte informa o custo (`amount_original`)? `False` → `investido_centavos`
+    # soma só o custo conhecido e "valor − investido" incluiria posições inteiras como rendimento.
+    investido_completo: bool = True
 
 
 # --- visão geral (dashboard do módulo) ------------------------------------------------

@@ -931,7 +931,14 @@ def serie_carteira(
         )
         anterior = valor
     return CarteiraSerie(
-        recorte=recorte, subtype=subtype, pontos=pontos, reconstruido_ate=reconstruido_ate
+        recorte=recorte,
+        subtype=subtype,
+        pontos=pontos,
+        reconstruido_ate=reconstruido_ate,
+        # Só posições com valor: uma já resgatada sem custo não distorce o rendimento de hoje.
+        investido_completo=all(
+            i.amount_original_centavos is not None for i in invs if _valor(i) > 0
+        ),
     )
 
 

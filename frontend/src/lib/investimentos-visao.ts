@@ -56,8 +56,8 @@ const compor = (pcts: (number | null)[]): number | null => {
     : null
 }
 
-/** Matriz ano × mês (anos do mais recente ao mais antigo). O CDI do ano compõe só os meses em que
- *  a carteira tem retorno — comparação no mesmo período. */
+/** Matriz ano × mês (anos do mais recente ao mais antigo). O CDI do ano compõe os mesmos meses da
+ *  carteira e fica nulo se faltar algum deles — nunca compara períodos diferentes. */
 export function matrizRentabilidade(
   carteira: { mes: string; pct: number }[],
   cdi: { mes: string; pct: number }[]
@@ -78,7 +78,14 @@ export function matrizRentabilidade(
     anos.set(a!, linha)
   }
   return [...anos.values()]
-    .map((l) => ({ ...l, total: compor(l.meses), totalCdi: compor(l.cdi) }))
+    .map((l) => ({
+      ...l,
+      total: compor(l.meses),
+      // Só compara no MESMO período: faltando o CDI de algum mês da carteira, não há CDI do ano.
+      totalCdi: l.meses.some((v, i) => v != null && l.cdi[i] == null)
+        ? null
+        : compor(l.cdi),
+    }))
     .sort((x, y) => y.ano - x.ano)
 }
 

@@ -46,7 +46,7 @@ assert.deepEqual(
   assert.equal(m[0].meses[2], null)
   assert.ok(Math.abs(m[0].total! - 4.5) < 1e-9) // 1.10 × 0.95 − 1
   assert.equal(m[0].cdi[1], null) // CDI de fev ausente
-  assert.ok(Math.abs(m[0].totalCdi! - 1) < 1e-9)
+  assert.equal(m[0].totalCdi, null) // → sem CDI do ano (seria 1 mês contra 2)
   assert.ok(Math.abs(m[1].totalCdi! - 0.9) < 1e-9) // nov/25 (50%) ignorado
 }
 
