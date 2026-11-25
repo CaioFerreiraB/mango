@@ -33,7 +33,7 @@ from app.schemas.investimento import (
 )
 from app.security.current_user import get_current_user
 from app.services import investimento as carteira_service
-from app.services.ativo_agrupamento import sincronizar_objetivos_ativos
+from app.services.ativo_agrupamento import sincronizar_objetivos_ativos, travar_ativos
 
 router = APIRouter(prefix="/investimentos", tags=["investimento"])
 
@@ -254,6 +254,8 @@ def atualizar(
             raise HTTPException(status.HTTP_404_NOT_FOUND, "ativo não encontrado")
     tem_objetivo = "objetivo_id" in dados
     objetivo_id = dados.pop("objetivo_id", None)
+    if "ativo_id" in dados:
+        travar_ativos(db, user.id, [inv.ativo_id, dados["ativo_id"]])  # antes da compra (ordem)
     for campo, valor in dados.items():
         setattr(inv, campo, valor)
     if "ativo_id" in dados and inv.ativo_id is None:

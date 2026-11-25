@@ -91,6 +91,17 @@ def agrupar_renda_fixa(db: Session, usuario_id: int) -> None:
     db.commit()
 
 
+def travar_ativos(db: Session, usuario_id: int, ativo_ids: Iterable[int] | None) -> list[int]:
+    """`FOR NO KEY UPDATE` nos ativos (None = todos do usuário), em ordem de id. Ordem de travas
+    comum a todos os fluxos: ativos antes das compras — quem mexe numa compra (mover de ativo)
+    trava origem e destino antes, senão cruza com um vínculo/sync que já travou os ativos e espera
+    pela compra (deadlock). No SQLite é no-op (sem FOR UPDATE)."""
+    consulta = select(Ativo.id).where(Ativo.usuario_id == usuario_id)
+    if ativo_ids is not None:
+        consulta = consulta.where(Ativo.id.in_({i for i in ativo_ids if i is not None}))
+    return list(db.scalars(consulta.order_by(Ativo.id).with_for_update(key_share=True)).all())
+
+
 def sincronizar_objetivos_ativos(
     db: Session, usuario_id: int, ativo_ids: Iterable[int] | None = None
 ) -> None:
@@ -103,10 +114,7 @@ def sincronizar_objetivos_ativos(
     UPDATE de `ativo` do vínculo pega, e não conflita com o `KEY SHARE` que a FK põe no ativo quando
     uma compra é movida para ele — com `FOR UPDATE`, mover + vincular em paralelo dava deadlock.
     Escopo restrito aos ativos afetados → vínculos de ativos diferentes não disputam as compras."""
-    consulta = select(Ativo.id).where(Ativo.usuario_id == usuario_id)
-    if ativo_ids is not None:
-        consulta = consulta.where(Ativo.id.in_(set(ativo_ids)))
-    ids = db.scalars(consulta.order_by(Ativo.id).with_for_update(key_share=True)).all()
+    ids = travar_ativos(db, usuario_id, ativo_ids)
     if not ids:
         return
     db.execute(
