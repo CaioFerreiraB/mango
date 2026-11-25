@@ -277,7 +277,6 @@ export function CalendarioCalor({ fim, visao }: { fim: string; visao: Visao }) {
                           <Dia
                             iso={iso}
                             valor={valorDe(iso)}
-                            temMovimento={movimentou(iso)}
                             investiu={investiu(iso)}
                             estilo={
                               iso > hoje && !movimentou(iso)
@@ -407,7 +406,6 @@ export function CalendarioCalor({ fim, visao }: { fim: string; visao: Visao }) {
 function Dia({
   iso,
   valor,
-  temMovimento,
   investiu,
   estilo,
   hoje,
@@ -417,7 +415,6 @@ function Dia({
 }: {
   iso: string
   valor: number
-  temMovimento: boolean
   investiu: boolean
   estilo: { background: string; color: string }
   hoje: boolean
@@ -431,7 +428,7 @@ function Dia({
       type="button"
       onClick={onClick}
       aria-pressed={selecionado}
-      aria-label={`${dataLonga(iso)}${hoje ? " (hoje)" : ""}: ${temMovimento ? `${rotuloModo} ${brl(valor)}` : "sem movimento"}${investiu ? ", com aporte ou resgate" : ""}`}
+      aria-label={`${dataLonga(iso)}${hoje ? " (hoje)" : ""}: ${rotuloModo} ${brl(valor)}${investiu ? ", com aporte ou resgate" : ""}`}
       style={estilo}
       className={cn(
         "flex h-12 w-full flex-col justify-between rounded-md p-1.5 text-left ring-1 ring-border/70 transition-[filter,box-shadow] outline-none ring-inset hover:brightness-95 focus-visible:ring-2 focus-visible:ring-ring @xl:h-16 @xl:p-2 dark:hover:brightness-110",
