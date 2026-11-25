@@ -1,6 +1,7 @@
 import {
   ArrowRightLeft,
   Briefcase,
+  CalendarCheck,
   ClipboardList,
   CreditCard,
   Gauge,
@@ -84,6 +85,7 @@ export const navSections: NavSection[] = [
       { title: "Orçamentos", url: "/orcamentos", icon: PiggyBank },
       { title: "Objetivos", url: "/objetivos", icon: Target },
       { title: "Assinaturas", url: "/assinaturas", icon: Repeat },
+      { title: "Despesas fixas", url: "/despesas-fixas", icon: CalendarCheck },
     ],
   },
   {
@@ -190,6 +192,13 @@ export const ATALHOS: Atalho[] = [
     short: "Assinaturas",
     url: "/assinaturas",
     icon: Repeat,
+  },
+  {
+    id: "despesas-fixas",
+    title: "Despesas fixas",
+    short: "Fixas",
+    url: "/despesas-fixas",
+    icon: CalendarCheck,
   },
   {
     id: "investimentos",

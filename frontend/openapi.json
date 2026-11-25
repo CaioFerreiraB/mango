@@ -3408,6 +3408,316 @@
         }
       }
     },
+    "/api/despesas-fixas": {
+      "get": {
+        "tags": [
+          "despesa_fixa"
+        ],
+        "summary": "Listar",
+        "operationId": "listar_api_despesas_fixas_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/DespesaFixaRead"
+                  },
+                  "type": "array",
+                  "title": "Response Listar Api Despesas Fixas Get"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "despesa_fixa"
+        ],
+        "summary": "Criar",
+        "operationId": "criar_api_despesas_fixas_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DespesaFixaCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DespesaFixaRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/despesas-fixas/resumo": {
+      "get": {
+        "tags": [
+          "despesa_fixa"
+        ],
+        "summary": "Resumo",
+        "operationId": "resumo_api_despesas_fixas_resumo_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DespesaFixaResumo"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/despesas-fixas/ocorrencias/{ocorrencia_id}": {
+      "patch": {
+        "tags": [
+          "despesa_fixa"
+        ],
+        "summary": "Atualizar Ocorrencia",
+        "description": "Pagar à mão (sem transação), pular o mês ou reabrir um vencimento (RF07).",
+        "operationId": "atualizar_ocorrencia_api_despesas_fixas_ocorrencias__ocorrencia_id__patch",
+        "parameters": [
+          {
+            "name": "ocorrencia_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Ocorrencia Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OcorrenciaUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OcorrenciaRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/despesas-fixas/{despesa_id}": {
+      "get": {
+        "tags": [
+          "despesa_fixa"
+        ],
+        "summary": "Obter",
+        "operationId": "obter_api_despesas_fixas__despesa_id__get",
+        "parameters": [
+          {
+            "name": "despesa_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Despesa Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DespesaFixaRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "despesa_fixa"
+        ],
+        "summary": "Atualizar",
+        "operationId": "atualizar_api_despesas_fixas__despesa_id__patch",
+        "parameters": [
+          {
+            "name": "despesa_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Despesa Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DespesaFixaUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DespesaFixaRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "despesa_fixa"
+        ],
+        "summary": "Remover",
+        "operationId": "remover_api_despesas_fixas__despesa_id__delete",
+        "parameters": [
+          {
+            "name": "despesa_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Despesa Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/despesas-fixas/{despesa_id}/ocorrencias": {
+      "get": {
+        "tags": [
+          "despesa_fixa"
+        ],
+        "summary": "Ocorrencias",
+        "description": "Histórico de vencimentos, do mais recente para o mais antigo (RF15).",
+        "operationId": "ocorrencias_api_despesas_fixas__despesa_id__ocorrencias_get",
+        "parameters": [
+          {
+            "name": "despesa_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Despesa Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/OcorrenciaRead"
+                  },
+                  "title": "Response Ocorrencias Api Despesas Fixas  Despesa Id  Ocorrencias Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/objetivos": {
       "get": {
         "tags": [
@@ -3807,6 +4117,38 @@
                 }
               ],
               "title": "Tem Assinatura"
+            }
+          },
+          {
+            "name": "despesa_fixa_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Despesa Fixa Id"
+            }
+          },
+          {
+            "name": "tem_despesa_fixa",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Tem Despesa Fixa"
             }
           },
           {
@@ -10402,6 +10744,24 @@
         "title": "ContaUpdate",
         "description": "Update estreito (§4 crud.md): o usuário só altera o vínculo com objetivo.\n\n`objetivo_id=None` desvincula. Campos importados do Pluggy não são editáveis aqui."
       },
+      "Contagem": {
+        "properties": {
+          "qtd": {
+            "type": "integer",
+            "title": "Qtd"
+          },
+          "centavos": {
+            "type": "integer",
+            "title": "Centavos"
+          }
+        },
+        "type": "object",
+        "required": [
+          "qtd",
+          "centavos"
+        ],
+        "title": "Contagem"
+      },
       "ContraparteTotal": {
         "properties": {
           "chave": {
@@ -10782,6 +11142,333 @@
           "buckets"
         ],
         "title": "DashboardSeries"
+      },
+      "DespesaFixaCreate": {
+        "properties": {
+          "descricao": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Descricao"
+          },
+          "valor_centavos": {
+            "type": "integer",
+            "exclusiveMinimum": 0.0,
+            "title": "Valor Centavos"
+          },
+          "frequencia": {
+            "type": "string",
+            "enum": [
+              "semanal",
+              "quinzenal",
+              "mensal",
+              "trimestral",
+              "semestral",
+              "anual"
+            ],
+            "title": "Frequencia"
+          },
+          "dia_vencimento": {
+            "type": "integer",
+            "maximum": 31.0,
+            "minimum": 1.0,
+            "title": "Dia Vencimento"
+          },
+          "inicio": {
+            "type": "string",
+            "format": "date",
+            "title": "Inicio"
+          },
+          "fim": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fim"
+          }
+        },
+        "type": "object",
+        "required": [
+          "descricao",
+          "valor_centavos",
+          "frequencia",
+          "dia_vencimento",
+          "inicio"
+        ],
+        "title": "DespesaFixaCreate"
+      },
+      "DespesaFixaRead": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "descricao": {
+            "type": "string",
+            "title": "Descricao"
+          },
+          "valor_centavos": {
+            "type": "integer",
+            "title": "Valor Centavos"
+          },
+          "frequencia": {
+            "type": "string",
+            "enum": [
+              "semanal",
+              "quinzenal",
+              "mensal",
+              "trimestral",
+              "semestral",
+              "anual"
+            ],
+            "title": "Frequencia"
+          },
+          "dia_vencimento": {
+            "type": "integer",
+            "title": "Dia Vencimento"
+          },
+          "inicio": {
+            "type": "string",
+            "format": "date",
+            "title": "Inicio"
+          },
+          "fim": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fim"
+          },
+          "retomada_em": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retomada Em"
+          },
+          "ativa": {
+            "type": "boolean",
+            "title": "Ativa"
+          },
+          "usuario_id": {
+            "type": "integer",
+            "title": "Usuario Id"
+          },
+          "criado_em": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Criado Em"
+          },
+          "atualizado_em": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Atualizado Em"
+          },
+          "proximo_vencimento": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Proximo Vencimento"
+          },
+          "qtd_atrasos": {
+            "type": "integer",
+            "title": "Qtd Atrasos",
+            "default": 0
+          },
+          "situacao": {
+            "type": "string",
+            "enum": [
+              "atrasada",
+              "vence_hoje",
+              "em_aberto",
+              "paga",
+              "pulada",
+              "em_dia",
+              "inativa"
+            ],
+            "title": "Situacao",
+            "default": "em_dia"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "descricao",
+          "valor_centavos",
+          "frequencia",
+          "dia_vencimento",
+          "inicio",
+          "ativa",
+          "usuario_id",
+          "criado_em",
+          "atualizado_em"
+        ],
+        "title": "DespesaFixaRead",
+        "description": "Colunas + indicadores calculados no momento da leitura (RF11)."
+      },
+      "DespesaFixaResumo": {
+        "properties": {
+          "mes": {
+            "type": "string",
+            "title": "Mes"
+          },
+          "tem_despesas": {
+            "type": "boolean",
+            "title": "Tem Despesas"
+          },
+          "pagas": {
+            "$ref": "#/components/schemas/Contagem"
+          },
+          "abertas": {
+            "$ref": "#/components/schemas/Contagem"
+          },
+          "atrasadas": {
+            "$ref": "#/components/schemas/Contagem"
+          },
+          "puladas": {
+            "type": "integer",
+            "title": "Puladas"
+          },
+          "proximos": {
+            "items": {
+              "$ref": "#/components/schemas/ResumoItem"
+            },
+            "type": "array",
+            "title": "Proximos"
+          }
+        },
+        "type": "object",
+        "required": [
+          "mes",
+          "tem_despesas",
+          "pagas",
+          "abertas",
+          "atrasadas",
+          "puladas",
+          "proximos"
+        ],
+        "title": "DespesaFixaResumo",
+        "description": "Mês corrente, só despesas ativas: pagas/abertas do mês, atrasadas de qualquer mês."
+      },
+      "DespesaFixaUpdate": {
+        "properties": {
+          "descricao": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 255,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Descricao"
+          },
+          "valor_centavos": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valor Centavos"
+          },
+          "frequencia": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "semanal",
+                  "quinzenal",
+                  "mensal",
+                  "trimestral",
+                  "semestral",
+                  "anual"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Frequencia"
+          },
+          "dia_vencimento": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 31.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dia Vencimento"
+          },
+          "inicio": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Inicio"
+          },
+          "fim": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fim"
+          },
+          "ativa": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ativa"
+          }
+        },
+        "type": "object",
+        "title": "DespesaFixaUpdate",
+        "description": "PATCH parcial (`exclude_unset`). `fim=None` torna a despesa permanente; os demais campos\nnão aceitam nulo (são obrigatórios no modelo)."
       },
       "DiaSemanaTotal": {
         "properties": {
@@ -13667,6 +14354,105 @@
         "title": "ObjetivoVinculo",
         "description": "Uma conta ou investimento vinculado ao objetivo (para a UI de vínculo)."
       },
+      "OcorrenciaRead": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "despesa_fixa_id": {
+            "type": "integer",
+            "title": "Despesa Fixa Id"
+          },
+          "vencimento": {
+            "type": "string",
+            "format": "date",
+            "title": "Vencimento"
+          },
+          "valor_centavos": {
+            "type": "integer",
+            "title": "Valor Centavos"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "aberta",
+              "paga",
+              "pulada"
+            ],
+            "title": "Status"
+          },
+          "situacao": {
+            "type": "string",
+            "enum": [
+              "atrasada",
+              "vence_hoje",
+              "aberta",
+              "paga",
+              "pulada"
+            ],
+            "title": "Situacao"
+          },
+          "pago_em": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pago Em"
+          },
+          "qtd_transacoes": {
+            "type": "integer",
+            "title": "Qtd Transacoes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "despesa_fixa_id",
+          "vencimento",
+          "valor_centavos",
+          "status",
+          "situacao",
+          "pago_em",
+          "qtd_transacoes"
+        ],
+        "title": "OcorrenciaRead"
+      },
+      "OcorrenciaUpdate": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "aberta",
+              "paga",
+              "pulada"
+            ],
+            "title": "Status"
+          },
+          "pago_em": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pago Em"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "OcorrenciaUpdate"
+      },
       "OperacaoAplicar": {
         "properties": {
           "operacao_id": {
@@ -15097,6 +15883,52 @@
         ],
         "title": "ResumoDivisoes"
       },
+      "ResumoItem": {
+        "properties": {
+          "ocorrencia_id": {
+            "type": "integer",
+            "title": "Ocorrencia Id"
+          },
+          "despesa_id": {
+            "type": "integer",
+            "title": "Despesa Id"
+          },
+          "descricao": {
+            "type": "string",
+            "title": "Descricao"
+          },
+          "vencimento": {
+            "type": "string",
+            "format": "date",
+            "title": "Vencimento"
+          },
+          "valor_centavos": {
+            "type": "integer",
+            "title": "Valor Centavos"
+          },
+          "situacao": {
+            "type": "string",
+            "enum": [
+              "atrasada",
+              "vence_hoje",
+              "aberta",
+              "paga",
+              "pulada"
+            ],
+            "title": "Situacao"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ocorrencia_id",
+          "despesa_id",
+          "descricao",
+          "vencimento",
+          "valor_centavos",
+          "situacao"
+        ],
+        "title": "ResumoItem"
+      },
       "ResumoSyncRead": {
         "properties": {
           "itens": {
@@ -15500,6 +16332,28 @@
               }
             ],
             "title": "Investimento Transacao Id"
+          },
+          "despesa_fixa_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Despesa Fixa Id"
+          },
+          "despesa_fixa_ocorrencia_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Despesa Fixa Ocorrencia Id"
           },
           "pluggy_criado_em": {
             "anyOf": [
@@ -16098,6 +16952,10 @@
             "type": "boolean",
             "title": "Notif Divisoes Pendentes"
           },
+          "notif_despesas_fixas": {
+            "type": "boolean",
+            "title": "Notif Despesas Fixas"
+          },
           "ultimo_envio_em": {
             "anyOf": [
               {
@@ -16155,6 +17013,7 @@
           "vinculo_expira_em",
           "notif_nao_revisadas",
           "notif_divisoes_pendentes",
+          "notif_despesas_fixas",
           "ultimo_envio_em",
           "erro",
           "sync_automatico",
@@ -16186,6 +17045,17 @@
               }
             ],
             "title": "Notif Divisoes Pendentes"
+          },
+          "notif_despesas_fixas": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notif Despesas Fixas"
           }
         },
         "additionalProperties": false,
@@ -16652,6 +17522,28 @@
             ],
             "title": "Investimento Transacao Id"
           },
+          "despesa_fixa_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Despesa Fixa Id"
+          },
+          "despesa_fixa_ocorrencia_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Despesa Fixa Ocorrencia Id"
+          },
           "pluggy_criado_em": {
             "anyOf": [
               {
@@ -16835,6 +17727,17 @@
               }
             ],
             "title": "Investimento Transacao Id"
+          },
+          "despesa_fixa_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Despesa Fixa Id"
           },
           "descricao_usuario": {
             "anyOf": [

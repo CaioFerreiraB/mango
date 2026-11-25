@@ -1,5 +1,6 @@
 import {
   ArrowRightLeft,
+  CalendarCheck,
   CreditCard,
   Repeat,
   StickyNote,
@@ -341,6 +342,12 @@ export function TransacoesTabela({
                             <Repeat
                               className="size-3.5 shrink-0 text-muted-foreground"
                               aria-label="assinatura"
+                            />
+                          ) : null}
+                          {t.despesa_fixa_id != null ? (
+                            <CalendarCheck
+                              className="size-3.5 shrink-0 text-muted-foreground"
+                              aria-label="despesa fixa"
                             />
                           ) : null}
                           {t.eh_transferencia ? (

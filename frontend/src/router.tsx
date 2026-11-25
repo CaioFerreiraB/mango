@@ -9,6 +9,7 @@ import { createBrowserRouter, Navigate } from "react-router"
 import { RequireAuth, RequireSetup } from "@/components/auth/require-auth"
 import { AppLayout } from "@/components/layout/app-layout"
 import { AssinaturasPage } from "@/routes/assinaturas/page"
+import { DespesasFixasPage } from "@/routes/despesas-fixas/page"
 import { ConfiguracoesPage } from "@/routes/configuracoes/page"
 import { ChatPage } from "@/routes/chat/page"
 import { AceitarConvitePage } from "@/routes/convite/aceitar"
@@ -132,6 +133,11 @@ export const router = createBrowserRouter([
             path: "assinaturas",
             element: <AssinaturasPage />,
             handle: { title: "Assinaturas" },
+          },
+          {
+            path: "despesas-fixas",
+            element: <DespesasFixasPage />,
+            handle: { title: "Despesas fixas" },
           },
           {
             path: "divisoes",

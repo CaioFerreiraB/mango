@@ -24,6 +24,8 @@ CAMPOS_USUARIO = (
     "assinatura_id",
     "nao_e_assinatura",
     "investimento_transacao_id",
+    "despesa_fixa_id",
+    "despesa_fixa_ocorrencia_id",
 )
 
 # Categoria efetiva: a precedência mora em `categoria_resolucao` (fonte única, §4.5) e depende do
@@ -66,6 +68,8 @@ class TransacaoRepository(UserScopedRepository[Transacao]):
         ocultar_pagamento_fatura: bool = False,
         assinatura_id: int | None = None,
         tem_assinatura: bool | None = None,
+        despesa_fixa_id: int | None = None,
+        tem_despesa_fixa: bool | None = None,
         busca: str | None = None,
         tem_divisao: bool | None = None,
         order: str = "date",
@@ -127,6 +131,14 @@ class TransacaoRepository(UserScopedRepository[Transacao]):
                 Transacao.assinatura_id.is_not(None)
                 if tem_assinatura
                 else Transacao.assinatura_id.is_(None)
+            )
+        if despesa_fixa_id is not None:
+            filtros.append(Transacao.despesa_fixa_id == despesa_fixa_id)
+        elif tem_despesa_fixa is not None:
+            filtros.append(
+                Transacao.despesa_fixa_id.is_not(None)
+                if tem_despesa_fixa
+                else Transacao.despesa_fixa_id.is_(None)
             )
         if busca:
             termo = f"%{_escape_like(busca)}%"

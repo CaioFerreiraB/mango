@@ -76,6 +76,9 @@ class TransacaoUpdate(BaseModel):
     # Vínculo com um provento de investimento (§4.9): id do movimento (posse validada no router,
     # pelo investimento pai) ou None p/ desvincular.
     investimento_transacao_id: int | None = None
+    # Vínculo com uma despesa fixa: paga o vencimento em aberto mais antigo (posse validada no
+    # router); None desvincula e reabre o vencimento que ela pagava.
+    despesa_fixa_id: int | None = None
     # Texto do usuário (§4.5): descrição própria (substitui a do banco na listagem) e observação
     # livre. `None` limpa o campo.
     descricao_usuario: str | None = Field(default=None, max_length=255)
