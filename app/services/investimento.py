@@ -17,6 +17,7 @@ from sqlalchemy import or_, select, update
 from sqlalchemy.orm import Session
 
 from app.exceptions import ConflictError, NotFoundError
+from app.models.ativo import Ativo
 from app.models.fii_fundamento import FiiFundamento
 from app.models.investimento import Investimento, InvestimentoTransacao
 from app.models.investimento_saldo_diario import InvestimentoSaldoDiario
@@ -46,6 +47,7 @@ from app.schemas.investimento import (
     VisaoGeralInvestimentos,
 )
 from app.services import indicadores
+from app.services.ativo_agrupamento import sincronizar_objetivos_ativos
 from app.services.brapi import token_brapi
 from app.services.periodo import SP
 
@@ -511,31 +513,38 @@ def _validar_ids(db: Session, usuario_id: int, ids: list[int]) -> list[Investime
     return invs
 
 
-def vincular_objetivo_posicao(
-    db: Session, usuario_id: int, ids: list[int], objetivo_id: int
+def definir_objetivo(
+    db: Session, usuario_id: int, ids: list[int], objetivo_id: int | None, *, transferir: bool
 ) -> None:
-    """Vincula as posições disponíveis em um commit, sem transferir de outro objetivo."""
-    if ObjetivoRepository(db, usuario_id).get(objetivo_id) is None:
+    """Vincula (ou desvincula, `objetivo_id=None`) o investimento INTEIRO de cada id: compra de um
+    ativo → o ativo (todas as compras, inclusive as futuras); posição sem ativo → ela mesma.
+    `transferir=False` não rouba de outro objetivo (409, nada gravado). Um commit só."""
+    if objetivo_id is not None and ObjetivoRepository(db, usuario_id).get(objetivo_id) is None:
         raise NotFoundError("objetivo não encontrado")
-    _validar_ids(db, usuario_id, ids)
+    invs = _validar_ids(db, usuario_id, ids)
+    ativo_ids = {i.ativo_id for i in invs if i.ativo_id is not None}
+    avulsos = {i.id for i in invs if i.ativo_id is None}
     try:
-        # A condição é verificada na escrita: cobre mudanças concorrentes após a leitura.
-        alterados = db.scalars(
-            update(Investimento)
-            .where(
-                Investimento.usuario_id == usuario_id,
-                Investimento.id.in_(ids),
-                or_(Investimento.objetivo_id.is_(None), Investimento.objetivo_id == objetivo_id),
-            )
-            .values(objetivo_id=objetivo_id)
-            .returning(Investimento.id)
-            .execution_options(synchronize_session=False)
-        ).all()
-        if set(alterados) != set(ids):
-            raise ConflictError(
-                "Alguma posição já foi vinculada a outro objetivo. "
-                "Atualize a seleção e tente novamente."
-            )
+        for tabela, alvos in ((Ativo, ativo_ids), (Investimento, avulsos)):
+            if not alvos:
+                continue
+            stmt = update(tabela).where(tabela.usuario_id == usuario_id, tabela.id.in_(alvos))
+            if not transferir:
+                # A condição é verificada na escrita: cobre mudanças concorrentes após a leitura.
+                stmt = stmt.where(
+                    or_(tabela.objetivo_id.is_(None), tabela.objetivo_id == objetivo_id)
+                )
+            alterados = db.scalars(
+                stmt.values(objetivo_id=objetivo_id)
+                .returning(tabela.id)
+                .execution_options(synchronize_session=False)
+            ).all()
+            if set(alterados) != alvos:
+                raise ConflictError(
+                    "Algum investimento já foi vinculado a outro objetivo. "
+                    "Atualize a seleção e tente novamente."
+                )
+        sincronizar_objetivos_ativos(db, usuario_id)
         db.commit()
     except Exception:
         db.rollback()

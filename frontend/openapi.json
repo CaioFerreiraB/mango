@@ -8454,6 +8454,17 @@
             "type": "string",
             "title": "Nome"
           },
+          "objetivo_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Objetivo Id"
+          },
           "usuario_id": {
             "type": "integer",
             "title": "Usuario Id"

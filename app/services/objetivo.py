@@ -10,6 +10,7 @@ from __future__ import annotations
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.models.ativo import Ativo
 from app.models.conta import Conta
 from app.models.investimento import Investimento
 from app.models.objetivo import Objetivo
@@ -59,16 +60,34 @@ def listar(db: Session, usuario_id: int) -> list[ObjetivoRead]:
 
 
 def _vinculos(db: Session, usuario_id: int, objetivo_id: int) -> list[ObjetivoVinculo]:
-    vinculos: list[ObjetivoVinculo] = []
-    for tabela, tipo in ((Conta, "conta"), (Investimento, "investimento")):
-        rows = db.scalars(
-            select(tabela).where(tabela.usuario_id == usuario_id, tabela.objetivo_id == objetivo_id)
-        ).all()
-        vinculos += [
-            ObjetivoVinculo(tipo=tipo, id=r.id, nome=r.nome, saldo_centavos=r.saldo_centavos)
-            for r in rows
-        ]
-    return vinculos
+    contas = db.scalars(
+        select(Conta).where(Conta.usuario_id == usuario_id, Conta.objetivo_id == objetivo_id)
+    ).all()
+    vinculos = [
+        ObjetivoVinculo(tipo="conta", id=c.id, nome=c.nome, saldo_centavos=c.saldo_centavos)
+        for c in contas
+    ]
+    # Investimento inteiro: as compras de um ativo viram uma linha só (nome do ativo, saldo somado).
+    # `id` = compra de maior saldo — representante p/ ícone e desvincular (que age no ativo todo).
+    rows = db.execute(
+        select(Investimento, Ativo.nome)
+        .outerjoin(Ativo, Ativo.id == Investimento.ativo_id)
+        .where(Investimento.usuario_id == usuario_id, Investimento.objetivo_id == objetivo_id)
+        .order_by(Investimento.saldo_centavos.desc(), Investimento.id)
+    ).all()
+    grupos: dict[tuple[str, int], ObjetivoVinculo] = {}
+    for inv, nome_ativo in rows:
+        chave = ("ativo", inv.ativo_id) if inv.ativo_id is not None else ("inv", inv.id)
+        if (v := grupos.get(chave)) is None:
+            grupos[chave] = ObjetivoVinculo(
+                tipo="investimento",
+                id=inv.id,
+                nome=nome_ativo or inv.nome,
+                saldo_centavos=inv.saldo_centavos,
+            )
+        else:
+            v.saldo_centavos += inv.saldo_centavos
+    return vinculos + list(grupos.values())
 
 
 def obter(db: Session, usuario_id: int, objetivo_id: int) -> ObjetivoDetalheRead | None:

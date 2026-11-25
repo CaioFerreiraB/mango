@@ -32,6 +32,7 @@ from app.schemas.investimento import (
 )
 from app.security.current_user import get_current_user
 from app.services import investimento as carteira_service
+from app.services.ativo_agrupamento import sincronizar_objetivos_ativos
 
 router = APIRouter(prefix="/investimentos", tags=["investimento"])
 
@@ -95,8 +96,8 @@ def vincular_objetivo_posicao(
     db: Session = Depends(get_db),
     user: Usuario = Depends(get_current_user),
 ) -> None:
-    carteira_service.vincular_objetivo_posicao(
-        db, user.id, payload.investimento_ids, payload.objetivo_id
+    carteira_service.definir_objetivo(
+        db, user.id, payload.investimento_ids, payload.objetivo_id, transferir=False
     )
 
 
@@ -250,4 +251,17 @@ def atualizar(
     if dados.get("ativo_id") is not None:
         if AtivoRepository(db, user.id).get(dados["ativo_id"]) is None:
             raise HTTPException(status.HTTP_404_NOT_FOUND, "ativo não encontrado")
-    return repo.update(inv, **dados)
+    tem_objetivo = "objetivo_id" in dados
+    objetivo_id = dados.pop("objetivo_id", None)
+    inv = repo.update(inv, **dados)
+    if "ativo_id" in dados:
+        # Compra movida: herda o objetivo do ativo de destino (ou fica sem, se virou avulsa).
+        if inv.ativo_id is None:
+            inv.objetivo_id = None
+        sincronizar_objetivos_ativos(db, user.id)
+        db.commit()
+    if tem_objetivo:
+        # Depois do ativo_id: o vínculo vale para o investimento inteiro (o ativo, se houver).
+        carteira_service.definir_objetivo(db, user.id, [inv.id], objetivo_id, transferir=True)
+    db.refresh(inv)
+    return inv

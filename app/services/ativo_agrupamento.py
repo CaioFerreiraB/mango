@@ -18,7 +18,7 @@ manual.
 
 from __future__ import annotations
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
 from app.models.ativo import Ativo
@@ -84,4 +84,21 @@ def agrupar_renda_fixa(db: Session, usuario_id: int) -> None:
                     nomes[ativo_id] = nome
         inv.ativo_id = ativo_id
         _registrar(inv, chave)
+    db.flush()
+    sincronizar_objetivos_ativos(db, usuario_id)  # compra nova herda o objetivo do ativo
     db.commit()
+
+
+def sincronizar_objetivos_ativos(db: Session, usuario_id: int) -> None:
+    """Espelha `ativo.objetivo_id` (fonte da verdade) em todas as compras do ativo. Chamar após
+    qualquer escrita de `ativo_id` ou de vínculo; não faz commit (quem chama faz)."""
+    db.execute(
+        update(Investimento)
+        .where(Investimento.usuario_id == usuario_id, Investimento.ativo_id.is_not(None))
+        .values(
+            objetivo_id=select(Ativo.objetivo_id)
+            .where(Ativo.id == Investimento.ativo_id)
+            .scalar_subquery()
+        )
+        .execution_options(synchronize_session=False)
+    )

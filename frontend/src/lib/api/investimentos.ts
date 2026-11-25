@@ -332,9 +332,11 @@ export function useVincularAtivo() {
       const n = args.investimentoIds.length
       toast.success(n === 1 ? "Compra movida." : `${n} compras movidas.`)
     },
+    // A compra movida herda o objetivo do ativo de destino → saldo dos objetivos muda junto.
     onSettled: () => {
-      qc.invalidateQueries({ queryKey: investimentosKeys.resumo })
+      qc.invalidateQueries({ queryKey: investimentosKeys.all })
       qc.invalidateQueries({ queryKey: ativosKeys.all })
+      qc.invalidateQueries({ queryKey: ["objetivos"] })
     },
     onError: (e) => toast.error(e.message),
   })

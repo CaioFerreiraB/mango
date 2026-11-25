@@ -38,6 +38,12 @@ ainda está se assentando. Cada versão publicada tem uma imagem correspondente 
 
 ### Alterado
 
+- **Objetivos vinculam o investimento inteiro:** vincular uma compra de renda fixa vincula o ativo
+  todo (todas as compras do Tesouro Selic 2027, a caixinha inteira), e o vínculo vale também para os
+  aportes que chegarem depois. Compra movida para um ativo vinculado passa a contar para o objetivo
+  dele; movida para fora, deixa de contar. No detalhe do objetivo, cada ativo aparece numa linha só,
+  com o saldo somado. Na atualização, compras do mesmo ativo que já estavam vinculadas levam o ativo
+  inteiro junto (se estavam em objetivos diferentes, fica o de maior saldo).
 - **Despesas × orçamento** (aba Despesas do dashboard) virou um mapa de calor: um quadrado por
   categoria, azul enquanto está dentro do limite e laranja quando passa dele, mais forte quanto mais
   estourou. Ao abrir uma categoria, o diálogo mostra em destaque quanto foi gasto, o orçamento e
