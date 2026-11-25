@@ -18,9 +18,12 @@ manual.
 
 from __future__ import annotations
 
-from sqlalchemy import select
+from collections.abc import Iterable
+
+from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
+from app.db.atomic import atomica
 from app.models.ativo import Ativo
 from app.models.investimento import Investimento
 from app.repositories.ativo import AtivoRepository
@@ -44,10 +47,21 @@ def _recorrencia(inv: Investimento) -> tuple | None:
 
 
 def agrupar_renda_fixa(db: Session, usuario_id: int) -> None:
+    # Uma transação só (o `repo.create` do meio não commita → não solta as travas) e ativos
+    # travados ANTES de ler/gravar compras: mesma ordem ativos → compras do PATCH e do vínculo.
+    with atomica(db):
+        travar_ativos(db, usuario_id, None)
+        _agrupar(db, usuario_id)
+        db.flush()
+        sincronizar_objetivos_ativos(db, usuario_id)  # compra nova herda o objetivo do ativo
+
+
+def _agrupar(db: Session, usuario_id: int) -> None:
     posicoes = db.scalars(
         select(Investimento)
         .where(Investimento.usuario_id == usuario_id, Investimento.type.in_(RENDA_FIXA))
         .order_by(Investimento.id)
+        .execution_options(populate_existing=True)  # estado pós-trava, não o do identity map
     ).all()
     nomes = {a.id: a.nome for a in db.scalars(select(Ativo).where(Ativo.usuario_id == usuario_id))}
     por_chave: dict[str, set[int]] = {}  # chave → ativos que já têm compras dela
@@ -84,4 +98,41 @@ def agrupar_renda_fixa(db: Session, usuario_id: int) -> None:
                     nomes[ativo_id] = nome
         inv.ativo_id = ativo_id
         _registrar(inv, chave)
-    db.commit()
+
+
+def travar_ativos(db: Session, usuario_id: int, ativo_ids: Iterable[int] | None) -> list[int]:
+    """`FOR NO KEY UPDATE` nos ativos (None = todos do usuário), em ordem de id. Ordem de travas
+    comum a todos os fluxos: ativos antes das compras — quem mexe numa compra (mover de ativo)
+    trava origem e destino antes, senão cruza com um vínculo/sync que já travou os ativos e espera
+    pela compra (deadlock). No SQLite é no-op (sem FOR UPDATE)."""
+    consulta = select(Ativo.id).where(Ativo.usuario_id == usuario_id)
+    if ativo_ids is not None:
+        consulta = consulta.where(Ativo.id.in_({i for i in ativo_ids if i is not None}))
+    return list(db.scalars(consulta.order_by(Ativo.id).with_for_update(key_share=True)).all())
+
+
+def sincronizar_objetivos_ativos(
+    db: Session, usuario_id: int, ativo_ids: Iterable[int] | None = None
+) -> None:
+    """Espelha `ativo.objetivo_id` (fonte da verdade) nas compras dos ativos dados (None = todos do
+    usuário). Chamar após qualquer escrita de `ativo_id` ou de vínculo; não faz commit.
+
+    Trava os ativos (ordem de id) antes do UPDATE: em Read Committed cada instrução tira snapshot
+    novo, então o espelho grava o `objetivo_id` confirmado por um vínculo concorrente do mesmo ativo
+    em vez de regravar o valor antigo. `FOR NO KEY UPDATE` (não `FOR UPDATE`): é o mesmo lock que o
+    UPDATE de `ativo` do vínculo pega, e não conflita com o `KEY SHARE` que a FK põe no ativo quando
+    uma compra é movida para ele — com `FOR UPDATE`, mover + vincular em paralelo dava deadlock.
+    Escopo restrito aos ativos afetados → vínculos de ativos diferentes não disputam as compras."""
+    ids = travar_ativos(db, usuario_id, ativo_ids)
+    if not ids:
+        return
+    db.execute(
+        update(Investimento)
+        .where(Investimento.usuario_id == usuario_id, Investimento.ativo_id.in_(ids))
+        .values(
+            objetivo_id=select(Ativo.objetivo_id)
+            .where(Ativo.id == Investimento.ativo_id, Ativo.usuario_id == usuario_id)
+            .scalar_subquery()
+        )
+        .execution_options(synchronize_session=False)
+    )
