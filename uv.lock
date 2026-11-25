@@ -653,7 +653,7 @@ requires-dist = [
     { name = "pydantic-settings", specifier = ">=2.16.3" },
     { name = "pyotp", specifier = ">=2.12.1" },
     { name = "sqlalchemy", specifier = ">=2.1.9" },
-    { name = "uvicorn", extras = ["standard"], specifier = ">=0.52.4" },
+    { name = "uvicorn", extras = ["standard"], specifier = ">=0.54.0" },
     { name = "vl-convert-python", specifier = ">=1.9,<2" },
 ]
 
