@@ -103,3 +103,18 @@ def test_job_percorre_usuarios_vinculados(cenario, db, session_factory):
     verificar_todos(session_factory=session_factory, momento=_em(10))
     verificar_todos(session_factory=session_factory, momento=_em(10, 11))
     assert len(enviados) == 1
+
+
+def test_mensagem_grande_cabe_no_limite_do_telegram():
+    from app.services.despesa_fixa_alerta import _mensagem
+
+    itens = [
+        (
+            DespesaFixaOcorrencia(vencimento=date(2020, 1, 1), valor_centavos=150_000_00),
+            "x" * 255,
+        )
+        for _ in range(200)
+    ]
+    texto = _mensagem([], itens, D)
+    assert len(texto) < 4096
+    assert "Atrasadas (200)" in texto and "e mais 185" in texto

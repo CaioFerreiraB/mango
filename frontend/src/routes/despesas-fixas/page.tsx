@@ -546,6 +546,11 @@ function VencimentoItem({ ocorrencia: o }: { ocorrencia: Ocorrencia }) {
               <SkipForward className="size-3.5" /> Pular
             </Button>
           </>
+        ) : o.qtd_transacoes > 0 ? (
+          // Pago por transação: reabrir só desvinculando (a API recusa com 409).
+          <span className="text-xs text-muted-foreground">
+            Desvincule a transação para reabrir
+          </span>
         ) : (
           <Button
             size="xs"

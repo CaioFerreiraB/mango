@@ -4,6 +4,7 @@ Manual (não o factory): a listagem é enriquecida e materializa vencimentos na 
 fixas (`/resumo`, `/ocorrencias/...`) são declaradas antes de `/{despesa_id}`.
 """
 
+import logging
 from datetime import date
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -26,6 +27,7 @@ from app.security.current_user import get_current_user
 from app.services import despesa_fixa as service
 from app.services.periodo import hoje_sp
 
+logger = logging.getLogger("app.despesa_fixa")
 router = APIRouter(prefix="/despesas-fixas", tags=["despesa_fixa"])
 
 
@@ -49,7 +51,13 @@ def _ler(despesa: DespesaFixa, ocorrencias: list[DespesaFixaOcorrencia], hoje: d
 
 
 def _ler_um(repo: DespesaFixaRepository, despesa: DespesaFixa, hoje: date) -> DespesaFixaRead:
-    service.materializar(repo.db, repo.usuario_id, hoje)
+    # A escrita (criar/editar) já foi comitada: a geração de vencimentos aqui é de melhor esforço.
+    # Falhar a resposta faria o cliente reenviar e duplicar a despesa; a próxima leitura completa.
+    try:
+        service.materializar(repo.db, repo.usuario_id, hoje)
+    except Exception:
+        repo.db.rollback()
+        logger.exception("materialização após escrita falhou despesa=%s", despesa.id)
     repo.db.refresh(despesa)
     ocorrencias = service.ocorrencias_por_despesa(repo.db, repo.usuario_id).get(despesa.id, [])
     return _ler(despesa, ocorrencias, hoje)
@@ -85,6 +93,12 @@ def atualizar_ocorrencia(
     oc = repo.get(ocorrencia_id)
     if oc is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "vencimento não encontrado")
+    if payload.status != "paga" and service.qtd_transacoes(db, [oc.id]):
+        # Reabrir/pular com transação ligada deixaria um "atrasado" que já foi pago.
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            "este vencimento foi pago por uma transação — desvincule-a para reabrir",
+        )
     hoje = hoje_sp()
     pago_em = (payload.pago_em or hoje) if payload.status == "paga" else None
     oc = repo.update(oc, status=payload.status, pago_em=pago_em)
@@ -155,6 +169,10 @@ def atualizar(
     mudou_agenda = any(
         campos.get(c, getattr(obj, c)) != getattr(obj, c) for c in service.CAMPOS_AGENDA
     )
+    if mudou_agenda:
+        # A agenda nova só vale de hoje em diante: sem isso, um dia 10→5 criaria todos os "dia 5"
+        # passados como atrasos. O histórico existente fica como está (RF08).
+        campos["retomada_em"] = max(hoje, obj.retomada_em or hoje)
     # Desativar também limpa os futuros em aberto: senão, reativada, a despesa herdaria como
     # atraso um vencimento que ainda nem tinha chegado quando ela foi pausada.
     if mudou_agenda or campos.get("ativa", obj.ativa) != obj.ativa:

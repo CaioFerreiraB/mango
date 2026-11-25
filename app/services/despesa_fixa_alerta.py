@@ -45,26 +45,7 @@ def verificar_e_avisar(db: Session, usuario_id: int, momento: datetime | None = 
         ):
             return 0
 
-        materializar(db, usuario_id, hoje)
-        linhas = db.execute(
-            select(DespesaFixaOcorrencia, DespesaFixa.descricao)
-            .join(DespesaFixa, DespesaFixa.id == DespesaFixaOcorrencia.despesa_fixa_id)
-            .where(
-                DespesaFixaOcorrencia.usuario_id == usuario_id,
-                DespesaFixa.ativa,
-                DespesaFixaOcorrencia.status == "aberta",
-                DespesaFixaOcorrencia.vencimento <= hoje,
-            )
-            .order_by(DespesaFixaOcorrencia.vencimento, DespesaFixaOcorrencia.id)
-        ).all()
-        vence_hoje = [
-            (oc, d) for oc, d in linhas if oc.vencimento == hoje and oc.aviso_hoje_em is None
-        ]
-        atrasadas = [
-            (oc, d)
-            for oc, d in linhas
-            if oc.vencimento < hoje and (oc.aviso_atraso_em is None or oc.aviso_atraso_em < hoje)
-        ]
+        vence_hoje, atrasadas = _a_avisar(db, usuario_id, hoje)
         if not vence_hoje and not atrasadas:
             return 0
 
@@ -93,23 +74,60 @@ def verificar_e_avisar(db: Session, usuario_id: int, momento: datetime | None = 
         return len(vence_hoje) + len(atrasadas)
 
 
+def _a_avisar(db: Session, usuario_id: int, hoje: date) -> tuple[list, list]:
+    """(vence hoje ainda não avisadas, atrasadas não avisadas hoje) das despesas ativas."""
+    materializar(db, usuario_id, hoje)
+    linhas = db.execute(
+        select(DespesaFixaOcorrencia, DespesaFixa.descricao)
+        .join(DespesaFixa, DespesaFixa.id == DespesaFixaOcorrencia.despesa_fixa_id)
+        .where(
+            DespesaFixaOcorrencia.usuario_id == usuario_id,
+            DespesaFixa.ativa,
+            DespesaFixaOcorrencia.status == "aberta",
+            DespesaFixaOcorrencia.vencimento <= hoje,
+        )
+        .order_by(DespesaFixaOcorrencia.vencimento, DespesaFixaOcorrencia.id)
+    ).all()
+    vence_hoje = [(oc, d) for oc, d in linhas if oc.vencimento == hoje and oc.aviso_hoje_em is None]
+    atrasadas = [
+        (oc, d)
+        for oc, d in linhas
+        if oc.vencimento < hoje and (oc.aviso_atraso_em is None or oc.aviso_atraso_em < hoje)
+    ]
+    return vence_hoje, atrasadas
+
+
+# Teto do Telegram é 4096 caracteres: lista no máximo isto (as marcas valem para todas) e corta a
+# descrição. 15 linhas × ~110 caracteres cabe com folga.
+_MAX_ITENS = 15
+_MAX_DESCRICAO = 60
+
+
+def _curta(texto: str) -> str:
+    return texto if len(texto) <= _MAX_DESCRICAO else texto[: _MAX_DESCRICAO - 1] + "…"
+
+
 def _mensagem(
     vence_hoje: list[tuple[DespesaFixaOcorrencia, str]],
     atrasadas: list[tuple[DespesaFixaOcorrencia, str]],
     hoje: date,
 ) -> str:
     partes = ["**Mango · despesas fixas**"]
+    vagas = _MAX_ITENS
     if vence_hoje:
         partes += ["", "**Vence hoje**"]
-        partes += [f"• {d} · {_brl(oc.valor_centavos)}" for oc, d in vence_hoje]
+        partes += [f"• {_curta(d)} · {_brl(oc.valor_centavos)}" for oc, d in vence_hoje[:vagas]]
+        vagas = max(0, vagas - len(vence_hoje))
     if atrasadas:
         partes += ["", f"**Atrasadas ({len(atrasadas)})**"]
-        for oc, d in atrasadas:
+        for oc, d in atrasadas[:vagas]:
             dias = (hoje - oc.vencimento).days
             atraso = "1 dia" if dias == 1 else f"{dias} dias"
-            partes.append(
-                f"• {d} · {_brl(oc.valor_centavos)} · venceu {oc.vencimento:%d/%m} ({atraso})"
-            )
+            venceu = f"venceu {oc.vencimento:%d/%m} ({atraso})"
+            partes.append(f"• {_curta(d)} · {_brl(oc.valor_centavos)} · {venceu}")
+    fora = len(vence_hoje) + len(atrasadas) - _MAX_ITENS
+    if fora > 0:
+        partes += ["", f"… e mais {fora}. Veja todas na página Despesas fixas."]
     return "\n".join(partes)
 
 

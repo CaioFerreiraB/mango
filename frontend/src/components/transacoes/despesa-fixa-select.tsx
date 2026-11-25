@@ -24,11 +24,13 @@ export function DespesaFixaSelect({
   onChange,
   placeholder = "Escolha a despesa fixa",
   className,
+  disabled = false,
 }: {
   value: number | null
   onChange: (v: number) => void
   placeholder?: string
   className?: string
+  disabled?: boolean
 }) {
   const { data } = useDespesasFixas()
   const [aberto, setAberto] = useState(false)
@@ -44,6 +46,7 @@ export function DespesaFixaSelect({
           variant="outline"
           role="combobox"
           aria-expanded={aberto}
+          disabled={disabled}
           size="sm"
           className={cn("w-full justify-between font-normal", className)}
         >

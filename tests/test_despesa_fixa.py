@@ -360,3 +360,32 @@ def test_resumo_e_situacoes(client_factory, usuario_a, hoje):
         ("Luz", "2026-04-05", "aberta"),
     ]
     assert semanal and aberta
+
+
+def test_nao_reabre_nem_pula_vencimento_pago_por_transacao(client_factory, usuario_a, db, hoje):
+    cliente = client_factory(usuario_a)
+    d = _criar(cliente)
+    t = _transacao(db, usuario_a, "r")
+    cliente.patch(f"/api/transacoes/{t.id}", json={"despesa_fixa_id": d["id"]})
+    (oc,) = [
+        o
+        for o in cliente.get(f"/api/despesas-fixas/{d['id']}/ocorrencias").json()
+        if o["vencimento"] == "2026-03-10"
+    ]
+    url = f"/api/despesas-fixas/ocorrencias/{oc['id']}"
+    for status in ("aberta", "pulada"):
+        assert cliente.patch(url, json={"status": status}).status_code == 409
+    # Desvinculando, volta a poder.
+    cliente.patch(f"/api/transacoes/{t.id}", json={"despesa_fixa_id": None})
+    assert cliente.patch(url, json={"status": "pulada"}).status_code == 200
+
+
+def test_mudar_agenda_nao_cria_vencimentos_passados(client_factory, usuario_a, hoje):
+    cliente = client_factory(usuario_a)
+    d = _criar(cliente, frequencia="semanal", dia_vencimento=1)  # 01, 08, 15, 22
+    cliente.patch(f"/api/despesas-fixas/{d['id']}", json={"dia_vencimento": 3})
+    datas = sorted(
+        o["vencimento"] for o in cliente.get(f"/api/despesas-fixas/{d['id']}/ocorrencias").json()
+    )
+    # Histórico (01, 08) intacto; 15 (hoje, aberta) refeito; nada de 03/03 ou 10/03 retroativos.
+    assert datas == ["2026-03-01", "2026-03-08", "2026-03-17"]

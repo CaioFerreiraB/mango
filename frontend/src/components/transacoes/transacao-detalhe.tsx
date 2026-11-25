@@ -388,6 +388,7 @@ function DespesaFixaCampo({ transacao }: { transacao: Transacao }) {
         É uma despesa fixa
         <Switch
           checked={vinculada || mostrar}
+          disabled={atualizar.isPending}
           onCheckedChange={(c) => {
             setMostrar(c)
             if (!c && vinculada)
@@ -402,6 +403,7 @@ function DespesaFixaCampo({ transacao }: { transacao: Transacao }) {
         <>
           <DespesaFixaSelect
             value={transacao.despesa_fixa_id ?? null}
+            disabled={atualizar.isPending}
             onChange={(v) =>
               salvar(v, "Vinculada: vencimento marcado como pago.")
             }
