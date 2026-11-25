@@ -104,6 +104,19 @@ type SortCol =
 
 const num = (v: number | null | undefined) => v ?? Number.NEGATIVE_INFINITY
 
+// Ordens oferecidas na lista mobile (subconjunto das colunas da tabela).
+const ORDENS_MOBILE: {
+  valor: `${SortCol}:${"asc" | "desc"}`
+  label: string
+}[] = [
+  { valor: "valor:desc", label: "Maior valor" },
+  { valor: "valor:asc", label: "Menor valor" },
+  { valor: "resultado:desc", label: "Maior rentabilidade" },
+  { valor: "resultado:asc", label: "Menor rentabilidade" },
+  { valor: "ativo:asc", label: "Ativo (A–Z)" },
+  { valor: "instituicao:asc", label: "Instituição (A–Z)" },
+]
+
 function comparar(
   a: CarteiraPosicao,
   b: CarteiraPosicao,
@@ -234,7 +247,7 @@ export function CarteiraPage() {
     return (
       <div className="space-y-6">
         <Skeleton className="h-9 w-64" />
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,9.5rem),1fr))] gap-3 lg:grid-cols-5">
           {Array.from({ length: 5 }).map((_, i) => (
             <Skeleton key={i} className="h-24 w-full" />
           ))}
@@ -267,13 +280,15 @@ export function CarteiraPage() {
       <Cabecalho />
 
       {/* Resumo (KPIs) — sem "valor disponível para investir" (não existe no modelo). */}
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+      {/* auto-fit: 2 colunas quando cabem, 1 quando não (320px) — valor nunca é cortado. */}
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,9.5rem),1fr))] gap-3 lg:grid-cols-5">
         <Kpi
-          className="col-span-2 lg:col-span-1"
+          className="col-span-full lg:col-span-1"
           label="Valor da carteira"
           hint={`Líquido ${formatBRL(totais.liquido_centavos)}`}
         >
           <Valor
+            quebraMoeda
             centavos={totais.valor_centavos}
             neutro
             className="text-xl font-bold sm:text-2xl"
@@ -283,9 +298,10 @@ export function CarteiraPage() {
           {/* null = o banco não informou o custo: "—", nunca um R$ 0,00 que parece dado. */}
           {totais.investido_centavos != null ? (
             <Valor
+              quebraMoeda
               centavos={totais.investido_centavos}
               neutro
-              className="text-xl font-bold sm:text-2xl"
+              className="text-lg font-bold sm:text-2xl"
             />
           ) : (
             <SemDado />
@@ -301,9 +317,10 @@ export function CarteiraPage() {
         >
           {totais.resultado_centavos != null ? (
             <Valor
+              quebraMoeda
               centavos={totais.resultado_centavos}
               sinal
-              className="text-xl font-bold sm:text-2xl"
+              className="text-lg font-bold sm:text-2xl"
             />
           ) : (
             <SemDado />
@@ -415,8 +432,37 @@ export function CarteiraPage() {
         </div>
 
         {/* Mobile: lista com o essencial (o detalhe completo está no drawer). A tabela de 10
-            colunas fica para md+, onde cabe sem rolagem horizontal. */}
-        <ul className="divide-y md:hidden">
+            colunas (~1230px) fica para lg+: no tablet, com a sidebar, sobravam ~450px. A ordenação, que na tabela
+            vem dos cabeçalhos, aqui é um select sobre o mesmo estado. */}
+        <div className="flex items-center justify-end gap-2 border-b px-3 py-2 lg:hidden">
+          <span id="ordenar-mobile" className="text-sm text-muted-foreground">
+            Ordenar
+          </span>
+          <Select
+            // Ordem vinda da tabela (ex.: por cotação) não está na lista → placeholder.
+            value={
+              ORDENS_MOBILE.find(
+                (o) => o.valor === `${ordenacao.col}:${ordenacao.dir}`
+              )?.valor ?? ""
+            }
+            onValueChange={(v) => {
+              const [col, dir] = v.split(":") as [SortCol, "asc" | "desc"]
+              setOrdenacao({ col, dir })
+            }}
+          >
+            <SelectTrigger size="sm" aria-labelledby="ordenar-mobile">
+              <SelectValue placeholder="Personalizada" />
+            </SelectTrigger>
+            <SelectContent align="end">
+              {ORDENS_MOBILE.map((o) => (
+                <SelectItem key={o.valor} value={o.valor}>
+                  {o.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <ul className="divide-y lg:hidden">
           {visiveis.length === 0 ? (
             <li className="py-10 text-center text-sm text-muted-foreground">
               Nenhum ativo com esses filtros.
@@ -433,7 +479,7 @@ export function CarteiraPage() {
           )}
         </ul>
 
-        <div className="hidden md:block">
+        <div className="hidden lg:block">
           <Table>
             <TableHeader>
               <TableRow>
@@ -620,8 +666,8 @@ function Kpi({
   children: React.ReactNode
 }) {
   return (
-    <Card className={cn("py-4 sm:py-6", className)}>
-      <CardContent className="space-y-1 px-4 sm:px-6">
+    <Card className={cn("min-w-0 py-4 sm:py-6", className)}>
+      <CardContent className="space-y-1 px-3 sm:px-6">
         <p className="text-sm leading-tight text-muted-foreground sm:truncate">
           {label}
         </p>

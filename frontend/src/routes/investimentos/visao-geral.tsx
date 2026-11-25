@@ -234,10 +234,11 @@ function KpiCard({
   acao?: ReactNode
 }) {
   return (
-    // Mobile: grade 2×3 compacta — sem o chip de ícone e sem truncar (valor cortado é número
-    // ambíguo); a partir de @xl volta ao card completo.
-    <Card className="py-4 @xl:py-6">
-      <CardContent className="space-y-2 px-4 @xl:space-y-2.5 @xl:px-6">
+    // Mobile: card compacto — sem o chip de ícone e sem truncar (valor cortado é número
+    // ambíguo); a grade (auto-fit) cai para 1 coluna quando 2 não cabem. A partir de @xl volta
+    // ao card completo. min-w-0: item de grid não cresce além da coluna.
+    <Card className="min-w-0 py-4 @xl:py-6">
+      <CardContent className="space-y-2 px-3 @xl:space-y-2.5 @xl:px-6">
         <div className="flex min-h-8 items-center gap-2">
           <span
             aria-hidden
@@ -251,7 +252,7 @@ function KpiCard({
           {acao}
         </div>
         <div>
-          <div className="text-lg font-bold tracking-tight tabular-nums @xl:truncate @xl:text-xl">
+          <div className="text-base font-bold tracking-tight tabular-nums @xl:truncate @xl:text-xl">
             {valor}
           </div>
           {detalhe ? (
@@ -277,7 +278,7 @@ function VarPct({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-0.5 font-medium tabular-nums",
+        "inline-flex flex-wrap items-center gap-x-0.5 font-medium tabular-nums",
         sobe ? "text-positive" : "text-negative"
       )}
     >
@@ -305,7 +306,7 @@ function Kpis({
 }) {
   if (carregando || !resumo) {
     return (
-      <div className="grid grid-cols-2 gap-3 @xl:gap-4 @4xl:grid-cols-3">
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,9.5rem),1fr))] gap-3 @xl:gap-4 @4xl:grid-cols-3">
         {Array.from({ length: 6 }, (_, i) => (
           <Skeleton key={i} className="h-24 w-full" />
         ))}
@@ -318,7 +319,7 @@ function Kpis({
   const nCat = resumo.alocacao.length
 
   return (
-    <div className="grid grid-cols-2 gap-3 @xl:gap-4 @4xl:grid-cols-3">
+    <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,9.5rem),1fr))] gap-3 @xl:gap-4 @4xl:grid-cols-3">
       <KpiCard
         icon={Wallet}
         label="Patrimônio total"
@@ -340,6 +341,7 @@ function Kpis({
         }
         valor={
           <Valor
+            quebraMoeda
             centavos={t.valor_centavos}
             neutro
             oculto={oculto}
@@ -350,12 +352,13 @@ function Kpis({
           t.resultado_centavos != null ? (
             <span
               className={cn(
-                "inline-flex items-center gap-1 font-medium",
+                "inline-flex flex-wrap items-center gap-x-1 font-medium",
                 sobe ? "text-positive" : "text-negative"
               )}
             >
               <Seta className="size-3.5" aria-hidden />
               <Valor
+                quebraMoeda
                 centavos={t.resultado_centavos}
                 sinal
                 oculto={oculto}
@@ -376,7 +379,12 @@ function Kpis({
         valor={
           // null = o banco não informou o custo: "—", nunca um R$ 0,00 que parece dado.
           t.investido_centavos != null ? (
-            <Valor centavos={t.investido_centavos} neutro oculto={oculto} />
+            <Valor
+              quebraMoeda
+              centavos={t.investido_centavos}
+              neutro
+              oculto={oculto}
+            />
           ) : (
             <span className="text-muted-foreground">—</span>
           )
@@ -388,7 +396,12 @@ function Kpis({
         label="Resultado"
         valor={
           t.resultado_centavos != null ? (
-            <Valor centavos={t.resultado_centavos} neutro oculto={oculto} />
+            <Valor
+              quebraMoeda
+              centavos={t.resultado_centavos}
+              neutro
+              oculto={oculto}
+            />
           ) : (
             <span className="text-muted-foreground">—</span>
           )
@@ -421,6 +434,7 @@ function Kpis({
         label="Dividendos (mês)"
         valor={
           <Valor
+            quebraMoeda
             centavos={vg?.dividendos_mes_centavos ?? 0}
             neutro
             oculto={oculto}

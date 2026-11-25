@@ -11,6 +11,7 @@ export function Valor({
   neutro = false,
   oculto = false,
   absoluto = false,
+  quebraMoeda = false,
   className,
 }: {
   centavos: number
@@ -22,6 +23,9 @@ export function Valor({
   /** Mostra `Math.abs(centavos)` (sem "-") — a cor continua vindo do sinal real, então um
    *  valor negativo ainda pode aparecer em vermelho, só sem o sinal de menos no texto. */
   absoluto?: boolean
+  /** Card estreito: permite quebrar linha só entre "R$" e o número (Intl usa NBSP ali), nunca
+   *  dentro do número nem depois do "-" — número partido é número ambíguo. */
+  quebraMoeda?: boolean
   className?: string
 }) {
   const cor =
@@ -38,9 +42,17 @@ export function Valor({
     : sinal && exibido > 0
       ? `+${formatBRL(exibido)}`
       : formatBRL(exibido)
+  const [moeda, numero] = texto.split("\u00a0")
   return (
     <span className={cn("font-medium tabular-nums", cor, className)}>
-      {texto}
+      {quebraMoeda && numero ? (
+        <>
+          <span className="whitespace-nowrap">{moeda}</span>{" "}
+          <span className="whitespace-nowrap">{numero}</span>
+        </>
+      ) : (
+        texto
+      )}
     </span>
   )
 }
