@@ -389,3 +389,69 @@ def test_mudar_agenda_nao_cria_vencimentos_passados(client_factory, usuario_a, h
     )
     # Histórico (01, 08) intacto; 15 (hoje, aberta) refeito; nada de 03/03 ou 10/03 retroativos.
     assert datas == ["2026-03-01", "2026-03-08", "2026-03-17"]
+
+
+@pytest.mark.parametrize("etapa", ["materializar", "ocorrencias_por_despesa"])
+def test_falha_apos_criar_responde_201_sem_duplicar(
+    client_factory, usuario_a, db, hoje, monkeypatch, etapa
+):
+    """A despesa já está gravada: falhar a resposta faria o cliente reenviar e duplicar."""
+    from app.models.despesa_fixa import DespesaFixa
+
+    def falha(*a, **kw):
+        raise RuntimeError("banco indisponível")
+
+    monkeypatch.setattr(f"app.services.despesa_fixa.{etapa}", falha)
+    resp = client_factory(usuario_a).post(
+        "/api/despesas-fixas",
+        json={
+            "descricao": "Luz",
+            "valor_centavos": 100,
+            "frequencia": "mensal",
+            "dia_vencimento": 10,
+            "inicio": "2026-03-01",
+        },
+    )
+    assert resp.status_code == 201, resp.text
+    assert resp.json()["descricao"] == "Luz" and resp.json()["id"]
+    db.expire_all()
+    assert db.query(DespesaFixa).count() == 1
+
+
+def test_vinculos_concorrentes_da_mesma_transacao_serializam(
+    client_factory, usuario_a, db, session_factory, hoje
+):
+    """Dois PATCH simultâneos: o segundo espera o primeiro e relê o vínculo já gravado, em vez de
+    pagar um segundo vencimento que ficaria órfão."""
+    import threading
+
+    from app.models.despesa_fixa import DespesaFixa
+    from app.services.despesa_fixa import materializar, travar_vinculo, vincular
+
+    cliente = client_factory(usuario_a)
+    a = _criar(cliente, descricao="A")
+    b = _criar(cliente, descricao="B")
+    t = _transacao(db, usuario_a, "c")
+    materializar(db, usuario_a.id, HOJE)
+
+    s1, s2 = session_factory(), session_factory()
+    try:
+        t1 = travar_vinculo(s1, t.id, a["id"])
+        visto: dict = {}
+
+        def segundo():
+            t2 = travar_vinculo(s2, t.id, b["id"])  # bloqueia até s1 comitar
+            visto["despesa"] = t2.despesa_fixa_id
+            s2.rollback()
+
+        th = threading.Thread(target=segundo)
+        th.start()
+        th.join(0.5)
+        assert th.is_alive()  # travado pelo primeiro
+        vincular(s1, t1, s1.get(DespesaFixa, a["id"]))
+        s1.commit()
+        th.join(10)
+        assert not th.is_alive() and visto["despesa"] == a["id"]
+    finally:
+        s1.close()
+        s2.close()

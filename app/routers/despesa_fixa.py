@@ -5,7 +5,7 @@ fixas (`/resumo`, `/ocorrencias/...`) são declaradas antes de `/{despesa_id}`.
 """
 
 import logging
-from datetime import date
+from datetime import UTC, date, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
@@ -51,13 +51,7 @@ def _ler(despesa: DespesaFixa, ocorrencias: list[DespesaFixaOcorrencia], hoje: d
 
 
 def _ler_um(repo: DespesaFixaRepository, despesa: DespesaFixa, hoje: date) -> DespesaFixaRead:
-    # A escrita (criar/editar) já foi comitada: a geração de vencimentos aqui é de melhor esforço.
-    # Falhar a resposta faria o cliente reenviar e duplicar a despesa; a próxima leitura completa.
-    try:
-        service.materializar(repo.db, repo.usuario_id, hoje)
-    except Exception:
-        repo.db.rollback()
-        logger.exception("materialização após escrita falhou despesa=%s", despesa.id)
+    service.materializar(repo.db, repo.usuario_id, hoje)
     repo.db.refresh(despesa)
     ocorrencias = service.ocorrencias_por_despesa(repo.db, repo.usuario_id).get(despesa.id, [])
     return _ler(despesa, ocorrencias, hoje)
@@ -124,10 +118,28 @@ def _ler_ocorrencia(
 @router.post("", response_model=DespesaFixaRead, status_code=status.HTTP_201_CREATED)
 def criar(payload: DespesaFixaCreate, repo: DespesaFixaRepository = Depends(_repo)):
     hoje = hoje_sp()
-    obj = repo.create(
-        **payload.model_dump(), retomada_em=service.piso_na_criacao(payload.inicio, hoje)
-    )
-    return _ler_um(repo, obj, hoje)
+    dados = {**payload.model_dump(), "retomada_em": service.piso_na_criacao(payload.inicio, hoje)}
+    obj = DespesaFixa(usuario_id=repo.usuario_id, **dados)
+    repo.db.add(obj)
+    repo.db.flush()
+    novo_id, agora = obj.id, datetime.now(UTC)
+    repo.db.commit()
+    # A despesa JÁ existe: qualquer falha daqui em diante (refresh, vencimentos, indicadores) não
+    # pode virar erro, senão o cliente reenvia o formulário e duplica a despesa. Responde 201 com o
+    # que foi gravado; os indicadores vêm na próxima leitura (a materialização é idempotente).
+    try:
+        return _ler_um(repo, obj, hoje)
+    except Exception:
+        repo.db.rollback()
+        logger.exception("leitura após criar falhou despesa=%s", novo_id)
+        return DespesaFixaRead(
+            id=novo_id,
+            usuario_id=repo.usuario_id,
+            ativa=True,
+            criado_em=agora,
+            atualizado_em=agora,
+            **dados,
+        )
 
 
 @router.get("/{despesa_id}", response_model=DespesaFixaRead)

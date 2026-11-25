@@ -11,7 +11,7 @@ from calendar import monthrange
 from collections.abc import Iterator
 from datetime import date, timedelta
 
-from sqlalchemy import delete, exists, func, select
+from sqlalchemy import delete, exists, func, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -286,6 +286,28 @@ def _alvo(db: Session, despesa: DespesaFixa) -> DespesaFixaOcorrencia | None:
     db.add(oc)
     db.flush()
     return oc
+
+
+def travar_vinculo(db: Session, transacao_id: int, despesa_id: int | None) -> Transacao:
+    """Serializa a troca de vínculo: lê o vínculo atual só DEPOIS de travar, até o commit.
+
+    O UPDATE neutro é o que trava nos dois bancos (mesmo padrão de `operacoes.py`): no SQLite um
+    `FOR UPDATE` é ignorado, mas a escrita pega o lock de escrita do banco; no Postgres trava a
+    linha. A despesa também é travada (Postgres), para que transações DIFERENTES vinculadas à mesma
+    despesa ao mesmo tempo não paguem o mesmo vencimento. Ordem fixa: transação → despesa."""
+    db.execute(
+        update(Transacao)
+        .where(Transacao.id == transacao_id)
+        .values(despesa_fixa_id=Transacao.despesa_fixa_id)
+        .execution_options(synchronize_session=False)
+    )
+    if despesa_id is not None:
+        db.execute(select(DespesaFixa.id).where(DespesaFixa.id == despesa_id).with_for_update())
+    return db.scalars(
+        select(Transacao)
+        .where(Transacao.id == transacao_id)
+        .execution_options(populate_existing=True)
+    ).one()
 
 
 def desvincular(db: Session, transacao: Transacao) -> None:

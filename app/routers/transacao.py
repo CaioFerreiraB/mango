@@ -11,7 +11,6 @@ from datetime import date
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.atomic import commit
@@ -229,18 +228,15 @@ def atualizar(
     despesa = _despesa_do_vinculo(repo, dados.pop("despesa_fixa_id", None))
 
     if vincular_despesa:
-        # Vencimentos gerados ANTES de mexer na transação: `materializar` comita por conta própria.
-        # Depois, a linha da transação é BLOQUEADA até o commit do update abaixo: dois PATCH
+        # Vencimentos gerados ANTES de travar: `materializar` comita por conta própria. Depois, a
+        # transação (e a despesa) ficam travadas até o commit do update abaixo: dois PATCH
         # concorrentes leriam o vínculo vazio e cada um pagaria um vencimento — o segundo agora
-        # espera e vê o vínculo do primeiro (SQLite serializa escrita de qualquer forma).
+        # espera e relê o vínculo já gravado pelo primeiro.
         if despesa is not None:
             despesa_fixa_service.materializar(repo.db, repo.usuario_id, hoje_sp())
-        obj = repo.db.scalars(
-            select(Transacao)
-            .where(Transacao.id == obj.id)
-            .with_for_update()
-            .execution_options(populate_existing=True)
-        ).one()
+        obj = despesa_fixa_service.travar_vinculo(
+            repo.db, obj.id, despesa.id if despesa is not None else None
+        )
         if despesa is None:
             despesa_fixa_service.desvincular(repo.db, obj)
         else:
