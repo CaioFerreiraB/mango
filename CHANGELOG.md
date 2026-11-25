@@ -12,6 +12,18 @@ ainda está se assentando. Cada versão publicada tem uma imagem correspondente 
 
 ### Adicionado
 
+- **Despesas fixas** (Planejamento → Despesas fixas): cadastre contas que se repetem (aluguel,
+  condomínio, parcelas) com valor, dia de vencimento e frequência semanal, quinzenal, mensal,
+  trimestral, semestral ou anual. Podem ser temporárias, com início e término. Cada vencimento fica
+  pago, em aberto, atrasado ou pulado, com a contagem de atrasos e o próximo vencimento à vista.
+  Marque como pago à mão ou vincule a transação que pagou (no detalhe da transação, "É uma despesa
+  fixa"). O detalhe da despesa lista os vencimentos e as transações vinculadas. Dá para desativar
+  sem perder o histórico.
+- **Aviso de despesas fixas no Telegram:** no dia do vencimento e, enquanto não for paga ou pulada,
+  um aviso por dia de atraso, a partir do horário da rotina diária. Liga e desliga em
+  Configurações → Telegram (ligado por padrão para quem já tem o Telegram vinculado).
+- **Widgets de despesas fixas no dashboard:** um com o gráfico do mês (pagas, em aberto e atrasadas)
+  e outro com os próximos vencimentos, atrasados primeiro.
 - **Calendário do mês no dashboard:** cada dia colorido numa escala contínua do laranja (mais
   negativo) ao azul (mais positivo), com filtro Tudo / Despesas / Receitas / Investimentos, navegação
   entre meses, botão "Hoje" e um painel com receitas, despesas, investido e resultado do dia ou do

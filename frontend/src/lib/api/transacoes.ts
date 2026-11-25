@@ -70,6 +70,8 @@ export type TransacaoFiltro = {
   ocultar_futuras?: boolean
   assinatura_id?: number
   tem_assinatura?: boolean
+  despesa_fixa_id?: number
+  tem_despesa_fixa?: boolean
   /** Divididas (vinculadas + lançamentos de divisão) / não divididas. */
   tem_divisao?: boolean
   busca?: string
@@ -141,6 +143,8 @@ export function useAtualizarTransacao() {
       // Trocar categoria muda o consumo do orçamento e as séries do dashboard — sem invalidar
       // aqui, a Visão Geral seguia mostrando o número antigo até a próxima navegação.
       qc.invalidateQueries({ queryKey: ["orcamentos"] })
+      // Vincular/desvincular de despesa fixa paga/reabre um vencimento.
+      qc.invalidateQueries({ queryKey: ["despesas-fixas"] })
     },
   })
 }

@@ -251,6 +251,30 @@ export function TelegramTab() {
                   }}
                 />
               </Field>
+              <Field orientation="horizontal" data-disabled={!dados.vinculado}>
+                <FieldContent>
+                  <FieldLabel htmlFor="telegram-despesas-fixas">
+                    Avisar sobre despesas fixas
+                  </FieldLabel>
+                  <FieldDescription id="telegram-despesas-fixas-desc">
+                    No dia do vencimento e, enquanto não for paga ou pulada, um
+                    aviso por dia de atraso. A partir do horário da rotina
+                    diária.
+                  </FieldDescription>
+                </FieldContent>
+                <Switch
+                  id="telegram-despesas-fixas"
+                  aria-describedby="telegram-despesas-fixas-desc"
+                  checked={dados.notif_despesas_fixas}
+                  disabled={!dados.vinculado || acao.isPending}
+                  onCheckedChange={(ativo) => {
+                    acao.mutate(
+                      { tipo: "despesas-fixas", ativo },
+                      { onError: falhou }
+                    )
+                  }}
+                />
+              </Field>
               <div className="flex flex-col gap-1 text-sm text-muted-foreground">
                 <p>
                   {dados.sync_automatico

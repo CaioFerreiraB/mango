@@ -16,11 +16,13 @@ from sqlalchemy.orm import Session
 from app.db.atomic import commit
 from app.db.session import get_db
 from app.models.assinatura import Assinatura
+from app.models.despesa_fixa import DespesaFixa
 from app.models.investimento import InvestimentoTransacao
 from app.models.transacao import Transacao
 from app.models.usuario import Usuario
 from app.repositories.assinatura import AssinaturaRepository
 from app.repositories.categoria import CategoriaRepository
+from app.repositories.despesa_fixa import DespesaFixaRepository
 from app.repositories.investimento import InvestimentoRepository
 from app.repositories.transacao import TransacaoRepository
 from app.schemas.investimento import InvestimentoTransacaoRead
@@ -32,12 +34,13 @@ from app.schemas.transacao import (
     TransacaoUpdate,
 )
 from app.security.current_user import get_current_user
+from app.services import despesa_fixa as despesa_fixa_service
 from app.services import divisao as divisao_service
 from app.services import investimento as carteira_service
 from app.services.assinatura_deteccao import normalizar_nome
 from app.services.categoria_resolucao import Contexto, carregar_contexto, resolver
 from app.services.compra_parcelada import irmas_da_compra
-from app.services.periodo import janela_listagem
+from app.services.periodo import hoje_sp, janela_listagem
 from app.services.revisao import corte_revisao
 
 router = APIRouter(prefix="/transacoes", tags=["transacao"])
@@ -106,6 +109,8 @@ def listar(
     ocultar_futuras: bool = Query(False),
     assinatura_id: int | None = Query(None),
     tem_assinatura: bool | None = Query(None),
+    despesa_fixa_id: int | None = Query(None),
+    tem_despesa_fixa: bool | None = Query(None),
     busca: str | None = Query(None, max_length=200),
     tem_divisao: bool | None = Query(None),
     order: Literal["date", "amount_centavos"] = Query("date"),
@@ -135,6 +140,8 @@ def listar(
         or fatura_id is not None
         or assinatura_id is not None
         or tem_assinatura is True
+        or despesa_fixa_id is not None
+        or tem_despesa_fixa is True
         or revisada is not None
         or eh_transferencia is True
         or tipo == "CREDIT"
@@ -167,6 +174,8 @@ def listar(
         ocultar_pagamento_fatura=ocultar_pagamento_fatura,
         assinatura_id=assinatura_id,
         tem_assinatura=tem_assinatura,
+        despesa_fixa_id=despesa_fixa_id,
+        tem_despesa_fixa=tem_despesa_fixa,
         busca=busca,
         tem_divisao=tem_divisao,
         order=order,
@@ -215,7 +224,17 @@ def atualizar(
     _validar_provento(repo, dados)
     _validar_categoria_override(repo, dados)
     _recusar_categoria_de_assinatura(obj, dados)
+    vincular_despesa = "despesa_fixa_id" in dados
+    despesa = _despesa_do_vinculo(repo, dados.pop("despesa_fixa_id", None))
 
+    if vincular_despesa:
+        # Vencimentos gerados ANTES de mexer na transação: `materializar` comita por conta própria.
+        # O vínculo em si (transação + vencimento pago/reaberto) entra no commit do update abaixo.
+        if despesa is None:
+            despesa_fixa_service.desvincular(repo.db, obj)
+        else:
+            despesa_fixa_service.materializar(repo.db, repo.usuario_id, hoje_sp())
+            despesa_fixa_service.vincular(repo.db, obj, despesa)
     atualizada = repo.update(obj, **dados)
     if assinatura is not None:
         _aprender_alias(repo.db, assinatura, atualizada)
@@ -233,6 +252,16 @@ def _assinatura_do_vinculo(repo: TransacaoRepository, dados: dict) -> Assinatura
     if assinatura is None:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "assinatura não encontrada")
     return assinatura
+
+
+def _despesa_do_vinculo(repo: TransacaoRepository, despesa_id: int | None) -> DespesaFixa | None:
+    """Despesa fixa a vincular, com posse validada (S3). None desvincula."""
+    if despesa_id is None:
+        return None
+    despesa = DespesaFixaRepository(repo.db, repo.usuario_id).get(despesa_id)
+    if despesa is None:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "despesa fixa não encontrada")
+    return despesa
 
 
 def _validar_provento(repo: TransacaoRepository, dados: dict) -> None:

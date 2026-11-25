@@ -121,6 +121,7 @@ def ler(db: Session, usuario_id: int) -> TelegramRead:
         vinculo_expira_em=_aware(config.vinculo_expira_em) if valido else None,
         notif_nao_revisadas=config.notif_nao_revisadas,
         notif_divisoes_pendentes=config.notif_divisoes_pendentes,
+        notif_despesas_fixas=config.notif_despesas_fixas,
         ultimo_envio_em=_aware(config.ultimo_envio_em) if config.ultimo_envio_em else None,
         erro=config.erro or geral.telegram_erro or (ultima.erro if ultima else None),
         sync_automatico=geral.sync_automatico,
@@ -358,9 +359,15 @@ def desvincular(db: Session, usuario_id: int) -> None:
 
 
 def preferencia(
-    db: Session, usuario_id: int, habilitar: bool | None, divisoes: bool | None = None
+    db: Session,
+    usuario_id: int,
+    habilitar: bool | None,
+    divisoes: bool | None = None,
+    despesas_fixas: bool | None = None,
 ) -> TelegramRead:
     config = config_usuario(db, usuario_id)
+    if despesas_fixas is not None:
+        config.notif_despesas_fixas = despesas_fixas  # aviso próprio; envio exige vínculo
     if divisoes is not None:
         config.notif_divisoes_pendentes = divisoes  # seção do relatório; não exige vínculo
     if habilitar is not None:

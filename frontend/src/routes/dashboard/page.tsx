@@ -33,6 +33,10 @@ import { toast } from "sonner"
 
 import { EmptyState } from "@/components/common/empty-state"
 import { AbaDespesas, AbaReceitas } from "@/components/dashboard/abas-analise"
+import {
+  DespesasFixasMesWidget,
+  DespesasFixasProximosWidget,
+} from "@/components/dashboard/despesas-fixas-widget"
 import { CalendarioCalor } from "@/components/dashboard/calendario-calor"
 import {
   CardGrafico,
@@ -465,6 +469,8 @@ export function DashboardPage() {
       </CardGrafico>
     ),
     calendario: () => <CalendarioCalor fim={fim} visao={visao} />,
+    "despesas-fixas": () => <DespesasFixasMesWidget />,
+    "despesas-fixas-proximos": () => <DespesasFixasProximosWidget />,
     patrimonio: () => (
       <CardGrafico
         titulo="Evolução patrimonial"

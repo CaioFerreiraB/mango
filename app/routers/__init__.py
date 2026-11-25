@@ -22,6 +22,7 @@ from app.routers import (
     convite,
     credencial,
     dashboard,
+    despesa_fixa,
     divisao,
     fonte_de_renda,
     indicadores,
@@ -122,6 +123,7 @@ _manuais: list[APIRouter] = [
     sync.router,  # POST /sync + /itens-pluggy/{id}/sincronizar (§4.3)
     dashboard.router,  # agregações (§4.10)
     orcamento.router,
+    despesa_fixa.router,  # despesas fixas + vencimentos (docs/dev/despesas-fixas.md)
     objetivo.router,  # CRUD + leitura enriquecida (valor guardado/progresso)
     transacao.router,
     revisao.router,

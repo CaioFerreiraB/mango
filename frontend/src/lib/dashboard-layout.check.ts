@@ -37,6 +37,8 @@ assert.equal(layoutPadrao().length, CATALOGO.length)
       "kpi-saidas",
       "kpi-resultado",
       "kpi-investido",
+      "despesas-fixas", // novo: depois de kpi-investido
+      "despesas-fixas-proximos",
       "ultimas",
     ]
   )
@@ -48,11 +50,22 @@ assert.equal(layoutPadrao().length, CATALOGO.length)
   assert.deepEqual(novo, { id: "patrimonio", largura: 60, visivel: true })
 }
 
-// Layout salvo antes de "ultimas" existir: o widget novo nasce logo abaixo dos cards.
+// Layout salvo antes de "despesas-fixas"/"ultimas" existirem: os novos nascem logo abaixo dos
+// cards, na ordem do catálogo.
 {
-  const antigo = layoutPadrao().filter((w) => w.id !== "ultimas")
+  const antigo = layoutPadrao().filter(
+    (w) => w.id !== "ultimas" && !w.id.startsWith("despesas-fixas")
+  )
   const ids = mesclarLayout(antigo).map((w) => w.id)
-  assert.equal(ids.indexOf("ultimas"), ids.indexOf("kpi-investido") + 1)
+  assert.equal(ids.indexOf("despesas-fixas"), ids.indexOf("kpi-investido") + 1)
+  assert.equal(
+    ids.indexOf("despesas-fixas-proximos"),
+    ids.indexOf("despesas-fixas") + 1
+  )
+  assert.equal(
+    ids.indexOf("ultimas"),
+    ids.indexOf("despesas-fixas-proximos") + 1
+  )
 }
 
 // Sem nenhum vizinho anterior no salvo → início.

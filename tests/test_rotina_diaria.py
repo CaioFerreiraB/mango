@@ -322,10 +322,11 @@ def test_agendador_preserva_jobs_por_modo(monkeypatch):
 
     monkeypatch.setattr(agendador, "BackgroundScheduler", Scheduler)
     monkeypatch.setattr(agendador, "_scheduler", None)
-    for modo, quantidade in (("local", 1), ("self_hosted", 4)):
+    for modo, quantidade in (("local", 2), ("self_hosted", 5)):
         monkeypatch.setattr(settings, "app_mode", modo)
         agendador.iniciar()
         assert len(agendador._scheduler.jobs) == quantidade
-        job = agendador._scheduler.jobs["rotina_diaria"]
-        assert job["max_instances"] == 1 and job["coalesce"] is True
+        for job_id in ("rotina_diaria", "despesas_fixas_aviso"):  # nos dois modos
+            job = agendador._scheduler.jobs[job_id]
+            assert job["max_instances"] == 1 and job["coalesce"] is True
         agendador.parar()

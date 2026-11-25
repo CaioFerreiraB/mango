@@ -22,6 +22,11 @@ TRANSFERENCIA_ORIGEM = ("auto", "manual")
 # §4.7 assinatura — periodicidade (mesma família da recorrência)
 PERIODICIDADE = ("mensal", "trimestral", "semestral", "anual", "irregular")
 
+# despesa_fixa — frequência da agenda de vencimentos e status guardado de cada vencimento
+# (atrasada/vence hoje são derivados de `aberta` + data, nunca gravados).
+FREQUENCIA = ("semanal", "quinzenal", "mensal", "trimestral", "semestral", "anual")
+STATUS_OCORRENCIA = ("aberta", "paga", "pulada")
+
 # §4.11 divisao_despesa — "quem pagou" é campo próprio (pago_por_usuario_id); aqui só "como
 # divide": entre N participantes (incl. quem pagou) ou o valor cheio p/ 1 único devedor.
 MODO_DIVISAO = ("igualmente", "integral", "porcentagem", "valor")
