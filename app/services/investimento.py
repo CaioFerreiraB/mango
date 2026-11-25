@@ -519,12 +519,14 @@ def definir_objetivo(
     """Vincula (ou desvincula, `objetivo_id=None`) o investimento INTEIRO de cada id: compra de um
     ativo → o ativo (todas as compras, inclusive as futuras); posição sem ativo → ela mesma.
     `transferir=False` não rouba de outro objetivo (409, nada gravado). Um commit só."""
-    if objetivo_id is not None and ObjetivoRepository(db, usuario_id).get(objetivo_id) is None:
-        raise NotFoundError("objetivo não encontrado")
-    invs = _validar_ids(db, usuario_id, ids)
-    ativo_ids = {i.ativo_id for i in invs if i.ativo_id is not None}
-    avulsos = {i.id for i in invs if i.ativo_id is None}
     try:
+        # Tudo dentro do try: o rollback desfaz também o que quem chamou deixou pendente na sessão
+        # (o PATCH /{id} move a compra de ativo e vincula num commit só).
+        if objetivo_id is not None and ObjetivoRepository(db, usuario_id).get(objetivo_id) is None:
+            raise NotFoundError("objetivo não encontrado")
+        invs = _validar_ids(db, usuario_id, ids)
+        ativo_ids = {i.ativo_id for i in invs if i.ativo_id is not None}
+        avulsos = {i.id for i in invs if i.ativo_id is None}
         for tabela, alvos in ((Ativo, ativo_ids), (Investimento, avulsos)):
             if not alvos:
                 continue
@@ -544,7 +546,7 @@ def definir_objetivo(
                     "Algum investimento já foi vinculado a outro objetivo. "
                     "Atualize a seleção e tente novamente."
                 )
-        sincronizar_objetivos_ativos(db, usuario_id)
+        sincronizar_objetivos_ativos(db, usuario_id, ativo_ids)
         db.commit()
     except Exception:
         db.rollback()

@@ -313,3 +313,58 @@ def test_vinculo_lote_detecta_mudanca_apos_leitura(
 def test_vinculo_lote_valida_corpo(client_factory, usuario_a, corpo):
     resposta = client_factory(usuario_a).patch("/api/investimentos/posicao/objetivo", json=corpo)
     assert resposta.status_code == 422, resposta.text
+
+
+def test_espelho_e_detalhe_ignoram_ativo_de_outro_usuario(db, usuario_a, usuario_b):
+    from app.services.ativo_agrupamento import sincronizar_objetivos_ativos
+
+    objetivo_a = ObjetivoRepository(db, usuario_a.id).create(titulo="A", valor_alvo_centavos=1)
+    objetivo_b = ObjetivoRepository(db, usuario_b.id).create(titulo="B", valor_alvo_centavos=1)
+    ativo_b = Ativo(usuario_id=usuario_b.id, nome="Ativo de B", objetivo_id=objetivo_b.id)
+    db.add(ativo_b)
+    conta = criar_conta(db, usuario_a.id, "acc-cruzado")
+    # Associação cruzada (não deveria existir): posição de A apontando p/ ativo de B.
+    inv = Investimento(
+        usuario_id=usuario_a.id,
+        item_id=conta.item_id,
+        pluggy_investment_id="inv-cruzado",
+        nome="Posição de A",
+        type="FIXED_INCOME",
+        saldo_centavos=1,
+        ativo_id=ativo_b.id,
+        objetivo_id=objetivo_a.id,
+    )
+    db.add(inv)
+    db.commit()
+
+    (vinculo,) = objetivo_service.obter(db, usuario_a.id, objetivo_a.id).vinculos
+    assert vinculo.nome == "Posição de A"  # nunca o nome do ativo de B
+
+    sincronizar_objetivos_ativos(db, usuario_a.id)
+    db.commit()
+    db.refresh(inv)
+    assert inv.objetivo_id == objetivo_a.id  # objetivo de B não vaza para a posição de A
+
+
+def test_patch_move_e_vincula_atomico(
+    client_factory, db, usuario_a, posicoes_objetivo, monkeypatch
+):
+    from app.exceptions import NotFoundError
+
+    objetivo, posicoes = posicoes_objetivo
+    destino = Ativo(usuario_id=usuario_a.id, nome="Destino")
+    db.add(destino)
+    db.commit()
+
+    def falha(*_):
+        raise NotFoundError("objetivo não encontrado")  # p.ex. removido por outra sessão
+
+    monkeypatch.setattr(investimento_service, "_validar_ids", falha)
+    resposta = client_factory(usuario_a).patch(
+        f"/api/investimentos/{posicoes[0].id}",
+        json={"ativo_id": destino.id, "objetivo_id": objetivo.id},
+    )
+    assert resposta.status_code == 404, resposta.text
+    db.expire_all()
+    movida = db.get(Investimento, posicoes[0].id)
+    assert (movida.ativo_id, movida.objetivo_id) == (posicoes[1].ativo_id, None)

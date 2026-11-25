@@ -10,6 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.db.atomic import commit
 from app.db.session import get_db
 from app.models.investimento import InvestimentoTransacao
 from app.models.usuario import Usuario
@@ -253,15 +254,19 @@ def atualizar(
             raise HTTPException(status.HTTP_404_NOT_FOUND, "ativo não encontrado")
     tem_objetivo = "objetivo_id" in dados
     objetivo_id = dados.pop("objetivo_id", None)
-    inv = repo.update(inv, **dados)
-    if "ativo_id" in dados:
-        # Compra movida: herda o objetivo do ativo de destino (ou fica sem, se virou avulsa).
-        if inv.ativo_id is None:
-            inv.objetivo_id = None
-        sincronizar_objetivos_ativos(db, user.id)
-        db.commit()
+    for campo, valor in dados.items():
+        setattr(inv, campo, valor)
+    if "ativo_id" in dados and inv.ativo_id is None:
+        inv.objetivo_id = None  # virou avulsa: sai do objetivo do ativo de origem
+    db.flush()
     if tem_objetivo:
-        # Depois do ativo_id: o vínculo vale para o investimento inteiro (o ativo, se houver).
+        # Depois do ativo_id e no mesmo commit: o vínculo vale para o investimento inteiro (o ativo,
+        # se houver); falha desfaz também a movimentação.
         carteira_service.definir_objetivo(db, user.id, [inv.id], objetivo_id, transferir=True)
+    else:
+        if inv.ativo_id is not None and "ativo_id" in dados:
+            # Compra movida: herda o objetivo do ativo de destino.
+            sincronizar_objetivos_ativos(db, user.id, [inv.ativo_id])
+        commit(db)
     db.refresh(inv)
     return inv

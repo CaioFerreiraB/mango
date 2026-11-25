@@ -18,6 +18,8 @@ manual.
 
 from __future__ import annotations
 
+from collections.abc import Iterable
+
 from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
@@ -89,15 +91,28 @@ def agrupar_renda_fixa(db: Session, usuario_id: int) -> None:
     db.commit()
 
 
-def sincronizar_objetivos_ativos(db: Session, usuario_id: int) -> None:
-    """Espelha `ativo.objetivo_id` (fonte da verdade) em todas as compras do ativo. Chamar após
-    qualquer escrita de `ativo_id` ou de vínculo; não faz commit (quem chama faz)."""
+def sincronizar_objetivos_ativos(
+    db: Session, usuario_id: int, ativo_ids: Iterable[int] | None = None
+) -> None:
+    """Espelha `ativo.objetivo_id` (fonte da verdade) nas compras dos ativos dados (None = todos do
+    usuário). Chamar após qualquer escrita de `ativo_id` ou de vínculo; não faz commit.
+
+    Trava os ativos (ordem de id) antes do UPDATE: em Read Committed cada instrução tira snapshot
+    novo, então o espelho grava o `objetivo_id` confirmado por um vínculo concorrente do mesmo ativo
+    em vez de regravar o valor antigo. Escopo restrito aos ativos afetados → vínculos de ativos
+    diferentes não disputam as mesmas compras."""
+    consulta = select(Ativo.id).where(Ativo.usuario_id == usuario_id)
+    if ativo_ids is not None:
+        consulta = consulta.where(Ativo.id.in_(set(ativo_ids)))
+    ids = db.scalars(consulta.order_by(Ativo.id).with_for_update()).all()
+    if not ids:
+        return
     db.execute(
         update(Investimento)
-        .where(Investimento.usuario_id == usuario_id, Investimento.ativo_id.is_not(None))
+        .where(Investimento.usuario_id == usuario_id, Investimento.ativo_id.in_(ids))
         .values(
             objetivo_id=select(Ativo.objetivo_id)
-            .where(Ativo.id == Investimento.ativo_id)
+            .where(Ativo.id == Investimento.ativo_id, Ativo.usuario_id == usuario_id)
             .scalar_subquery()
         )
         .execution_options(synchronize_session=False)

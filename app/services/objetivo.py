@@ -71,7 +71,7 @@ def _vinculos(db: Session, usuario_id: int, objetivo_id: int) -> list[ObjetivoVi
     # `id` = compra de maior saldo — representante p/ ícone e desvincular (que age no ativo todo).
     rows = db.execute(
         select(Investimento, Ativo.nome)
-        .outerjoin(Ativo, Ativo.id == Investimento.ativo_id)
+        .outerjoin(Ativo, (Ativo.id == Investimento.ativo_id) & (Ativo.usuario_id == usuario_id))
         .where(Investimento.usuario_id == usuario_id, Investimento.objetivo_id == objetivo_id)
         .order_by(Investimento.saldo_centavos.desc(), Investimento.id)
     ).all()
