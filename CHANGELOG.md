@@ -19,6 +19,24 @@ ainda está se assentando. Cada versão publicada tem uma imagem correspondente 
   filelock/virtualenv) foram para as versões corrigidas.
 - O build do frontend (imagem Docker e desenvolvimento local) passa do Node 20, fora de suporte desde
   abril de 2026, para o **Node 24 LTS**. Quem builda localmente precisa do Node ≥ 22.22 (`nvm use`).
+- **Carteira no celular:** a tabela de posições vira uma lista (nome, tipo, valor e rentabilidade; o
+  resto fica no detalhe). Os indicadores da Carteira e da Visão Geral ficam em duas colunas.
+
+### Corrigido
+
+- **Sem rolagem horizontal no celular:** as abas (Configurações, Carteira, detalhe do ativo, MCP)
+  quebram linha em vez de rolar para o lado, e o comando de conexão do MCP quebra linha.
+- **Contraste:** o vermelho dos valores negativos (tema claro) e o azul dos positivos (tema escuro)
+  passam no mínimo de legibilidade WCAG AA.
+- Valor investido e resultado que o banco não informa aparecem como "—", não como "R$ 0,00"; a
+  alocação mostra "Renda variável" em vez de "EQUITY".
+- O seletor de categoria abre largo o bastante para os nomes, e os diálogos de orçamento não cortam
+  o nome nem o valor no celular.
+- "Novembro de 2026" em vez de "Novembro De 2026" (Orçamentos e Faturas); orçamento estourado diz
+  "Excedido"; plurais certos em vez de "transação(ões)".
+- Cards de objetivo e linhas de Divisões abrem pelo teclado; convite inválido mostra "Convite
+  indisponível" com botão para o login; a linha "Resultado" do gráfico do dashboard não se confunde
+  mais com as barras de entrada quando a cor de destaque é azul.
 
 ## [0.10.0] — 2026-11-24
 

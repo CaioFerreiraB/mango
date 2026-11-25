@@ -106,7 +106,11 @@ export function FaturasPage() {
   // Meses presentes (competência do vencimento), rotulados "junho de 2026", mais recente primeiro.
   const opcoesMes = [
     ...new Map(
-      faturas.map((f) => [mesISO(f.due_date), formatMesAno(f.due_date)])
+      faturas.map((f) => [
+        mesISO(f.due_date),
+        // Só a 1ª letra: `capitalize` do CSS virava "Novembro De 2026".
+        formatMesAno(f.due_date).replace(/^./, (c) => c.toUpperCase()),
+      ])
     ),
   ]
     .sort((a, b) => (a[0] < b[0] ? 1 : -1))
@@ -159,7 +163,7 @@ export function FaturasPage() {
               <SelectContent>
                 <SelectItem value={TODAS}>Todos os meses</SelectItem>
                 {opcoesMes.map((o) => (
-                  <SelectItem key={o.key} value={o.key} className="capitalize">
+                  <SelectItem key={o.key} value={o.key}>
                     {o.label}
                   </SelectItem>
                 ))}
@@ -207,7 +211,7 @@ export function FaturasPage() {
             <div className="flex flex-col gap-5">
               {grupos.map((g) => (
                 <section key={g.key} className="flex flex-col gap-2">
-                  <h2 className="text-sm font-semibold text-muted-foreground capitalize">
+                  <h2 className="text-sm font-semibold text-muted-foreground first-letter:uppercase">
                     {g.label}
                   </h2>
                   <div className="flex flex-col gap-3">

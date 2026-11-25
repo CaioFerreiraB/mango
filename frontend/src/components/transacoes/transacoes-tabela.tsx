@@ -142,6 +142,7 @@ export function TransacoesTabela({
   abrirId = null,
   ocultarCategoria = false,
   parteDoUsuario = false,
+  semMoldura = false,
 }: {
   items: ItemListagem[]
   /** Repassado ao drawer: esconde "Ir para a fatura" quando já estamos numa fatura. */
@@ -152,6 +153,8 @@ export function TransacoesTabela({
   ocultarCategoria?: boolean
   /** Compra dividida mostra só a parte do usuário (drill-down de gráfico: a lista soma a fatia). */
   parteDoUsuario?: boolean
+  /** Sem borda própria: a lista já está dentro de um card (borda dupla = card aninhado). */
+  semMoldura?: boolean
 }) {
   const valorDe = (t: Transacao) => {
     const v = valorEfetivoCentavos(t)
@@ -190,7 +193,9 @@ export function TransacoesTabela({
 
   return (
     <>
-      <div className="hidden rounded-lg border md:block">
+      <div
+        className={cn("hidden md:block", !semMoldura && "rounded-lg border")}
+      >
         <Table className="table-fixed">
           <colgroup>
             {larguras.map((w, i) =>
@@ -421,7 +426,9 @@ export function TransacoesTabela({
         </Table>
       </div>
 
-      <ul className="divide-y rounded-lg border md:hidden">
+      <ul
+        className={cn("divide-y md:hidden", !semMoldura && "rounded-lg border")}
+      >
         {items.map((t) => {
           if (ehLancamento(t)) {
             const IconeL = iconeCategoria(t.categoria_id)

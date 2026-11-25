@@ -169,14 +169,16 @@ export function GraficoFluxo({
           symbolSize: 6,
           showSymbol: false,
           z: 3,
+          // Tinta neutra, não o accent: com o accent azul, a linha e a legenda ficavam da mesma
+          // cor das barras de Entradas (--positive é azul).
           lineStyle: {
-            color: t.primary,
+            color: t.texto,
             width: 2,
             type: [6, 4],
             opacity: 0.75,
           },
           itemStyle: {
-            color: t.primary,
+            color: t.texto,
             borderColor: t.superficie,
             borderWidth: 2,
           },
