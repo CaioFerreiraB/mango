@@ -30,7 +30,7 @@ export function ContaCard({
     <Link to={`/contas/${conta.id}`} className="group">
       <Card
         className={cn(
-          "relative h-full overflow-hidden transition-colors hover:border-primary/50",
+          "relative h-full overflow-hidden transition-[border-color,transform] duration-150 ease-out hover:border-primary/50 active:scale-[0.99] motion-reduce:active:scale-100",
           isCartao && "min-h-44 gap-3" // cartão: header + rodapé, arte sangrando no meio
         )}
       >
@@ -48,9 +48,11 @@ export function ContaCard({
             <p className="line-clamp-2 font-medium [overflow-wrap:anywhere] break-words">
               {nome}
             </p>
-            <p className="text-xs text-muted-foreground">
-              {mascarar(conta.numero)}
-            </p>
+            {conta.numero ? (
+              <p className="text-xs text-muted-foreground">
+                {mascarar(conta.numero)}
+              </p>
+            ) : null}
           </div>
         </CardHeader>
 
@@ -58,13 +60,11 @@ export function ContaCard({
           // Conta: saldo + sparkline dos últimos 30 dias sangrando até a borda (padrão do KpiCard).
           <CardContent className="flex items-end justify-between gap-2 pb-0">
             <div className="shrink-0 pb-6">
-              <p className="text-lg">
-                <Valor
-                  centavos={conta.saldo_centavos}
-                  neutro
-                  className="font-bold text-primary"
-                />
-              </p>
+              <p className="text-xs text-muted-foreground">Saldo</p>
+              <Valor
+                centavos={conta.saldo_centavos}
+                className="text-lg font-semibold tracking-tight"
+              />
             </div>
             {pontos && pontos.length >= 2 ? (
               <div className="-mr-6 min-w-0 flex-1 self-end">

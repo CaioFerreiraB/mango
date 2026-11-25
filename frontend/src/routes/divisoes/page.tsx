@@ -2,6 +2,8 @@ import { Info, Plus, Receipt, Sparkles, Users } from "lucide-react"
 import { useState } from "react"
 
 import { EmptyState } from "@/components/common/empty-state"
+import { CardDestaque, Kpi } from "@/components/common/kpi"
+import { PageHeader } from "@/components/common/page-header"
 import { Valor } from "@/components/common/valor"
 import { DivisaoDetalheDialog } from "@/components/divisoes/divisao-detalhe-dialog"
 import { NovaDivisaoWizard } from "@/components/divisoes/nova-divisao-wizard"
@@ -63,24 +65,23 @@ export function DivisoesPage() {
 
   return (
     <div className="space-y-6">
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold">Divisão de contas</h1>
-          <p className="text-sm text-muted-foreground">
-            Acompanhe suas despesas compartilhadas e acertos com amigos.
-          </p>
-        </div>
-        <NovaDivisaoWizard
-          trigger={
-            <Button>
-              <Plus className="size-4" /> Nova divisão
-            </Button>
-          }
-        />
-      </header>
+      <PageHeader
+        titulo="Divisão de contas"
+        descricao="Despesas compartilhadas e acertos com amigos."
+        acoes={
+          <NovaDivisaoWizard
+            trigger={
+              <Button>
+                <Plus className="size-4" aria-hidden />
+                <span className="max-sm:sr-only">Nova divisão</span>
+              </Button>
+            }
+          />
+        }
+      />
 
       <Tabs defaultValue="resumo">
-        <TabsList>
+        <TabsList variant="line" className="w-full justify-start border-b">
           <TabsTrigger value="resumo">Resumo</TabsTrigger>
           <TabsTrigger value="transacoes">Transações</TabsTrigger>
           <TabsTrigger value="pessoas">Pessoas</TabsTrigger>
@@ -135,134 +136,139 @@ function AbaResumo({
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <Card>
-          <CardContent className="space-y-1 py-4">
-            <p className="text-sm text-muted-foreground">Saldo a receber</p>
-            <Valor
-              centavos={data.saldo_a_receber_centavos}
-              neutro
-              className="text-2xl text-positive-ink"
+      {pessoasTop.length === 0 && atividades.length === 0 ? (
+        <EmptyState
+          cena="mango-juice"
+          title="Nenhuma divisão ainda"
+          description="Divida uma conta com quem também usa esta instância — o mango acompanha quem deve a quem e os acertos."
+        >
+          <NovaDivisaoWizard
+            trigger={
+              <Button>
+                <Plus className="size-4" aria-hidden /> Nova divisão
+              </Button>
+            }
+          />
+        </EmptyState>
+      ) : (
+        <>
+          <div className="grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-4">
+            <CardDestaque
+              className="col-span-2"
+              titulo="Saldo das divisões"
+              valor={
+                <Valor centavos={data.saldo_total_centavos} sinal neutro />
+              }
+              mascote="mango-juice"
+              rodape={
+                data.saldo_total_centavos > 0
+                  ? "Você tem mais a receber"
+                  : data.saldo_total_centavos < 0
+                    ? "Você tem mais a pagar"
+                    : "Tudo acertado"
+              }
             />
-            <p className="text-xs text-muted-foreground">
-              de {data.pessoas_a_receber} pessoas
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="space-y-1 py-4">
-            <p className="text-sm text-muted-foreground">Saldo a pagar</p>
-            <Valor
-              centavos={data.saldo_a_pagar_centavos}
-              absoluto
-              neutro
-              className="text-2xl text-negative-ink"
+            <Kpi
+              label="A receber"
+              valor={<Valor centavos={data.saldo_a_receber_centavos} neutro />}
+              detalhe={`de ${data.pessoas_a_receber} ${data.pessoas_a_receber === 1 ? "pessoa" : "pessoas"}`}
             />
-            <p className="text-xs text-muted-foreground">
-              para {data.pessoas_a_pagar} pessoas
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="space-y-1 py-4">
-            <p className="text-sm text-muted-foreground">Saldo total</p>
-            <Valor
-              centavos={data.saldo_total_centavos}
-              sinal
-              className="text-2xl"
+            <Kpi
+              label="A pagar"
+              valor={
+                <Valor centavos={data.saldo_a_pagar_centavos} absoluto neutro />
+              }
+              detalhe={`para ${data.pessoas_a_pagar} ${data.pessoas_a_pagar === 1 ? "pessoa" : "pessoas"}`}
             />
-            <p className="text-xs text-muted-foreground">
-              {data.saldo_total_centavos >= 0 ? "positivo" : "negativo"}
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+          </div>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <Card>
-          <CardContent className="space-y-1 py-4">
-            <div className="flex items-center justify-between">
-              <p className="text-sm font-medium">Saldos com pessoas</p>
-              {config.data?.otimizar_transacoes_divisao ? (
-                <BadgeOtimizado />
-              ) : null}
-            </div>
-            {pessoasTop.length === 0 ? (
-              <p className="py-6 text-center text-sm text-muted-foreground">
-                Nenhuma pessoa ainda.
-              </p>
-            ) : (
-              <ul className="divide-y">
-                {pessoasTop.map((p) => (
-                  <li
-                    key={p.usuario_id}
-                    className="flex items-center gap-3 py-2.5"
-                  >
-                    <PessoaAvatar nome={p.nome} avatar={p.avatar} />
-                    <span className="min-w-0 flex-1 truncate text-sm">
-                      {p.nome}
-                    </span>
-                    <div className="text-right text-xs">
-                      <p className="text-muted-foreground">
-                        {p.saldo_centavos > 0
-                          ? "Você recebe"
-                          : p.saldo_centavos < 0
-                            ? "Você paga"
-                            : "Quitado"}
-                      </p>
-                      <Valor
-                        centavos={p.saldo_centavos}
-                        absoluto
-                        className="text-sm"
-                      />
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </CardContent>
-        </Card>
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <Card>
+              <CardContent className="space-y-1 py-4">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-medium">Saldos com pessoas</p>
+                  {config.data?.otimizar_transacoes_divisao ? (
+                    <BadgeOtimizado />
+                  ) : null}
+                </div>
+                {pessoasTop.length === 0 ? (
+                  <p className="py-6 text-center text-sm text-muted-foreground">
+                    Nenhuma pessoa ainda.
+                  </p>
+                ) : (
+                  <ul className="divide-y">
+                    {pessoasTop.map((p) => (
+                      <li
+                        key={p.usuario_id}
+                        className="flex items-center gap-3 py-2.5"
+                      >
+                        <PessoaAvatar nome={p.nome} avatar={p.avatar} />
+                        <span className="min-w-0 flex-1 truncate text-sm">
+                          {p.nome}
+                        </span>
+                        <div className="text-right text-xs">
+                          <p className="text-muted-foreground">
+                            {p.saldo_centavos > 0
+                              ? "Você recebe"
+                              : p.saldo_centavos < 0
+                                ? "Você paga"
+                                : "Quitado"}
+                          </p>
+                          <Valor
+                            centavos={p.saldo_centavos}
+                            absoluto
+                            className="text-sm"
+                          />
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </CardContent>
+            </Card>
 
-        <Card>
-          <CardContent className="space-y-1 py-4">
-            <p className="text-sm font-medium">Atividades recentes</p>
-            {atividades.length === 0 ? (
-              <p className="py-6 text-center text-sm text-muted-foreground">
-                Nenhuma divisão ainda.
-              </p>
-            ) : (
-              <ul className="divide-y">
-                {atividades.map((d) => (
-                  <li key={d.id}>
-                    <button
-                      type="button"
-                      onClick={() => onAbrirDetalhe(d.id)}
-                      className="flex w-full items-center gap-3 py-2.5 text-left hover:opacity-80"
-                    >
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm">
-                          {d.descricao || "Sem descrição"}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {d.pago_por_usuario_id === me.data?.id
-                            ? "Você pagou"
-                            : "Pagou"}{" "}
-                          · {formatDate(d.data)}
-                        </p>
-                      </div>
-                      <Valor
-                        centavos={d.valor_total_centavos}
-                        neutro
-                        className="text-sm"
-                      />
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+            <Card>
+              <CardContent className="space-y-1 py-4">
+                <p className="text-sm font-medium">Atividades recentes</p>
+                {atividades.length === 0 ? (
+                  <p className="py-6 text-center text-sm text-muted-foreground">
+                    Nenhuma divisão ainda.
+                  </p>
+                ) : (
+                  <ul className="divide-y">
+                    {atividades.map((d) => (
+                      <li key={d.id}>
+                        <button
+                          type="button"
+                          onClick={() => onAbrirDetalhe(d.id)}
+                          className="flex w-full items-center gap-3 py-2.5 text-left hover:opacity-80"
+                        >
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm">
+                              {d.descricao || "Sem descrição"}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {d.pago_por_usuario_id === me.data?.id
+                                ? "Você pagou"
+                                : "Pagou"}{" "}
+                              · {formatDate(d.data)}
+                            </p>
+                          </div>
+                          <Valor
+                            centavos={d.valor_total_centavos}
+                            neutro
+                            className="text-sm"
+                          />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </>
+      )}
 
       <div className="flex gap-2 rounded-lg bg-muted/50 p-3 text-sm">
         <Info className="size-4 shrink-0 text-primary" aria-hidden />

@@ -4,6 +4,9 @@ import { cn } from "@/lib/utils"
 /**
  * Valor monetário (centavos → BRL). Cor por sinal, **sempre** com o sinal visível — cor nunca é o
  * único portador de sentido (acessibilidade, DESIGN.md). `sinal` prefixa `+` em créditos.
+ *
+ * Azul (positivo) só aparece junto do `+`: saldo, limite, orçado e meta são grandezas, não fluxos,
+ * e ficam na cor do texto. Negativo continua coral mesmo sem `sinal` — o "-" já está no texto.
  */
 export function Valor({
   centavos,
@@ -34,7 +37,9 @@ export function Valor({
       : centavos < 0
         ? "text-negative-ink"
         : centavos > 0
-          ? "text-positive-ink"
+          ? sinal
+            ? "text-positive-ink"
+            : undefined
           : "text-muted-foreground"
   const exibido = absoluto ? Math.abs(centavos) : centavos
   const texto = oculto
@@ -44,7 +49,15 @@ export function Valor({
       : formatBRL(exibido)
   const [moeda, numero] = texto.split("\u00a0")
   return (
-    <span className={cn("font-medium tabular-nums", cor, className)}>
+    // Sem `quebraMoeda` o valor é indivisível: o "-" do negativo é ponto de quebra para o browser.
+    <span
+      className={cn(
+        "font-medium tabular-nums",
+        !quebraMoeda && "whitespace-nowrap",
+        cor,
+        className
+      )}
+    >
       {quebraMoeda && numero ? (
         <>
           <span className="whitespace-nowrap">{moeda}</span>{" "}

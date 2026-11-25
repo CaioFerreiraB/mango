@@ -671,9 +671,9 @@ function ResumoTab({
   return (
     <>
       {p.historico_incompleto ? (
-        <div className="mb-3 flex items-start gap-2 rounded-lg border border-amber-500/40 bg-amber-50 p-3 dark:bg-amber-950/30">
+        <div className="mb-3 flex items-start gap-2 rounded-lg border border-warning/40 bg-warning/10 p-3">
           <AlertTriangle
-            className="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-500"
+            className="mt-0.5 size-4 shrink-0 text-warning-ink"
             aria-hidden
           />
           <p className="text-xs text-foreground">

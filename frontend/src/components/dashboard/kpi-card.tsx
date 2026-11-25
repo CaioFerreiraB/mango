@@ -1,12 +1,11 @@
-import { ArrowDownRight, ArrowUpRight, Eye, EyeOff } from "lucide-react"
+import { ArrowDownRight, ArrowUpRight } from "lucide-react"
 import type { ReactNode } from "react"
 
+import { CardDestaque, Kpi } from "@/components/common/kpi"
 import { Valor } from "@/components/common/valor"
 import { AreaTendencia, type CampoSerie } from "@/components/dashboard/graficos"
-import { Card, CardContent } from "@/components/ui/card"
 import { useIsMobile } from "@/hooks/use-mobile"
 import type { SerieBucket } from "@/lib/api/dashboard"
-import { cn } from "@/lib/utils"
 
 /**
  * Variação vs. mesmo período do mês anterior. Pílula **neutra** (identidade sóbria): a direção é
@@ -33,9 +32,8 @@ function Delta({ delta, titulo }: { delta: number; titulo: string }) {
 }
 
 /**
- * Card de KPI do painel: rótulo, valor grande (mês até hoje) com a variação ao lado, e uma
- * mini-área da tendência dos últimos 6 meses do mesmo dado. O saldo usa o mesmo card sem `delta`
- * nem `serie` (saldo vivo, sem base de comparação nem histórico mensal).
+ * KPI de dinheiro do painel: valor (mês até hoje) com a variação ao lado e, no desktop, a
+ * mini-área da tendência dos últimos 6 meses do mesmo dado. Casca = `Kpi` comum.
  */
 export function KpiCard({
   label,
@@ -60,170 +58,37 @@ export function KpiCard({
   serie?: SerieBucket[]
   campo?: CampoSerie
 }) {
-  // Mobile: card compacto, dois por linha e sem a mini-área (o gráfico nem monta).
+  // Mobile: sem a mini-área (o gráfico nem monta) — dois por linha, compactos.
   const compacto = useIsMobile()
   const temArea =
     !compacto && serie != null && campo != null && serie.length > 0
   return (
-    // Com área: `pb-0` + `overflow-hidden` fazem a área sangrar até a borda inferior arredondada.
-    <Card
-      className={cn(
-        "@container",
-        compacto && "gap-0 py-4",
-        temArea && "overflow-hidden pb-0"
-      )}
-    >
-      <CardContent
-        className={cn("space-y-3", compacto ? "px-4" : "px-4 @[13rem]:px-6")}
-      >
-        <div className="space-y-1">
-          <p
-            className={cn(
-              "truncate text-muted-foreground",
-              compacto ? "text-xs" : "text-sm"
-            )}
-          >
-            {label}
-          </p>
-          {/* Valor sempre neutro e forte (identidade da referência): o sinal +/− carrega o
-              sentido, nunca a cor — `text-foreground` sobrepõe a cor por sinal do `Valor` (a11y). */}
-          <div
-            className={cn(
-              "flex flex-wrap items-baseline gap-x-2 gap-y-1 tracking-tight",
-              // Card estreito (container) reduz o valor em vez de cortá-lo.
-              compacto
-                ? "text-base @[11rem]:text-lg"
-                : "text-base @[11rem]:text-lg @[15rem]:text-2xl"
-            )}
-          >
-            <Valor
-              centavos={centavos}
-              sinal={sinal}
-              oculto={oculto}
-              className="font-bold whitespace-nowrap text-foreground"
-            />
-            {delta != null ? (
-              <Delta delta={delta} titulo={tituloDelta} />
-            ) : null}
-          </div>
-          {rodape ? (
-            <p className="truncate text-xs text-muted-foreground">{rodape}</p>
-          ) : null}
-        </div>
-        {temArea && serie && campo ? (
-          <div className="-mx-4 @[13rem]:-mx-6">
-            <AreaTendencia buckets={serie} campo={campo} oculto={oculto} />
-          </div>
-        ) : null}
-      </CardContent>
-    </Card>
-  )
-}
-
-/**
- * Card de destaque no tom escuro do accent do usuário (degradê `--destaque-a → b`, texto branco AA
- * em qualquer preset) com ondas decorativas. `suave` é a variante clara (tinta do accent sobre a
- * superfície, texto do tema) para um segundo destaque ao lado do primeiro sem competir com ele.
- * Mede o próprio espaço (`@container`): estreito reduz o valor em vez de cortá-lo.
- */
-export function CardDestaque({
-  titulo,
-  centavos,
-  oculto,
-  onAlternarOculto,
-  rodape,
-  suave = false,
-}: {
-  titulo: string
-  centavos: number
-  oculto: boolean
-  /** Olho do modo privacidade; omitido, o card só respeita o `oculto` de fora. */
-  onAlternarOculto?: () => void
-  /** Pílula no rodapé (ex.: "3 contas"). */
-  rodape?: ReactNode
-  suave?: boolean
-}) {
-  return (
-    <div
-      className={cn(
-        "@container relative isolate flex flex-col overflow-hidden rounded-xl px-5 pt-4 pb-5",
-        suave
-          ? "border bg-card bg-linear-135 from-primary/18 via-primary/6 to-transparent text-foreground"
-          : "bg-destaque-b bg-linear-135 from-destaque-a to-destaque-b text-white shadow-[0_12px_28px_-14px_var(--destaque-b)]"
-      )}
-    >
-      {/* Ondas: decoração pura, atrás do conteúdo (dados sempre por cima). */}
-      <svg
-        viewBox="0 0 320 120"
-        preserveAspectRatio="none"
-        className={cn(
-          "pointer-events-none absolute inset-x-0 bottom-0 -z-10 h-3/4 w-full",
-          suave ? "text-primary" : "text-white"
-        )}
-        aria-hidden
-      >
-        <path
-          d="M0 96 C 60 92, 110 70, 170 74 S 270 40, 320 18 V120 H0 Z"
-          fill="currentColor"
-          fillOpacity={suave ? 0.06 : 0.07}
-        />
-        <path
-          d="M0 112 C 80 108, 130 92, 200 94 S 290 66, 320 54 V120 H0 Z"
-          fill="currentColor"
-          fillOpacity={suave ? 0.08 : 0.08}
-        />
-      </svg>
-      <div className="flex min-h-9 items-start justify-between gap-3">
-        <p
-          className={cn(
-            "truncate pt-1 text-sm",
-            suave ? "text-muted-foreground" : "text-white/80"
-          )}
-        >
-          {titulo}
-        </p>
-        {onAlternarOculto ? (
-          <BotaoOcultar
+    <Kpi
+      label={label}
+      // Valor sempre neutro e forte: o sinal +/− carrega o sentido, nunca só a cor (a11y).
+      valor={
+        <>
+          <Valor
+            centavos={centavos}
+            sinal={sinal}
             oculto={oculto}
-            onClick={onAlternarOculto}
-            className={
-              suave
-                ? "-mr-1 size-9 bg-primary/10 text-primary hover:bg-primary/15 focus-visible:ring-ring"
-                : "-mr-1 size-9 bg-white/12 text-white hover:bg-white/20 focus-visible:ring-white/70"
-            }
+            neutro
+            className="font-semibold whitespace-nowrap"
           />
-        ) : null}
-      </div>
-      <Valor
-        centavos={centavos}
-        oculto={oculto}
-        neutro
-        className={cn(
-          "mt-1 block text-2xl leading-tight font-bold tracking-tight whitespace-nowrap @[17rem]:text-[1.875rem]",
-          suave ? "text-foreground" : "text-white"
-        )}
-      />
-      {rodape != null ? (
-        // mt-auto: esticado até a altura dos vizinhos, a pílula desce ao rodapé.
-        <div className="mt-auto self-start pt-3">
-          <span
-            className={cn(
-              "inline-flex flex-wrap items-center gap-x-1 rounded-full px-2.5 py-1 text-xs",
-              suave
-                ? "bg-primary/10 text-foreground"
-                : "bg-white/12 text-white/90"
-            )}
-          >
-            {rodape}
-          </span>
-        </div>
+          {delta != null ? <Delta delta={delta} titulo={tituloDelta} /> : null}
+        </>
+      }
+      detalhe={rodape}
+    >
+      {temArea && serie && campo ? (
+        <AreaTendencia buckets={serie} campo={campo} oculto={oculto} />
       ) : null}
-    </div>
+    </Kpi>
   )
 }
 
-/** Saldo em contas do dashboard: o destaque com o olho que liga o modo privacidade de TODOS os
- *  cards do painel (o estado mora na página). No desktop ocupa ⅕ da linha, no mobile a inteira. */
+/** Saldo em contas do dashboard: o herói com o olho que liga o modo privacidade de TODOS os
+ *  cards do painel (o estado mora na página). */
 export function SaldoDestaque({
   centavos,
   contas,
@@ -250,36 +115,5 @@ export function SaldoDestaque({
           : undefined
       }
     />
-  )
-}
-
-/** Olho do modo privacidade: mascara os valores de todos os cards do painel. */
-export function BotaoOcultar({
-  oculto,
-  onClick,
-  className,
-}: {
-  oculto: boolean
-  onClick: () => void
-  className?: string
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={oculto}
-      aria-label="Ocultar valores"
-      title={oculto ? "Valores ocultos" : "Ocultar valores"}
-      className={cn(
-        "flex shrink-0 items-center justify-center rounded-full transition-colors focus-visible:ring-2 focus-visible:outline-none motion-reduce:transition-none",
-        className
-      )}
-    >
-      {oculto ? (
-        <EyeOff className="size-4" aria-hidden />
-      ) : (
-        <Eye className="size-4" aria-hidden />
-      )}
-    </button>
   )
 }

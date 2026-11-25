@@ -2,7 +2,8 @@ import { Landmark } from "lucide-react"
 import { Link } from "react-router"
 
 import { EmptyState } from "@/components/common/empty-state"
-import { Valor } from "@/components/common/valor"
+import { CardDestaque } from "@/components/common/kpi"
+import { PageHeader } from "@/components/common/page-header"
 import { ContaCard } from "@/components/contas/conta-card"
 import { SyncButton } from "@/components/sync-button"
 import { Button } from "@/components/ui/button"
@@ -50,7 +51,6 @@ export function ContasPage() {
   const contas = (data ?? []).filter((c) => c.type === "BANK")
   const cartoes = (data ?? []).filter((c) => c.type === "CREDIT")
   const saldoTotal = contas.reduce((s, c) => s + c.saldo_centavos, 0)
-
   // ISO ordena cronologicamente → o mais recente é o max lexicográfico.
   const ultimaAtualizacao = (data ?? [])
     .map((c) => c.pluggy_atualizado_em)
@@ -60,22 +60,15 @@ export function ContasPage() {
 
   return (
     <div className="space-y-6">
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold">Contas e Cartões</h1>
-          {contas.length > 0 ? (
-            <p className="text-sm text-muted-foreground">
-              Saldo total em contas: <Valor centavos={saldoTotal} />
-            </p>
-          ) : null}
-          {ultimaAtualizacao ? (
-            <p className="mt-0.5 text-xs text-muted-foreground/70">
-              Atualizado em {formatDateTime(ultimaAtualizacao)}
-            </p>
-          ) : null}
-        </div>
-        <SyncButton />
-      </header>
+      <PageHeader
+        titulo="Contas e cartões"
+        descricao={
+          ultimaAtualizacao
+            ? `Saldos e limites vindos do Open Finance · atualizado em ${formatDateTime(ultimaAtualizacao)}`
+            : "Saldos e limites vindos do Open Finance."
+        }
+        acoes={<SyncButton />}
+      />
 
       {isError ? (
         <EmptyState title="Não foi possível carregar as contas" />
@@ -97,6 +90,13 @@ export function ContasPage() {
         </EmptyState>
       ) : (
         <>
+          <CardDestaque
+            className="sm:max-w-md"
+            titulo="Saldo em contas"
+            centavos={saldoTotal}
+            mascote="money"
+            rodape={contas.length === 1 ? "1 conta" : `${contas.length} contas`}
+          />
           <Secao titulo="Contas" contas={contas} saldos={saldos} />
           <Secao titulo="Cartões" contas={cartoes} grid={GRID_CARTOES} />
         </>

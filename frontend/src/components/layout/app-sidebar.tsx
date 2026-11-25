@@ -29,7 +29,6 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
   SidebarRail,
-  SidebarSeparator,
   useSidebar,
 } from "@/components/ui/sidebar"
 import {
@@ -210,17 +209,6 @@ export function AppSidebar() {
       >
         <SidebarGroup>
           <SidebarGroupContent>
-            {/* Recolher/expandir como 1ª linha da navegação, separada do resto por uma linha. No
-                mobile o menu é uma gaveta (fecha tocando fora/Esc), então não há o que recolher. */}
-            {isMobile ? null : (
-              <>
-                <SidebarMenu>
-                  <BotaoRecolher />
-                </SidebarMenu>
-                {/* Recolhida, os botões são `size-8` alinhados à esquerda: a linha acompanha. */}
-                <SidebarSeparator className="my-2 group-data-[collapsible=icon]:mx-0 group-data-[collapsible=icon]:w-8!" />
-              </>
-            )}
             <SidebarMenu>
               {!somenteDivisao && (
                 <NavItemButton item={dashboardItem} pathname={pathname} />
@@ -246,6 +234,13 @@ export function AppSidebar() {
       </SidebarContent>
 
       <SidebarFooter>
+        {/* Recolher/expandir fica no rodapé, junto do usuário: é controle do shell, não destino —
+            não disputa o topo com a navegação. No mobile (gaveta) não há o que recolher. */}
+        {isMobile ? null : (
+          <SidebarMenu>
+            <BotaoRecolher />
+          </SidebarMenu>
+        )}
         <NavUser />
       </SidebarFooter>
 

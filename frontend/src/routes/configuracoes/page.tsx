@@ -1,6 +1,7 @@
 import { IaTab } from "@/components/configuracoes/ia-tab"
 import { useSearchParams } from "react-router"
 
+import { PageHeader } from "@/components/common/page-header"
 import { CategoriasTab } from "@/components/configuracoes/categorias-tab"
 import { ConexoesTab } from "@/components/configuracoes/conexoes-tab"
 import { McpTab } from "@/components/configuracoes/mcp-tab"
@@ -10,6 +11,13 @@ import { SegurancaTab } from "@/components/configuracoes/seguranca-tab"
 import { SistemaTab } from "@/components/configuracoes/sistema-tab"
 import { TelegramTab } from "@/components/configuracoes/telegram-tab"
 import { UsuariosTab } from "@/components/configuracoes/usuarios-tab"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useMe, useSetupStatus } from "@/lib/api/auth"
 
@@ -33,16 +41,19 @@ export function ConfiguracoesPage() {
   // aberto por quem não é admin — deixa nenhum trigger ativo e nenhum conteúdo renderizado: a
   // página fica só com a faixa de abas. Links de configuração são compartilháveis, então o estado
   // é alcançável; cair no padrão é o comportamento que não confunde.
-  const abasVisiveis = [
-    ...(podeVerConexoes ? ["conexoes", "ia"] : []),
-    "telegram",
-    "perfil",
-    "preferencias",
-    "categorias",
-    "mcp",
-    ...(podeVerSeguranca ? ["seguranca"] : []),
-    ...(podeAdministrarInstancia ? ["usuarios", "sistema"] : []),
-  ] // precisa espelhar os `TabsTrigger` abaixo
+  const abas = [
+    { valor: "conexoes", rotulo: "Conexões", ok: podeVerConexoes },
+    { valor: "telegram", rotulo: "Telegram", ok: true },
+    { valor: "ia", rotulo: "Inteligência artificial", ok: podeVerConexoes },
+    { valor: "perfil", rotulo: "Perfil", ok: true },
+    { valor: "preferencias", rotulo: "Preferências", ok: true },
+    { valor: "categorias", rotulo: "Categorias", ok: true },
+    { valor: "mcp", rotulo: "MCP", ok: true },
+    { valor: "seguranca", rotulo: "Segurança", ok: podeVerSeguranca },
+    { valor: "usuarios", rotulo: "Usuários", ok: podeAdministrarInstancia },
+    { valor: "sistema", rotulo: "Sistema", ok: podeAdministrarInstancia },
+  ].filter((a) => a.ok)
+  const abasVisiveis = abas.map((a) => a.valor)
   const naUrl = params.get("aba")
   const aba = naUrl !== null && abasVisiveis.includes(naUrl) ? naUrl : abaPadrao
 
@@ -58,35 +69,36 @@ export function ConfiguracoesPage() {
   }
 
   return (
-    <div className="max-w-5xl space-y-4">
-      <h1 className="text-xl font-semibold">Configurações</h1>
+    <div className="max-w-5xl space-y-6">
+      <PageHeader
+        titulo="Configurações"
+        descricao="Conexões, integrações, perfil e preferências do app."
+      />
       <Tabs value={aba} onValueChange={trocarAba} key={abaPadrao}>
-        {/* Com até 10 abas, a lista quebra linha em tela estreita (TabsList é flex-wrap) —
-            sem rolagem horizontal. */}
-        <div className="py-1">
-          <TabsList>
-            {podeVerConexoes ? (
-              <TabsTrigger value="conexoes">Conexões</TabsTrigger>
-            ) : null}
-            <TabsTrigger value="telegram">Telegram</TabsTrigger>
-            {podeVerConexoes ? (
-              <TabsTrigger value="ia">Inteligência artificial</TabsTrigger>
-            ) : null}
-            <TabsTrigger value="perfil">Perfil</TabsTrigger>
-            <TabsTrigger value="preferencias">Preferências</TabsTrigger>
-            <TabsTrigger value="categorias">Categorias</TabsTrigger>
-            <TabsTrigger value="mcp">MCP</TabsTrigger>
-            {podeVerSeguranca ? (
-              <TabsTrigger value="seguranca">Segurança</TabsTrigger>
-            ) : null}
-            {podeAdministrarInstancia ? (
-              <TabsTrigger value="usuarios">Usuários</TabsTrigger>
-            ) : null}
-            {podeAdministrarInstancia ? (
-              <TabsTrigger value="sistema">Sistema</TabsTrigger>
-            ) : null}
-          </TabsList>
-        </div>
+        {/* Mobile: as até 10 abas viram um seletor (uma linha, sem quebra torta); a partir de
+            `md`, abas de linha como no resto do app. */}
+        <Select value={aba} onValueChange={trocarAba}>
+          <SelectTrigger className="w-full md:hidden" aria-label="Seção">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {abas.map((a) => (
+              <SelectItem key={a.valor} value={a.valor}>
+                {a.rotulo}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <TabsList
+          variant="line"
+          className="hidden w-full justify-start border-b md:flex"
+        >
+          {abas.map((a) => (
+            <TabsTrigger key={a.valor} value={a.valor}>
+              {a.rotulo}
+            </TabsTrigger>
+          ))}
+        </TabsList>
         {podeVerConexoes ? (
           <TabsContent value="conexoes" className="pt-4">
             <ConexoesTab />

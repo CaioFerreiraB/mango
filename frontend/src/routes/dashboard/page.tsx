@@ -32,6 +32,7 @@ import { Link, useSearchParams } from "react-router"
 import { toast } from "sonner"
 
 import { EmptyState } from "@/components/common/empty-state"
+import { PageHeader } from "@/components/common/page-header"
 import { AbaDespesas, AbaReceitas } from "@/components/dashboard/abas-analise"
 import {
   DespesasFixasMesWidget,
@@ -82,6 +83,7 @@ import {
   type Granularidade,
   type Visao,
 } from "@/lib/api/dashboard"
+import { useMe } from "@/lib/api/auth"
 import { useAtualizarPerfil, usePerfil } from "@/lib/api/perfil"
 import { useTransacoes } from "@/lib/api/transacoes"
 import {
@@ -170,7 +172,30 @@ const CHAVE_VISAO = "mango:dashboard-visao"
 const ABAS = ["geral", "receitas", "despesas"] as const
 type Aba = (typeof ABAS)[number]
 
+/** "Bom dia/Boa tarde/Boa noite" pela hora de Brasília (o fuso de todos os cortes do app). */
+function saudacao(): string {
+  const h = Number(
+    new Intl.DateTimeFormat("pt-BR", {
+      hour: "numeric",
+      hourCycle: "h23",
+      timeZone: "America/Sao_Paulo",
+    }).format(new Date())
+  )
+  return h < 5
+    ? "Boa noite"
+    : h < 12
+      ? "Bom dia"
+      : h < 18
+        ? "Boa tarde"
+        : "Boa noite"
+}
+
 export function DashboardPage() {
+  const me = useMe()
+  // ponytail: "Local" é o nome-placeholder do modo desktop — sem nome real, saúda sem nome.
+  const nome = me.data?.nome?.trim().split(/\s+/)[0]
+  const titulo =
+    nome && nome !== "Local" ? `${saudacao()}, ${nome}` : saudacao()
   // Competência × caixa: vale para KPIs, gráficos e abas. Lembrado neste navegador.
   const [visao, setVisao] = useState<Visao>(() => {
     try {
@@ -492,8 +517,12 @@ export function DashboardPage() {
   const geral = aba === "geral"
   return (
     <Tabs value={aba} onValueChange={trocarAba} className="gap-4">
+      <PageHeader
+        titulo={titulo}
+        descricao="Seu resumo financeiro: saldo, entradas, saídas e o que vence."
+      />
       {/* Abas no topo; o período abaixo vale para as três. Personalizar é só da Geral. */}
-      <TabsList className="w-full sm:w-fit">
+      <TabsList variant="line" className="w-full justify-start border-b">
         <TabsTrigger value="geral" disabled={editando}>
           Geral
         </TabsTrigger>

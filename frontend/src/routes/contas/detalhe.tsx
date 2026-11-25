@@ -6,6 +6,8 @@ import { AvatarBanco } from "@/components/contas/avatar-banco"
 import { CartaoFlip } from "@/components/contas/cartao-flip"
 import { GraficoFaturas } from "@/components/contas/grafico-faturas"
 import { EmptyState } from "@/components/common/empty-state"
+import { CardDestaque } from "@/components/common/kpi"
+import { PageHeader } from "@/components/common/page-header"
 import { Valor } from "@/components/common/valor"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -28,61 +30,61 @@ export function ContaDetalhePage() {
   const nome = data.marketing_name ?? data.nome ?? "Conta"
 
   return (
-    <div className="space-y-5">
-      <Button asChild variant="ghost" size="sm" className="-ml-2">
+    <div className="space-y-6">
+      {/* Desktop já tem o breadcrumb; no mobile a topbar só mostra a página atual. */}
+      <Button asChild variant="ghost" size="sm" className="-ml-2 md:hidden">
         <Link to="/contas">
           <ArrowLeft className="size-4" aria-hidden /> Contas
         </Link>
       </Button>
 
-      <header>
-        <h1 className="text-xl font-semibold">
-          {data.marketing_name ?? data.nome ?? "Conta"}
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          {data.type === "CREDIT" ? "Cartão de crédito" : "Conta"} ·{" "}
-          {mascarar(data.numero)}
-        </p>
-        {data.type !== "CREDIT" ? (
-          <p className="mt-2 text-2xl">
-            <Valor centavos={data.saldo_centavos} />
-          </p>
-        ) : null}
-        {data.objetivo_id ? (
-          <p className="mt-1 text-xs text-muted-foreground">
-            Vinculada a um objetivo.
-          </p>
-        ) : null}
-      </header>
-
-      <div className="flex items-center gap-3 rounded-lg border p-3">
-        <AvatarBanco nome={efetiva?.nome ?? "?"} logoUrl={efetiva?.logo_url} />
+      <div className="flex items-start gap-3">
+        <AvatarBanco nome={efetiva?.nome ?? nome} logoUrl={efetiva?.logo_url} />
         <div className="min-w-0 flex-1">
-          <p className="text-xs text-muted-foreground">Instituição</p>
-          <p className="truncate font-medium">{efetiva?.nome ?? "—"}</p>
+          <PageHeader
+            titulo={nome}
+            descricao={[
+              efetiva?.nome,
+              data.type === "CREDIT" ? "Cartão de crédito" : "Conta",
+              data.numero ? mascarar(data.numero) : null,
+              data.objetivo_id ? "vinculada a um objetivo" : null,
+            ]
+              .filter(Boolean)
+              .join(" · ")}
+            acoes={
+              <>
+                <Button asChild variant="outline">
+                  <Link to={`/transacoes?conta_id=${id}`}>
+                    <ArrowRightLeft className="size-4" aria-hidden />
+                    <span className="max-sm:sr-only">Transações</span>
+                  </Link>
+                </Button>
+                {data.cartao ? (
+                  <Button asChild variant="outline">
+                    <Link to={`/faturas?cartao_id=${id}`}>
+                      <CreditCard className="size-4" aria-hidden />
+                      <span className="max-sm:sr-only">Faturas</span>
+                    </Link>
+                  </Button>
+                ) : null}
+              </>
+            }
+          />
         </div>
       </div>
+
+      {data.type !== "CREDIT" ? (
+        <CardDestaque
+          className="sm:max-w-md"
+          titulo="Saldo atual"
+          centavos={data.saldo_centavos}
+        />
+      ) : null}
 
       {data.conta_bancaria ? <DetalheBanco conta={data} /> : null}
       {data.cartao ? (
         <DetalheCartao conta={data} nome={nome} logoUrl={efetiva?.logo_url} />
       ) : null}
-
-      <div className="flex flex-col gap-2 sm:flex-row">
-        <Button asChild variant="outline">
-          <Link to={`/transacoes?conta_id=${id}`}>
-            <ArrowRightLeft className="size-4" aria-hidden /> Ver todas as
-            transações
-          </Link>
-        </Button>
-        {data.cartao ? (
-          <Button asChild variant="outline">
-            <Link to={`/faturas?cartao_id=${id}`}>
-              <CreditCard className="size-4" aria-hidden /> Ver faturas
-            </Link>
-          </Button>
-        ) : null}
-      </div>
 
       {data.cartao ? <GraficoFaturas contaId={id} /> : null}
     </div>
@@ -177,7 +179,8 @@ function DetalheCartao({
   )
 }
 
-/** Valor monetário do painel do cartão — realçado no accent (identidade da referência). */
+/** Valor monetário do painel do cartão — grandeza (limite, mínimo), na cor do texto: o accent
+ *  fica para ação e seleção. */
 function Metrica({
   rotulo,
   centavos,
@@ -189,9 +192,7 @@ function Metrica({
   return (
     <div>
       <dt className="text-xs text-muted-foreground">{rotulo}</dt>
-      <dd className="font-semibold text-accent-ink tabular-nums">
-        {formatBRL(centavos)}
-      </dd>
+      <dd className="font-semibold tabular-nums">{formatBRL(centavos)}</dd>
     </div>
   )
 }

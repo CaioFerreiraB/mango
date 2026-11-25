@@ -21,7 +21,6 @@ import { FaturaDetalhePage } from "@/routes/faturas/detalhe"
 import { FaturasPage } from "@/routes/faturas/page"
 import { FontesDeRendaPage } from "@/routes/fontes-de-renda/page"
 import { CarteiraPage } from "@/routes/investimentos/carteira"
-import { InvestimentosPage } from "@/routes/investimentos/page"
 import { VisaoGeralPage } from "@/routes/investimentos/visao-geral"
 import { LoginPage } from "@/routes/login/page"
 import { NotFoundPage } from "@/routes/not-found"
@@ -120,12 +119,6 @@ export const router = createBrowserRouter([
                 path: "carteira",
                 element: <CarteiraPage />,
                 handle: { title: "Carteira" },
-              },
-              // Backup temporário da Carteira antiga enquanto validamos o novo design.
-              {
-                path: "carteira-legado",
-                element: <InvestimentosPage />,
-                handle: { title: "Carteira (legado)" },
               },
             ],
           },

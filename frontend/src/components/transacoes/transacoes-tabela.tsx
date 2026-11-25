@@ -36,7 +36,7 @@ import {
   type ItemListagem,
   type Transacao,
 } from "@/lib/api/transacoes"
-import { formatBRL, formatDate } from "@/lib/format"
+import { formatBRL, formatDataCurta } from "@/lib/format"
 import { estadoRevisao } from "@/lib/revisao"
 import { cn } from "@/lib/utils"
 
@@ -277,7 +277,7 @@ export function TransacoesTabela({
                       </div>
                     </TableCell>
                     <TableCell className="text-muted-foreground">
-                      <div className="truncate">{formatDate(t.data)}</div>
+                      <div className="truncate">{formatDataCurta(t.data)}</div>
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       —
@@ -392,7 +392,7 @@ export function TransacoesTabela({
                     </div>
                   </TableCell>
                   <TableCell className="text-muted-foreground">
-                    <div className="truncate">{formatDate(t.date)}</div>
+                    <div className="truncate">{formatDataCurta(t.date)}</div>
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
                     <div
@@ -410,7 +410,9 @@ export function TransacoesTabela({
                           className="max-w-full font-normal"
                         >
                           <IconeCat className="size-3.5 shrink-0" aria-hidden />
-                          <span className="min-w-0 truncate">{catNome}</span>
+                          <span className="min-w-0 truncate" title={catNome}>
+                            {catNome}
+                          </span>
                         </Badge>
                       ) : (
                         <span className="text-muted-foreground">—</span>
@@ -478,7 +480,7 @@ export function TransacoesTabela({
                       className="block text-xs font-semibold"
                     />
                     <p className="text-[11px] text-muted-foreground">
-                      {formatDate(t.data)}
+                      {formatDataCurta(t.data)}
                     </p>
                   </div>
                 </button>
@@ -538,7 +540,7 @@ export function TransacoesTabela({
                     className="block text-xs font-semibold"
                   />
                   <p className="text-[11px] text-muted-foreground">
-                    {formatDate(t.date)}
+                    {formatDataCurta(t.date)}
                   </p>
                 </div>
               </button>

@@ -36,6 +36,12 @@
   --color-negative-ink: var(--negative-ink);
   --color-positive-foreground: var(--positive-foreground);
   --color-negative-foreground: var(--negative-foreground);
+  /* Estados (status/progresso): sucesso (pago, revisado) e aviso (pendente, perto do limite).
+     Mesma divisão fill × ink dos financeiros: preenchimento para ponto/barra, `*-ink` para texto. */
+  --color-success: var(--success);
+  --color-success-ink: var(--success-ink);
+  --color-warning: var(--warning);
+  --color-warning-ink: var(--warning-ink);
   /* Accent legível para texto de dado (números realçados): tom do accent com lightness
        normalizada p/ contraste AA em ambos os temas — ver bloco @supports abaixo. */
   --color-accent-ink: var(--accent-ink);
@@ -93,6 +99,10 @@
      (5.07:1 no branco, 4.55:1 sobre --muted); o azul dá 4.2:1 sobre --muted → L 0.55. */
   --positive-ink: oklch(0.55 0.21 267.454);
   --negative-ink: oklch(0.56 0.18 34.962);
+  --success: oklch(0.66 0.14 165);
+  --success-ink: oklch(0.5 0.11 165); /* 5.2:1 no branco */
+  --warning: oklch(0.78 0.16 70);
+  --warning-ink: oklch(0.53 0.13 60); /* 5.0:1 no branco */
   --accent-ink: oklch(
     0.48 0.16 292.581
   ); /* fallback estático (violeta); accent real no @supports */
@@ -150,6 +160,8 @@
   /* Texto no escuro: o azul da marca dá 3.7:1 no card → L 0.68 (5.9:1); o laranja já passa (5.7:1). */
   --positive-ink: oklch(0.68 0.15 267.454);
   --negative-ink: #f36846;
+  --success-ink: oklch(0.76 0.13 165);
+  --warning-ink: oklch(0.82 0.13 75);
   --accent-ink: oklch(
     0.8 0.16 292.759
   ); /* fallback estático (violeta); accent real no @supports */

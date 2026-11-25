@@ -1,3 +1,4 @@
+import { TONS_SELO, type TomSelo } from "@/components/common/selo-tons"
 import type {
   SituacaoDespesa,
   SituacaoOcorrencia,
@@ -5,47 +6,34 @@ import type {
 
 export type Situacao = SituacaoDespesa | SituacaoOcorrencia
 
-const PAGA = {
-  badge:
-    "bg-[#e7f7ef] text-[#0ca678] dark:bg-emerald-500/15 dark:text-emerald-400",
-  ponto: "bg-[#0ca678]",
-}
-// Em aberto (ainda no prazo) é neutro de propósito: a única cor quente é a de atraso, e "vence
-// hoje" fica no âmbar — senão laranja e coral se confundem na barra e nos badges.
-const ABERTA = {
-  badge: "bg-muted text-foreground",
-  ponto: "bg-muted-foreground",
-}
-const HOJE = {
-  badge: "bg-[#fef3c7] text-[#92400e] dark:bg-amber-500/15 dark:text-amber-300",
-  ponto: "bg-[#f59e0b]",
-}
-const NEUTRA = {
-  badge: "bg-muted text-muted-foreground",
-  ponto: "bg-muted-foreground",
-}
-
-/** Texto e cores por situação. `switch` exaustivo: o TS garante que nenhuma fica de fora. */
-export function estiloSituacao(s: Situacao) {
+/** Texto e tom por situação (tons compartilhados do `Selo`). Em aberto (ainda no prazo) é neutro
+ *  de propósito: a única cor quente é a de atraso, e "vence hoje" fica no aviso — senão laranja e
+ *  coral se confundem na barra e nos selos. `switch` exaustivo: nenhuma situação fica de fora. */
+export function estiloSituacao(s: Situacao): {
+  texto: string
+  tom: TomSelo
+  ponto: string
+} {
+  const com = (texto: string, tom: TomSelo) => ({
+    texto,
+    tom,
+    ponto: TONS_SELO[tom].ponto,
+  })
   switch (s) {
     case "atrasada":
-      return {
-        texto: "Atrasada",
-        badge: "bg-negative/10 text-negative-ink",
-        ponto: "bg-negative",
-      }
+      return com("Atrasada", "perigo")
     case "vence_hoje":
-      return { texto: "Vence hoje", ...HOJE }
+      return com("Vence hoje", "aviso")
     case "em_aberto":
     case "aberta":
-      return { texto: "Em aberto", ...ABERTA }
+      return com("Em aberto", "neutro")
     case "paga":
-      return { texto: "Paga", ...PAGA }
+      return com("Paga", "sucesso")
     case "pulada":
-      return { texto: "Pulada", ...NEUTRA }
+      return com("Pulada", "apagado")
     case "em_dia":
-      return { texto: "Sem vencimento no mês", ...NEUTRA }
+      return com("Sem vencimento no mês", "apagado")
     case "inativa":
-      return { texto: "Inativa", ...NEUTRA }
+      return com("Inativa", "apagado")
   }
 }

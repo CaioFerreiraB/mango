@@ -44,7 +44,15 @@ Sistema visual da SPA do mango. Os tokens vivem em `frontend/src/index.css` (Tai
   em **texto** usa `text-positive-ink`/`text-negative-ink` (mesmo matiz com contraste AA por tema) e
   texto **sobre** o preenchimento cheio usa `text-positive-foreground`/`text-negative-foreground`.
   Badge tem variantes `positive`/`negative` em pílula para deltas. Regra: valor nunca depende **só** de cor
-  (ver PRODUCT.md / a11y).
+  (ver PRODUCT.md / a11y). **Azul só junto do `+`:** `<Valor>` pinta positivo apenas com `sinal`
+  (fluxo, resultado, delta); saldo, limite, orçado, meta e restante são grandezas e ficam na cor do
+  texto. Negativo segue coral (o "-" já está no texto). `<Valor>` é indivisível
+  (`whitespace-nowrap`) salvo com `quebraMoeda`.
+- **Estados:** `--success`/`--warning` (+ `-ink`, mesma divisão fill × ink) para status e
+  progresso — pago/revisado/concluído, pendente/perto do limite. Nada de paleta crua do Tailwind
+  (`amber-500`, `red-600`…) fora de `components/ui`. A escala de consumo do orçamento é
+  sucesso → aviso (≥75%) → negativo (≥100%) e **não usa o accent** (o preset manga repetiria o
+  coral de "estourou").
 - **Charts (Apache ECharts):** todo gráfico passa pelo wrapper `components/common/echart.tsx` e
   pelas peças de `components/common/graficos-base.tsx` (`GraficoLinhas`, `GraficoBarras`, `Rosca`,
   `Sparkline`); cores vêm dos tokens resolvidos por `useTemaGrafico`/`useCores`
@@ -74,9 +82,42 @@ Sistema visual da SPA do mango. Os tokens vivem em `frontend/src/index.css` (Tai
 - **shadcn/ui** (Radix por baixo) como vocabulário único: `button`, `sidebar`, `breadcrumb`,
   `dropdown-menu`, `sheet`, `tooltip`, `separator`, `skeleton`, `avatar`, `input`. Mesma forma de
   botão e mesmos controles em todas as telas.
-- **Padrões próprios** em `components/common`: `EmptyState` (vazio que ensina) e `PlaceholderPage`
-  (telas ainda não implementadas). Todo componente interativo cobre default/hover/focus/active/
+- **Padrões próprios** em `components/common`: `PageHeader`, `CardDestaque`/`Kpi`/`GRADE_KPI`
+  (`kpi.tsx`), `Selo` (status), `EmptyState` (vazio que ensina, com `cena` opcional), `Mascote`,
+  `Valor` e `PlaceholderPage`. Todo componente interativo cobre default/hover/focus/active/
   disabled; carregamento usa **skeleton**, não spinner solto.
+
+## Anatomia de página
+
+Toda tela autenticada segue a mesma gramática — é o que faz o app parecer um produto só.
+
+1. **`PageHeader`** (`components/common/page-header.tsx`): `h1` + **uma** linha de descrição
+   (sempre presente) à esquerda, ações à direita — no máximo **uma** primária, o resto `outline`.
+   No celular as ações ficam na linha do título e viram ícone (`max-sm:sr-only` no rótulo); a
+   descrição desce para a largura toda. Exatamente um `h1` visível por tela (o 404 usa
+   `EmptyState tituloComo="h1"`). O Dashboard saúda pelo horário de Brasília.
+2. **Linha de controles** (período, mês, filtros, busca) logo abaixo; no celular atrás de
+   "Filtros" quando forem muitos.
+3. **Abas de seção da página** = `TabsList variant="line"` com `w-full justify-start border-b`
+   (sublinhado no accent). Troca de visão dentro de card/período = `ToggleGroup size="sm"
+   variant="outline"`. Configurações: abas viram `Select` abaixo de `md`.
+4. **Herói** = `CardDestaque` — **no máximo um por tela** (`data-destaque`), só onde existe um
+   número-âncora (saldo, patrimônio, alocado, total mensal, restante do orçamento, saldo das
+   divisões, total da fatura). Degradê escuro do accent, olho de privacidade quando a página tem
+   modo privacidade, `mascote` opcional (cena do contexto, ≤ 8rem, some em card estreito, recua do
+   olho). Sozinho na linha: `sm:max-w-md`; com KPIs: `col-span-2` numa grade de 2/4 colunas.
+5. **KPIs** = `Kpi` (rótulo, valor `text-lg→xl font-semibold tabular-nums` por container query,
+   detalhe opcional, visual em sangria opcional), sem ícone decorativo. Grade padrão `GRADE_KPI`
+   (auto-fit, mín. 10rem). Nada de card dentro de card (o antigo `StatChip` saiu).
+6. **Conteúdo**: cards/tabelas. Card clicável inteiro: `hover:border-primary/50` + pressão
+   `active:scale-[0.99]` (`motion-reduce` desliga); linha dentro de card: `hover:bg-muted/50`.
+7. **Status** = `Selo` com tons `neutro|apagado|info|sucesso|aviso|perigo`
+   (`components/common/selo-tons.ts`): a mesma palavra tem a mesma cara em qualquer tela
+   ("Em aberto" é sempre neutro, "Pendente" sempre aviso, "Atrasada" sempre perigo).
+8. **Vazio**: sempre `EmptyState`; tela sem dados **não** mostra herói/KPIs zerados antes do vazio.
+9. **Datas em tabela/lista**: `formatDataCurta` (`23 nov`, ano só fora do corrente) — nunca data
+   truncada com "…". Coluna inteira de "—" não aparece (Carteira oculta Instituição/Cotação vazias).
+10. **Detalhe** (conta, fatura): breadcrumb no desktop; botão "← Voltar" só no mobile.
 
 ## Illustrations
 
@@ -100,9 +141,13 @@ via `ilustracao(avatar, cena)` de `frontend/src/lib/illustrations.ts` — nunca 
 - **Padrões de posicionamento** (referências): lateral (mascote ancorado num lado, conteúdo no
   outro), inferior (na base do card), marca-d'água (versão translúcida ao fundo), celebração
   (junto a um resultado positivo), "em cena" (ambiente ilustrado envolvendo o dado). Elementos de
-  apoio: stat-chips sobrepondo painel tintado (`bg-primary/5..10`), icon chips
-  (`size-9 rounded-lg bg-primary/10 text-primary`), badges pílula `positive`/`negative` para
-  deltas, progress com trilha tintada (`bg-primary/10`).
+  apoio: icon chips (`size-9 rounded-lg bg-primary/10 text-primary`), badges pílula
+  `positive`/`negative` para deltas, progress com trilha tintada (`bg-primary/10`).
+- **Onde o mascote aparece (papel = momentos):** estados vazios (`EmptyState cena`), 404, chat,
+  telas públicas e **um por herói** (`CardDestaque mascote`) — reagindo ao estado quando faz
+  sentido (despesas fixas: `scared` com atraso, `thumbs-up` tudo pago; orçamento: `scared` ao
+  estourar). Nunca como peça central de 300px num card de dados. `bar-scene` tem fundo próprio:
+  não usar em vazio/herói.
 - **Sidebar: nunca** — ilustração não entra na sidebar; é território de navegação.
 - **Telas públicas** (setup, aceite de convite, login, recuperação) usam o `AuthShell`
   (`frontend/src/components/auth/auth-shell.tsx`): painel de marca tintado (`bg-primary/5`, grade de
@@ -122,7 +167,8 @@ via `ilustracao(avatar, cena)` de `frontend/src/lib/illustrations.ts` — nunca 
 
 ## Layout & Iconography
 
-- **App shell (desktop, ≥ `md`):** sidebar à esquerda (colapsável em ícones) + header com
+- **App shell (desktop, ≥ `md`):** sidebar à esquerda (colapsável em ícones; "Recolher menu" no
+  rodapé, junto do usuário — não disputa o topo com a navegação) + header com
   `SidebarTrigger`, breadcrumb (derivado do `handle` das rotas) e troca de tema no rodapé da
   sidebar. Conteúdo no `Outlet` do React Router. Responsividade **estrutural**
   (colapsar/empilhar), não tipografia fluida.
@@ -142,7 +188,7 @@ via `ilustracao(avatar, cena)` de `frontend/src/lib/illustrations.ts` — nunca 
   - **Filtros de página** no mobile ficam atrás de um botão "Filtros" (com o resumo do valor atual)
     que abre um drawer inferior — o topo da página não acumula controles. Botões de ação do topo
     viram só ícone (`max-sm:sr-only` no rótulo).
-  - **Card de destaque (saldo no dashboard, mobile e desktop):** degradê `--destaque-a →
+  - **Card de destaque (herói — ver §Anatomia de página):** degradê `--destaque-a →
     --destaque-b` (accent com L normalizada 0.44 → 0.29 via RCS), texto branco, ondas SVG
     decorativas atrás do conteúdo. Mede o próprio espaço (`@container`): valor reduz em ⅕ de linha.
     Um por tela, no máximo. O olho dele liga o **modo privacidade de todos os cards** do painel

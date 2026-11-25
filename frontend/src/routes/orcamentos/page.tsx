@@ -11,14 +11,14 @@ import {
 import { createElement, useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
 
-import { AnelProgresso } from "@/components/common/anel-progresso"
 import { EmptyState } from "@/components/common/empty-state"
+import { CardDestaque, Kpi } from "@/components/common/kpi"
+import { PageHeader } from "@/components/common/page-header"
 import { Valor } from "@/components/common/valor"
 import { ConfigurarOrcamentoPadraoDialog } from "@/components/orcamentos/configurar-orcamento-padrao-dialog"
 import { EditarMesDialog } from "@/components/orcamentos/editar-mes-dialog"
 import { TransacoesTabela } from "@/components/transacoes/transacoes-tabela"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -44,14 +44,15 @@ import {
 import { formatMesAno, hojeISO } from "@/lib/format"
 import { cn } from "@/lib/utils"
 
-// Escala de "calor" do consumo — a cor nunca é o único sinal (o % e a barra também informam).
-// Só se aplica à despesa: receita não tem conceito de "estourar".
+// Três degraus de consumo, nos tokens de estado do app: sucesso até 75%, aviso a partir daí,
+// negativo (coral da marca) ao estourar. A cor nunca é o único sinal (o % e a barra
+// também informam). Só se aplica à despesa: receita não tem conceito de "estourar".
+// Não usa o accent: com o preset manga ele quase repete o coral de "estourou".
 function corAlerta(alerta: number | null): string {
-  if (alerta === null) return "bg-primary"
-  if (alerta >= 100) return "bg-red-600"
-  if (alerta >= 90) return "bg-orange-600"
-  if (alerta >= 75) return "bg-orange-500"
-  return "bg-yellow-500"
+  if (alerta === null) return "bg-success"
+  if (alerta >= 100) return "bg-negative"
+  if (alerta >= 75) return "bg-warning"
+  return "bg-success"
 }
 
 /** Rótulos por aba: despesa tem teto (limite/gasto); receita e investimento são metas a atingir. */
@@ -131,49 +132,51 @@ export function OrcamentosPage() {
 
   return (
     <div className="space-y-6">
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold">Orçamento</h1>
-          <p className="text-sm text-muted-foreground">
-            Limite mensal por categoria, com alertas em 50%, 75%, 90% e 100%.
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center gap-1 rounded-md border p-0.5">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => mudarMes(-1)}
-              aria-label="Mês anterior"
-            >
-              <ChevronLeft className="size-4" />
-            </Button>
-            <span className="min-w-36 text-center text-sm font-medium first-letter:uppercase">
-              {rotuloMes}
-            </span>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => mudarMes(1)}
-              disabled={noMesAtual}
-              aria-label="Próximo mês"
-            >
-              <ChevronRight className="size-4" />
-            </Button>
-          </div>
-          <EditarMesDialog
-            itens={itens}
-            ano={ano}
-            mes={mes}
-            disabled={itens.length === 0}
-          />
-          {/* No mobile o botão reaparece embaixo da lista de categorias — aqui não cabe junto
-              do seletor de mês sem quebrar a linha de forma feia. */}
-          <div className="hidden sm:block">
-            <ConfigurarOrcamentoPadraoDialog />
-          </div>
-        </div>
-      </header>
+      <PageHeader
+        titulo="Orçamento"
+        descricao="Limite mensal por categoria, com alertas em 50%, 75%, 90% e 100%."
+        acoes={
+          <>
+            <EditarMesDialog
+              itens={itens}
+              ano={ano}
+              mes={mes}
+              disabled={itens.length === 0}
+            />
+            {/* No mobile o botão reaparece embaixo da lista de categorias. */}
+            <div className="hidden sm:block">
+              <ConfigurarOrcamentoPadraoDialog />
+            </div>
+          </>
+        }
+      />
+
+      {/* Controle da página: o mês vale para as três abas. */}
+      <div className="flex w-fit items-center gap-1 rounded-md border p-0.5">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => mudarMes(-1)}
+          aria-label="Mês anterior"
+        >
+          <ChevronLeft className="size-4" />
+        </Button>
+        <span
+          className="min-w-36 text-center text-sm font-medium first-letter:uppercase"
+          aria-live="polite"
+        >
+          {rotuloMes}
+        </span>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => mudarMes(1)}
+          disabled={noMesAtual}
+          aria-label="Próximo mês"
+        >
+          <ChevronRight className="size-4" />
+        </Button>
+      </div>
 
       {consumo.isError ? (
         <EmptyState title="Não foi possível carregar os orçamentos" />
@@ -219,7 +222,7 @@ export function OrcamentosPage() {
               mostra ao menos o "Não planejado". Investimentos (aportes − resgates) ficam
               fora de Despesas e Receitas. */}
           <Tabs defaultValue="despesa">
-            <TabsList>
+            <TabsList variant="line" className="w-full justify-start border-b">
               {TIPOS.map((t) => (
                 <TabsTrigger key={t} value={t}>
                   {ROTULOS[t].aba}
@@ -426,42 +429,50 @@ function ResumoSecao({
 }) {
   const despesa = tipo === "despesa"
   const r = ROTULOS[tipo]
+  const excedido = despesa && restanteTotal < 0
+  const pct = Math.max(0, percentualTotal)
   return (
-    <Card>
-      <CardContent className="flex flex-wrap items-center justify-between gap-6 py-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:gap-8">
-          <div>
-            <p className="text-sm text-muted-foreground">{r.orcadoTotal}</p>
-            <p className="text-lg font-semibold">
-              <Valor centavos={totalOrcado} neutro />
-            </p>
+    // Herói = o que resta (a pergunta do mês); orçado e realizado completam a linha como KPIs.
+    <div className="grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-4">
+      <CardDestaque
+        className="col-span-2"
+        // Rótulo muda ao estourar: o valor sai sem "-", então a cor não pode ser o único sinal.
+        titulo={excedido ? "Excedido no mês" : r.restanteTotal}
+        // Nas metas (receita/investimento), passar da meta zera o restante — o excedente não
+        // é "o que falta".
+        centavos={
+          despesa ? Math.abs(restanteTotal) : Math.max(restanteTotal, 0)
+        }
+        mascote={despesa ? (pct >= 100 ? "scared" : "money") : "goal"}
+      >
+        <div className="space-y-1.5">
+          <div
+            role="img"
+            aria-label={`${pct}% ${r.anel}`}
+            className="h-2 w-full overflow-hidden rounded-full bg-white/15"
+          >
+            <div
+              className={cn(
+                "h-full rounded-full",
+                excedido ? "bg-negative" : "bg-white"
+              )}
+              style={{ width: `${Math.min(pct, 100)}%` }}
+            />
           </div>
-          <div>
-            <p className="text-sm text-muted-foreground">{r.realizadoTotal}</p>
-            <p className="text-lg font-semibold">
-              <Valor centavos={totalRealizado} neutro />
-            </p>
-          </div>
-          <div>
-            {/* O valor sai sem "-" (ver abaixo); sem trocar o rótulo, "Restante R$ 2.313" em
-                vermelho dependia só da cor para dizer que estourou. */}
-            <p className="text-sm text-muted-foreground">
-              {despesa && restanteTotal < 0 ? "Excedido" : r.restanteTotal}
-            </p>
-            <p className="text-lg font-semibold">
-              {/* Nunca mostra "-": despesa mantém a cor do sinal real (vermelho se estourou),
-                  só sem o sinal de menos no texto. Nas metas (receita/investimento), passar
-                  da meta zera o restante — o excedente não é "o que falta". */}
-              <Valor
-                centavos={despesa ? restanteTotal : Math.max(restanteTotal, 0)}
-                absoluto={despesa}
-              />
-            </p>
-          </div>
+          <p className="text-xs text-white/80 tabular-nums">
+            {pct}% {r.anel}
+          </p>
         </div>
-        <AnelProgresso pct={percentualTotal} tamanho={96} rotulo={r.anel} />
-      </CardContent>
-    </Card>
+      </CardDestaque>
+      <Kpi
+        label={r.orcadoTotal}
+        valor={<Valor centavos={totalOrcado} neutro />}
+      />
+      <Kpi
+        label={r.realizadoTotal}
+        valor={<Valor centavos={totalRealizado} neutro />}
+      />
+    </div>
   )
 }
 

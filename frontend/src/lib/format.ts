@@ -65,6 +65,27 @@ export function formatDate(value: string | number | Date): string {
   return dateFmt.format(toDate(value))
 }
 
+const mesAbrev = new Intl.DateTimeFormat("pt-BR", {
+  month: "short",
+  timeZone: "UTC",
+})
+
+/** Data para coluna de tabela/lista: `23 nov` no ano corrente, `23 nov 2025` fora dele (fuso SP).
+ *  Cabe numa coluna estreita sem `…` — data cortada é data ambígua. */
+export function formatDataCurta(
+  value: string | number | Date,
+  hoje: string | number | Date = new Date()
+): string {
+  const [a, m, d] = diaCivilSP(value).split("-")
+  const ano = diaCivilSP(hoje).slice(0, 4)
+  // Dia civil já resolvido no fuso SP → meio-dia UTC só para nomear o mês ("nov." → "nov").
+  const mes = mesAbrev.format(
+    new Date(Date.UTC(Number(a), Number(m) - 1, Number(d), 12))
+  )
+  const base = `${Number(d)} ${mes.replace(".", "")}`
+  return a === ano ? base : `${base} ${a}`
+}
+
 // `en-CA` formata como `2026-03-01` — mesma forma do `<input type="date">` e do backend, então
 // duas saídas deste helper são comparáveis como string (ordem lexicográfica = ordem cronológica).
 const diaCivilFmt = new Intl.DateTimeFormat("en-CA", {

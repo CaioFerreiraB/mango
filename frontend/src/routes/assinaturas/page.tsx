@@ -9,9 +9,6 @@ import {
   Search,
   Sparkles,
   Trash2,
-  TrendingDown,
-  TrendingUp,
-  Users,
   X,
 } from "lucide-react"
 import { createElement, useId, useState } from "react"
@@ -19,10 +16,9 @@ import { toast } from "sonner"
 
 import { CategoriaSelect } from "@/components/transacoes/categoria-select"
 import { EmptyState } from "@/components/common/empty-state"
-import { StatChip } from "@/components/common/stat-chip"
+import { CardDestaque, Kpi } from "@/components/common/kpi"
+import { PageHeader } from "@/components/common/page-header"
 import { useIconeCategoria } from "@/lib/api/categoria-icones"
-import { useMe } from "@/lib/api/auth"
-import { ilustracao } from "@/lib/illustrations"
 import { Valor } from "@/components/common/valor"
 import {
   AlertDialog,
@@ -115,33 +111,32 @@ export function AssinaturasPage() {
 
   return (
     <div className="space-y-6">
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold">Assinaturas</h1>
-          <p className="text-sm text-muted-foreground">
-            Gastos recorrentes. As detectadas no sync vêm marcadas para você
-            confirmar.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <BuscarAssinaturasDialog />
-          <AssinaturaFormDialog
-            trigger={
-              <Button>
-                <Plus className="size-4" /> Nova assinatura
-              </Button>
-            }
-          />
-        </div>
-      </header>
+      <PageHeader
+        titulo="Assinaturas"
+        descricao="Gastos recorrentes. As detectadas no sync vêm marcadas para você confirmar."
+        acoes={
+          <>
+            <BuscarAssinaturasDialog />
+            <AssinaturaFormDialog
+              trigger={
+                <Button>
+                  <Plus className="size-4" aria-hidden />
+                  <span className="max-sm:sr-only">Nova assinatura</span>
+                </Button>
+              }
+            />
+          </>
+        }
+      />
 
-      {resumo.data ? (
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          <CardTotalMensal
+      {/* Sem nenhuma assinatura o resumo zerado só repetiria o vazio abaixo. */}
+      {resumo.data && lista.length > 0 ? (
+        <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-2">
+          <ResumoMensal
             total={resumo.data.total_mensal_centavos}
             qtdAtivas={valoresAtivas.length}
-            maior={valoresAtivas.length ? Math.max(...valoresAtivas) : 0}
-            menor={valoresAtivas.length ? Math.min(...valoresAtivas) : 0}
+            maior={valoresAtivas.length ? Math.max(...valoresAtivas) : null}
+            menor={valoresAtivas.length ? Math.min(...valoresAtivas) : null}
           />
           <Card>
             <CardHeader className="pb-0">
@@ -169,7 +164,7 @@ export function AssinaturasPage() {
         </div>
       ) : lista.length === 0 ? (
         <EmptyState
-          icon={Repeat}
+          cena="subscriptions"
           title="Nenhuma assinatura"
           description="Adicione as assinaturas vigentes ou rode um sync para detectá-las automaticamente."
         >
@@ -236,14 +231,14 @@ function AssinaturaRow({
     <>
       <Card
         className={cn(
-          "gap-0 overflow-hidden p-0",
+          "gap-0 overflow-hidden p-0 transition-[border-color,transform] duration-150 ease-out hover:border-primary/50 has-[button:active]:scale-[0.99] motion-reduce:has-[button:active]:scale-100",
           !assinatura.ativa && "opacity-60"
         )}
       >
         <button
           type="button"
           onClick={() => setAberto(true)}
-          className="flex w-full items-center gap-3 px-4 py-4 text-left transition-colors hover:bg-muted/50"
+          className="flex w-full items-center gap-3 px-4 py-4 text-left"
         >
           <span
             aria-hidden
@@ -584,9 +579,9 @@ function NomesTransacaoInput({
   )
 }
 
-/** Card do total mensal estimado: número + mascote grande sangrando no topo e, por baixo, os chips
- *  de fato (ativas / maior / menor) sobre painel tintado do accent (DESIGN.md §Illustrations). */
-function CardTotalMensal({
+/** Resumo do mês: herói com o total estimado (mascote do módulo em sangria) e, abaixo, os KPIs de
+ *  maior e menor assinatura ativa. */
+function ResumoMensal({
   total,
   qtdAtivas,
   maior,
@@ -594,73 +589,33 @@ function CardTotalMensal({
 }: {
   total: number
   qtdAtivas: number
-  maior: number
-  menor: number
+  maior: number | null
+  menor: number | null
 }) {
-  const me = useMe()
+  const sem = <span className="text-muted-foreground">—</span>
   return (
-    <Card className="relative gap-0 overflow-hidden py-0">
-      {/* decorativos → ilustração → dados (empilhamento de trás p/ frente) */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 bg-gradient-to-br from-primary/15 via-primary/5 to-transparent"
+    <div className="space-y-3 md:space-y-4">
+      <CardDestaque
+        titulo="Total mensal (estimado)"
+        centavos={total}
+        mascote="subscriptions"
+        rodape={
+          qtdAtivas === 1
+            ? "1 assinatura ativa"
+            : `${qtdAtivas} assinaturas ativas`
+        }
       />
-      <CardContent className="relative flex flex-col gap-4 p-4 sm:p-5">
-        {/* valor no topo */}
-        <div className="relative z-10">
-          <p className="text-sm font-medium text-muted-foreground">
-            Total mensal (estimado)
-          </p>
-          <Valor
-            centavos={total}
-            neutro
-            className="text-4xl font-bold md:text-5xl"
-          />
-        </div>
-        {/* mascote centralizado abaixo do valor */}
-        <div className="flex h-72 items-end justify-center">
-          <img
-            src={ilustracao(me.data?.avatar, "subscriptions")}
-            alt=""
-            className="pointer-events-none h-full max-w-full object-contain"
-          />
-        </div>
-        {/* chips na parte de baixo, largura total */}
-        <div className="grid grid-cols-3 gap-2 sm:gap-2.5">
-          <StatChip
-            icon={Users}
-            valor={
-              <span className="text-sm font-bold tabular-nums sm:text-lg">
-                {qtdAtivas}
-              </span>
-            }
-            rotulo="assinaturas ativas"
-          />
-          <StatChip
-            icon={TrendingUp}
-            valor={
-              <Valor
-                centavos={maior}
-                neutro
-                className="text-sm font-bold sm:text-lg"
-              />
-            }
-            rotulo="maior valor"
-          />
-          <StatChip
-            icon={TrendingDown}
-            valor={
-              <Valor
-                centavos={menor}
-                neutro
-                className="text-sm font-bold sm:text-lg"
-              />
-            }
-            rotulo="menor valor"
-          />
-        </div>
-      </CardContent>
-    </Card>
+      <div className="grid grid-cols-2 gap-3 md:gap-4">
+        <Kpi
+          label="Maior assinatura"
+          valor={maior != null ? <Valor centavos={maior} neutro /> : sem}
+        />
+        <Kpi
+          label="Menor assinatura"
+          valor={menor != null ? <Valor centavos={menor} neutro /> : sem}
+        />
+      </div>
+    </div>
   )
 }
 
@@ -825,7 +780,8 @@ function BuscarAssinaturasDialog() {
     <Dialog open={aberto} onOpenChange={abrir}>
       <DialogTrigger asChild>
         <Button variant="outline">
-          <Sparkles className="size-4" /> Buscar assinaturas
+          <Sparkles className="size-4" aria-hidden />
+          <span className="max-sm:sr-only">Buscar assinaturas</span>
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-2xl">

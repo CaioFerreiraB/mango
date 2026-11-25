@@ -3,6 +3,7 @@ import { useState } from "react"
 import { useSearchParams } from "react-router"
 
 import { EmptyState } from "@/components/common/empty-state"
+import { PageHeader } from "@/components/common/page-header"
 import { CategoriaSelect } from "@/components/transacoes/categoria-select"
 import { TransacoesTabela } from "@/components/transacoes/transacoes-tabela"
 import { SyncButton } from "@/components/sync-button"
@@ -153,11 +154,12 @@ export function TransacoesPage() {
   const paginaAtual = page + 1
 
   return (
-    <div className="space-y-4">
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-xl font-semibold">Transações</h1>
-        <SyncButton />
-      </header>
+    <div className="space-y-6">
+      <PageHeader
+        titulo="Transações"
+        descricao="Tudo o que o Open Finance importou. Revise, categorize e marque transferências."
+        acoes={<SyncButton />}
+      />
 
       <div className="space-y-2">
         <div className="flex items-center gap-3">
