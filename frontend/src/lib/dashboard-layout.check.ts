@@ -30,7 +30,8 @@ assert.equal(layoutPadrao().length, CATALOGO.length)
     l.map((w) => w.id),
     [
       "fluxo",
-      "patrimonio", // depois de fluxo
+      "calendario", // depois de fluxo
+      "patrimonio", // depois de calendario
       "kpi-saldo",
       "kpi-entradas", // depois de kpi-saldo
       "kpi-saidas",
@@ -40,7 +41,7 @@ assert.equal(layoutPadrao().length, CATALOGO.length)
     ]
   )
   assert.deepEqual(l[0], { id: "fluxo", largura: 30, visivel: false })
-  assert.deepEqual(l[2], { id: "kpi-saldo", largura: 20, visivel: true })
+  assert.deepEqual(l[3], { id: "kpi-saldo", largura: 20, visivel: true })
   assert.equal(l.length, CATALOGO.length)
   assert.ok(!l.some((w) => w.id === "widget-removido" || w.id === "categorias"))
   const novo = l.find((w) => w.id === "patrimonio")

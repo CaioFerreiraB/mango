@@ -279,7 +279,7 @@ function VarPct({
     <span
       className={cn(
         "inline-flex flex-wrap items-center gap-x-0.5 font-medium tabular-nums",
-        sobe ? "text-positive" : "text-negative"
+        sobe ? "text-positive-ink" : "text-negative-ink"
       )}
     >
       <Icone className="size-3.5" aria-hidden />
@@ -353,7 +353,7 @@ function Kpis({
             <span
               className={cn(
                 "inline-flex flex-wrap items-center gap-x-1 font-medium",
-                sobe ? "text-positive" : "text-negative"
+                sobe ? "text-positive-ink" : "text-negative-ink"
               )}
             >
               <Seta className="size-3.5" aria-hidden />
@@ -1000,7 +1000,7 @@ function InsightsBar({
             className="flex gap-2.5 rounded-lg border bg-muted/30 p-3"
           >
             <CircleCheck
-              className="mt-0.5 size-4 shrink-0 text-positive"
+              className="mt-0.5 size-4 shrink-0 text-positive-ink"
               aria-hidden
             />
             <p className="text-sm">{texto}</p>

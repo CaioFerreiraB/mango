@@ -20,8 +20,8 @@ const badgeVariants = cva(
           "hover:bg-muted hover:text-muted-foreground dark:hover:bg-muted/50",
         link: "text-primary underline-offset-4 hover:underline",
         // Deltas financeiros em pílula (DESIGN.md §Color: --positive/--negative).
-        positive: "bg-positive/10 text-positive dark:bg-positive/20",
-        negative: "bg-negative/10 text-negative dark:bg-negative/20",
+        positive: "bg-positive/10 text-positive-ink dark:bg-positive/20",
+        negative: "bg-negative/10 text-negative-ink dark:bg-negative/20",
       },
     },
     defaultVariants: {

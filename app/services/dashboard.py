@@ -774,17 +774,16 @@ class FiltroLancamentos:
 def lancamentos_da_analise(
     db: Session,
     usuario_id: int,
-    natureza: str,
+    natureza: str | None,
     periodo: tuple[date, date],
     filtro: FiltroLancamentos,
     visao: Visao = VISAO_PADRAO,
 ) -> list[Lancamento]:
     """Drill-down de um pedaço da análise — o mesmo recorte de `montar_analise`, então a lista
-    soma exatamente o valor do gráfico. Mais recentes primeiro."""
+    soma exatamente o valor do gráfico. `natureza=None` não filtra por natureza (todos os
+    lançamentos do período na visão). Mais recentes primeiro."""
     ini, fim_excl = limites_sp(*periodo)
-    lancs = _da_natureza(
-        lancamentos_do_periodo(db, usuario_id, ini, fim_excl, visao),
-        natureza,
-        categorias_investimento(db, usuario_id),
-    )
+    lancs = lancamentos_do_periodo(db, usuario_id, ini, fim_excl, visao)
+    if natureza is not None:
+        lancs = _da_natureza(lancs, natureza, categorias_investimento(db, usuario_id))
     return sorted((x for x in lancs if filtro.aceita(x)), key=lambda x: x.data, reverse=True)

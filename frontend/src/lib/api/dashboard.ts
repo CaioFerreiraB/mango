@@ -138,7 +138,8 @@ export function useAnalise(
 
 /** Pedaço da análise aberto num gráfico (categoria, contraparte, meio e/ou conta). */
 export type FiltroAnalise = {
-  natureza: Natureza
+  /** Sem natureza: todos os lançamentos do período na visão (calendário do dashboard). */
+  natureza?: Natureza
   titulo: string
   categoria_id?: string
   contraparte?: string

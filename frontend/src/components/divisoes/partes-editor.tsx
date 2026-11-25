@@ -126,7 +126,7 @@ export function PartesEditor({
           role="status"
           className={cn(
             "tabular-nums",
-            diferenca === 0 ? "text-muted-foreground" : "text-negative"
+            diferenca === 0 ? "text-muted-foreground" : "text-negative-ink"
           )}
         >
           {status}

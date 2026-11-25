@@ -42,8 +42,8 @@ import { cn } from "@/lib/utils"
 /** Avatar de categoria: fundo tingido suave + ícone colorido, por tipo (entrada/saída). */
 function corTile(type: string) {
   return type === "CREDIT"
-    ? "bg-positive/15 text-positive"
-    : "bg-negative/15 text-negative"
+    ? "bg-positive/15 text-positive-ink"
+    : "bg-negative/15 text-negative-ink"
 }
 
 /** Marcador de transação dividida: a parte do usuário é o que conta no orçamento. */

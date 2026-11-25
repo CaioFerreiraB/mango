@@ -803,7 +803,9 @@ function PosicaoItemMobile({
           <span
             className={cn(
               "text-xs tabular-nums",
-              p.resultado_centavos < 0 ? "text-negative" : "text-positive"
+              p.resultado_centavos < 0
+                ? "text-negative-ink"
+                : "text-positive-ink"
             )}
           >
             {pctTexto(p.resultado_pct)}
@@ -919,7 +921,9 @@ function PosicaoLinha({
             {p.resultado_pct != null ? (
               <span
                 className={`text-xs ${
-                  p.resultado_centavos < 0 ? "text-negative" : "text-positive"
+                  p.resultado_centavos < 0
+                    ? "text-negative-ink"
+                    : "text-positive-ink"
                 }`}
               >
                 {pctTexto(p.resultado_pct)}
