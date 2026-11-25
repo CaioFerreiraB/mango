@@ -25,6 +25,7 @@ import { PainelCartoes } from "@/components/dashboard/painel-cartoes"
 import {
   TransacoesAnaliseDialog,
   TransacoesOrcamentoDialog,
+  type ConsumoLinha,
 } from "@/components/dashboard/transacoes-dialog"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -65,7 +66,6 @@ const DIAS_CURTOS = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"]
 const diaMes = (iso: string) => formatBucketLabel(iso, "diaria")
 const mesAno = (yyyyMm: string) => formatBucketLabel(`${yyyyMm}-01`, "mensal")
 const pct = (v: number) => `${Math.round(v * 100)}%`
-const curto = (s: string) => (s.length > 14 ? `${s.slice(0, 13)}…` : s)
 
 function variacao(atual: number, anterior: number): number | null {
   return anterior === 0 ? null : (atual - anterior) / Math.abs(anterior)
@@ -427,12 +427,56 @@ const SERIES_PREVISTO = [
   { chave: "previsto", nome: "Previsto", cor: "var(--chart-cat-outras)" },
   { chave: "recebido", nome: "Recebido", cor: "var(--positive)" },
 ]
-const SERIES_ORCAMENTO = [
-  { chave: "orcado", nome: "Orçado", cor: "var(--chart-cat-outras)" },
-  { chave: "gasto", nome: "Gasto", cor: "var(--chart-cat-1)" },
+// --- Despesas × orçamento (mês do fim do período) ----------------------------------------------
+
+/* Heatmap de uso do orçamento: azul padrão (--positive) cheio até 25%, desbotando até 100%;
+   acima disso, laranja claro → o laranja de despesa (--negative) cheio no pior caso. Faixas
+   discretas (legenda legível); mistura ≤ 60% mantém texto --foreground em AA nos dois temas
+   (≥ 5.1:1), e os degraus cheios usam o --*-foreground da cor (4.69:1 no azul, 5.5:1 no laranja). */
+const FAIXAS_USO = [
+  {
+    ate: 0.25,
+    rotulo: "até 25%",
+    fundo: "var(--positive)",
+    texto: "text-positive-foreground",
+  },
+  {
+    ate: 0.5,
+    rotulo: "até 50%",
+    fundo: "color-mix(in oklab, var(--positive) 60%, var(--card))",
+  },
+  {
+    ate: 0.75,
+    rotulo: "até 75%",
+    fundo: "color-mix(in oklab, var(--positive) 38%, var(--card))",
+  },
+  {
+    ate: 1,
+    rotulo: "até 100%",
+    fundo: "color-mix(in oklab, var(--positive) 18%, var(--card))",
+  },
+  {
+    ate: 1.1,
+    rotulo: "até 110%",
+    fundo: "color-mix(in oklab, var(--negative) 28%, var(--card))",
+  },
+  {
+    ate: 1.3,
+    rotulo: "até 130%",
+    fundo: "color-mix(in oklab, var(--negative) 55%, var(--card))",
+  },
+  {
+    ate: Infinity,
+    rotulo: "acima de 130%",
+    fundo: "var(--negative)",
+    texto: "text-negative-foreground",
+  },
 ]
 
-// --- Despesas × orçamento (mês do fim do período) ----------------------------------------------
+function faixaUso(realizado: number, limite: number) {
+  const uso = limite > 0 ? realizado / limite : realizado > 0 ? Infinity : 0
+  return FAIXAS_USO.find((f) => uso <= f.ate)!
+}
 
 function DespesasOrcamento({
   fim,
@@ -443,49 +487,16 @@ function DespesasOrcamento({
 }) {
   const [ano, mes] = fim.split("-").map(Number)
   const consumo = useConsumoOrcamentos(ano, mes)
-  const [alvo, setAlvo] = useState<(AlvoDrilldown & { titulo: string }) | null>(
-    null
-  )
+  const [alvo, setAlvo] = useState<
+    (AlvoDrilldown & { titulo: string; consumo: ConsumoLinha }) | null
+  >(null)
+  // Mais usado primeiro: o que pede atenção abre a grade.
   const itens = useMemo(
     () =>
-      (consumo.data?.itens ?? []).filter(
-        (i) => i.tipo === "despesa" && !i.suprimido
-      ),
+      (consumo.data?.itens ?? [])
+        .filter((i) => i.tipo === "despesa" && !i.suprimido)
+        .sort((a, b) => b.percentual - a.percentual),
     [consumo.data]
-  )
-  const dados = useMemo(
-    () =>
-      itens.map((i) => ({
-        nome: rotulo.get(i.categoria_id) ?? i.categoria_id,
-        orcado: i.limite_centavos,
-        gasto: i.realizado_centavos,
-      })),
-    [itens, rotulo]
-  )
-  const destaque = useMemo(
-    () => ({
-      serie: 1,
-      cor: "var(--negative)",
-      quando: (i: number) =>
-        itens[i].realizado_centavos > itens[i].limite_centavos,
-    }),
-    [itens]
-  )
-  const detalhe = useCallback(
-    (i: number) => {
-      const it = itens[i]
-      if (!it) return ""
-      const sobra = it.limite_centavos - it.realizado_centavos
-      return (
-        nota(
-          sobra >= 0
-            ? `Restam ${formatBRL(sobra)} · ${it.percentual}% utilizado`
-            : `▲ Estourou ${formatBRL(-sobra)} · ${it.percentual}% utilizado`,
-          true
-        ) + nota("Clique para ver as transações")
-      )
-    },
-    [itens]
   )
   const nomeMes = new Date(ano, mes - 1, 1).toLocaleDateString("pt-BR", {
     month: "long",
@@ -513,65 +524,80 @@ function DespesasOrcamento({
             </Button>
           </div>
         ) : (
-          <div className="space-y-2">
-            <GraficoBarrasAgrupadas
-              dados={dados}
-              x="nome"
-              series={SERIES_ORCAMENTO}
-              destaque={destaque}
-              formatarX={curto}
-              formatarY={eixoBRL}
-              formatarValor={formatBRL}
-              detalheTooltip={detalhe}
-              onClique={(i) =>
-                setAlvo({
-                  tipo: "despesa",
-                  categoriaId: itens[i].categoria_id,
-                  titulo: dados[i].nome,
-                })
-              }
-              ariaLabel={`Gasto e orçamento por categoria em ${nomeMes}`}
-            />
-            <p className="text-xs text-muted-foreground">
-              Em vermelho, categorias acima do limite. Escolha uma categoria (no
-              gráfico ou abaixo) para ver as transações.
-            </p>
-            {/* Mesmo drill-down das barras, por teclado/leitor de tela — e a leitura em tabela. */}
+          <div className="space-y-3">
             <ul
-              className="flex flex-wrap gap-1.5"
-              aria-label="Categorias do orçamento"
+              className="grid grid-cols-[repeat(auto-fill,minmax(6rem,1fr))] gap-1.5"
+              aria-label={`Uso do orçamento por categoria em ${nomeMes}`}
             >
-              {itens.map((it, i) => (
-                <li key={it.orcamento_mensal_id}>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className={cn(
-                      "h-auto py-1 text-xs font-normal",
-                      it.realizado_centavos > it.limite_centavos &&
-                        "border-destructive/50"
-                    )}
-                    onClick={() =>
-                      setAlvo({
-                        tipo: "despesa",
-                        categoriaId: it.categoria_id,
-                        titulo: dados[i].nome,
-                      })
-                    }
-                  >
-                    <span className="max-w-[14ch] truncate">
-                      {dados[i].nome}
-                    </span>
-                    <span className="text-muted-foreground tabular-nums">
-                      {it.percentual}%
-                      {it.realizado_centavos > it.limite_centavos
-                        ? " · acima"
-                        : ""}
-                    </span>
-                  </Button>
-                </li>
-              ))}
+              {itens.map((it) => {
+                const nome = rotulo.get(it.categoria_id) ?? it.categoria_id
+                const faixa = faixaUso(
+                  it.realizado_centavos,
+                  it.limite_centavos
+                )
+                const sobra = it.limite_centavos - it.realizado_centavos
+                const resumo =
+                  sobra >= 0
+                    ? `restam ${formatBRL(sobra)}`
+                    : `estourou ${formatBRL(-sobra)}`
+                return (
+                  <li key={it.orcamento_mensal_id}>
+                    <button
+                      type="button"
+                      title={`${nome} · ${formatBRL(it.realizado_centavos)} de ${formatBRL(it.limite_centavos)} · ${resumo}`}
+                      aria-label={`${nome}: ${it.percentual}% usado, ${formatBRL(it.realizado_centavos)} de ${formatBRL(it.limite_centavos)}, ${resumo}. Ver transações`}
+                      style={{ background: faixa.fundo }}
+                      className={cn(
+                        "flex aspect-square w-full flex-col justify-between rounded-md p-2.5 text-left transition-[filter] outline-none hover:brightness-95 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card dark:hover:brightness-110",
+                        faixa.texto ?? "text-foreground"
+                      )}
+                      onClick={() =>
+                        setAlvo({
+                          tipo: "despesa",
+                          categoriaId: it.categoria_id,
+                          titulo: nome,
+                          consumo: {
+                            realizado: it.realizado_centavos,
+                            limite: it.limite_centavos,
+                            percentual: it.percentual,
+                          },
+                        })
+                      }
+                    >
+                      <span className="line-clamp-2 text-xs font-medium break-words">
+                        {nome}
+                      </span>
+                      <span>
+                        <span className="block text-xl font-semibold tabular-nums">
+                          {it.percentual}%
+                        </span>
+                        <span className="block truncate text-[11px] tabular-nums opacity-80">
+                          {formatBRL(it.realizado_centavos)}
+                        </span>
+                      </span>
+                    </button>
+                  </li>
+                )
+              })}
             </ul>
+            <div
+              className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground"
+              aria-hidden
+            >
+              {FAIXAS_USO.map((f) => (
+                <span key={f.rotulo} className="flex items-center gap-1">
+                  <span
+                    className="size-3 rounded-sm ring-1 ring-border"
+                    style={{ background: f.fundo }}
+                  />
+                  {f.rotulo}
+                </span>
+              ))}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Azul: dentro do limite · laranja: acima dele. Escolha uma
+              categoria para ver as transações.
+            </p>
           </div>
         )}
       </Estado>
@@ -580,6 +606,7 @@ function DespesasOrcamento({
         mes={mes}
         alvo={alvo}
         titulo={alvo?.titulo ?? ""}
+        consumo={alvo?.consumo}
         onFechar={() => setAlvo(null)}
       />
     </CardGrafico>

@@ -177,7 +177,11 @@ function DivisaoVisao({
                     {p.usuario_id === me.data?.id ? `Você (${p.nome})` : p.nome}
                   </span>
                   <div className="text-right text-sm">
-                    <p className={pagou ? "text-positive" : "text-negative"}>
+                    <p
+                      className={
+                        pagou ? "text-positive-ink" : "text-negative-ink"
+                      }
+                    >
                       {pagou ? "Pagou" : "Deve"}
                       {p.percentual_bp != null
                         ? ` · ${(p.percentual_bp / 100).toLocaleString("pt-BR")}%`

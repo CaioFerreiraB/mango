@@ -33,6 +33,7 @@ import { toast } from "sonner"
 
 import { EmptyState } from "@/components/common/empty-state"
 import { AbaDespesas, AbaReceitas } from "@/components/dashboard/abas-analise"
+import { CalendarioCalor } from "@/components/dashboard/calendario-calor"
 import {
   CardGrafico,
   ErroCard,
@@ -463,6 +464,7 @@ export function DashboardPage() {
         )}
       </CardGrafico>
     ),
+    calendario: () => <CalendarioCalor fim={fim} visao={visao} />,
     patrimonio: () => (
       <CardGrafico
         titulo="Evolução patrimonial"

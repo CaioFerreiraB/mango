@@ -544,7 +544,7 @@ function IndicadoresFII({
             <span
               className={cn(
                 "inline-flex items-center gap-0.5 text-xs font-medium",
-                variacaoPct >= 0 ? "text-positive" : "text-negative"
+                variacaoPct >= 0 ? "text-positive-ink" : "text-negative-ink"
               )}
             >
               {variacaoPct >= 0 ? (
@@ -623,7 +623,7 @@ function IndicadoresTesouro({
         {p.resultado_pct != null ? (
           <span
             className={cn(
-              p.resultado_pct >= 0 ? "text-positive" : "text-negative"
+              p.resultado_pct >= 0 ? "text-positive-ink" : "text-negative-ink"
             )}
           >
             {pctTexto(p.resultado_pct)}
@@ -1045,7 +1045,7 @@ function RetornoItem({ rotulo, pct }: { rotulo: string; pct: number | null }) {
         <p
           className={cn(
             "inline-flex items-center gap-1 text-sm font-semibold tabular-nums",
-            pct >= 0 ? "text-positive" : "text-negative"
+            pct >= 0 ? "text-positive-ink" : "text-negative-ink"
           )}
         >
           {pct >= 0 ? (
@@ -1367,7 +1367,7 @@ function RetornoTesouro({
         <p
           className={cn(
             "mt-1 text-lg font-semibold tabular-nums",
-            pct >= 0 ? "text-positive" : "text-negative"
+            pct >= 0 ? "text-positive-ink" : "text-negative-ink"
           )}
         >
           {pctTexto(pct)}

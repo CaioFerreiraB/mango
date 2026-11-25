@@ -32,9 +32,9 @@ export function Valor({
     oculto || neutro
       ? undefined
       : centavos < 0
-        ? "text-negative"
+        ? "text-negative-ink"
         : centavos > 0
-          ? "text-positive"
+          ? "text-positive-ink"
           : "text-muted-foreground"
   const exibido = absoluto ? Math.abs(centavos) : centavos
   const texto = oculto

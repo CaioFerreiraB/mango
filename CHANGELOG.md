@@ -10,7 +10,21 @@ ainda está se assentando. Cada versão publicada tem uma imagem correspondente 
 
 ## [Não publicado]
 
+### Adicionado
+
+- **Calendário do mês no dashboard:** cada dia colorido numa escala contínua do laranja (mais
+  negativo) ao azul (mais positivo), com filtro Tudo / Despesas / Receitas / Investimentos, navegação
+  entre meses, botão "Hoje" e um painel com receitas, despesas, investido e resultado do dia ou do
+  mês, que abre a lista de lançamentos. Dias com aporte ou resgate ganham uma marca.
+
 ### Alterado
+
+- **Despesas × orçamento** (aba Despesas do dashboard) virou um mapa de calor: um quadrado por
+  categoria, azul enquanto está dentro do limite e laranja quando passa dele, mais forte quanto mais
+  estourou. Ao abrir uma categoria, o diálogo mostra em destaque quanto foi gasto, o orçamento e
+  quanto resta ou passou.
+- As cores de positivo e negativo voltam ao azul `#4268F1` e ao laranja `#F36846` em gráficos,
+  barras e destaques; os valores em texto continuam num tom do mesmo matiz que passa no contraste AA.
 
 - Dependências atualizadas: FastAPI 0.165, SQLAlchemy 2.1, Alembic 1.20, uvicorn 0.54, psycopg 3.3.9,
   React 19.3, Vite 8.3, React Router 8 e o restante dos minor/patch; actions do CI e do release em
