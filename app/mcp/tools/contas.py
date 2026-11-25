@@ -288,7 +288,8 @@ async def vincular_objetivo(
     objetivo: Annotated[NomeOuId | None, Field(description="Id ou título; null desvincula")],
 ) -> CallToolResult:
     """Vincula (ou desvincula, com objetivo=null) uma conta ou investimento a um objetivo — o
-    saldo dele passa a contar como guardado para o objetivo. Investimento de renda fixa agrupado
+    saldo da conta (ou o valor líquido do investimento, após IR/IOF) passa a contar como guardado
+    para o objetivo. Investimento de renda fixa agrupado
     num ativo é vinculado inteiro: todas as compras do ativo, inclusive aportes futuros."""
     objetivo_id = await resolver_objetivo(ctx, objetivo) if objetivo is not None else None
     caminho = f"/contas/{item_id}" if tipo == "conta" else f"/investimentos/{item_id}"

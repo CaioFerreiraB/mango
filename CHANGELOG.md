@@ -10,6 +10,18 @@ ainda está se assentando. Cada versão publicada tem uma imagem correspondente 
 
 ## [Não publicado]
 
+### Adicionado
+
+- **Objetivos:** dois cards no topo da página: **Alocado em objetivos** (total guardado e quanto
+  das metas já foi alcançado no conjunto) e **Investido sem objetivo** (o que está investido sem
+  vínculo, com a fatia sobre o total investido). Os objetivos passam a ficar 4 por linha no
+  desktop (1 no celular).
+
+### Alterado
+
+- **Objetivos:** investimentos vinculados contam pelo **valor líquido** (após IR e IOF), não mais
+  pelo saldo bruto. O valor bruto continua visível no detalhe do objetivo, como informação.
+
 ## [0.11.0] — 2026-11-25
 
 ### Adicionado

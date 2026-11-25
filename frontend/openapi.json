@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "mango",
-    "version": "0.10.0"
+    "version": "0.11.0"
   },
   "paths": {
     "/health": {
@@ -14358,6 +14358,17 @@
           "saldo_centavos": {
             "type": "integer",
             "title": "Saldo Centavos"
+          },
+          "bruto_centavos": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bruto Centavos"
           }
         },
         "type": "object",

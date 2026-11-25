@@ -70,15 +70,15 @@ def _eh_provento(t: InvestimentoTransacao) -> bool:
     return tipo == "INTEREST" or t.movement_type == "CREDIT"
 
 
-def _valor(inv: Investimento) -> int:
+def valor_bruto(inv: Investimento) -> int:
     """Valor de referência: bruto atual (`amount`), fallback `balance`."""
     return inv.amount_centavos if inv.amount_centavos is not None else inv.saldo_centavos
 
 
-def _liquido(inv: Investimento) -> int:
+def valor_liquido(inv: Investimento) -> int:
     """Valor de resgate: bruto atual menos os impostos que o Pluggy informa (IR + IOF).
     Renda variável não traz impostos (nulos) → líquido = bruto."""
-    return _valor(inv) - (inv.taxes_centavos or 0) - (inv.taxes2_centavos or 0)
+    return valor_bruto(inv) - (inv.taxes_centavos or 0) - (inv.taxes2_centavos or 0)
 
 
 def _resultado(inv: Investimento) -> int | None:
@@ -236,7 +236,7 @@ def resumo_carteira(db: Session, usuario_id: int) -> CarteiraResumo:
     insts = _instituicao_por_item(db, usuario_id)
 
     analise, incompletos = _analisar_custos(db, invs)
-    total = sum(_valor(i) for i in invs)
+    total = sum(valor_bruto(i) for i in invs)
     investidos = [v for v in (_investido(i, analise) for i in invs) if v is not None]
     resultados = [r for r in (_resultado_c(i, analise) for i in invs) if r is not None]
     investido = sum(investidos) if investidos else None
@@ -250,7 +250,7 @@ def resumo_carteira(db: Session, usuario_id: int) -> CarteiraResumo:
     outros = sum(1 for i in invs if i.type not in RENDA_VARIAVEL and i.type not in RENDA_FIXA)
     totais = CarteiraTotais(
         valor_centavos=total,
-        liquido_centavos=sum(_liquido(i) for i in invs),
+        liquido_centavos=sum(valor_liquido(i) for i in invs),
         investido_centavos=investido,
         resultado_centavos=resultado,
         resultado_pct=_pct(resultado, investido) if resultado is not None else None,
@@ -260,7 +260,7 @@ def resumo_carteira(db: Session, usuario_id: int) -> CarteiraResumo:
     aloc: dict[str, int] = {}
     for i in invs:
         chave = i.subtype or i.type
-        aloc[chave] = aloc.get(chave, 0) + _valor(i)
+        aloc[chave] = aloc.get(chave, 0) + valor_bruto(i)
     alocacao = [
         CarteiraAlocacao(tipo=t, valor_centavos=v, pct=_pct(v, total) or 0.0)
         for t, v in sorted(aloc.items(), key=lambda kv: -kv[1])
@@ -294,7 +294,7 @@ def resumo_carteira(db: Session, usuario_id: int) -> CarteiraResumo:
         (
             CarteiraGrupo(
                 type=tipo,
-                valor_centavos=sum(_valor(g) for g in itens),
+                valor_centavos=sum(valor_bruto(g) for g in itens),
                 itens=sorted((_item(g) for g in itens), key=lambda x: -x.valor_centavos),
             )
             for tipo, itens in por_tipo.items()
@@ -384,7 +384,7 @@ def _posicoes(
             )
         )
     for i in outros:
-        valor = _valor(i)
+        valor = valor_bruto(i)
         resultado = _resultado(i)
         linhas.append(
             CarteiraPosicao(
@@ -427,7 +427,7 @@ def _ativo_rv(
     pares = [r for r in (_custo_qtd(g, analise) for g in grupo) if r is not None]
     investido = sum(c for c, _ in pares) if pares else None
     qtd_base = sum((q for _, q in pares), Decimal(0))
-    valor = sum(_valor(g) for g in grupo)
+    valor = sum(valor_bruto(g) for g in grupo)
     valorizacao = valor - investido if investido is not None else None
     return CarteiraAtivoRV(
         code=code,
@@ -453,7 +453,7 @@ def _ativo_rf(
         g.amount_original_centavos for g in grupo if g.amount_original_centavos is not None
     ]
     investido = sum(investidos) if investidos else None
-    valor = sum(_valor(g) for g in grupo)
+    valor = sum(valor_bruto(g) for g in grupo)
     resultados = [r for r in (_resultado(g) for g in grupo) if r is not None]
     resultado = sum(resultados) if resultados else None
     nome = (nomes_ativo.get(ativo_id) if ativo_id is not None else None) or grupo[0].nome
@@ -477,7 +477,7 @@ def _item(inv: Investimento) -> CarteiraItem:
         type=inv.type,
         subtype=inv.subtype,
         code=inv.code,
-        valor_centavos=_valor(inv),
+        valor_centavos=valor_bruto(inv),
         investido_centavos=inv.amount_original_centavos,
         resultado_centavos=resultado,
         resultado_pct=(
@@ -658,7 +658,7 @@ def proventos_posicao(
     total_isento = sum(
         t.amount_centavos for t in proventos if (t.type or "").upper() in PROVENTO_ISENTO
     )
-    valor_ref = sum(_valor(i) for i in invs)
+    valor_ref = sum(valor_bruto(i) for i in invs)
     return ProventosFII(
         investimento_id=ids[0],
         inicio=inicio,
@@ -916,7 +916,7 @@ def serie_carteira(
     investido_completo = all(
         custo[i.id] is not None and i.id not in incompletos
         for i in invs
-        if _valor(i) > 0 or i.id in com_valor_na_janela
+        if valor_bruto(i) > 0 or i.id in com_valor_na_janela
     )
     if aplicado_por_dia:
         # Renda fixa: linha "aplicado" reconstruída dia-a-dia (aportes − resgates), forward-fill nos

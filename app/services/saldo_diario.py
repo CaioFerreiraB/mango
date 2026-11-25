@@ -49,7 +49,7 @@ def registrar_snapshot_investimento(db: Session, inv: Investimento) -> None:
     reconstrução retroativa (a Pluggy não dá cotação histórica). Idempotente; sem commit."""
     hoje = hoje_sp()
     valor = inv.amount_centavos if inv.amount_centavos is not None else inv.saldo_centavos
-    # Mesma regra de `investimento._liquido`: bruto − IR − IOF (renda variável: impostos nulos).
+    # Regra de `investimento.valor_liquido`: bruto − IR − IOF (renda variável: impostos nulos).
     liquido = valor - (inv.taxes_centavos or 0) - (inv.taxes2_centavos or 0)
     existente = db.scalars(
         select(InvestimentoSaldoDiario).where(
