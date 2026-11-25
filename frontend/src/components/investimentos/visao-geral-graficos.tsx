@@ -45,8 +45,8 @@ import {
 import { retornoMensal } from "@/lib/tesouro"
 import { cn } from "@/lib/utils"
 
-// Gráficos da Visão Geral de investimentos. Rentabilidade mês a mês e Aportes × valorização leem a
-// MESMA série de 5 anos (mesma chave de query → uma requisição só).
+// Gráficos da Visão Geral de investimentos. Rentabilidade mês a mês lê a série de 5 anos; Aportes ×
+// valorização pede só os 24 meses que mostra (a completude do custo vale para essa janela).
 
 const MESES_SERIE = 60
 const mesCurto = (mes: string) => formatBucketLabel(`${mes}-01`, "mensal")
@@ -146,15 +146,25 @@ export function ProventosPorMes({
 
 // --- aportes × valorização ---------------------------------------------------------------------
 
+/** Meses exibidos no Aportes × valorização (o corrente incluso). */
+const MESES_APORTES = 24
+
 export function AportesValorizacao({ oculto }: { oculto: boolean }) {
-  const serie = useSerieLonga()
+  // Janela própria = exatamente os meses exibidos: `investido_completo` é avaliado nesse período,
+  // então uma posição sem custo resgatada antes dele não esconde o gráfico.
+  const fim = hojeISO()
+  const serie = useCarteiraSerie({
+    recorte: "todos",
+    inicio: `${subMeses(fim, MESES_APORTES - 1).slice(0, 7)}-01`,
+    fim,
+  })
   // Últimos 24 meses (o corrente vale até hoje: é dele que saem os números do topo) com custo
   // conhecido: aportado embaixo, rendimento (pode ser < 0) em cima.
   const mesAtual = hojeISO().slice(0, 7)
   const custoCompleto = serie.data?.investido_completo ?? true
   const meses = fechamentosMensais(serie.data?.pontos ?? [])
     .filter((m) => m.investido != null)
-    .slice(-24)
+    .slice(-MESES_APORTES)
     .map((m) => ({
       mes: m.mes,
       aportado: m.investido!,
@@ -272,7 +282,6 @@ const RECORTES: { valor: RecorteCarteira; rotulo: string }[] = [
  *  Percentual não é valor: não mascara no modo privacidade. */
 export function RentabilidadeMensal() {
   const tema = useTemaGrafico()
-  // "Todos" reaproveita a série do Aportes × valorização (mesma chave de query).
   const [recorte, setRecorte] = useState<RecorteCarteira>("todos")
   const serie = useSerieLonga(recorte)
   const pontos = aPartirDaPrimeiraPosicao(serie.data?.pontos ?? [])

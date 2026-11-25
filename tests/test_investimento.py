@@ -1107,3 +1107,5 @@ def test_serie_sinaliza_custo_incompleto(db, usuario, conexao, client_factory):
     _snap(db, antiga, hoje - timedelta(days=10), 3_000)
     _snap(db, antiga, hoje - timedelta(days=5), 0)
     assert completo() is False
+    # A completude vale para a janela pedida: com o resgate antes dela, a série é completa.
+    assert completo(inicio=str(hoje - timedelta(days=4))) is True
