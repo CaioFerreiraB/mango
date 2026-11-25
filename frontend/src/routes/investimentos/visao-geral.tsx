@@ -6,14 +6,11 @@ import {
   CircleCheck,
   CircleDollarSign,
   Coins,
-  Eye,
-  EyeOff,
   Layers,
   MoreHorizontal,
   Percent,
   Sparkles,
   TrendingUp,
-  Wallet,
   X,
 } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
@@ -25,6 +22,13 @@ import { corIndicador } from "@/lib/echart-tema"
 import { GraficoLinhas, Rosca } from "@/components/common/graficos-base"
 import { Valor } from "@/components/common/valor"
 import { eixoBRL } from "@/components/dashboard/chart-helpers"
+import { CardDestaque } from "@/components/dashboard/kpi-card"
+import {
+  AportesValorizacao,
+  ProventosPorMes,
+  RentabilidadeMensal,
+  VencimentosRendaFixa,
+} from "@/components/investimentos/visao-geral-graficos"
 import { SyncButton } from "@/components/sync-button"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -171,6 +175,27 @@ export function VisaoGeralPage() {
         <MaioresPosicoes itens={posicoes} total={total} oculto={oculto} />
       </div>
 
+      <div className="grid items-stretch gap-4 @5xl:grid-cols-2">
+        <ProventosPorMes
+          vg={vg.data}
+          carregando={vg.isLoading}
+          erro={vg.isError}
+          oculto={oculto}
+        />
+        <AportesValorizacao oculto={oculto} />
+      </div>
+
+      <div className="grid items-stretch gap-4 @5xl:grid-cols-3">
+        <div className="min-w-0 @5xl:col-span-2">
+          <RentabilidadeMensal />
+        </div>
+        <VencimentosRendaFixa
+          itens={posicoes}
+          carregando={resumo.isLoading}
+          oculto={oculto}
+        />
+      </div>
+
       <InsightsBar
         vg={vg.data}
         numCategorias={resumo.data?.alocacao.length ?? 0}
@@ -246,7 +271,8 @@ function KpiCard({
           >
             <Icon className="size-4" />
           </span>
-          <p className="min-w-0 flex-1 text-sm leading-tight text-muted-foreground @xl:truncate">
+          {/* Rótulo quebra em vez de cortar: com 5 cards por linha "Rentabilidade (12M)" não cabe. */}
+          <p className="min-w-0 flex-1 text-sm leading-tight text-muted-foreground">
             {label}
           </p>
           {acao}
@@ -306,10 +332,16 @@ function Kpis({
 }) {
   if (carregando || !resumo) {
     return (
-      <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,9.5rem),1fr))] gap-3 @xl:gap-4 @4xl:grid-cols-3">
-        {Array.from({ length: 6 }, (_, i) => (
-          <Skeleton key={i} className="h-24 w-full" />
-        ))}
+      <div className="space-y-3 @xl:space-y-4">
+        <div className="grid gap-3 @xl:gap-4 @3xl:grid-cols-2">
+          <Skeleton className="h-32 w-full rounded-xl" />
+          <Skeleton className="h-32 w-full rounded-xl" />
+        </div>
+        <div className="grid grid-cols-2 gap-3 @xl:gap-4 @4xl:grid-cols-5">
+          {Array.from({ length: 5 }, (_, i) => (
+            <Skeleton key={i} className="h-24 w-full" />
+          ))}
+        </div>
       </div>
     )
   }
@@ -317,143 +349,150 @@ function Kpis({
   const sobe = (t.resultado_centavos ?? 0) >= 0
   const Seta = sobe ? ArrowUpRight : ArrowDownRight
   const nCat = resumo.alocacao.length
+  const impostos = t.valor_centavos - t.liquido_centavos
 
   return (
-    <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,9.5rem),1fr))] gap-3 @xl:gap-4 @4xl:grid-cols-3">
-      <KpiCard
-        icon={Wallet}
-        label="Patrimônio total"
-        acao={
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            className="-mr-1 text-muted-foreground"
-            aria-label="Ocultar valores"
-            aria-pressed={oculto}
-            onClick={onToggleOculto}
-          >
-            {oculto ? (
-              <EyeOff className="size-4" />
+    <div className="space-y-3 @xl:space-y-4">
+      {/* Os dois patrimônios em destaque: no celular um por linha (linha inteira), lado a lado
+          a partir de @3xl. Bruto no destaque escuro; líquido na variante clara. */}
+      <div className="grid gap-3 @xl:gap-4 @3xl:grid-cols-2">
+        <CardDestaque
+          titulo="Patrimônio total"
+          centavos={t.valor_centavos}
+          oculto={oculto}
+          onAlternarOculto={onToggleOculto}
+          rodape={
+            t.resultado_centavos != null ? (
+              <>
+                <Seta className="size-3.5" aria-hidden />
+                <Valor
+                  centavos={t.resultado_centavos}
+                  sinal
+                  neutro
+                  oculto={oculto}
+                  className="text-xs text-inherit"
+                />
+                {t.resultado_pct != null ? (
+                  <span>({formatPct(t.resultado_pct)})</span>
+                ) : null}
+                <span className="sr-only">
+                  {sobe ? "de resultado" : "de prejuízo"}
+                </span>
+              </>
+            ) : undefined
+          }
+        />
+        <CardDestaque
+          suave
+          titulo="Patrimônio líquido"
+          centavos={t.liquido_centavos}
+          oculto={oculto}
+          rodape={
+            impostos > 0 ? (
+              <>
+                Após IR e IOF:
+                <Valor
+                  centavos={-impostos}
+                  sinal
+                  neutro
+                  oculto={oculto}
+                  className="text-xs text-inherit"
+                />
+              </>
             ) : (
-              <Eye className="size-4" />
-            )}
-          </Button>
-        }
-        valor={
-          <Valor
-            quebraMoeda
-            centavos={t.valor_centavos}
-            neutro
-            oculto={oculto}
-            className="text-accent-ink"
-          />
-        }
-        detalhe={
-          t.resultado_centavos != null ? (
-            <span
-              className={cn(
-                "inline-flex flex-wrap items-center gap-x-1 font-medium",
-                sobe ? "text-positive-ink" : "text-negative-ink"
-              )}
-            >
-              <Seta className="size-3.5" aria-hidden />
+              "Valor de resgate hoje"
+            )
+          }
+        />
+      </div>
+
+      <div className="grid grid-cols-2 gap-3 @xl:gap-4 @4xl:grid-cols-5">
+        <KpiCard
+          icon={Coins}
+          label="Valor investido"
+          valor={
+            // null = o banco não informou o custo: "—", nunca um R$ 0,00 que parece dado.
+            t.investido_centavos != null ? (
+              <Valor
+                quebraMoeda
+                centavos={t.investido_centavos}
+                neutro
+                oculto={oculto}
+              />
+            ) : (
+              <span className="text-muted-foreground">—</span>
+            )
+          }
+          detalhe={
+            <span className="text-muted-foreground">Total aportado</span>
+          }
+        />
+        <KpiCard
+          icon={TrendingUp}
+          label="Resultado"
+          valor={
+            t.resultado_centavos != null ? (
               <Valor
                 quebraMoeda
                 centavos={t.resultado_centavos}
-                sinal
+                neutro
                 oculto={oculto}
-                className="text-xs"
               />
-              {t.resultado_pct != null ? (
-                <span className="text-muted-foreground">
-                  ({formatPct(t.resultado_pct)})
-                </span>
-              ) : null}
+            ) : (
+              <span className="text-muted-foreground">—</span>
+            )
+          }
+          detalhe={<VarPct pct={t.resultado_pct} />}
+        />
+        <KpiCard
+          icon={Percent}
+          label="Rentabilidade (12M)"
+          valor={
+            vg?.rentabilidade_12m_pct != null ? (
+              formatPct(vg.rentabilidade_12m_pct)
+            ) : (
+              <span className="text-muted-foreground">—</span>
+            )
+          }
+          detalhe={
+            vg?.vs_cdi_pp != null ? (
+              <VarPct
+                pct={vg.vs_cdi_pp}
+                sufixo={vg.vs_cdi_pp >= 0 ? "acima do CDI" : "abaixo do CDI"}
+              />
+            ) : (
+              <span className="text-muted-foreground">
+                vs. CDI indisponível
+              </span>
+            )
+          }
+        />
+        <KpiCard
+          icon={CircleDollarSign}
+          label="Dividendos (mês)"
+          valor={
+            <Valor
+              quebraMoeda
+              centavos={vg?.dividendos_mes_centavos ?? 0}
+              neutro
+              oculto={oculto}
+            />
+          }
+          detalhe={
+            <span className="text-muted-foreground">Recebidos neste mês</span>
+          }
+        />
+        <KpiCard
+          icon={Layers}
+          label="Ativos"
+          valor={<span className="tabular-nums">{t.quantidade_ativos}</span>}
+          detalhe={
+            <span className="text-muted-foreground">
+              Em {nCat} categoria{nCat === 1 ? "" : "s"}
             </span>
-          ) : null
-        }
-      />
-      <KpiCard
-        icon={Coins}
-        label="Valor investido"
-        valor={
-          // null = o banco não informou o custo: "—", nunca um R$ 0,00 que parece dado.
-          t.investido_centavos != null ? (
-            <Valor
-              quebraMoeda
-              centavos={t.investido_centavos}
-              neutro
-              oculto={oculto}
-            />
-          ) : (
-            <span className="text-muted-foreground">—</span>
-          )
-        }
-        detalhe={<span className="text-muted-foreground">Total aportado</span>}
-      />
-      <KpiCard
-        icon={TrendingUp}
-        label="Resultado"
-        valor={
-          t.resultado_centavos != null ? (
-            <Valor
-              quebraMoeda
-              centavos={t.resultado_centavos}
-              neutro
-              oculto={oculto}
-            />
-          ) : (
-            <span className="text-muted-foreground">—</span>
-          )
-        }
-        detalhe={<VarPct pct={t.resultado_pct} />}
-      />
-      <KpiCard
-        icon={Percent}
-        label="Rentabilidade (12M)"
-        valor={
-          vg?.rentabilidade_12m_pct != null ? (
-            formatPct(vg.rentabilidade_12m_pct)
-          ) : (
-            <span className="text-muted-foreground">—</span>
-          )
-        }
-        detalhe={
-          vg?.vs_cdi_pp != null ? (
-            <VarPct
-              pct={vg.vs_cdi_pp}
-              sufixo={vg.vs_cdi_pp >= 0 ? "acima do CDI" : "abaixo do CDI"}
-            />
-          ) : (
-            <span className="text-muted-foreground">vs. CDI indisponível</span>
-          )
-        }
-      />
-      <KpiCard
-        icon={CircleDollarSign}
-        label="Dividendos (mês)"
-        valor={
-          <Valor
-            quebraMoeda
-            centavos={vg?.dividendos_mes_centavos ?? 0}
-            neutro
-            oculto={oculto}
-          />
-        }
-        detalhe={
-          <span className="text-muted-foreground">Recebidos neste mês</span>
-        }
-      />
-      <KpiCard
-        icon={Layers}
-        label="Ativos"
-        valor={<span className="tabular-nums">{t.quantidade_ativos}</span>}
-        detalhe={
-          <span className="text-muted-foreground">
-            Em {nCat} categoria{nCat === 1 ? "" : "s"}
-          </span>
-        }
-      />
+          }
+        />
+      </div>
     </div>
   )
 }

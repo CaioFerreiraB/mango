@@ -41,6 +41,7 @@ from app.schemas.investimento import (
     FundamentosFII,
     FundamentosFIIAlocacao,
     InvestimentoTransacaoRead,
+    ProventoMes,
     ProventosFII,
     VisaoGeralInvestimentos,
 )
@@ -878,6 +879,7 @@ def serie_carteira(
         reconstruido_ate = max((d for d, _v in recon.items() if d <= fim_rec), default=None)
 
     # Era dos snapshots: forward-fill por investimento (último snapshot ≤ dia).
+    com_valor_na_janela: set[int] = set()  # p/ `investido_completo` (inclui já resgatadas)
     if primeira_snap is not None:
         faixa_ini = max(inicio, primeira_snap)
         for i in invs:
@@ -889,9 +891,21 @@ def serie_carteira(
                 atual = snaps_inv.get(dia, atual)
                 if atual is not None:
                     valor_por_dia[dia] = valor_por_dia.get(dia, 0) + atual
+                    if atual > 0:
+                        com_valor_na_janela.add(i.id)
                 dia += timedelta(days=1)
 
     dias = sorted(valor_por_dia)
+    analise, incompletos = _analisar_custos(db, invs)
+    custo = {i.id: _investido(i, analise) for i in invs}
+    # Custo completo = toda posição que teve valor no período (hoje ou em algum dia da janela, mesmo
+    # já resgatada) tem custo conhecido e cobrindo a quantidade. Senão "valor − investido" contaria
+    # valor sem custo como rendimento.
+    investido_completo = all(
+        custo[i.id] is not None and i.id not in incompletos
+        for i in invs
+        if _valor(i) > 0 or i.id in com_valor_na_janela
+    )
     if aplicado_por_dia:
         # Renda fixa: linha "aplicado" reconstruída dia-a-dia (aportes − resgates), forward-fill nos
         # dias sem evento (a reconstrução também cobre a era dos snapshots, então é contínua).
@@ -901,11 +915,10 @@ def serie_carteira(
             ult = aplicado_por_dia.get(dia, ult)
             investido_seq[dia] = ult
     else:
-        # Demais casos: "aplicado" ancorado no investido atual (amount_original) e recuado pelos
-        # fluxos conhecidos — termina certo mesmo sem o BUY inicial. ponytail: aproximação.
-        investido_final = sum(
-            i.amount_original_centavos for i in invs if i.amount_original_centavos is not None
-        )
+        # Demais casos: "aplicado" ancorado no investido atual e recuado pelos fluxos conhecidos —
+        # termina certo mesmo sem o BUY inicial. Custo = o mesmo do resumo (`amount_original`,
+        # senão reconstruído dos movimentos, incl. aportes manuais). ponytail: aproximação.
+        investido_final = sum(v for v in custo.values() if v is not None)
         fluxo_total = sum(fluxo_por_dia.get(d, 0) for d in dias)
         acc = (investido_final - fluxo_total) if investido_final else 0
         investido_seq = {}
@@ -930,7 +943,11 @@ def serie_carteira(
         )
         anterior = valor
     return CarteiraSerie(
-        recorte=recorte, subtype=subtype, pontos=pontos, reconstruido_ate=reconstruido_ate
+        recorte=recorte,
+        subtype=subtype,
+        pontos=pontos,
+        reconstruido_ate=reconstruido_ate,
+        investido_completo=investido_completo,
     )
 
 
@@ -1130,16 +1147,20 @@ def visao_geral(db: Session, usuario_id: int) -> VisaoGeralInvestimentos:
         .join(Investimento, InvestimentoTransacao.investimento_id == Investimento.id)
         .where(Investimento.usuario_id == usuario_id)
     ).all()
-    dividendos_mes = 0
+    # Proventos por mês nos 12 meses até o corrente (o do mês corrente é o card "Dividendos").
+    indice = hoje.year * 12 + hoje.month - 1
+    meses = [f"{i // 12:04d}-{i % 12 + 1:02d}" for i in range(indice - 11, indice + 1)]
+    por_mes = dict.fromkeys(meses, 0)
     for m in movimentos:
         if not _eh_provento(m):
             continue
         dia = _dia_sp(m.date or m.trade_date)
-        if dia is not None and dia.year == hoje.year and dia.month == hoje.month:
-            dividendos_mes += m.amount_centavos
+        if dia is not None and (chave := f"{dia:%Y-%m}") in por_mes:
+            por_mes[chave] += m.amount_centavos
 
     return VisaoGeralInvestimentos(
         rentabilidade_12m_pct=rent_12m,
         vs_cdi_pp=vs_cdi,
-        dividendos_mes_centavos=dividendos_mes,
+        dividendos_mes_centavos=por_mes[meses[-1]],
+        proventos_mensais=[ProventoMes(mes=k, centavos=v) for k, v in por_mes.items()],
     )

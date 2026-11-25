@@ -12,6 +12,13 @@ ainda está se assentando. Cada versão publicada tem uma imagem correspondente 
 
 ### Adicionado
 
+- **Visão Geral de investimentos:** Patrimônio total ganha o card de destaque do dashboard, com
+  **Patrimônio líquido** (valor de resgate, após IR e IOF) ao lado; os demais indicadores ficam 5
+  por linha no desktop e 2 no celular. Quatro gráficos novos: **proventos por mês** (12 meses, com
+  total e média), **aportes × valorização** (quanto do patrimônio é aporte e quanto é rendimento),
+  **rentabilidade mês a mês** (mapa de calor por ano, com acumulado do ano e CDI, filtrável por
+  todos, renda fixa ou renda variável) e **vencimentos
+  da renda fixa** (o que vence em cada mês).
 - **Despesas fixas** (Planejamento → Despesas fixas): cadastre contas que se repetem (aluguel,
   condomínio, parcelas) com valor, dia de vencimento e frequência semanal, quinzenal, mensal,
   trimestral, semestral ou anual. Podem ser temporárias, com início e término. Cada vencimento fica

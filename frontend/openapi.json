@@ -9407,6 +9407,11 @@
               }
             ],
             "title": "Reconstruido Ate"
+          },
+          "investido_completo": {
+            "type": "boolean",
+            "title": "Investido Completo",
+            "default": true
           }
         },
         "type": "object",
@@ -15629,6 +15634,24 @@
         ],
         "title": "ProvedorOpenai"
       },
+      "ProventoMes": {
+        "properties": {
+          "mes": {
+            "type": "string",
+            "title": "Mes"
+          },
+          "centavos": {
+            "type": "integer",
+            "title": "Centavos"
+          }
+        },
+        "type": "object",
+        "required": [
+          "mes",
+          "centavos"
+        ],
+        "title": "ProventoMes"
+      },
       "ProventosFII": {
         "properties": {
           "investimento_id": {
@@ -17971,6 +17994,14 @@
           "dividendos_mes_centavos": {
             "type": "integer",
             "title": "Dividendos Mes Centavos"
+          },
+          "proventos_mensais": {
+            "items": {
+              "$ref": "#/components/schemas/ProventoMes"
+            },
+            "type": "array",
+            "title": "Proventos Mensais",
+            "default": []
           }
         },
         "type": "object",

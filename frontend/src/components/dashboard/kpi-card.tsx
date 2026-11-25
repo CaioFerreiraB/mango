@@ -121,11 +121,109 @@ export function KpiCard({
 }
 
 /**
- * Saldo em contas: card de destaque no tom escuro do accent do usuário (degradê
- * `--destaque-a → b`, texto branco AA em qualquer preset), ondas decorativas e o olho que liga o
- * modo privacidade de TODOS os cards do painel (o estado mora na página). Mede o próprio espaço
- * (`@container`): no desktop ele ocupa ⅕ da linha, no mobile a linha inteira.
+ * Card de destaque no tom escuro do accent do usuário (degradê `--destaque-a → b`, texto branco AA
+ * em qualquer preset) com ondas decorativas. `suave` é a variante clara (tinta do accent sobre a
+ * superfície, texto do tema) para um segundo destaque ao lado do primeiro sem competir com ele.
+ * Mede o próprio espaço (`@container`): estreito reduz o valor em vez de cortá-lo.
  */
+export function CardDestaque({
+  titulo,
+  centavos,
+  oculto,
+  onAlternarOculto,
+  rodape,
+  suave = false,
+}: {
+  titulo: string
+  centavos: number
+  oculto: boolean
+  /** Olho do modo privacidade; omitido, o card só respeita o `oculto` de fora. */
+  onAlternarOculto?: () => void
+  /** Pílula no rodapé (ex.: "3 contas"). */
+  rodape?: ReactNode
+  suave?: boolean
+}) {
+  return (
+    <div
+      className={cn(
+        "@container relative isolate flex flex-col overflow-hidden rounded-xl px-5 pt-4 pb-5",
+        suave
+          ? "border bg-card bg-linear-135 from-primary/18 via-primary/6 to-transparent text-foreground"
+          : "bg-destaque-b bg-linear-135 from-destaque-a to-destaque-b text-white shadow-[0_12px_28px_-14px_var(--destaque-b)]"
+      )}
+    >
+      {/* Ondas: decoração pura, atrás do conteúdo (dados sempre por cima). */}
+      <svg
+        viewBox="0 0 320 120"
+        preserveAspectRatio="none"
+        className={cn(
+          "pointer-events-none absolute inset-x-0 bottom-0 -z-10 h-3/4 w-full",
+          suave ? "text-primary" : "text-white"
+        )}
+        aria-hidden
+      >
+        <path
+          d="M0 96 C 60 92, 110 70, 170 74 S 270 40, 320 18 V120 H0 Z"
+          fill="currentColor"
+          fillOpacity={suave ? 0.06 : 0.07}
+        />
+        <path
+          d="M0 112 C 80 108, 130 92, 200 94 S 290 66, 320 54 V120 H0 Z"
+          fill="currentColor"
+          fillOpacity={suave ? 0.08 : 0.08}
+        />
+      </svg>
+      <div className="flex min-h-9 items-start justify-between gap-3">
+        <p
+          className={cn(
+            "truncate pt-1 text-sm",
+            suave ? "text-muted-foreground" : "text-white/80"
+          )}
+        >
+          {titulo}
+        </p>
+        {onAlternarOculto ? (
+          <BotaoOcultar
+            oculto={oculto}
+            onClick={onAlternarOculto}
+            className={
+              suave
+                ? "-mr-1 size-9 bg-primary/10 text-primary hover:bg-primary/15 focus-visible:ring-ring"
+                : "-mr-1 size-9 bg-white/12 text-white hover:bg-white/20 focus-visible:ring-white/70"
+            }
+          />
+        ) : null}
+      </div>
+      <Valor
+        centavos={centavos}
+        oculto={oculto}
+        neutro
+        className={cn(
+          "mt-1 block text-2xl leading-tight font-bold tracking-tight whitespace-nowrap @[17rem]:text-[1.875rem]",
+          suave ? "text-foreground" : "text-white"
+        )}
+      />
+      {rodape != null ? (
+        // mt-auto: esticado até a altura dos vizinhos, a pílula desce ao rodapé.
+        <div className="mt-auto self-start pt-3">
+          <span
+            className={cn(
+              "inline-flex flex-wrap items-center gap-x-1 rounded-full px-2.5 py-1 text-xs",
+              suave
+                ? "bg-primary/10 text-foreground"
+                : "bg-white/12 text-white/90"
+            )}
+          >
+            {rodape}
+          </span>
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
+/** Saldo em contas do dashboard: o destaque com o olho que liga o modo privacidade de TODOS os
+ *  cards do painel (o estado mora na página). No desktop ocupa ⅕ da linha, no mobile a inteira. */
 export function SaldoDestaque({
   centavos,
   contas,
@@ -139,49 +237,19 @@ export function SaldoDestaque({
   onAlternarOculto: () => void
 }) {
   return (
-    <div className="@container relative isolate flex flex-col overflow-hidden rounded-xl bg-destaque-b bg-linear-135 from-destaque-a to-destaque-b px-5 pt-4 pb-5 text-white shadow-[0_12px_28px_-14px_var(--destaque-b)]">
-      {/* Ondas: decoração pura, atrás do conteúdo (dados sempre por cima). */}
-      <svg
-        viewBox="0 0 320 120"
-        preserveAspectRatio="none"
-        className="pointer-events-none absolute inset-x-0 bottom-0 -z-10 h-3/4 w-full"
-        aria-hidden
-      >
-        <path
-          d="M0 96 C 60 92, 110 70, 170 74 S 270 40, 320 18 V120 H0 Z"
-          fill="white"
-          fillOpacity="0.07"
-        />
-        <path
-          d="M0 112 C 80 108, 130 92, 200 94 S 290 66, 320 54 V120 H0 Z"
-          fill="white"
-          fillOpacity="0.08"
-        />
-      </svg>
-      <div className="flex items-start justify-between gap-3">
-        <p className="truncate pt-1 text-sm text-white/80">Saldo em contas</p>
-        <BotaoOcultar
-          oculto={oculto}
-          onClick={onAlternarOculto}
-          className="-mr-1 size-9 bg-white/12 text-white hover:bg-white/20 focus-visible:ring-white/70"
-        />
-      </div>
-      {/* Estreito (⅕ da linha no desktop) reduz o valor em vez de cortá-lo. */}
-      <Valor
-        centavos={centavos}
-        oculto={oculto}
-        neutro
-        className="mt-1 block text-2xl leading-tight font-bold tracking-tight whitespace-nowrap text-white @[17rem]:text-[1.875rem]"
-      />
-      {contas != null ? (
-        // mt-auto: no desktop o card estica até a altura dos vizinhos e a pílula desce ao rodapé.
-        <p className="mt-auto self-start pt-3">
-          <span className="inline-flex rounded-full bg-white/12 px-2.5 py-1 text-xs text-white/90">
-            {contas === 1 ? "1 conta" : `${contas} contas`}
-          </span>
-        </p>
-      ) : null}
-    </div>
+    <CardDestaque
+      titulo="Saldo em contas"
+      centavos={centavos}
+      oculto={oculto}
+      onAlternarOculto={onAlternarOculto}
+      rodape={
+        contas != null
+          ? contas === 1
+            ? "1 conta"
+            : `${contas} contas`
+          : undefined
+      }
+    />
   )
 }
 

@@ -217,12 +217,24 @@ class CarteiraSerie(BaseModel):
     # Renda fixa sem cotação histórica: pontos até esta data foram estimados (capitalização dos
     # aportes pelo indexador realizado), não medidos. `None` quando nada foi reconstruído.
     reconstruido_ate: date | None = None
+    # Toda posição com valor no período (hoje ou na janela, mesmo já resgatada) tem custo conhecido
+    # — Pluggy ou reconstruído dos movimentos, incl. aportes manuais — cobrindo a quantidade?
+    # `False` → "valor − investido" contaria valor sem custo como rendimento.
+    investido_completo: bool = True
 
 
 # --- visão geral (dashboard do módulo) ------------------------------------------------
+
+
+class ProventoMes(BaseModel):
+    mes: str  # YYYY-MM
+    centavos: int
 
 
 class VisaoGeralInvestimentos(BaseModel):
     rentabilidade_12m_pct: float | None  # TWR dos últimos 12 meses (janela disponível)
     vs_cdi_pp: float | None  # p.p. acima/abaixo do CDI no mesmo período
     dividendos_mes_centavos: int  # proventos recebidos no mês corrente
+    # Proventos da carteira inteira por mês: os 12 meses até o corrente, em ordem, zeros inclusos
+    # (mês sem provento é dado, não buraco).
+    proventos_mensais: list[ProventoMes] = []
