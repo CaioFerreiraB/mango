@@ -130,6 +130,15 @@ export function CalendarioCalor({ fim, visao }: { fim: string; visao: Visao }) {
     marcarInvest && (porDia.get(iso)?.investido_centavos ?? 0) !== 0
   const algumInvest =
     marcarInvest && [...porDia.values()].some((b) => b.investido_centavos !== 0)
+  const movimentou = (iso: string) => {
+    const b = porDia.get(iso)
+    return (
+      !!b &&
+      (b.entradas_centavos !== 0 ||
+        b.saidas_centavos !== 0 ||
+        b.investido_centavos !== 0)
+    )
+  }
   const valores = [...porDia.values()].map(MODOS[modo].valor)
   const maxPos = Math.max(0, ...valores)
   const maxNeg = Math.max(0, ...valores.map((v) => -v))
@@ -166,6 +175,43 @@ export function CalendarioCalor({ fim, visao }: { fim: string; visao: Visao }) {
   const soma = (f: (b: SerieBucket) => number) =>
     doPainel.reduce((s, b) => s + f(b), 0)
 
+  const navegacao = (
+    <div className="flex items-center justify-between gap-2">
+      <div className="flex items-center gap-1">
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          onClick={() => mover(-1)}
+          aria-label="Mês anterior"
+        >
+          <ChevronLeft aria-hidden />
+        </Button>
+        <h3
+          aria-live="polite"
+          className="min-w-36 text-center text-sm font-medium first-letter:uppercase"
+        >
+          {nomeMes}
+        </h3>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          onClick={() => mover(1)}
+          aria-label="Próximo mês"
+        >
+          <ChevronRight aria-hidden />
+        </Button>
+      </div>
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => irPara(hoje.slice(0, 7), hoje)}
+        disabled={selecionado === hoje}
+      >
+        Hoje
+      </Button>
+    </div>
+  )
+
   return (
     <CardGrafico
       titulo="Calendário do mês"
@@ -189,48 +235,21 @@ export function CalendarioCalor({ fim, visao }: { fim: string; visao: Visao }) {
       }
     >
       {serie.isLoading ? (
-        <Skeleton className="h-80 w-full" />
+        <div className="space-y-3">
+          {navegacao}
+          <Skeleton className="h-80 w-full" />
+        </div>
       ) : serie.isError ? (
-        <p className="py-8 text-center text-sm text-muted-foreground">
-          Não foi possível carregar o calendário.
-        </p>
+        <div className="space-y-3">
+          {navegacao}
+          <p className="py-8 text-center text-sm text-muted-foreground">
+            Não foi possível carregar este mês.
+          </p>
+        </div>
       ) : (
         <div className="grid gap-6 @3xl:grid-cols-[minmax(0,1fr)_15rem]">
           <div className="min-w-0 space-y-3">
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-1">
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  onClick={() => mover(-1)}
-                  aria-label="Mês anterior"
-                >
-                  <ChevronLeft aria-hidden />
-                </Button>
-                <h3
-                  aria-live="polite"
-                  className="min-w-36 text-center text-sm font-medium first-letter:uppercase"
-                >
-                  {nomeMes}
-                </h3>
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  onClick={() => mover(1)}
-                  aria-label="Próximo mês"
-                >
-                  <ChevronRight aria-hidden />
-                </Button>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => irPara(hoje.slice(0, 7), hoje)}
-                disabled={selecionado === hoje}
-              >
-                Hoje
-              </Button>
-            </div>
+            {navegacao}
             <table className="w-full table-fixed border-separate border-spacing-1.5">
               <caption className="sr-only">
                 {`Calendário de ${nomeMes}: ${MODOS[modo].descricao}`}
@@ -258,11 +277,17 @@ export function CalendarioCalor({ fim, visao }: { fim: string; visao: Visao }) {
                           <Dia
                             iso={iso}
                             valor={valorDe(iso)}
-                            temMovimento={porDia.has(iso)}
+                            temMovimento={movimentou(iso)}
                             investiu={investiu(iso)}
-                            estilo={estilo(valorDe(iso))}
+                            estilo={
+                              iso > hoje && !movimentou(iso)
+                                ? {
+                                    background: tema.superficie,
+                                    color: tema.textoSec,
+                                  }
+                                : estilo(valorDe(iso))
+                            }
                             hoje={iso === hoje}
-                            futuro={iso > hoje}
                             selecionado={iso === selecionado}
                             rotuloModo={MODOS[modo].rotulo.toLowerCase()}
                             onClick={() =>
@@ -386,7 +411,6 @@ function Dia({
   investiu,
   estilo,
   hoje,
-  futuro,
   selecionado,
   rotuloModo,
   onClick,
@@ -397,7 +421,6 @@ function Dia({
   investiu: boolean
   estilo: { background: string; color: string }
   hoje: boolean
-  futuro: boolean
   selecionado: boolean
   rotuloModo: string
   onClick: () => void
@@ -408,13 +431,12 @@ function Dia({
       type="button"
       onClick={onClick}
       aria-pressed={selecionado}
-      aria-label={`${dataLonga(iso)}${hoje ? " (hoje)" : ""}: ${valor ? `${rotuloModo} ${brl(valor)}` : "sem movimento"}${investiu ? ", com aporte ou resgate" : ""}`}
+      aria-label={`${dataLonga(iso)}${hoje ? " (hoje)" : ""}: ${temMovimento ? `${rotuloModo} ${brl(valor)}` : "sem movimento"}${investiu ? ", com aporte ou resgate" : ""}`}
       style={estilo}
       className={cn(
         "flex h-12 w-full flex-col justify-between rounded-md p-1.5 text-left ring-1 ring-border/70 transition-[filter,box-shadow] outline-none ring-inset hover:brightness-95 focus-visible:ring-2 focus-visible:ring-ring @xl:h-16 @xl:p-2 dark:hover:brightness-110",
         selecionado &&
-          "shadow-[0_0_0_2px_var(--color-card),0_0_0_3.5px_var(--color-primary)]",
-        futuro && !temMovimento && "opacity-50"
+          "shadow-[0_0_0_2px_var(--color-card),0_0_0_3.5px_var(--color-primary)]"
       )}
     >
       <span className="flex items-start justify-between gap-1">

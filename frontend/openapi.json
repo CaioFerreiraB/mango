@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "mango",
-    "version": "0.9.0"
+    "version": "0.10.0"
   },
   "paths": {
     "/health": {
@@ -2845,19 +2845,26 @@
           "dashboard"
         ],
         "summary": "Analise Transacoes",
-        "description": "Transações de um pedaço da análise (categoria, contraparte, meio e/ou conta). Mesmo recorte\ndos gráficos: a soma bate com o valor exibido. Até 200, mais recentes primeiro.",
+        "description": "Transações de um pedaço da análise (categoria, contraparte, meio e/ou conta). Mesmo recorte\ndos gráficos: a soma bate com o valor exibido. Até 200, mais recentes primeiro. Sem `natureza`:\ntodos os lançamentos do período na visão (receita, despesa e investimento) — o calendário do\ndashboard, cujos totais saem da mesma base.",
         "operationId": "analise_transacoes_api_dashboard_analise_transacoes_get",
         "parameters": [
           {
             "name": "natureza",
             "in": "query",
-            "required": true,
+            "required": false,
             "schema": {
-              "enum": [
-                "receita",
-                "despesa"
+              "anyOf": [
+                {
+                  "enum": [
+                    "receita",
+                    "despesa"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
               ],
-              "type": "string",
               "title": "Natureza"
             }
           },
@@ -7556,8 +7563,7 @@
                 "exclusiveMinimum": 0.0
               },
               {
-                "type": "string",
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+                "type": "string"
               }
             ],
             "title": "Quantidade"
@@ -7598,8 +7604,7 @@
                 "exclusiveMinimum": 0.0
               },
               {
-                "type": "string",
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+                "type": "string"
               },
               {
                 "type": "null"
@@ -10307,8 +10312,7 @@
           "rem_pre_fixed_rate": {
             "anyOf": [
               {
-                "type": "string",
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+                "type": "string"
               },
               {
                 "type": "null"
@@ -12344,8 +12348,7 @@
           "quantity": {
             "anyOf": [
               {
-                "type": "string",
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+                "type": "string"
               },
               {
                 "type": "null"
@@ -12356,8 +12359,7 @@
           "value_unitario": {
             "anyOf": [
               {
-                "type": "string",
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+                "type": "string"
               },
               {
                 "type": "null"
@@ -12460,8 +12462,7 @@
           "rate": {
             "anyOf": [
               {
-                "type": "string",
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+                "type": "string"
               },
               {
                 "type": "null"
@@ -12494,8 +12495,7 @@
           "fixed_annual_rate": {
             "anyOf": [
               {
-                "type": "string",
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+                "type": "string"
               },
               {
                 "type": "null"
@@ -12506,8 +12506,7 @@
           "annual_rate": {
             "anyOf": [
               {
-                "type": "string",
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+                "type": "string"
               },
               {
                 "type": "null"
@@ -12518,8 +12517,7 @@
           "last_month_rate": {
             "anyOf": [
               {
-                "type": "string",
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+                "type": "string"
               },
               {
                 "type": "null"
@@ -12530,8 +12528,7 @@
           "last_twelve_months_rate": {
             "anyOf": [
               {
-                "type": "string",
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+                "type": "string"
               },
               {
                 "type": "null"
@@ -12696,8 +12693,7 @@
           "value_unitario": {
             "anyOf": [
               {
-                "type": "string",
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+                "type": "string"
               },
               {
                 "type": "null"
@@ -12708,8 +12704,7 @@
           "quantity": {
             "anyOf": [
               {
-                "type": "string",
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+                "type": "string"
               },
               {
                 "type": "null"
@@ -15837,8 +15832,7 @@
                 "minimum": 0.0
               },
               {
-                "type": "string",
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+                "type": "string"
               },
               {
                 "type": "null"

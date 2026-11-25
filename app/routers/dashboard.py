@@ -124,7 +124,7 @@ class _FiltroQuery:
 
 @router.get("/analise/transacoes", response_model=TransacaoListagem)
 def analise_transacoes(
-    natureza: Natureza = Query(),
+    natureza: Natureza | None = Query(None),
     inicio: date | None = Query(None),
     fim: date | None = Query(None),
     f: _FiltroQuery = Depends(),
@@ -133,7 +133,9 @@ def analise_transacoes(
     user: Usuario = Depends(get_current_user),
 ) -> TransacaoListagem:
     """Transações de um pedaço da análise (categoria, contraparte, meio e/ou conta). Mesmo recorte
-    dos gráficos: a soma bate com o valor exibido. Até 200, mais recentes primeiro."""
+    dos gráficos: a soma bate com o valor exibido. Até 200, mais recentes primeiro. Sem `natureza`:
+    todos os lançamentos do período na visão (receita, despesa e investimento) — o calendário do
+    dashboard, cujos totais saem da mesma base."""
     filtro = FiltroLancamentos(f.categoria_id, f.contraparte, f.meio, f.conta_id)
     lancs = lancamentos_da_analise(db, user.id, natureza, _periodo(inicio, fim), filtro, visao)
     pagina = lancs[:_LIMITE_DRILLDOWN]

@@ -487,9 +487,9 @@ function DespesasOrcamento({
 }) {
   const [ano, mes] = fim.split("-").map(Number)
   const consumo = useConsumoOrcamentos(ano, mes)
-  const [alvo, setAlvo] = useState<
-    (AlvoDrilldown & { titulo: string; consumo: ConsumoLinha }) | null
-  >(null)
+  const [alvo, setAlvo] = useState<(AlvoDrilldown & { titulo: string }) | null>(
+    null
+  )
   // Mais usado primeiro: o que pede atenção abre a grade.
   const itens = useMemo(
     () =>
@@ -498,6 +498,17 @@ function DespesasOrcamento({
         .sort((a, b) => b.percentual - a.percentual),
     [consumo.data]
   )
+  // Resumo do diálogo lido dos dados atuais (refetch com o diálogo aberto atualiza); a categoria
+  // é única por mês/tipo. Linha sumiu (orçamento removido) → sem resumo.
+  const linhaAlvo =
+    alvo && itens.find((i) => i.categoria_id === alvo.categoriaId)
+  const consumoDoAlvo: ConsumoLinha | undefined = linhaAlvo
+    ? {
+        realizado: linhaAlvo.realizado_centavos,
+        limite: linhaAlvo.limite_centavos,
+        percentual: linhaAlvo.percentual,
+      }
+    : undefined
   const nomeMes = new Date(ano, mes - 1, 1).toLocaleDateString("pt-BR", {
     month: "long",
     year: "numeric",
@@ -556,11 +567,6 @@ function DespesasOrcamento({
                           tipo: "despesa",
                           categoriaId: it.categoria_id,
                           titulo: nome,
-                          consumo: {
-                            realizado: it.realizado_centavos,
-                            limite: it.limite_centavos,
-                            percentual: it.percentual,
-                          },
                         })
                       }
                     >
@@ -571,7 +577,7 @@ function DespesasOrcamento({
                         <span className="block text-xl font-semibold tabular-nums">
                           {it.percentual}%
                         </span>
-                        <span className="block truncate text-[11px] tabular-nums opacity-80">
+                        <span className="block truncate text-[11px] tabular-nums">
                           {formatBRL(it.realizado_centavos)}
                         </span>
                       </span>
@@ -606,7 +612,7 @@ function DespesasOrcamento({
         mes={mes}
         alvo={alvo}
         titulo={alvo?.titulo ?? ""}
-        consumo={alvo?.consumo}
+        consumo={consumoDoAlvo}
         onFechar={() => setAlvo(null)}
       />
     </CardGrafico>

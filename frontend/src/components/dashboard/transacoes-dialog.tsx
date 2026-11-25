@@ -19,7 +19,7 @@ import {
   useTransacoesDoOrcamento,
   type AlvoDrilldown,
 } from "@/lib/api/orcamentos"
-import { useTransacoes, type ItemListagem } from "@/lib/api/transacoes"
+import type { ItemListagem } from "@/lib/api/transacoes"
 import { formatBRL, formatDate } from "@/lib/format"
 import { cn } from "@/lib/utils"
 
@@ -118,7 +118,7 @@ export function TransacoesAnaliseDialog({
     <ListaDialog
       aberto={filtro != null}
       titulo={filtro?.titulo ?? ""}
-      descricao={`${filtro ? NATUREZA[filtro.natureza] : ""} de ${dia(inicio)} a ${dia(fim)}`}
+      descricao={`${filtro?.natureza ? NATUREZA[filtro.natureza] : "Lançamentos"} de ${dia(inicio)} a ${dia(fim)}`}
       itens={lista.data?.items ?? []}
       total={lista.data?.total}
       carregando={lista.isLoading}
@@ -217,8 +217,9 @@ export function TransacoesOrcamentoDialog({
 }
 
 /**
- * Lançamentos de um período (dia ou mês do calendário do dashboard): sem transferências e, na
- * visão competência, sem pagamento de fatura — o mesmo que fica de fora das somas do calendário.
+ * Lançamentos de um período (dia ou mês do calendário do dashboard): o drill-down da análise sem
+ * `natureza`, no recorte da visão — a mesma base dos totais do calendário (na visão caixa entra o
+ * pagamento de fatura e saem as compras no cartão).
  */
 export function TransacoesPeriodoDialog({
   periodo,
@@ -229,24 +230,19 @@ export function TransacoesPeriodoDialog({
   visao: Visao
   onFechar: () => void
 }) {
-  const lista = useTransacoes(
-    {
-      inicio: periodo?.inicio,
-      fim: periodo?.fim,
-      eh_transferencia: false,
-      ocultar_pagamento_fatura: visao === "competencia",
-      limit: 200,
-    },
-    { enabled: periodo != null }
+  const lista = useTransacoesDaAnalise(
+    periodo ? { titulo: periodo.titulo } : null,
+    { inicio: periodo?.inicio ?? "", fim: periodo?.fim ?? "" },
+    visao
   )
   return (
     <ListaDialog
       aberto={periodo != null}
       titulo={periodo?.titulo ?? ""}
       descricao={
-        periodo?.inicio === periodo?.fim
-          ? "Sem transferências"
-          : `De ${dia(periodo?.inicio ?? "")} a ${dia(periodo?.fim ?? "")} · sem transferências`
+        visao === "caixa"
+          ? "Visão caixa: só o que mexeu nas contas (pagamento de fatura no lugar das compras no cartão)"
+          : "Visão competência: compras no cartão na data da compra, sem transferências"
       }
       itens={lista.data?.items ?? []}
       total={lista.data?.total}
