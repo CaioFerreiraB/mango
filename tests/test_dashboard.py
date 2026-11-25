@@ -13,7 +13,13 @@ from app.models.transacao import Transacao
 from app.models.usuario import Usuario
 from app.repositories.conta import ContaRepository
 from app.repositories.transacao import TransacaoRepository
-from app.services.dashboard import montar_dashboard, montar_series, resumo_faturas
+from app.services.dashboard import (
+    FiltroLancamentos,
+    lancamentos_da_analise,
+    montar_dashboard,
+    montar_series,
+    resumo_faturas,
+)
 from app.services.periodo import mes_corrente
 from app.services.revisao import corte_revisao
 
@@ -633,3 +639,14 @@ def test_visao_caixa_troca_compras_do_cartao_pelo_pagamento_da_fatura(db, usuari
     }
     serie = montar_series(db, usuario.id, *mes_corrente(), "mensal", "caixa")
     assert sum(b.saidas_centavos for b in serie.buckets) == 47_000
+
+    # Lista "todos os lançamentos" do período (natureza=None, modal do calendário): mesmo recorte.
+    def pids(visao):
+        lancs = lancamentos_da_analise(
+            db, usuario.id, None, mes_corrente(), FiltroLancamentos(), visao
+        )
+        ids = [x.transacao_id for x in lancs]
+        return set(db.scalars(select(Transacao.pluggy_transaction_id).where(Transacao.id.in_(ids))))
+
+    assert pids("competencia") == {"sal", "pix", "compra"}
+    assert pids("caixa") == {"sal", "pix", "pgto", "boleto"}

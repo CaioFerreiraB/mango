@@ -1,7 +1,7 @@
 /**
  * Self-check da heurística de sugestão (§4.7). Sem framework de teste no projeto — asserts + node.
  * Fica fora do `tsc -b` (excluído em tsconfig.app.json) por depender de `node:`. Rodar de frontend/
- * (Node 20):
+ * (Node 24):
  *   node_modules/.bin/tsc --ignoreConfig --module commonjs --target es2022 --esModuleInterop \
  *     --skipLibCheck --outDir /tmp/sug src/lib/assinatura-sugestao.ts src/lib/assinatura-sugestao.check.ts \
  *   && node /tmp/sug/assinatura-sugestao.check.js

@@ -34,6 +34,11 @@ import { toast } from "sonner"
 import { EmptyState } from "@/components/common/empty-state"
 import { AbaDespesas, AbaReceitas } from "@/components/dashboard/abas-analise"
 import {
+  DespesasFixasMesWidget,
+  DespesasFixasProximosWidget,
+} from "@/components/dashboard/despesas-fixas-widget"
+import { CalendarioCalor } from "@/components/dashboard/calendario-calor"
+import {
   CardGrafico,
   ErroCard,
   SeletorGranularidade,
@@ -362,7 +367,11 @@ export function DashboardPage() {
         className="flex items-center justify-between rounded-lg border border-dashed bg-muted/40 px-4 py-3 text-sm transition-colors hover:bg-muted"
       >
         <span>
-          <strong>{d.nao_revisadas}</strong> transação(ões) aguardando revisão
+          <strong>{d.nao_revisadas}</strong>{" "}
+          {d.nao_revisadas === 1
+            ? "transação aguardando"
+            : "transações aguardando"}{" "}
+          revisão
         </span>
         <ArrowRight className="size-4 text-muted-foreground" aria-hidden />
       </Link>
@@ -428,7 +437,7 @@ export function DashboardPage() {
               Não foi possível carregar as transações.
             </p>
           ) : ultimas.data?.items.length ? (
-            <TransacoesTabela items={ultimas.data.items} />
+            <TransacoesTabela items={ultimas.data.items} semMoldura />
           ) : (
             <p className="py-8 text-center text-sm text-muted-foreground">
               Nenhuma transação ainda.
@@ -459,6 +468,9 @@ export function DashboardPage() {
         )}
       </CardGrafico>
     ),
+    calendario: () => <CalendarioCalor fim={fim} visao={visao} />,
+    "despesas-fixas": () => <DespesasFixasMesWidget />,
+    "despesas-fixas-proximos": () => <DespesasFixasProximosWidget />,
     patrimonio: () => (
       <CardGrafico
         titulo="Evolução patrimonial"

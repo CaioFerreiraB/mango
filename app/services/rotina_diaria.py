@@ -118,7 +118,7 @@ def relatorio(db, usuario: Usuario, momento: datetime, *, divisoes: bool = True)
     return "\n".join(linhas)
 
 
-def _url_do_botao(base: str | None) -> str | None:
+def _url_do_botao(base: str | None, caminho: str = "/transacoes?pendente=true") -> str | None:
     if not base:
         return None
     host = (urlsplit(base).hostname or "").rstrip(".")
@@ -129,7 +129,7 @@ def _url_do_botao(base: str | None) -> str | None:
             return None
     except ValueError:
         pass  # domínio da instalação
-    return f"{base}/transacoes?pendente=true"
+    return f"{base}{caminho}"
 
 
 def _falha_envio(db, geral, config, registro, momento, exc: TelegramError) -> None:

@@ -32,6 +32,16 @@ CASOS = [
         },
     ),
     ("/api/assinaturas", {"nome": "Streaming", "valor_centavos": 2990, "periodicidade": "mensal"}),
+    (
+        "/api/despesas-fixas",
+        {
+            "descricao": "Aluguel",
+            "valor_centavos": 150000,
+            "frequencia": "mensal",
+            "dia_vencimento": 10,
+            "inicio": "2026-01-01",
+        },
+    ),
     ("/api/credenciais-pluggy", {"client_id": "cid", "client_secret": "sec"}),
     (
         "/api/regras-categorizacao",

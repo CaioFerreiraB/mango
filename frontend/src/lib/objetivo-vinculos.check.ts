@@ -1,5 +1,5 @@
 /**
- * Self-check sem framework. Rodar de frontend/ (Node 20):
+ * Self-check sem framework. Rodar de frontend/ (Node 24):
  * node_modules/.bin/tsc --ignoreConfig --module commonjs --target es2022 --esModuleInterop \
  *   --skipLibCheck --types node --outDir /tmp/mango-vinculos \
  *   src/lib/objetivo-vinculos.ts src/lib/objetivo-vinculos.check.ts

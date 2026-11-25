@@ -80,7 +80,12 @@ git push origin dev
 gh pr create --base main --head dev --title "release vX.Y.Z"
 # mergeie com MERGE COMMIT (nunca squash — a tag ficaria fora da main)
 git push origin vX.Y.Z        # dispara .github/workflows/release.yml → publica no GHCR
+uv run python scripts/notas_release.py X.Y.Z > /tmp/notas.md
+gh release create vX.Y.Z --verify-tag --title "vX.Y.Z — <tema>" --notes-file /tmp/notas.md --latest
 ```
+
+Toda versão publicada tem página de release no GitHub (notas = seção do CHANGELOG, gerada por
+`scripts/notas_release.py`, com a imagem e o link de comparação) — não só a imagem no GHCR.
 
 O `make release` commita direto na `dev`, e a `dev` exige PR. Isso funciona porque o mantenedor tem
 bypass de admin na ruleset da `dev` — é o único caminho que usa esse bypass de propósito.

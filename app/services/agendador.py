@@ -1,4 +1,4 @@
-"""Rotina diária nos dois modos; orçamentos, saldos e fundamentos no self-hosted.
+"""Rotina diária e aviso de despesas fixas nos dois modos; orçamentos, saldos e FII no self-hosted.
 
 O desktop recupera a rotina diária ao abrir; demais jobs mantêm seus backstops existentes.
 """
@@ -73,6 +73,19 @@ def iniciar() -> None:
         trigger="interval",
         minutes=1,
         id="rotina_diaria",
+        max_instances=1,
+        coalesce=True,
+        next_run_time=datetime.now(SP),
+    )
+    from app.services.despesa_fixa_alerta import verificar_todos
+
+    # Vence hoje / atrasadas (nos dois modos). O próprio aviso espera `sync_horario` e deduplica
+    # por vencimento, então rodar a cada 15 min só define a latência após o horário.
+    _scheduler.add_job(
+        verificar_todos,
+        trigger="interval",
+        minutes=15,
+        id="despesas_fixas_aviso",
         max_instances=1,
         coalesce=True,
         next_run_time=datetime.now(SP),

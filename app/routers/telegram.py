@@ -64,7 +64,11 @@ def atualizar(
 ):
     with service.lock:
         return service.preferencia(
-            db, user.id, payload.notif_nao_revisadas, payload.notif_divisoes_pendentes
+            db,
+            user.id,
+            payload.notif_nao_revisadas,
+            payload.notif_divisoes_pendentes,
+            payload.notif_despesas_fixas,
         )
 
 

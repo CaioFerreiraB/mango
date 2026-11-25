@@ -229,7 +229,7 @@ export function EditarMesDialog({
       setErros(novosErros)
       toast.error(
         sucessos > 0
-          ? `${sucessos} alteração(ões) salva(s), ${erroCount} com erro.`
+          ? `${sucessos} ${sucessos === 1 ? "alteração salva" : "alterações salvas"}, ${erroCount} com erro.`
           : `Não foi possível salvar (${erroCount} erro(s)).`
       )
     }
@@ -301,13 +301,15 @@ export function EditarMesDialog({
                       edits[item.orcamento_mensal_id] ?? item.limite_centavos
                     return (
                       <div key={item.orcamento_mensal_id}>
-                        <div className="flex items-center gap-2 py-1">
+                        {/* Mobile: nome numa linha, valor/aviso/remover na de baixo — numa linha só
+                            o nome truncava e o input de 112px cortava "R$ 12.500,00". */}
+                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 py-1 sm:flex-nowrap">
                           {createElement(iconeCategoria(item.categoria_id), {
                             className: "size-4 shrink-0 text-muted-foreground",
                             "aria-hidden": true,
                           })}
                           {isMobile ? (
-                            <div className="min-w-0 flex-1">
+                            <div className="min-w-0 flex-1 max-sm:basis-[calc(100%-1.5rem)]">
                               <p className="truncate text-sm">{nome}</p>
                               <p className="truncate text-xs text-muted-foreground">
                                 Gasto:{" "}
@@ -331,7 +333,7 @@ export function EditarMesDialog({
                                 [item.orcamento_mensal_id]: v,
                               }))
                             }
-                            className="w-28 shrink-0 sm:w-32"
+                            className="min-w-0 flex-1 max-sm:ml-6 sm:w-32 sm:flex-none"
                             aria-label={`Limite de ${nome}`}
                           />
                           {tipo === "despesa" ? (
@@ -372,12 +374,12 @@ export function EditarMesDialog({
                     const chave = `novo:${tipo}:${nova.categoriaId}`
                     return (
                       <div key={nova.categoriaId}>
-                        <div className="flex items-center gap-2 py-1">
+                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 py-1 sm:flex-nowrap">
                           {createElement(iconeCategoria(nova.categoriaId), {
                             className: "size-4 shrink-0 text-muted-foreground",
                             "aria-hidden": true,
                           })}
-                          <span className="min-w-0 flex-1 truncate text-sm">
+                          <span className="min-w-0 flex-1 truncate text-sm max-sm:basis-[calc(100%-1.5rem)]">
                             {nome}
                           </span>
                           <CurrencyInput
@@ -385,7 +387,7 @@ export function EditarMesDialog({
                             onChange={(v) =>
                               mudarValorNova(tipo, nova.categoriaId, v)
                             }
-                            className="w-28 shrink-0 sm:w-32"
+                            className="min-w-0 flex-1 max-sm:ml-6 sm:w-32 sm:flex-none"
                             aria-label={`Valor de ${nome}`}
                           />
                           {tipo === "despesa" ? (

@@ -73,10 +73,10 @@ jobs:
       TEST_DATABASE_URL: postgresql+psycopg://mango:mango@localhost:5432/mango
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Setup uv + Python
-        uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5.4.2
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
         with:
           python-version: "3.12"
 
@@ -122,13 +122,13 @@ jobs:
       run:
         working-directory: frontend
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           # Caminho a partir da raiz: o `working-directory` do job só vale para passos `run:`.
-          # O `.nvmrc` diz `20` (não uma patch fixa) para acompanhar o `node:20-alpine` do
+          # O `.nvmrc` diz `24` (não uma patch fixa) para acompanhar o `node:24-alpine` do
           # Dockerfile — assim o CI testa na mesma linha de Node em que a imagem é buildada.
           node-version-file: frontend/.nvmrc
           cache: npm
@@ -157,7 +157,7 @@ jobs:
   seguranca:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Trivy — CVE nas dependências (filesystem)
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0

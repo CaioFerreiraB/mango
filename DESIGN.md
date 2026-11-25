@@ -39,8 +39,11 @@ Sistema visual da SPA do mango. Os tokens vivem em `frontend/src/index.css` (Tai
 - **Neutros (`mist`):** cinzas levemente frios (hue ~214) para superfícies, bordas e texto —
   `--background/card/muted/secondary/accent/border/input/ring` **não** derivam do accent.
 - **Semânticos:** `destructive` (vermelho) para ações destrutivas/erro. Tokens próprios para
-  **valores financeiros** — `--positive` e `--negative` (não derivam do accent; badge tem variantes
-  `positive`/`negative` em pílula para deltas). Regra: valor nunca depende **só** de cor
+  **valores financeiros** — `--positive` `#4268F1` e `--negative` `#F36846` (cores da marca, iguais
+  nos dois temas; não derivam do accent) para **preenchimento** (barras, heatmaps, badges). Número
+  em **texto** usa `text-positive-ink`/`text-negative-ink` (mesmo matiz com contraste AA por tema) e
+  texto **sobre** o preenchimento cheio usa `text-positive-foreground`/`text-negative-foreground`.
+  Badge tem variantes `positive`/`negative` em pílula para deltas. Regra: valor nunca depende **só** de cor
   (ver PRODUCT.md / a11y).
 - **Charts (Apache ECharts):** todo gráfico passa pelo wrapper `components/common/echart.tsx` e
   pelas peças de `components/common/graficos-base.tsx` (`GraficoLinhas`, `GraficoBarras`, `Rosca`,

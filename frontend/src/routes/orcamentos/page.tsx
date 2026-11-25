@@ -148,7 +148,7 @@ export function OrcamentosPage() {
             >
               <ChevronLeft className="size-4" />
             </Button>
-            <span className="min-w-36 text-center text-sm font-medium capitalize">
+            <span className="min-w-36 text-center text-sm font-medium first-letter:uppercase">
               {rotuloMes}
             </span>
             <Button
@@ -443,7 +443,11 @@ function ResumoSecao({
             </p>
           </div>
           <div>
-            <p className="text-sm text-muted-foreground">{r.restanteTotal}</p>
+            {/* O valor sai sem "-" (ver abaixo); sem trocar o rótulo, "Restante R$ 2.313" em
+                vermelho dependia só da cor para dizer que estourou. */}
+            <p className="text-sm text-muted-foreground">
+              {despesa && restanteTotal < 0 ? "Excedido" : r.restanteTotal}
+            </p>
             <p className="text-lg font-semibold">
               {/* Nunca mostra "-": despesa mantém a cor do sinal real (vermelho se estourou),
                   só sem o sinal de menos no texto. Nas metas (receita/investimento), passar
@@ -713,7 +717,7 @@ function PainelTransacoes({
       ) : !transacoes.data?.length ? (
         <EmptyState title="Nenhuma transação nesta categoria no mês" />
       ) : (
-        <TransacoesTabela items={transacoes.data} />
+        <TransacoesTabela items={transacoes.data} semMoldura />
       )}
     </section>
   )

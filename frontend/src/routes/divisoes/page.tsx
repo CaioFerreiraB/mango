@@ -142,7 +142,7 @@ function AbaResumo({
             <Valor
               centavos={data.saldo_a_receber_centavos}
               neutro
-              className="text-2xl text-positive"
+              className="text-2xl text-positive-ink"
             />
             <p className="text-xs text-muted-foreground">
               de {data.pessoas_a_receber} pessoas
@@ -156,7 +156,7 @@ function AbaResumo({
               centavos={data.saldo_a_pagar_centavos}
               absoluto
               neutro
-              className="text-2xl text-negative"
+              className="text-2xl text-negative-ink"
             />
             <p className="text-xs text-muted-foreground">
               para {data.pessoas_a_pagar} pessoas
@@ -350,7 +350,17 @@ function AbaTransacoes({
                   onClick={() => onAbrirDetalhe(d.id)}
                 >
                   <TableCell>
-                    <p>{d.descricao || "Sem descrição"}</p>
+                    {/* Alvo de teclado; o clique na linha é só conveniência de mouse. */}
+                    <button
+                      type="button"
+                      className="text-left hover:text-primary"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onAbrirDetalhe(d.id)
+                      }}
+                    >
+                      {d.descricao || "Sem descrição"}
+                    </button>
                     <p className="text-xs text-muted-foreground">
                       {d.categoria_id
                         ? (nomesCategoria.get(d.categoria_id) ?? d.categoria_id)

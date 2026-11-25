@@ -7,6 +7,7 @@ import { DivisaoDetalheDialog } from "@/components/divisoes/divisao-detalhe-dial
 import { EscolhaReajuste } from "@/components/divisoes/escolha-reajuste"
 import { NovaDivisaoWizard } from "@/components/divisoes/nova-divisao-wizard"
 import { AssinaturaSelect } from "@/components/transacoes/assinatura-select"
+import { DespesaFixaSelect } from "@/components/transacoes/despesa-fixa-select"
 import { CampoCategoria } from "@/components/transacoes/campo-categoria"
 import { StatusBadge } from "@/components/transacoes/status-badge"
 import { Valor } from "@/components/common/valor"
@@ -187,6 +188,9 @@ export function TransacaoDetalhe({
                   />
                 </label>
                 <AssinaturaCampo key={t.id} transacao={t} />
+                {t.type === "DEBIT" || t.despesa_fixa_id != null ? (
+                  <DespesaFixaCampo key={`df-${t.id}`} transacao={t} />
+                ) : null}
                 <DivisaoCampo key={`div-${t.id}`} transacao={t} />
                 {t.type === "CREDIT" ? (
                   <ProventoCampo key={`prov-${t.id}`} transacao={t} />
@@ -358,6 +362,58 @@ function AssinaturaCampo({ transacao }: { transacao: Transacao }) {
             atualizar.mutate({ id: transacao.id, patch: { assinatura_id: v } })
           }
         />
+      ) : null}
+    </div>
+  )
+}
+
+/** Switch "é uma despesa fixa?" + combobox. Escolher vincula e marca como pago o vencimento em
+ *  aberto mais antigo da despesa; desligar desvincula e reabre esse vencimento. */
+function DespesaFixaCampo({ transacao }: { transacao: Transacao }) {
+  const atualizar = useAtualizarTransacao()
+  const [mostrar, setMostrar] = useState(transacao.despesa_fixa_id != null)
+  const vinculada = transacao.despesa_fixa_id != null
+  const salvar = (despesa_fixa_id: number | null, msg: string) =>
+    atualizar.mutate(
+      { id: transacao.id, patch: { despesa_fixa_id } },
+      {
+        onSuccess: () => toast.success(msg),
+        onError: (err) => toast.error(err.message),
+      }
+    )
+
+  return (
+    <div className="space-y-2">
+      <label className="flex items-center justify-between gap-2 text-sm">
+        É uma despesa fixa
+        <Switch
+          checked={vinculada || mostrar}
+          disabled={atualizar.isPending}
+          onCheckedChange={(c) => {
+            setMostrar(c)
+            if (!c && vinculada)
+              salvar(
+                null,
+                "Desvinculada; o vencimento voltou a ficar em aberto."
+              )
+          }}
+        />
+      </label>
+      {vinculada || mostrar ? (
+        <>
+          <DespesaFixaSelect
+            value={transacao.despesa_fixa_id ?? null}
+            disabled={atualizar.isPending}
+            onChange={(v) =>
+              salvar(v, "Vinculada: vencimento marcado como pago.")
+            }
+          />
+          {!vinculada ? (
+            <p className="text-xs text-muted-foreground">
+              Paga o vencimento em aberto mais antigo da despesa.
+            </p>
+          ) : null}
+        </>
       ) : null}
     </div>
   )

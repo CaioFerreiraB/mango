@@ -17,6 +17,7 @@ from sqlalchemy import or_, select, update
 from sqlalchemy.orm import Session
 
 from app.exceptions import ConflictError, NotFoundError
+from app.models.ativo import Ativo
 from app.models.fii_fundamento import FiiFundamento
 from app.models.investimento import Investimento, InvestimentoTransacao
 from app.models.investimento_saldo_diario import InvestimentoSaldoDiario
@@ -41,10 +42,12 @@ from app.schemas.investimento import (
     FundamentosFII,
     FundamentosFIIAlocacao,
     InvestimentoTransacaoRead,
+    ProventoMes,
     ProventosFII,
     VisaoGeralInvestimentos,
 )
 from app.services import indicadores
+from app.services.ativo_agrupamento import sincronizar_objetivos_ativos, travar_ativos
 from app.services.brapi import token_brapi
 from app.services.periodo import SP
 
@@ -510,31 +513,41 @@ def _validar_ids(db: Session, usuario_id: int, ids: list[int]) -> list[Investime
     return invs
 
 
-def vincular_objetivo_posicao(
-    db: Session, usuario_id: int, ids: list[int], objetivo_id: int
+def definir_objetivo(
+    db: Session, usuario_id: int, ids: list[int], objetivo_id: int | None, *, transferir: bool
 ) -> None:
-    """Vincula as posições disponíveis em um commit, sem transferir de outro objetivo."""
-    if ObjetivoRepository(db, usuario_id).get(objetivo_id) is None:
-        raise NotFoundError("objetivo não encontrado")
-    _validar_ids(db, usuario_id, ids)
+    """Vincula (ou desvincula, `objetivo_id=None`) o investimento INTEIRO de cada id: compra de um
+    ativo → o ativo (todas as compras, inclusive as futuras); posição sem ativo → ela mesma.
+    `transferir=False` não rouba de outro objetivo (409, nada gravado). Um commit só."""
     try:
-        # A condição é verificada na escrita: cobre mudanças concorrentes após a leitura.
-        alterados = db.scalars(
-            update(Investimento)
-            .where(
-                Investimento.usuario_id == usuario_id,
-                Investimento.id.in_(ids),
-                or_(Investimento.objetivo_id.is_(None), Investimento.objetivo_id == objetivo_id),
-            )
-            .values(objetivo_id=objetivo_id)
-            .returning(Investimento.id)
-            .execution_options(synchronize_session=False)
-        ).all()
-        if set(alterados) != set(ids):
-            raise ConflictError(
-                "Alguma posição já foi vinculada a outro objetivo. "
-                "Atualize a seleção e tente novamente."
-            )
+        # Tudo dentro do try: o rollback desfaz também o que quem chamou deixou pendente na sessão
+        # (o PATCH /{id} move a compra de ativo e vincula num commit só).
+        if objetivo_id is not None and ObjetivoRepository(db, usuario_id).get(objetivo_id) is None:
+            raise NotFoundError("objetivo não encontrado")
+        invs = _validar_ids(db, usuario_id, ids)
+        ativo_ids = {i.ativo_id for i in invs if i.ativo_id is not None}
+        avulsos = {i.id for i in invs if i.ativo_id is None}
+        travar_ativos(db, usuario_id, ativo_ids)  # ordem de id antes do UPDATE (ver travar_ativos)
+        for tabela, alvos in ((Ativo, ativo_ids), (Investimento, avulsos)):
+            if not alvos:
+                continue
+            stmt = update(tabela).where(tabela.usuario_id == usuario_id, tabela.id.in_(alvos))
+            if not transferir:
+                # A condição é verificada na escrita: cobre mudanças concorrentes após a leitura.
+                stmt = stmt.where(
+                    or_(tabela.objetivo_id.is_(None), tabela.objetivo_id == objetivo_id)
+                )
+            alterados = db.scalars(
+                stmt.values(objetivo_id=objetivo_id)
+                .returning(tabela.id)
+                .execution_options(synchronize_session=False)
+            ).all()
+            if set(alterados) != alvos:
+                raise ConflictError(
+                    "Algum investimento já foi vinculado a outro objetivo. "
+                    "Atualize a seleção e tente novamente."
+                )
+        sincronizar_objetivos_ativos(db, usuario_id, ativo_ids)
         db.commit()
     except Exception:
         db.rollback()
@@ -878,6 +891,7 @@ def serie_carteira(
         reconstruido_ate = max((d for d, _v in recon.items() if d <= fim_rec), default=None)
 
     # Era dos snapshots: forward-fill por investimento (último snapshot ≤ dia).
+    com_valor_na_janela: set[int] = set()  # p/ `investido_completo` (inclui já resgatadas)
     if primeira_snap is not None:
         faixa_ini = max(inicio, primeira_snap)
         for i in invs:
@@ -889,9 +903,21 @@ def serie_carteira(
                 atual = snaps_inv.get(dia, atual)
                 if atual is not None:
                     valor_por_dia[dia] = valor_por_dia.get(dia, 0) + atual
+                    if atual > 0:
+                        com_valor_na_janela.add(i.id)
                 dia += timedelta(days=1)
 
     dias = sorted(valor_por_dia)
+    analise, incompletos = _analisar_custos(db, invs)
+    custo = {i.id: _investido(i, analise) for i in invs}
+    # Custo completo = toda posição que teve valor no período (hoje ou em algum dia da janela, mesmo
+    # já resgatada) tem custo conhecido e cobrindo a quantidade. Senão "valor − investido" contaria
+    # valor sem custo como rendimento.
+    investido_completo = all(
+        custo[i.id] is not None and i.id not in incompletos
+        for i in invs
+        if _valor(i) > 0 or i.id in com_valor_na_janela
+    )
     if aplicado_por_dia:
         # Renda fixa: linha "aplicado" reconstruída dia-a-dia (aportes − resgates), forward-fill nos
         # dias sem evento (a reconstrução também cobre a era dos snapshots, então é contínua).
@@ -901,11 +927,10 @@ def serie_carteira(
             ult = aplicado_por_dia.get(dia, ult)
             investido_seq[dia] = ult
     else:
-        # Demais casos: "aplicado" ancorado no investido atual (amount_original) e recuado pelos
-        # fluxos conhecidos — termina certo mesmo sem o BUY inicial. ponytail: aproximação.
-        investido_final = sum(
-            i.amount_original_centavos for i in invs if i.amount_original_centavos is not None
-        )
+        # Demais casos: "aplicado" ancorado no investido atual e recuado pelos fluxos conhecidos —
+        # termina certo mesmo sem o BUY inicial. Custo = o mesmo do resumo (`amount_original`,
+        # senão reconstruído dos movimentos, incl. aportes manuais). ponytail: aproximação.
+        investido_final = sum(v for v in custo.values() if v is not None)
         fluxo_total = sum(fluxo_por_dia.get(d, 0) for d in dias)
         acc = (investido_final - fluxo_total) if investido_final else 0
         investido_seq = {}
@@ -930,7 +955,11 @@ def serie_carteira(
         )
         anterior = valor
     return CarteiraSerie(
-        recorte=recorte, subtype=subtype, pontos=pontos, reconstruido_ate=reconstruido_ate
+        recorte=recorte,
+        subtype=subtype,
+        pontos=pontos,
+        reconstruido_ate=reconstruido_ate,
+        investido_completo=investido_completo,
     )
 
 
@@ -1130,16 +1159,20 @@ def visao_geral(db: Session, usuario_id: int) -> VisaoGeralInvestimentos:
         .join(Investimento, InvestimentoTransacao.investimento_id == Investimento.id)
         .where(Investimento.usuario_id == usuario_id)
     ).all()
-    dividendos_mes = 0
+    # Proventos por mês nos 12 meses até o corrente (o do mês corrente é o card "Dividendos").
+    indice = hoje.year * 12 + hoje.month - 1
+    meses = [f"{i // 12:04d}-{i % 12 + 1:02d}" for i in range(indice - 11, indice + 1)]
+    por_mes = dict.fromkeys(meses, 0)
     for m in movimentos:
         if not _eh_provento(m):
             continue
         dia = _dia_sp(m.date or m.trade_date)
-        if dia is not None and dia.year == hoje.year and dia.month == hoje.month:
-            dividendos_mes += m.amount_centavos
+        if dia is not None and (chave := f"{dia:%Y-%m}") in por_mes:
+            por_mes[chave] += m.amount_centavos
 
     return VisaoGeralInvestimentos(
         rentabilidade_12m_pct=rent_12m,
         vs_cdi_pp=vs_cdi,
-        dividendos_mes_centavos=dividendos_mes,
+        dividendos_mes_centavos=por_mes[meses[-1]],
+        proventos_mensais=[ProventoMes(mes=k, centavos=v) for k, v in por_mes.items()],
     )

@@ -27,9 +27,15 @@
   --color-input: var(--input);
   --color-border: var(--border);
   --color-destructive: var(--destructive);
-  /* Valores financeiros: entradas (positivo) e saídas (negativo) — §5.3. */
+  /* Valores financeiros: entradas (positivo) e saídas (negativo) — §5.3. `positive`/`negative` são
+     as cores da marca para preenchimento (barras, heatmaps, badges); número em texto usa `*-ink`
+     (mesmo matiz com contraste AA) e texto sobre o preenchimento cheio usa `*-foreground`. */
   --color-positive: var(--positive);
   --color-negative: var(--negative);
+  --color-positive-ink: var(--positive-ink);
+  --color-negative-ink: var(--negative-ink);
+  --color-positive-foreground: var(--positive-foreground);
+  --color-negative-foreground: var(--negative-foreground);
   /* Accent legível para texto de dado (números realçados): tom do accent com lightness
        normalizada p/ contraste AA em ambos os temas — ver bloco @supports abaixo. */
   --color-accent-ink: var(--accent-ink);
@@ -77,8 +83,16 @@
   --accent: oklch(0.963 0.002 197.1);
   --accent-foreground: oklch(0.32 0.016 255);
   --destructive: oklch(0.577 0.245 27.325);
-  --positive: oklch(57.066% 0.21012 267.454);
-  --negative: oklch(68.443% 0.17853 34.962);
+  /* Cores da marca para valores financeiros (iguais nos dois temas; o .dark não redefine). */
+  --positive: #4268f1;
+  --negative: #f36846;
+  /* Texto sobre o preenchimento cheio: branco no azul (4.69:1), tinta escura no laranja (5.5:1). */
+  --positive-foreground: #ffffff;
+  --negative-foreground: oklch(0.218 0.008 223.9);
+  /* Número em texto (12–14px precisa de AA 4.5:1): o laranja da marca dá 3.05:1 no branco → L 0.56
+     (5.07:1 no branco, 4.55:1 sobre --muted); o azul dá 4.2:1 sobre --muted → L 0.55. */
+  --positive-ink: oklch(0.55 0.21 267.454);
+  --negative-ink: oklch(0.56 0.18 34.962);
   --accent-ink: oklch(
     0.48 0.16 292.581
   ); /* fallback estático (violeta); accent real no @supports */
@@ -133,8 +147,9 @@
   --accent: oklch(0.275 0.011 216.9);
   --accent-foreground: oklch(0.93 0.008 250);
   --destructive: oklch(0.704 0.191 22.216);
-  --positive: oklch(57.066% 0.21012 267.454);
-  --negative: oklch(68.443% 0.17853 34.962);
+  /* Texto no escuro: o azul da marca dá 3.7:1 no card → L 0.68 (5.9:1); o laranja já passa (5.7:1). */
+  --positive-ink: oklch(0.68 0.15 267.454);
+  --negative-ink: #f36846;
   --accent-ink: oklch(
     0.8 0.16 292.759
   ); /* fallback estático (violeta); accent real no @supports */

@@ -61,10 +61,9 @@ export function ConfiguracoesPage() {
     <div className="max-w-5xl space-y-4">
       <h1 className="text-xl font-semibold">Configurações</h1>
       <Tabs value={aba} onValueChange={trocarAba} key={abaPadrao}>
-        {/* Faixa rolável: com 7 abas a lista estoura telas estreitas e arrastava a página inteira.
-            overflow-y-hidden porque overflow-x-auto promove overflow-y a auto e o after:bottom-[-5px]
-            do trigger criaria scroll vertical; py-1 dá folga ao anel de foco. Ver carteira.tsx. */}
-        <div className="no-scrollbar overflow-x-auto overflow-y-hidden py-1">
+        {/* Com até 10 abas, a lista quebra linha em tela estreita (TabsList é flex-wrap) —
+            sem rolagem horizontal. */}
+        <div className="py-1">
           <TabsList>
             {podeVerConexoes ? (
               <TabsTrigger value="conexoes">Conexões</TabsTrigger>

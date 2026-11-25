@@ -10,6 +10,75 @@ ainda está se assentando. Cada versão publicada tem uma imagem correspondente 
 
 ## [Não publicado]
 
+## [0.11.0] — 2026-11-25
+
+### Adicionado
+
+- **Visão Geral de investimentos:** Patrimônio total ganha o card de destaque do dashboard, com
+  **Patrimônio líquido** (valor de resgate, após IR e IOF) ao lado; os demais indicadores ficam 5
+  por linha no desktop e 2 no celular. Quatro gráficos novos: **proventos por mês** (12 meses, com
+  total e média), **aportes × valorização** (quanto do patrimônio é aporte e quanto é rendimento),
+  **rentabilidade mês a mês** (mapa de calor por ano, com acumulado do ano e CDI, filtrável por
+  todos, renda fixa ou renda variável) e **vencimentos
+  da renda fixa** (o que vence em cada mês).
+- **Despesas fixas** (Planejamento → Despesas fixas): cadastre contas que se repetem (aluguel,
+  condomínio, parcelas) com valor, dia de vencimento e frequência semanal, quinzenal, mensal,
+  trimestral, semestral ou anual. Podem ser temporárias, com início e término. Cada vencimento fica
+  pago, em aberto, atrasado ou pulado, com a contagem de atrasos e o próximo vencimento à vista.
+  Marque como pago à mão ou vincule a transação que pagou (no detalhe da transação, "É uma despesa
+  fixa"). O detalhe da despesa lista os vencimentos e as transações vinculadas. Dá para desativar
+  sem perder o histórico.
+- **Aviso de despesas fixas no Telegram:** no dia do vencimento e, enquanto não for paga ou pulada,
+  um aviso por dia de atraso, a partir do horário da rotina diária. Liga e desliga em
+  Configurações → Telegram (ligado por padrão para quem já tem o Telegram vinculado).
+- **Widgets de despesas fixas no dashboard:** um com o gráfico do mês (pagas, em aberto e atrasadas)
+  e outro com os próximos vencimentos, atrasados primeiro.
+- **Calendário do mês no dashboard:** cada dia colorido numa escala contínua do laranja (mais
+  negativo) ao azul (mais positivo), com filtro Tudo / Despesas / Receitas / Investimentos, navegação
+  entre meses, botão "Hoje" e um painel com receitas, despesas, investido e resultado do dia ou do
+  mês, que abre a lista de lançamentos. Dias com aporte ou resgate ganham uma marca.
+
+### Alterado
+
+- **Objetivos vinculam o investimento inteiro:** vincular uma compra de renda fixa vincula o ativo
+  todo (todas as compras do Tesouro Selic 2027, a caixinha inteira), e o vínculo vale também para os
+  aportes que chegarem depois. Compra movida para um ativo vinculado passa a contar para o objetivo
+  dele; movida para fora, deixa de contar. No detalhe do objetivo, cada ativo aparece numa linha só,
+  com o saldo somado. Na atualização, compras do mesmo ativo que já estavam vinculadas levam o ativo
+  inteiro junto (se estavam em objetivos diferentes, fica o de maior saldo).
+- **Despesas × orçamento** (aba Despesas do dashboard) virou um mapa de calor: um quadrado por
+  categoria, azul enquanto está dentro do limite e laranja quando passa dele, mais forte quanto mais
+  estourou. Ao abrir uma categoria, o diálogo mostra em destaque quanto foi gasto, o orçamento e
+  quanto resta ou passou.
+- As cores de positivo e negativo voltam ao azul `#4268F1` e ao laranja `#F36846` em gráficos,
+  barras e destaques; os valores em texto continuam num tom do mesmo matiz que passa no contraste AA.
+
+- Dependências atualizadas: FastAPI 0.165, SQLAlchemy 2.1, Alembic 1.20, uvicorn 0.54, psycopg 3.3.9,
+  React 19.3, Vite 8.3, React Router 8 e o restante dos minor/patch; actions do CI e do release em
+  versões que rodam em Node 24. `@tanstack/react-table`, que não era usado, saiu do frontend.
+  Dependências indiretas com alerta de segurança (Mako, opentelemetry-api, minimatch e as de dev
+  filelock/virtualenv) foram para as versões corrigidas.
+- O build do frontend (imagem Docker e desenvolvimento local) passa do Node 20, fora de suporte desde
+  abril de 2026, para o **Node 24 LTS**. Quem builda localmente precisa do Node ≥ 22.22 (`nvm use`).
+- **Carteira no celular:** a tabela de posições vira uma lista (nome, tipo, valor e rentabilidade; o
+  resto fica no detalhe). Os indicadores da Carteira e da Visão Geral ficam em duas colunas.
+
+### Corrigido
+
+- **Sem rolagem horizontal no celular:** as abas (Configurações, Carteira, detalhe do ativo, MCP)
+  quebram linha em vez de rolar para o lado, e o comando de conexão do MCP quebra linha.
+- **Contraste:** o vermelho dos valores negativos (tema claro) e o azul dos positivos (tema escuro)
+  passam no mínimo de legibilidade WCAG AA.
+- Valor investido e resultado que o banco não informa aparecem como "—", não como "R$ 0,00"; a
+  alocação mostra "Renda variável" em vez de "EQUITY".
+- O seletor de categoria abre largo o bastante para os nomes, e os diálogos de orçamento não cortam
+  o nome nem o valor no celular.
+- "Novembro de 2026" em vez de "Novembro De 2026" (Orçamentos e Faturas); orçamento estourado diz
+  "Excedido"; plurais certos em vez de "transação(ões)".
+- Cards de objetivo e linhas de Divisões abrem pelo teclado; convite inválido mostra "Convite
+  indisponível" com botão para o login; a linha "Resultado" do gráfico do dashboard não se confunde
+  mais com as barras de entrada quando a cor de destaque é azul.
+
 ## [0.10.0] — 2026-11-24
 
 ### Adicionado
@@ -379,7 +448,8 @@ Primeira versão publicada. Imagem única servindo API e interface, instalável 
 - Os endpoints de autenticação ainda não têm rate-limiting nem lockout. Ver **Problemas conhecidos**
   em [ROADMAP.md](ROADMAP.md) antes de expor a instância à internet aberta.
 
-[Não publicado]: https://github.com/CaioFerreiraB/mango/compare/v0.10.0...HEAD
+[Não publicado]: https://github.com/CaioFerreiraB/mango/compare/v0.11.0...HEAD
+[0.11.0]: https://github.com/CaioFerreiraB/mango/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/CaioFerreiraB/mango/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/CaioFerreiraB/mango/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/CaioFerreiraB/mango/compare/v0.7.0...v0.8.0

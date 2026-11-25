@@ -1,7 +1,7 @@
 # Hooks de pre-commit. Instalar: uv run pre-commit install
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.15.20
+    rev: v0.17.6
     hooks:
       - id: ruff
         args: [--fix]

@@ -262,7 +262,7 @@ export function ConfigurarOrcamentoPadraoDialog({
       setErros(novosErros)
       toast.error(
         sucessos > 0
-          ? `${sucessos} alteração(ões) salva(s), ${erroCount} com erro.`
+          ? `${sucessos} ${sucessos === 1 ? "alteração salva" : "alterações salvas"}, ${erroCount} com erro.`
           : `Não foi possível salvar (${erroCount} erro(s)).`
       )
     }
@@ -485,7 +485,8 @@ function LinhaArrastavel({
 
   return (
     <div ref={setNodeRef} style={style}>
-      <div className="flex items-center gap-2 py-1">
+      {/* Mobile: nome numa linha, valor/aviso/remover na de baixo (numa linha só o nome truncava). */}
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 py-1 sm:flex-nowrap">
         <button
           type="button"
           className="-m-2 cursor-grab touch-none p-2 text-muted-foreground active:cursor-grabbing"
@@ -499,11 +500,13 @@ function LinhaArrastavel({
           className: "size-4 shrink-0 text-muted-foreground",
           "aria-hidden": true,
         })}
-        <span className="min-w-0 flex-1 truncate text-sm">{nome}</span>
+        <span className="min-w-0 flex-1 truncate text-sm max-sm:basis-[calc(100%-3rem)]">
+          {nome}
+        </span>
         <CurrencyInput
           value={linha.valor}
           onChange={onMudarValor}
-          className="w-28 shrink-0 sm:w-32"
+          className="min-w-0 flex-1 max-sm:ml-12 sm:w-32 sm:flex-none"
           aria-label={`Valor de ${nome}`}
         />
         {onMudarNotificar ? (

@@ -10,6 +10,7 @@ from app.models import (  # noqa: F401
     configuracao,
     conta,
     convite,
+    despesa_fixa,
     divisao,
     fii_fundamento,
     fonte_de_renda,

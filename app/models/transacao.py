@@ -105,6 +105,15 @@ class Transacao(UserOwnedMixin, TimestampMixin, Base):
         ForeignKey("investimento_transacao.id", ondelete="SET NULL"), index=True
     )
 
+    # Vínculo com uma despesa fixa (docs/dev/despesas-fixas.md): a despesa escolhida pelo usuário
+    # e o vencimento que esta transação pagou (preenchido pelo servidor).
+    despesa_fixa_id: Mapped[int | None] = mapped_column(
+        ForeignKey("despesa_fixa.id", ondelete="SET NULL"), index=True
+    )
+    despesa_fixa_ocorrencia_id: Mapped[int | None] = mapped_column(
+        ForeignKey("despesa_fixa_ocorrencia.id", ondelete="SET NULL"), index=True
+    )
+
     pluggy_criado_em: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     pluggy_atualizado_em: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 

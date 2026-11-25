@@ -62,6 +62,15 @@ No modo local, o Mango precisa estar aberto. Ao abrir depois do horário, recupe
 do dia atual. Não acumula relatórios dos dias em que ficou fechado. O mesmo vale após reinício do
 self-hosted.
 
+## Aviso de despesas fixas
+
+Mensagem própria, separada do relatório: lista o que **vence hoje** e o que está **atrasado** (com
+quantos dias), com botão para a página Despesas fixas. "Vence hoje" sai uma vez por vencimento; o
+aviso de atraso repete uma vez por dia até o vencimento ser marcado como pago ou pulado. Sai a partir
+do horário da rotina diária, mesmo com o sync automático desligado. Despesas desativadas não avisam.
+Liga e desliga em Configurações → Telegram → "Avisar sobre despesas fixas". No modo local, o aviso
+sai quando o Mango estiver aberto.
+
 ## Falhas e recuperação
 
 - Erros de sync transitórios têm até três tentativas: a inicial, mais uma após cinco minutos e

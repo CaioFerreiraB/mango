@@ -23,6 +23,7 @@ class TelegramRead(BaseModel):
     vinculo_expira_em: datetime | None
     notif_nao_revisadas: bool
     notif_divisoes_pendentes: bool
+    notif_despesas_fixas: bool
     ultimo_envio_em: datetime | None
     erro: str | None
     sync_automatico: bool
@@ -37,6 +38,8 @@ class TelegramUpdate(BaseModel):
     model_config = ConfigDict(extra="forbid")
     notif_nao_revisadas: bool | None = None
     notif_divisoes_pendentes: bool | None = None
+    # Aviso de despesa fixa que vence hoje / está atrasada — mensagem própria, fora do relatório.
+    notif_despesas_fixas: bool | None = None
 
     @model_validator(mode="after")
     def campos_nao_nulos(self):

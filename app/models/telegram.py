@@ -27,6 +27,10 @@ class ConfigTelegram(UserOwnedMixin, TimestampMixin, Base):
     notif_divisoes_pendentes: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=True, server_default=true()
     )
+    # Aviso de despesa fixa que vence hoje / está atrasada (ligado por padrão).
+    notif_despesas_fixas: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True, server_default=true()
+    )
     horario_1: Mapped[time | None] = mapped_column(Time)  # 2×/dia
     horario_2: Mapped[time | None] = mapped_column(Time)
     resumo_diario: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)

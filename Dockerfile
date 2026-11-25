@@ -2,7 +2,7 @@
 # Migrations + seed rodam sozinhos no boot (app.main lifespan → app.db.bootstrap).
 
 # ---- Stage 1: build da SPA (usa o frontend/openapi.json commitado; não precisa do backend) ----
-FROM node:20-alpine AS frontend
+FROM node:24-alpine AS frontend
 WORKDIR /app/frontend
 COPY frontend/package.json frontend/package-lock.json frontend/.npmrc ./
 RUN npm ci

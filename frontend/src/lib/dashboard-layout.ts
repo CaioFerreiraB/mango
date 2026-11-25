@@ -14,8 +14,11 @@ export type WidgetId =
   | "kpi-saidas"
   | "kpi-resultado"
   | "kpi-investido"
+  | "despesas-fixas"
+  | "despesas-fixas-proximos"
   | "ultimas"
   | "fluxo"
+  | "calendario"
   | "patrimonio"
 
 /** Ordem e largura padrão (grid de 60 colunas a partir de `lg`). */
@@ -25,8 +28,15 @@ export const CATALOGO: { id: WidgetId; titulo: string; largura: Largura }[] = [
   { id: "kpi-saidas", titulo: "Saídas no mês", largura: 12 },
   { id: "kpi-resultado", titulo: "Resultado no mês", largura: 12 },
   { id: "kpi-investido", titulo: "Investido no mês", largura: 12 },
+  { id: "despesas-fixas", titulo: "Despesas fixas · visão geral", largura: 30 },
+  {
+    id: "despesas-fixas-proximos",
+    titulo: "Despesas fixas · lista",
+    largura: 30,
+  },
   { id: "ultimas", titulo: "Últimas transações", largura: 60 },
   { id: "fluxo", titulo: "Entradas e saídas", largura: 60 },
+  { id: "calendario", titulo: "Calendário do mês", largura: 60 },
   { id: "patrimonio", titulo: "Evolução patrimonial", largura: 60 },
 ]
 // Categorias de despesa e cartões moram na aba Despesas: ids antigos ("categorias", "faturas")

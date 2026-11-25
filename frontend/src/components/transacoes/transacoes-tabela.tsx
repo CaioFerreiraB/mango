@@ -1,5 +1,6 @@
 import {
   ArrowRightLeft,
+  CalendarCheck,
   CreditCard,
   Repeat,
   StickyNote,
@@ -42,8 +43,8 @@ import { cn } from "@/lib/utils"
 /** Avatar de categoria: fundo tingido suave + ícone colorido, por tipo (entrada/saída). */
 function corTile(type: string) {
   return type === "CREDIT"
-    ? "bg-positive/15 text-positive"
-    : "bg-negative/15 text-negative"
+    ? "bg-positive/15 text-positive-ink"
+    : "bg-negative/15 text-negative-ink"
 }
 
 /** Marcador de transação dividida: a parte do usuário é o que conta no orçamento. */
@@ -142,6 +143,7 @@ export function TransacoesTabela({
   abrirId = null,
   ocultarCategoria = false,
   parteDoUsuario = false,
+  semMoldura = false,
 }: {
   items: ItemListagem[]
   /** Repassado ao drawer: esconde "Ir para a fatura" quando já estamos numa fatura. */
@@ -152,6 +154,8 @@ export function TransacoesTabela({
   ocultarCategoria?: boolean
   /** Compra dividida mostra só a parte do usuário (drill-down de gráfico: a lista soma a fatia). */
   parteDoUsuario?: boolean
+  /** Sem borda própria: a lista já está dentro de um card (borda dupla = card aninhado). */
+  semMoldura?: boolean
 }) {
   const valorDe = (t: Transacao) => {
     const v = valorEfetivoCentavos(t)
@@ -190,7 +194,9 @@ export function TransacoesTabela({
 
   return (
     <>
-      <div className="hidden rounded-lg border md:block">
+      <div
+        className={cn("hidden md:block", !semMoldura && "rounded-lg border")}
+      >
         <Table className="table-fixed">
           <colgroup>
             {larguras.map((w, i) =>
@@ -338,6 +344,12 @@ export function TransacoesTabela({
                               aria-label="assinatura"
                             />
                           ) : null}
+                          {t.despesa_fixa_id != null ? (
+                            <CalendarCheck
+                              className="size-3.5 shrink-0 text-muted-foreground"
+                              aria-label="despesa fixa"
+                            />
+                          ) : null}
                           {t.eh_transferencia ? (
                             <ArrowRightLeft
                               className="size-3.5 shrink-0 text-muted-foreground"
@@ -421,7 +433,9 @@ export function TransacoesTabela({
         </Table>
       </div>
 
-      <ul className="divide-y rounded-lg border md:hidden">
+      <ul
+        className={cn("divide-y md:hidden", !semMoldura && "rounded-lg border")}
+      >
         {items.map((t) => {
           if (ehLancamento(t)) {
             const IconeL = iconeCategoria(t.categoria_id)

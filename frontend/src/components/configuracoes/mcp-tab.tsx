@@ -417,19 +417,18 @@ function Snippets({
       </CardHeader>
       <CardContent>
         <Tabs defaultValue="claude">
-          <div className="no-scrollbar overflow-x-auto overflow-y-hidden py-1">
-            <TabsList>
-              {itens.map((s) => (
-                <TabsTrigger key={s.id} value={s.id}>
-                  {s.rotulo}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-          </div>
+          <TabsList>
+            {itens.map((s) => (
+              <TabsTrigger key={s.id} value={s.id}>
+                {s.rotulo}
+              </TabsTrigger>
+            ))}
+          </TabsList>
           {itens.map((s) => (
             <TabsContent key={s.id} value={s.id} className="pt-3">
               <div className="relative">
-                <pre className="overflow-x-auto rounded-md border bg-muted/50 p-3 pr-12 font-mono text-xs leading-relaxed">
+                {/* Quebra no mobile (copiar é pelo botão); em tela larga mantém a linha e rola. */}
+                <pre className="rounded-md border bg-muted/50 p-3 pr-12 font-mono text-xs leading-relaxed [overflow-wrap:anywhere] whitespace-pre-wrap sm:overflow-x-auto sm:[overflow-wrap:normal] sm:whitespace-pre">
                   {s.texto}
                 </pre>
                 <div className="absolute top-2 right-2">
