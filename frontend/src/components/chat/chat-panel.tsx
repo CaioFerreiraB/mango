@@ -110,13 +110,13 @@ export function ChatPanel() {
           fechar()
       }}
     >
-      <div className="absolute inset-y-0 right-0 flex w-[360px] py-3 pr-3 pl-1 lg:w-[420px]">
+      <div className="absolute inset-y-0 right-0 flex w-[360px] p-4 lg:w-[420px]">
         {/* Superfície própria, flutuando sobre a página (encaixado ou gaveta): card elevado com
             respiro em volta — nunca uma coluna colada ao conteúdo. Entra deslizando + fade junto
             com a largura (transform/opacity, mesma curva). */}
         <div
           className={cn(
-            "flex min-h-0 w-full flex-col overflow-hidden rounded-[1.75rem] bg-card shadow-(--shadow-pop) transition-[opacity,transform] duration-300 ease-(--ease-out) motion-reduce:transition-none dark:ring-1 dark:ring-border/70",
+            "flex min-h-0 w-full flex-col overflow-hidden rounded-[1.75rem] bg-card shadow-(--shadow-painel) transition-[opacity,transform] duration-300 ease-(--ease-out) motion-reduce:transition-none dark:ring-1 dark:ring-border/70",
             aberto ? "translate-x-0 opacity-100" : "translate-x-6 opacity-0"
           )}
         >
