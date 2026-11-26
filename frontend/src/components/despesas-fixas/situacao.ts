@@ -8,7 +8,7 @@ export type Situacao = SituacaoDespesa | SituacaoOcorrencia
 
 /** Texto e tom por situação (tons compartilhados do `Selo`). Em aberto (ainda no prazo) é neutro
  *  de propósito: a única cor quente é a de atraso, e "vence hoje" fica no aviso — senão laranja e
- *  coral se confundem na barra e nos selos. `switch` exaustivo: nenhuma situação fica de fora. */
+ *  framboesa se confundem na barra e nos selos. `switch` exaustivo: nenhuma situação fica de fora. */
 export function estiloSituacao(s: Situacao): {
   texto: string
   tom: TomSelo

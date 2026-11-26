@@ -200,7 +200,7 @@ export const comAlfa = (rgba: string, a: number) =>
 
 /**
  * Cor fixa por indicador de mercado (a cor segue a entidade em todas as telas): slots da paleta
- * categórica validada. O ativo/carteira usa o accent; IBOV fica no laranja para não colidir com o
+ * categórica validada. O ativo/carteira usa o accent; IBOV fica no laranja (não é a framboesa da saída) para não colidir com o
  * violeta padrão do accent. Indicador desconhecido → neutro.
  */
 export const COR_INDICADOR: Record<string, string> = {

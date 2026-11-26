@@ -430,9 +430,9 @@ const SERIES_PREVISTO = [
 // --- Despesas × orçamento (mês do fim do período) ----------------------------------------------
 
 /* Heatmap de uso do orçamento: azul padrão (--positive) cheio até 25%, desbotando até 100%;
-   acima disso, laranja claro → o laranja de despesa (--negative) cheio no pior caso. Faixas
+   acima disso, framboesa clara → a framboesa de despesa (--negative) cheio no pior caso. Faixas
    discretas (legenda legível); mistura ≤ 60% mantém texto --foreground em AA nos dois temas
-   (≥ 5.1:1), e os degraus cheios usam o --*-foreground da cor (4.69:1 no azul, 5.5:1 no laranja). */
+   (≥ 5.1:1), e os degraus cheios usam o --*-foreground da cor (4.69:1 no azul, 5.4:1 na framboesa). */
 const FAIXAS_USO = [
   {
     ate: 0.25,
@@ -601,7 +601,7 @@ function DespesasOrcamento({
               ))}
             </div>
             <p className="text-xs text-muted-foreground">
-              Azul: dentro do limite · laranja: acima dele. Escolha uma
+              Azul: dentro do limite · framboesa: acima dele. Escolha uma
               categoria para ver as transações.
             </p>
           </div>

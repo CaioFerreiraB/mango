@@ -56,7 +56,8 @@ function useTween(
  * único portador de sentido (acessibilidade, DESIGN.md). `sinal` prefixa `+` em créditos.
  *
  * Azul (positivo) só aparece junto do `+`: saldo, limite, orçado e meta são grandezas, não fluxos,
- * e ficam na cor do texto. Negativo continua coral mesmo sem `sinal` — o "-" já está no texto.
+ * e ficam na cor do texto. Negativo também fica na cor do texto (`--negative-ink` é neutro): o "-"
+ * carrega o sentido; a framboesa da saída só aparece em preenchimento (barras, pontos, gráficos).
  */
 export function Valor({
   centavos,

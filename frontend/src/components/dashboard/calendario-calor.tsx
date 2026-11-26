@@ -79,7 +79,7 @@ const dataLonga = (iso: string) => {
   return `${DIAS_SEMANA_LONGO[d.getDay()]}, ${d.toLocaleDateString("pt-BR", { day: "numeric", month: "long" })}`
 }
 
-/** Calendário de calor do mês do fim do período: cada dia colorido numa escala contínua do laranja
+/** Calendário de calor do mês do fim do período: cada dia colorido numa escala contínua da framboesa
  *  de despesa (mais negativo) ao azul padrão (mais positivo); clicar num dia mostra o detalhe. */
 export function CalendarioCalor({ fim, visao }: { fim: string; visao: Visao }) {
   const hoje = hojeISO()
@@ -485,7 +485,7 @@ function Linha({
 }
 
 /** Escala contínua: o extremo negativo à esquerda, zero na superfície, o positivo à direita. Só
- *  desenha os braços que o mês tem (só despesas → só o laranja). */
+ *  desenha os braços que o mês tem (só despesas → só a framboesa). */
 function Legenda({
   maxPos,
   maxNeg,

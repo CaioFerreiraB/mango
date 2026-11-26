@@ -45,9 +45,9 @@ import { formatMesAno, hojeISO } from "@/lib/format"
 import { cn } from "@/lib/utils"
 
 // Três degraus de consumo, nos tokens de estado do app: sucesso até 75%, aviso a partir daí,
-// negativo (coral da marca) ao estourar. A cor nunca é o único sinal (o % e a barra
+// negativo (framboesa) ao estourar. A cor nunca é o único sinal (o % e a barra
 // também informam). Só se aplica à despesa: receita não tem conceito de "estourar".
-// Não usa o accent: com o preset manga ele quase repete o coral de "estourou".
+// Não usa o accent: com o preset rosa ele quase repete a framboesa de "estourou".
 function corAlerta(alerta: number | null): string {
   if (alerta === null) return "bg-success"
   if (alerta >= 100) return "bg-negative"
@@ -650,10 +650,8 @@ function LinhaTabela({
         {restante === null ? (
           <SemValor />
         ) : (
-          <Valor
-            centavos={despesa ? restante : Math.max(restante, 0)}
-            absoluto={despesa}
-          />
+          // Estourado sai com "−": a cor do texto é neutra, o sinal carrega o sentido.
+          <Valor centavos={despesa ? restante : Math.max(restante, 0)} />
         )}
       </TableCell>
       <TableCell>

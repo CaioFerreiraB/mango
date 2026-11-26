@@ -1,5 +1,5 @@
 /**
- * Calendário de calor do dashboard: escala divergente contínua (laranja `--negative` no valor mais
+ * Calendário de calor do dashboard: escala divergente contínua (framboesa `--negative` no valor mais
  * negativo → superfície no zero → azul `--positive` no mais positivo) e texto legível em cima.
  * Funções puras sobre cores já resolvidas pelo tema (`rgba(r,g,b,a)` de `useTemaGrafico`).
  */

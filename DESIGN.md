@@ -51,20 +51,21 @@ Sistema visual da SPA do mango. Os tokens vivem em `frontend/src/index.css` (Tai
 - **Neutros (`mist`):** cinzas levemente frios (hue ~214) para superfícies, bordas e texto —
   `--background/card/muted/secondary/accent/border/input/ring` **não** derivam do accent.
 - **Semânticos:** `destructive` (vermelho) para ações destrutivas/erro. Tokens próprios para
-  **valores financeiros** — `--positive` `#4268F1` e `--negative` `#F36846` (cores da marca, iguais
+  **valores financeiros** — `--positive` `#4268F1` e `--negative` `#F0506E` framboesa (iguais
   nos dois temas; não derivam do accent) para **preenchimento** (barras, heatmaps, badges). Número
-  em **texto** usa `text-positive-ink`/`text-negative-ink` (mesmo matiz com contraste AA por tema) e
-  texto **sobre** o preenchimento cheio usa `text-positive-foreground`/`text-negative-foreground`.
+  em **texto**: entrada usa `text-positive-ink` (azul com contraste AA por tema); **saída em texto
+  é neutra** — `--negative-ink` = `--foreground`, o "−" carrega o sentido (estilo Wise; a
+  framboesa fica só no preenchimento). Texto **sobre** o preenchimento cheio usa `text-positive-foreground`/`text-negative-foreground`.
   Badge tem variantes `positive`/`negative` em pílula para deltas. Regra: valor nunca depende **só** de cor
   (ver PRODUCT.md / a11y). **Azul só junto do `+`:** `<Valor>` pinta positivo apenas com `sinal`
   (fluxo, resultado, delta); saldo, limite, orçado, meta e restante são grandezas e ficam na cor do
-  texto. Negativo segue coral (o "-" já está no texto). `<Valor>` é indivisível
+  texto. Negativo fica na cor do texto com o "−" (nunca `absoluto` onde o sinal é o sentido). `<Valor>` é indivisível
   (`whitespace-nowrap`) salvo com `quebraMoeda`.
 - **Estados:** `--success`/`--warning` (+ `-ink`, mesma divisão fill × ink) para status e
   progresso — pago/revisado/concluído, pendente/perto do limite. Nada de paleta crua do Tailwind
   (`amber-500`, `red-600`…) fora de `components/ui`. A escala de consumo do orçamento é
-  sucesso → aviso (≥75%) → negativo (≥100%) e **não usa o accent** (o preset tangerina repetiria o
-  coral de "estourou").
+  sucesso → aviso (≥75%) → negativo (≥100%) e **não usa o accent** (o preset rosa quase repetiria a
+  framboesa de "estourou").
 - **Charts (Apache ECharts):** todo gráfico passa pelo wrapper `components/common/echart.tsx` e
   pelas peças de `components/common/graficos-base.tsx` (`GraficoLinhas`, `GraficoBarras`, `Rosca`,
   `Sparkline`); cores vêm dos tokens resolvidos por `useTemaGrafico`/`useCores`
