@@ -16,11 +16,39 @@ ainda está se assentando. Cada versão publicada tem uma imagem correspondente 
   das metas já foi alcançado no conjunto) e **Investido sem objetivo** (o que está investido sem
   vínculo, com a fatia sobre o total investido). Os objetivos passam a ficar 4 por linha no
   desktop (1 no celular).
+- **Dashboard personalizável nas três abas:** Receitas e Despesas também ganham "Personalizar".
+  No modo edição, arraste o próprio card para reordenar (no celular, toque e segure) e, em telas
+  largas, puxe a borda direita ou a de baixo para mudar **largura e altura** — os gráficos crescem
+  junto. Duplo clique na borda de baixo volta à altura automática.
+- **Transações:** paginação também acima da tabela e escolha de **25, 50, 100 ou 200** por página.
+- **Orçamento em duas colunas:** no desktop, categorias à esquerda e as transações da escolhida à
+  direita; no celular, a categoria abre as transações logo abaixo dela, com animação, sem a página
+  sair do lugar.
 
 ### Alterado
 
+- **Identidade visual nova** em todo o app: Início como ponto de partida (saudação, saldo, atalhos
+  e o que precisa de atenção), superfícies brancas sem borda com sombra de profundidade, um herói
+  por tela na largura toda com as estatísticas dentro dele e o mascote em cena. Diálogos, menus,
+  gavetas e avisos seguem a mesma superfície.
+- **Cores de saída:** valor de saída em texto fica na cor do texto, com o sinal "−"; a framboesa
+  aparece só em barras e preenchimentos.
+- **Assistente (chat):** painel com superfície própria, separado da página; no celular ocupa a tela
+  inteira e o campo de texto acompanha o teclado.
+- **Contas e cartões** (novo nome da página de Contas): a conta mostra todos os dados que o banco
+  informa; o cartão destaca a **fatura atual**, com o limite como apoio; a fatura traz o cartão no
+  lugar do mascote.
+- **Dashboard:** o olho de ocultar valores fica no topo, igual nas três abas.
 - **Objetivos:** investimentos vinculados contam pelo **valor líquido** (após IR e IOF), não mais
   pelo saldo bruto. O valor bruto continua visível no detalhe do objetivo, como informação.
+
+### Corrigido
+
+- **Logos dos bancos** voltaram a aparecer: eram carregados de servidores externos e a política de
+  segurança do app os bloqueava. Agora são servidos pelo próprio mango (sem contar a terceiros quais
+  bancos você usa). As instituições já vinculadas são migradas automaticamente.
+- **Calendário do dashboard:** "Ver lançamentos do mês" não abre mais rolagem horizontal; no
+  celular, o ícone de investimento fica abaixo do número do dia.
 
 ## [0.11.0] — 2026-11-25
 
