@@ -22,6 +22,31 @@ const RELEVO_D = (() => {
   return d
 })()
 
+/** Curvas de nível no accent, ancoradas no canto inferior direito do card (atrás do mascote ou de
+ *  outra arte do herói). O card precisa de `relative overflow-hidden`. */
+export function Relevo() {
+  return (
+    <svg
+      aria-hidden
+      viewBox="0 0 600 400"
+      preserveAspectRatio="xMaxYMax slice"
+      className="relevo-cena pointer-events-none absolute right-0 bottom-0 z-0 h-full w-[min(42.5rem,100%)]"
+    >
+      <g className="origin-[78%_100%] animate-[deriva_14s_ease-in-out_infinite] motion-reduce:animate-none">
+        <path
+          d={RELEVO_D}
+          fill="none"
+          stroke="var(--grafico-destaque)"
+          strokeOpacity={0.3}
+          strokeWidth={1.25}
+          strokeLinejoin="round"
+          vectorEffect="non-scaling-stroke"
+        />
+      </g>
+    </svg>
+  )
+}
+
 /**
  * O tamanho segue a largura do CARD (container query — o card precisa de `@container`), não a da
  * janela: com sidebar e chat abertos um tablet tem card estreito.
@@ -43,24 +68,7 @@ export function CenaMascote({
   const grande = tamanho === "grande"
   return (
     <>
-      <svg
-        aria-hidden
-        viewBox="0 0 600 400"
-        preserveAspectRatio="xMaxYMax slice"
-        className="relevo-cena pointer-events-none absolute right-0 bottom-0 z-0 h-full w-[min(42.5rem,100%)]"
-      >
-        <g className="origin-[78%_100%] animate-[deriva_14s_ease-in-out_infinite] motion-reduce:animate-none">
-          <path
-            d={RELEVO_D}
-            fill="none"
-            stroke="var(--grafico-destaque)"
-            strokeOpacity={0.3}
-            strokeWidth={1.25}
-            strokeLinejoin="round"
-            vectorEffect="non-scaling-stroke"
-          />
-        </g>
-      </svg>
+      <Relevo />
       <div
         aria-hidden
         className={cn(

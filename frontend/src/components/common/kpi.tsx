@@ -1,7 +1,7 @@
 import { Eye, EyeOff } from "lucide-react"
-import type { ReactNode } from "react"
+import type { CSSProperties, ReactNode } from "react"
 
-import { CenaMascote } from "@/components/common/mascote-cena"
+import { CenaMascote, Relevo } from "@/components/common/mascote-cena"
 import { Valor } from "@/components/common/valor"
 import { Card } from "@/components/ui/card"
 import type { Cena } from "@/lib/illustrations"
@@ -107,6 +107,7 @@ export function CardDestaque({
       data-destaque
       className={cn(
         "@container relative isolate min-w-0 gap-0 overflow-hidden rounded-[1.75rem] py-0",
+        arte && "group",
         (mascote || arte) && "@xl:min-h-56",
         className
       )}
@@ -117,11 +118,23 @@ export function CardDestaque({
           <CenaMascote cena={mascote} tamanho="medio" />
         </div>
       ) : arte ? (
-        <div
-          aria-hidden
-          className="pointer-events-none absolute top-9 right-16 hidden origin-top scale-[1.35] @xl:block"
-        >
-          {arte}
+        // Arte no lugar do mascote: mesmo relevo atrás, entra subindo como ele e, como o card na
+        // lista de Contas e cartões, se endireita um pouco sob o cursor (group-hover na arte).
+        <div className="hidden @xl:contents">
+          <Relevo />
+          <div
+            aria-hidden
+            className="pointer-events-none absolute top-9 right-16 z-[6] entra"
+            style={
+              {
+                "--dist": "40px",
+                "--atraso": "80ms",
+                "--dur": "620ms",
+              } as CSSProperties
+            }
+          >
+            <div className="origin-top scale-[1.35]">{arte}</div>
+          </div>
         </div>
       ) : null}
       <div

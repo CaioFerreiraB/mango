@@ -47,7 +47,6 @@ export function ContaDetalhePage() {
               efetiva?.nome,
               data.type === "CREDIT" ? "Cartão de crédito" : "Conta",
               data.numero ? mascarar(data.numero) : null,
-              data.objetivo_id ? "vinculada a um objetivo" : null,
             ]
               .filter(Boolean)
               .join(" · ")}
@@ -160,16 +159,6 @@ function DetalheBanco({
               ? formatDate(conta.pluggy_atualizado_em)
               : null}
           </Campo>
-          {conta.objetivo_id ? (
-            <Campo rotulo="Objetivo">
-              <Link
-                to="/objetivos"
-                className="font-medium text-accent-ink underline-offset-4 hover:underline"
-              >
-                Vinculada a um objetivo
-              </Link>
-            </Campo>
-          ) : null}
         </dl>
         {conta.saldos_reservados.length > 0 ? (
           <div className="mt-6 border-t pt-5">
@@ -203,8 +192,8 @@ function Campo({ rotulo, children }: { rotulo: string; children: ReactNode }) {
 }
 
 /**
- * Herói do cartão: a mesma superfície dos outros heróis (branca, sem borda, cantos 1.75rem), com
- * o cartão — que vira ao clicar — de um lado e o limite disponível como número-âncora do outro.
+ * Cartão (que vira ao clicar) ao lado do herói. O número-âncora é a fatura atual — o saldo da
+ * conta de crédito, o mesmo que a lista de Contas e cartões soma —; o limite fica de apoio.
  */
 function HeroCartao({
   conta,
@@ -234,115 +223,84 @@ function HeroCartao({
           : "bg-success"
 
   return (
-    <Card
-      data-destaque
-      className="@container gap-0 rounded-[1.75rem] px-5 py-5 md:px-7 md:py-7"
-    >
-      <div className="grid items-center gap-6 @3xl:grid-cols-[minmax(0,19rem)_1fr] @3xl:gap-10">
-        <div className="mx-auto w-full max-w-[19rem] space-y-2">
-          <CartaoFlip
-            conta={conta}
-            nome={nome}
-            logoUrl={logoUrl}
-            virado={virado}
-            onVirar={virar}
-          />
-          <div className="flex justify-center">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={virar}
-              aria-pressed={virado}
-            >
-              <RefreshCw className="size-4" aria-hidden /> Virar cartão
-            </Button>
-          </div>
-        </div>
-
-        <div className="min-w-0">
-          <p className="text-sm font-medium text-muted-foreground">
-            Limite disponível
-          </p>
-          <div className="mt-2 text-[2.25rem] leading-none font-extrabold tracking-[-0.04em] whitespace-nowrap tabular-nums @md:text-[2.75rem]">
-            {disponivel != null ? (
-              <Valor
-                centavos={disponivel}
-                neutro
-                animado
-                className="font-extrabold"
-              />
-            ) : (
-              <span className="text-muted-foreground">—</span>
-            )}
-          </div>
-          {pct != null && usado != null && total != null ? (
-            <div className="mt-5 max-w-xl space-y-2">
-              <div
-                className="h-2 overflow-hidden rounded-full bg-muted"
-                role="progressbar"
-                aria-label="Limite usado"
-                aria-valuemin={0}
-                aria-valuemax={100}
-                aria-valuenow={Math.round(pct * 100)}
-              >
-                <div
-                  className={`h-full rounded-full ${corBarra}`}
-                  style={{ width: `${Math.max(pct * 100, 1)}%` }}
-                />
-              </div>
-              <p className="text-sm text-muted-foreground">
-                {formatBRL(usado)} usados de {formatBRL(total)} ·{" "}
-                {Math.round(pct * 100)}%
-              </p>
-            </div>
-          ) : null}
-          <dl className="mt-6 flex flex-wrap gap-x-8 gap-y-3">
-            <Estat rotulo="Limite total" centavos={total} />
-            <EstatData rotulo="Fechamento" data={c?.balance_close_date} />
-            <EstatData rotulo="Vencimento" data={c?.balance_due_date} />
-            <Estat
-              rotulo="Pagamento mínimo"
-              centavos={c?.minimum_payment_centavos}
-            />
-          </dl>
+    <div className="grid items-center gap-5 @3xl:grid-cols-[minmax(0,19rem)_1fr] @3xl:gap-8">
+      <div className="mx-auto w-full max-w-[19rem] space-y-2">
+        <CartaoFlip
+          conta={conta}
+          nome={nome}
+          logoUrl={logoUrl}
+          virado={virado}
+          onVirar={virar}
+        />
+        <div className="flex justify-center">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={virar}
+            aria-pressed={virado}
+          >
+            <RefreshCw className="size-4" aria-hidden /> Virar cartão
+          </Button>
         </div>
       </div>
-    </Card>
-  )
-}
 
-function Estat({
-  rotulo,
-  centavos,
-}: {
-  rotulo: string
-  centavos: number | null | undefined
-}) {
-  if (centavos == null) return null
-  return (
-    <div className="min-w-0">
-      <dt className="text-xs font-semibold text-muted-foreground">{rotulo}</dt>
-      <dd className="mt-0.5 text-base font-bold tracking-tight whitespace-nowrap tabular-nums">
-        {formatBRL(centavos)}
-      </dd>
-    </div>
-  )
-}
-
-function EstatData({
-  rotulo,
-  data,
-}: {
-  rotulo: string
-  data: string | null | undefined
-}) {
-  if (!data) return null
-  return (
-    <div className="min-w-0">
-      <dt className="text-xs font-semibold text-muted-foreground">{rotulo}</dt>
-      <dd className="mt-0.5 text-base font-bold tracking-tight whitespace-nowrap">
-        {formatDate(data)}
-      </dd>
+      <CardDestaque
+        titulo="Fatura atual"
+        centavos={Math.abs(conta.saldo_centavos)}
+        estatisticas={[
+          ...(disponivel != null
+            ? [
+                {
+                  rotulo: "Limite disponível",
+                  valor: formatBRL(disponivel),
+                },
+              ]
+            : []),
+          ...(total != null
+            ? [{ rotulo: "Limite total", valor: formatBRL(total) }]
+            : []),
+          ...(c?.balance_close_date
+            ? [
+                {
+                  rotulo: "Fechamento",
+                  valor: formatDate(c.balance_close_date),
+                },
+              ]
+            : []),
+          ...(c?.balance_due_date
+            ? [{ rotulo: "Vencimento", valor: formatDate(c.balance_due_date) }]
+            : []),
+          ...(c?.minimum_payment_centavos != null
+            ? [
+                {
+                  rotulo: "Pagamento mínimo",
+                  valor: formatBRL(c.minimum_payment_centavos),
+                },
+              ]
+            : []),
+        ]}
+      >
+        {pct != null && usado != null && total != null ? (
+          <div className="max-w-xl space-y-2">
+            <div
+              className="h-2 overflow-hidden rounded-full bg-muted"
+              role="progressbar"
+              aria-label="Limite usado"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={Math.round(pct * 100)}
+            >
+              <div
+                className={`h-full rounded-full ${corBarra}`}
+                style={{ width: `${Math.max(pct * 100, 1)}%` }}
+              />
+            </div>
+            <p className="text-sm text-muted-foreground">
+              {formatBRL(usado)} do limite usados · {Math.round(pct * 100)}%
+            </p>
+          </div>
+        ) : null}
+      </CardDestaque>
     </div>
   )
 }

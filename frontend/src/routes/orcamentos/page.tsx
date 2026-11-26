@@ -15,6 +15,7 @@ import {
   useLayoutEffect,
   useRef,
   useState,
+  type MouseEvent,
   type ReactNode,
   type RefObject,
 } from "react"
@@ -394,19 +395,26 @@ function SecaoOrcamento({
           abertaKey={abertaKey}
           onAlternar={alternar}
           detalhe={
-            !largo && aberta && alvo ? (
-              <PainelTransacoes
-                ano={ano}
-                mes={mes}
-                alvo={alvo}
-                titulo={`${aberta.nome} · ${rotuloMes}`}
-                embutido
-              />
-            ) : null
+            largo
+              ? undefined
+              : (linha) => (
+                  <PainelTransacoes
+                    ano={ano}
+                    mes={mes}
+                    alvo={{ tipo, categoriaId: linha.categoriaId }}
+                    titulo={`${linha.nome} · ${rotuloMes}`}
+                    embutido
+                  />
+                )
           }
         />
         {largo ? (
-          <div className="sticky top-4">
+          // key = categoria: trocar de categoria remonta o painel e toca a entrada (fade + leve
+          // subida) — a troca de conteúdo lê como transição, não como pulo.
+          <div
+            key={abertaKey ?? "vazio"}
+            className="sticky top-4 animate-[entrada-pagina_260ms_var(--ease-out)_both] motion-reduce:animate-[entrada-fade_150ms_ease_both]"
+          >
             {aberta && alvo ? (
               <PainelTransacoes
                 ano={ano}
@@ -519,8 +527,9 @@ function ListaCategorias({
   linhas: LinhaVisao[]
   abertaKey: string | null
   onAlternar: (linha: LinhaVisao) => void
-  /** Transações da categoria aberta, embutidas logo abaixo dela (modo sanfona). */
-  detalhe: ReactNode
+  /** Transações de uma categoria, embutidas logo abaixo dela (modo sanfona); sem ela, nada abre
+   *  na lista (o painel mora ao lado). */
+  detalhe?: (linha: LinhaVisao) => ReactNode
 }) {
   return (
     <div className="space-y-0.5 rounded-2xl superficie p-2">
@@ -532,9 +541,8 @@ function ListaCategorias({
             linha={linha}
             aberta={aberta}
             onAlternar={onAlternar}
-          >
-            {aberta ? detalhe : null}
-          </ItemCategoria>
+            detalhe={detalhe}
+          />
         )
       })}
     </div>
@@ -545,13 +553,32 @@ function ItemCategoria({
   linha,
   aberta,
   onAlternar,
-  children,
+  detalhe,
 }: {
   linha: LinhaVisao
   aberta: boolean
   onAlternar: (linha: LinhaVisao) => void
-  children?: ReactNode
+  detalhe?: (linha: LinhaVisao) => ReactNode
 }) {
+  // Conteúdo continua montado enquanto fecha (a altura anima até 0) e sai no fim da transição.
+  const [montado, setMontado] = useState(aberta)
+  if (aberta && !montado) setMontado(true)
+
+  function alternar(e: MouseEvent<HTMLButtonElement>) {
+    // A linha tocada fica parada na tela: se outra categoria ACIMA fecha, a página subiria junto —
+    // compensamos a rolagem a cada quadro enquanto as alturas animam.
+    const el = e.currentTarget
+    const y0 = el.getBoundingClientRect().top
+    const fim = performance.now() + 400
+    const fixar = () => {
+      const d = el.getBoundingClientRect().top - y0
+      if (Math.abs(d) > 0.5) window.scrollBy(0, d)
+      if (performance.now() < fim) requestAnimationFrame(fixar)
+    }
+    onAlternar(linha)
+    requestAnimationFrame(fixar)
+  }
+
   return (
     <div
       className={cn(
@@ -561,10 +588,9 @@ function ItemCategoria({
     >
       <button
         type="button"
-        onClick={() => {
-          onAlternar(linha)
-        }}
-        aria-expanded={aberta}
+        onClick={alternar}
+        aria-expanded={detalhe ? aberta : undefined}
+        aria-pressed={detalhe ? undefined : aberta}
         className="flex w-full items-center gap-3 rounded-sm text-left outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         {createElement(linha.icone, {
@@ -588,7 +614,29 @@ function ItemCategoria({
           indicatorClassName={linha.cor}
         />
       </div>
-      {children}
+      {detalhe ? (
+        // Sanfona: grid 0fr → 1fr anima a altura até a do conteúdo (sem medir em JS); o conteúdo
+        // acompanha com opacidade. mt-0: fechada, não deixa o espaçamento do space-y sobrando.
+        <div
+          className={cn(
+            "mt-0! grid transition-[grid-template-rows] duration-300 ease-(--ease-out) motion-reduce:transition-none",
+            aberta ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+          )}
+          onTransitionEnd={(e) => {
+            if (e.target === e.currentTarget && !aberta) setMontado(false)
+          }}
+        >
+          <div
+            className={cn(
+              "min-h-0 overflow-hidden transition-opacity duration-300 ease-(--ease-out) motion-reduce:transition-none",
+              aberta ? "opacity-100" : "opacity-0"
+            )}
+            inert={!aberta || undefined}
+          >
+            {montado ? detalhe(linha) : null}
+          </div>
+        </div>
+      ) : null}
     </div>
   )
 }
@@ -637,9 +685,10 @@ function PainelTransacoes({
   const transacoes = useTransacoesDoOrcamento(ano, mes, alvo)
   const ref = useRef<HTMLElement>(null)
   // Traz o painel pra vista ao abrir/trocar de linha — numa tabela longa ele nasceria fora da tela.
+  // Na sanfona não: a página fica parada e só a categoria expande.
   useEffect(() => {
-    ref.current?.scrollIntoView({ block: "nearest" })
-  }, [alvo.tipo, alvo.categoriaId])
+    if (!embutido) ref.current?.scrollIntoView({ block: "nearest" })
+  }, [alvo.tipo, alvo.categoriaId, embutido])
 
   return (
     <section
