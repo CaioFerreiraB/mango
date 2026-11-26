@@ -34,7 +34,11 @@ export function CardGrafico({
         </div>
         {acao}
       </CardHeader>
-      <CardContent className="@container">{children}</CardContent>
+      {/* Coluna flexível: com altura personalizada (card mais alto que o conteúdo), o gráfico
+          filho direto cresce para ocupar o espaço em vez de deixar um vão embaixo. */}
+      <CardContent className="@container flex flex-1 flex-col [&>[role=img]]:flex-auto">
+        {children}
+      </CardContent>
     </Card>
   )
 }

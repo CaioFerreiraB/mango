@@ -1,28 +1,10 @@
+import { arrayMove } from "@dnd-kit/sortable"
 import {
-  DndContext,
-  PointerSensor,
-  closestCenter,
-  useSensor,
-  useSensors,
-  type DragEndEvent,
-} from "@dnd-kit/core"
-import {
-  SortableContext,
-  arrayMove,
-  rectSortingStrategy,
-  useSortable,
-} from "@dnd-kit/sortable"
-import { CSS } from "@dnd-kit/utilities"
-import {
-  ArrowDown,
   ArrowRight,
-  ArrowUp,
   Eye,
   EyeOff,
-  GripVertical,
   Landmark,
   LayoutGrid,
-  MoveHorizontal,
   Plus,
   RotateCcw,
   SlidersHorizontal,
@@ -39,6 +21,7 @@ import {
   DespesasFixasProximosWidget,
 } from "@/components/dashboard/despesas-fixas-widget"
 import { CalendarioCalor } from "@/components/dashboard/calendario-calor"
+import { GradeWidgets } from "@/components/dashboard/grade-widgets"
 import {
   CardGrafico,
   ErroCard,
@@ -83,18 +66,21 @@ import {
   type Granularidade,
   type Visao,
 } from "@/lib/api/dashboard"
-import { useAtualizarPerfil, usePerfil } from "@/lib/api/perfil"
+import {
+  useAtualizarPerfil,
+  usePerfil,
+  type PerfilUpdate,
+} from "@/lib/api/perfil"
 import { useTransacoes } from "@/lib/api/transacoes"
 import {
   CATALOGO,
-  ROTULO_LARGURA,
+  abaDe,
   layoutPadrao,
   mesclarLayout,
   mesmoLayout,
   mover,
-  proximaLargura,
-  type Largura,
-  type WidgetId,
+  restaurarAba,
+  type Aba,
   type WidgetLayout,
 } from "@/lib/dashboard-layout"
 import {
@@ -107,7 +93,6 @@ import {
   subMeses,
   ultimos6MesesCompletos,
 } from "@/lib/format"
-import { cn } from "@/lib/utils"
 
 /** Presets do filtro rápido: intervalo até hoje (fuso SP). */
 const PRESETS_RAPIDOS = [
@@ -133,30 +118,6 @@ const PRESETS_RAPIDOS = [
   },
 ]
 
-// Classes estáticas (o Tailwind não enxerga classe montada em runtime). O grid segue a largura
-// DISPONÍVEL (container query: janela − sidebar − chat), não a da janela:
-// - ≥ @4xl (56rem): grid de 60, a largura configurada vale (5 cards ⅕ cabem com folga);
-// - @3xl–@4xl: 6 colunas — até ⅓ vira ⅓, ½ fica ½, mais largo ocupa a linha;
-// - abaixo: 2 colunas — cards do mês lado a lado, o resto em largura total (até ½ vira ½ a partir de
-//   @xl).
-const SPAN: Record<Largura, string> = {
-  12: "@xl:col-span-1 @3xl:col-span-2 @4xl:col-span-12",
-  15: "@xl:col-span-1 @3xl:col-span-3 @4xl:col-span-15",
-  20: "@xl:col-span-1 @3xl:col-span-2 @4xl:col-span-20",
-  30: "@xl:col-span-1 @3xl:col-span-3 @4xl:col-span-30",
-  40: "@xl:col-span-2 @3xl:col-span-6 @4xl:col-span-40",
-  45: "@xl:col-span-2 @3xl:col-span-6 @4xl:col-span-45",
-  60: "@xl:col-span-2 @3xl:col-span-6 @4xl:col-span-60",
-}
-// Mobile (2 colunas): KPIs dois por linha, mas o saldo — card de destaque — ocupa a linha toda.
-const spanDe = (w: WidgetLayout) =>
-  cn(
-    w.id.startsWith("kpi-") && w.id !== "kpi-saldo"
-      ? "col-span-1"
-      : "col-span-2",
-    SPAN[w.largura]
-  )
-
 const TITULO = new Map(CATALOGO.map((w) => [w.id as string, w.titulo]))
 
 /** Variação relativa vs. período anterior; `null` quando não há base de comparação. */
@@ -168,8 +129,7 @@ function variacao(atual: number, anterior: number | undefined): number | null {
 const CHAVE_OCULTO = "mango:dashboard-oculto"
 const CHAVE_VISAO = "mango:dashboard-visao"
 
-const ABAS = ["geral", "receitas", "despesas"] as const
-type Aba = (typeof ABAS)[number]
+const ABAS: Aba[] = ["geral", "receitas", "despesas"]
 
 export function DashboardPage() {
   // Competência × caixa: vale para KPIs, gráficos e abas. Lembrado neste navegador.
@@ -241,7 +201,7 @@ export function DashboardPage() {
 
   const contas = useContas()
   const saldoSerie = useSaldoContasSerie()
-  // Modo privacidade dos cards: o olho mora no card de saldo (ou no topo, se ele estiver oculto).
+  // Modo privacidade dos cards: o olho mora no topo e vale para as três abas.
   // Lembrado neste navegador — quem esconde os valores não quer vê-los voltar ao recarregar.
   const [oculto, setOculto] = useState(() => {
     try {
@@ -278,12 +238,10 @@ export function DashboardPage() {
   const [rascunho, setRascunho] = useState<WidgetLayout[] | null>(null)
   const editando = rascunho !== null
   const layout = rascunho ?? salvo
-  const visiveis = layout.filter((w) => w.visivel)
-  const ocultos = layout.filter((w) => !w.visivel)
-
-  const sensores = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 4 } })
-  )
+  // Cada aba lê só os seus widgets da lista comum (ver dashboard-layout).
+  const daAba = layout.filter((w) => abaDe(w.id) === aba)
+  const visiveis = daAba.filter((w) => w.visivel)
+  const ocultos = daAba.filter((w) => !w.visivel)
 
   function concluir() {
     if (!rascunho) return
@@ -294,7 +252,8 @@ export function DashboardPage() {
     // Igual ao padrão → null: o usuário acompanha mudanças futuras do padrão.
     const valor = mesmoLayout(rascunho, layoutPadrao()) ? null : rascunho
     salvar.mutate(
-      { dashboard_layout: valor },
+      // Largura vem das frações do catálogo (LARGURAS), as mesmas que o backend aceita.
+      { dashboard_layout: valor as PerfilUpdate["dashboard_layout"] },
       {
         onSuccess: () => setRascunho(null),
         onError: (e) => toast.error(e.message),
@@ -302,30 +261,53 @@ export function DashboardPage() {
     )
   }
 
-  function alterar(id: string, f: (w: WidgetLayout) => WidgetLayout) {
-    setRascunho((r) => (r ?? salvo).map((w) => (w.id === id ? f(w) : w)))
+  function alterar(id: string, patch: Partial<WidgetLayout>) {
+    setRascunho((r) =>
+      (r ?? salvo).map((w) => {
+        if (w.id !== id) return w
+        const novo = { ...w, ...patch }
+        // Altura automática = sem a chave (o layout salvo não carrega `altura: undefined`).
+        if (novo.altura === undefined) delete novo.altura
+        return novo
+      })
+    )
   }
 
   function moverVisivel(id: string, delta: number) {
-    // ▲/▼ andam entre os visíveis; os ocultos mantêm a posição relativa na lista completa.
+    // ▲/▼ andam entre os visíveis da aba; os demais mantêm a posição na lista completa.
     setRascunho((r) => {
       const base = r ?? salvo
-      const ids = base.filter((w) => w.visivel).map((w) => w.id)
+      const daVez = (w: WidgetLayout) => w.visivel && abaDe(w.id) === aba
+      const ids = base.filter(daVez).map((w) => w.id)
       const alvo = mover(ids, ids.indexOf(id), delta)
       const fila = alvo.map((i) => base.find((w) => w.id === i)!)
-      return base.map((w) => (w.visivel ? fila.shift()! : w))
+      return base.map((w) => (daVez(w) ? fila.shift()! : w))
     })
   }
 
-  function aoSoltar(e: DragEndEvent) {
-    if (!e.over || e.active.id === e.over.id) return
+  function reordenar(de: string, para: string) {
     setRascunho((r) => {
       const base = r ?? salvo
-      const de = base.findIndex((w) => w.id === e.active.id)
-      const para = base.findIndex((w) => w.id === e.over!.id)
-      return arrayMove(base, de, para)
+      return arrayMove(
+        base,
+        base.findIndex((w) => w.id === de),
+        base.findIndex((w) => w.id === para)
+      )
     })
   }
+
+  // Grade de qualquer aba: mesma edição, sobre os widgets que a aba entrega.
+  const grade = (widgets: Record<string, () => ReactNode>) => (
+    <GradeWidgets
+      itens={visiveis}
+      widgets={widgets}
+      editando={editando}
+      bloqueado={salvar.isPending}
+      onAlterar={alterar}
+      onMover={moverVisivel}
+      onReordenar={reordenar}
+    />
+  )
 
   // Sem contas conectadas: ensina o próximo passo em vez de mostrar zeros.
   if (contas.isSuccess && contas.data.length === 0) {
@@ -386,7 +368,7 @@ export function DashboardPage() {
       </Link>
     ) : null
 
-  const widgets: Record<WidgetId, () => ReactNode> = {
+  const widgets: Record<string, () => ReactNode> = {
     "kpi-saldo": () =>
       dashMes.isError ? (
         <ErroCard />
@@ -398,7 +380,6 @@ export function DashboardPage() {
           contas={contas.data?.filter((c) => c.type === "BANK").length}
           pontos={saldoSerie}
           oculto={oculto}
-          onAlternarOculto={alternarOculto}
         />
       ),
     "kpi-entradas": () =>
@@ -499,14 +480,13 @@ export function DashboardPage() {
     ),
   }
 
-  const geral = aba === "geral"
   return (
     <Tabs value={aba} onValueChange={trocarAba} className="gap-4">
       <PageHeader
         titulo="Dashboard"
         descricao="Análise do período: fluxo, categorias, calendário e patrimônio — personalizável."
       />
-      {/* Abas no topo; o período abaixo vale para as três. Personalizar é só da Geral. */}
+      {/* Abas no topo; o período, a visão e o personalizar abaixo valem para a aba aberta. */}
       <TabsList variant="line" className="w-full justify-start border-b">
         <TabsTrigger value="geral" disabled={editando}>
           Geral
@@ -544,9 +524,7 @@ export function DashboardPage() {
                   {ocultos.map((w) => (
                     <DropdownMenuItem
                       key={w.id}
-                      onSelect={() =>
-                        alterar(w.id, (x) => ({ ...x, visivel: true }))
-                      }
+                      onSelect={() => alterar(w.id, { visivel: true })}
                     >
                       {TITULO.get(w.id)}
                     </DropdownMenuItem>
@@ -557,7 +535,9 @@ export function DashboardPage() {
                 variant="ghost"
                 size="sm"
                 disabled={salvar.isPending}
-                onClick={() => setRascunho(layoutPadrao())}
+                onClick={() =>
+                  setRascunho((r) => restaurarAba(r ?? salvo, aba))
+                }
               >
                 <RotateCcw aria-hidden />
                 Restaurar padrão
@@ -598,100 +578,49 @@ export function DashboardPage() {
                   Caixa
                 </ToggleGroupItem>
               </ToggleGroup>
-              {geral && visiveis.some((w) => w.id === "kpi-saldo") ? null : (
-                <Button
-                  variant="outline"
-                  size="icon-sm"
-                  onClick={alternarOculto}
-                  aria-pressed={oculto}
-                  aria-label="Ocultar valores"
-                  title={oculto ? "Valores ocultos" : "Ocultar valores"}
-                >
-                  {oculto ? <EyeOff aria-hidden /> : <Eye aria-hidden />}
-                </Button>
-              )}
+              <Button
+                variant="outline"
+                size="icon-sm"
+                onClick={alternarOculto}
+                aria-pressed={oculto}
+                aria-label="Ocultar valores"
+                title={oculto ? "Valores ocultos" : "Ocultar valores"}
+              >
+                {oculto ? <EyeOff aria-hidden /> : <Eye aria-hidden />}
+              </Button>
               <SyncButton compacto />
-              {geral ? (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  // Antes do perfil chegar, "salvo" é o padrão: editar dali sobrescreveria o layout.
-                  disabled={!perfil.data}
-                  onClick={() => setRascunho(salvo)}
-                >
-                  <LayoutGrid aria-hidden />
-                  <span className="max-sm:sr-only">Personalizar</span>
-                </Button>
-              ) : null}
+              <Button
+                variant="outline"
+                size="sm"
+                // Antes do perfil chegar, "salvo" é o padrão: editar dali sobrescreveria o layout.
+                disabled={!perfil.data}
+                onClick={() => setRascunho(salvo)}
+              >
+                <LayoutGrid aria-hidden />
+                <span className="max-sm:sr-only">Personalizar</span>
+              </Button>
             </>
           )}
         </div>
       </div>
 
+      {editando ? (
+        <p className="rounded-lg bg-muted/60 px-4 py-2.5 text-sm text-muted-foreground">
+          Arraste os blocos para reordenar (no celular, toque e segure). Em
+          telas largas, puxe a borda direita ou a de baixo para mudar largura e
+          altura — duplo clique na borda de baixo volta à altura automática. Os
+          ocultos voltam por “Adicionar visualização”.
+        </p>
+      ) : null}
       <TabsContent value="geral" className="space-y-4">
-        {editando ? (
-          <p className="rounded-lg bg-muted/60 px-4 py-2.5 text-sm text-muted-foreground">
-            Arraste os blocos pela alça ou use ▲ ▼ para reordenar. Cada bloco
-            pode ser ocultado e, em telas largas, mudar de largura; os ocultos
-            voltam por “Adicionar visualização”.
-          </p>
-        ) : null}
-
         {/* Pendentes moram acima da tabela de últimas transações; sem ela visível, ficam no topo. */}
         {visiveis.some((w) => w.id === "ultimas") ? null : pendentes}
 
-        {/* @container: o grid lê a largura disponível (ver SPAN). */}
-        <div className="@container">
-          <DndContext
-            sensors={sensores}
-            collisionDetection={closestCenter}
-            onDragEnd={aoSoltar}
-          >
-            <SortableContext
-              items={visiveis.map((w) => w.id)}
-              strategy={rectSortingStrategy}
-            >
-              <div className="grid grid-cols-2 gap-3 sm:gap-4 @3xl:grid-cols-6 @4xl:grid-cols-60">
-                {visiveis.map((w, i) => (
-                  <Widget
-                    key={w.id}
-                    w={w}
-                    editando={editando}
-                    bloqueado={salvar.isPending}
-                    primeiro={i === 0}
-                    ultimo={i === visiveis.length - 1}
-                    onOcultar={() =>
-                      alterar(w.id, (x) => ({ ...x, visivel: false }))
-                    }
-                    onLargura={() =>
-                      alterar(w.id, (x) => ({
-                        ...x,
-                        largura: proximaLargura(x.largura),
-                      }))
-                    }
-                    onMover={(delta) => moverVisivel(w.id, delta)}
-                  >
-                    {widgets[w.id as WidgetId]()}
-                  </Widget>
-                ))}
-              </div>
-            </SortableContext>
-          </DndContext>
-        </div>
-        {visiveis.length === 0 ? (
-          <EmptyState
-            icon={LayoutGrid}
-            title="Nenhuma visualização no painel"
-            description={
-              editando
-                ? "Use “Adicionar visualização” para trazer os blocos de volta."
-                : "Clique em “Personalizar” e use “Adicionar visualização” para trazer os blocos de volta."
-            }
-          />
-        ) : null}
+        {grade(widgets)}
       </TabsContent>
-      <TabsContent value="receitas" className="@container">
+      <TabsContent value="receitas">
         <AbaReceitas
+          grade={grade}
           periodo={periodo}
           rotuloPeriodo={rotuloPeriodo}
           rotulo={rotulo}
@@ -699,8 +628,9 @@ export function DashboardPage() {
           visao={visao}
         />
       </TabsContent>
-      <TabsContent value="despesas" className="@container">
+      <TabsContent value="despesas">
         <AbaDespesas
+          grade={grade}
           periodo={periodo}
           rotuloPeriodo={rotuloPeriodo}
           rotulo={rotulo}
@@ -709,113 +639,6 @@ export function DashboardPage() {
         />
       </TabsContent>
     </Tabs>
-  )
-}
-
-/** Moldura de um widget: largura no grid e, no modo edição, a barra de controles. */
-function Widget({
-  w,
-  editando,
-  bloqueado,
-  primeiro,
-  ultimo,
-  onOcultar,
-  onLargura,
-  onMover,
-  children,
-}: {
-  w: WidgetLayout
-  editando: boolean
-  /** Gravação em andamento: controles travados (mudança agora se perderia no fim do save). */
-  bloqueado: boolean
-  primeiro: boolean
-  ultimo: boolean
-  onOcultar: () => void
-  onLargura: () => void
-  onMover: (delta: number) => void
-  children: ReactNode
-}) {
-  const titulo = TITULO.get(w.id) ?? w.id
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    setActivatorNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: w.id, disabled: !editando || bloqueado })
-  return (
-    <section
-      ref={setNodeRef}
-      aria-label={titulo}
-      style={{ transform: CSS.Translate.toString(transform), transition }}
-      className={cn(
-        "relative min-w-0 [&>*]:h-full",
-        spanDe(w),
-        editando &&
-          "rounded-xl outline-2 outline-offset-2 outline-primary/35 outline-dashed",
-        isDragging && "z-20 opacity-80"
-      )}
-    >
-      {children}
-      {editando ? (
-        <fieldset
-          disabled={bloqueado}
-          className="absolute -top-3 right-3 z-10 flex h-auto! items-center gap-0.5 rounded-lg border bg-popover p-0.5 shadow-sm"
-        >
-          <Button
-            ref={setActivatorNodeRef}
-            variant="ghost"
-            size="icon-sm"
-            className="cursor-grab touch-none active:cursor-grabbing"
-            aria-label={`Arrastar ${titulo}`}
-            {...attributes}
-            {...listeners}
-          >
-            <GripVertical aria-hidden />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            aria-label={`Ocultar ${titulo}`}
-            onClick={onOcultar}
-          >
-            <EyeOff aria-hidden />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="hidden gap-1 px-2 @4xl:inline-flex"
-            aria-label={`Largura de ${titulo}: ${ROTULO_LARGURA[w.largura]}. Alterar`}
-            onClick={onLargura}
-          >
-            <MoveHorizontal aria-hidden />
-            <span className="text-xs tabular-nums">
-              {ROTULO_LARGURA[w.largura]}
-            </span>
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            aria-label={`Mover ${titulo} para cima`}
-            disabled={primeiro}
-            onClick={() => onMover(-1)}
-          >
-            <ArrowUp aria-hidden />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            aria-label={`Mover ${titulo} para baixo`}
-            disabled={ultimo}
-            onClick={() => onMover(1)}
-          >
-            <ArrowDown aria-hidden />
-          </Button>
-        </fieldset>
-      ) : null}
-    </section>
   )
 }
 

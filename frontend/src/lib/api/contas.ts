@@ -68,6 +68,8 @@ export function useConta(contaId: number) {
       if (error || !data) throw new Error("falha ao carregar a conta")
       return data
     },
+    // Id ainda desconhecido (ex.: fatura carregando) → não pergunta pela conta 0.
+    enabled: contaId > 0,
   })
 }
 

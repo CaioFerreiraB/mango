@@ -1,6 +1,7 @@
 import { ArrowLeft, Info, Receipt } from "lucide-react"
 import { Link, useParams } from "react-router"
 
+import { CartaoArt } from "@/components/contas/cartao-art"
 import { EmptyState } from "@/components/common/empty-state"
 import { CardDestaque } from "@/components/common/kpi"
 import { PageHeader } from "@/components/common/page-header"
@@ -10,7 +11,9 @@ import { TransacoesTabela } from "@/components/transacoes/transacoes-tabela"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
+import { useConta } from "@/lib/api/contas"
 import { useFatura } from "@/lib/api/faturas"
+import { instituicaoEfetiva, useInstituicoes } from "@/lib/api/instituicoes"
 import { useTransacoes } from "@/lib/api/transacoes"
 import { formatDate, formatMesAno, statusFatura } from "@/lib/format"
 
@@ -19,6 +22,9 @@ export function FaturaDetalhePage() {
   const id = Number(faturaId)
   const fatura = useFatura(id)
   const transacoes = useTransacoes({ fatura_id: id, limit: 200 })
+  // O cartão da fatura vira a arte do herói (a mesma do card em Contas e cartões).
+  const cartao = useConta(fatura.data?.cartao_id ?? 0)
+  const instituicoes = useInstituicoes()
 
   if (fatura.isError) return <EmptyState title="Fatura não encontrada" />
   if (fatura.isLoading || !fatura.data)
@@ -27,6 +33,14 @@ export function FaturaDetalhePage() {
   const f = fatura.data
   const st = statusFatura(f.due_date)
   const itens = transacoes.data?.items ?? []
+  const c = cartao.data
+  const nomeCartao = c ? (c.marketing_name ?? c.nome ?? "Cartão") : ""
+  const logoUrl = c
+    ? instituicaoEfetiva(
+        c,
+        new Map((instituicoes.data ?? []).map((i) => [i.id, i]))
+      )?.logo_url
+    : undefined
 
   return (
     <div className="space-y-6">
@@ -50,7 +64,11 @@ export function FaturaDetalhePage() {
       <CardDestaque
         titulo="Total da fatura"
         centavos={f.total_amount_centavos}
-        mascote={st.aberta ? "money-v2" : "thumbs-up"}
+        arte={
+          c ? (
+            <CartaoArt conta={c} nome={nomeCartao} logoUrl={logoUrl} />
+          ) : undefined
+        }
         estatisticas={[
           ...(f.minimum_payment_centavos
             ? [

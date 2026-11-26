@@ -74,6 +74,7 @@ export function CardDestaque({
   onAlternarOculto,
   rodape,
   mascote,
+  arte,
   grafico,
   estatisticas,
   children,
@@ -90,6 +91,9 @@ export function CardDestaque({
   rodape?: ReactNode
   /** Cena do mascote do módulo (em cena no canto inferior direito; some em card estreito). */
   mascote?: Cena
+  /** No lugar do mascote: uma peça do próprio assunto (ex.: o cartão tombado na fatura), no mesmo
+   *  canto e com a mesma regra de sumir em card estreito. */
+  arte?: ReactNode
   /** Gráfico que sangra até a borda inferior do card. */
   grafico?: ReactNode
   /** Números de apoio NA linha do herói (ex.: orçado · gasto) — no lugar de KPIs soltos ao lado. */
@@ -103,7 +107,7 @@ export function CardDestaque({
       data-destaque
       className={cn(
         "@container relative isolate min-w-0 gap-0 overflow-hidden rounded-[1.75rem] py-0",
-        mascote && "@xl:min-h-56",
+        (mascote || arte) && "@xl:min-h-56",
         className
       )}
     >
@@ -112,12 +116,19 @@ export function CardDestaque({
         <div className="hidden @xl:contents">
           <CenaMascote cena={mascote} tamanho="medio" />
         </div>
+      ) : arte ? (
+        <div
+          aria-hidden
+          className="pointer-events-none absolute top-9 right-16 hidden origin-top scale-[1.35] @xl:block"
+        >
+          {arte}
+        </div>
       ) : null}
       <div
         className={cn(
           "relative z-10 px-5 pt-5 md:px-7 md:pt-7",
           grafico ? "pb-2" : "pb-5 md:pb-7",
-          mascote && "@xl:pr-64"
+          (mascote || arte) && "@xl:pr-64"
         )}
       >
         <div className="flex min-h-8 items-start justify-between gap-3">

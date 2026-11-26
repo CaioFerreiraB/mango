@@ -86,47 +86,35 @@ const NOMES = {
 
 // --- KPIs --------------------------------------------------------------------------------------
 
-function Kpis({
-  natureza,
-  analise,
-  oculto,
-  visao,
-}: {
-  natureza: Natureza
-  analise: ReturnType<typeof useAnalise>
+/** Os quatro KPIs da aba, um widget cada (ids `rec-…`/`desp-…` do catálogo). */
+function kpisAnalise(
+  natureza: Natureza,
+  analise: ReturnType<typeof useAnalise>,
+  tendencia: ReturnType<typeof useDashboardSeries>,
   oculto: boolean
-  visao: Visao
-}) {
-  // Tendência de 6 meses: mesma query compartilhada com os cards da aba Geral.
-  const tendencia = useDashboardSeries(
-    ultimos6MesesCompletos(),
-    "mensal",
-    visao
-  )
+): Record<string, () => ReactNode> {
+  const p = natureza === "receita" ? "rec" : "desp"
+  const ids = [
+    `${p}-total`,
+    `${p}-anterior`,
+    `${p}-media`,
+    natureza === "receita" ? "rec-previsto" : "desp-orcamento",
+  ]
   const a = analise.data
-  const grade = "grid grid-cols-2 gap-3 sm:gap-4 @3xl:grid-cols-4"
-  if (analise.isError)
-    return (
-      <div className={grade}>
-        <ErroCard />
-      </div>
-    )
-  if (!a)
-    return (
-      <div className={grade}>
-        {[0, 1, 2, 3].map((i) => (
-          <Skeleton key={i} className="h-28 w-full rounded-xl" />
-        ))}
-      </div>
-    )
+  if (analise.isError || !a) {
+    const no = analise.isError
+      ? () => <ErroCard />
+      : () => <Skeleton className="h-28 w-full rounded-xl" />
+    return Object.fromEntries(ids.map((id) => [id, no]))
+  }
   const n = NOMES[natureza]
   const anterior = `${diaMes(a.anterior_inicio)} a ${diaMes(a.anterior_fim)}`
   const meses = a.previsto.filter((p) => p.previsto_centavos != null)
   const orcado = meses.reduce((s, p) => s + (p.previsto_centavos ?? 0), 0)
   const realizadoOrcado = meses.reduce((s, p) => s + p.realizado_centavos, 0)
   const dias = a.dias_semana.reduce((s, d) => s + d.ocorrencias, 0)
-  return (
-    <div className={grade}>
+  return {
+    [ids[0]]: () => (
       <KpiCard
         label={`${n.acao} no período`}
         centavos={a.total_centavos}
@@ -136,13 +124,17 @@ function Kpis({
         campo={natureza === "receita" ? "entradas_centavos" : "saidas_centavos"}
         oculto={oculto}
       />
+    ),
+    [ids[1]]: () => (
       <KpiCard
         label="Período anterior"
         centavos={a.anterior_centavos}
         rodape={anterior}
         oculto={oculto}
       />
-      {natureza === "receita" ? (
+    ),
+    [ids[2]]: () =>
+      natureza === "receita" ? (
         <KpiCard
           label="Média por recebimento"
           centavos={
@@ -158,7 +150,8 @@ function Kpis({
           rodape={`em ${dias} ${dias === 1 ? "dia" : "dias"}`}
           oculto={oculto}
         />
-      )}
+      ),
+    [ids[3]]: () => (
       <KpiCard
         label={natureza === "receita" ? "Previsto (orçamento)" : "Orçamento"}
         centavos={orcado}
@@ -169,8 +162,8 @@ function Kpis({
         }
         oculto={oculto}
       />
-    </div>
-  )
+    ),
+  }
 }
 
 // --- Maiores fontes / estabelecimentos (barras horizontais) -------------------------------------
@@ -800,90 +793,105 @@ function EvolucaoDespesas({
   )
 }
 
+type PropsAba = {
+  periodo: Periodo
+  rotuloPeriodo: string
+  rotulo: Map<string, string>
+  oculto: boolean
+  visao: Visao
+  /** Grade personalizável do dashboard (mesma da aba Geral) que posiciona os widgets. */
+  grade: (widgets: Record<string, () => ReactNode>) => ReactNode
+}
+
 export function AbaReceitas({
   periodo,
   rotuloPeriodo,
   rotulo,
   oculto,
   visao,
-}: {
-  periodo: Periodo
-  rotuloPeriodo: string
-  rotulo: Map<string, string>
-  oculto: boolean
-  visao: Visao
-}) {
+  grade,
+}: PropsAba) {
   const analise = useAnalise("receita", periodo, visao)
+  // Tendência de 6 meses: mesma query compartilhada com os cards da aba Geral.
+  const tendencia = useDashboardSeries(
+    ultimos6MesesCompletos(),
+    "mensal",
+    visao
+  )
   const a = analise.data
   const [filtro, setFiltro] = useState<FiltroAnalise | null>(null)
   const estado = { carregando: analise.isLoading, erro: analise.isError }
-  return (
-    <div className="space-y-4">
-      <Kpis
-        natureza="receita"
-        analise={analise}
-        oculto={oculto}
+  const widgets: Record<string, () => ReactNode> = {
+    ...kpisAnalise("receita", analise, tendencia, oculto),
+    "rec-evolucao": () => (
+      <EvolucaoReceitas
+        periodo={periodo}
+        rotuloPeriodo={rotuloPeriodo}
         visao={visao}
       />
-      <div className="grid gap-4 @5xl:grid-cols-2">
-        <div className="@5xl:col-span-2">
-          <EvolucaoReceitas
-            periodo={periodo}
-            rotuloPeriodo={rotuloPeriodo}
-            visao={visao}
-          />
-        </div>
-        <CardGrafico
-          titulo="Receitas por categoria"
-          descricao={`${rotuloPeriodo} (sem transferências, resgates e aportes)`}
-        >
-          <Estado {...estado}>
-            {a ? (
-              <DistribuicaoCategorias
-                gastos={a.por_categoria}
-                rotulo={rotulo}
-                ariaLabel="Distribuição das receitas por categoria no período"
-                rotuloLista="Receitas por categoria"
-                onSelecionar={(c) =>
-                  setFiltro({
-                    natureza: "receita",
-                    categoria_id: c.id,
-                    titulo: c.nome,
-                  })
-                }
-              />
-            ) : null}
-          </Estado>
-        </CardGrafico>
-        <CardGrafico
-          titulo="Principais fontes de receita"
-          descricao="Quem mais pagou no período, como o banco identifica"
-        >
-          <Estado {...estado}>
-            {a ? (
-              <RankingContrapartes
-                a={a}
-                natureza="receita"
-                onSelecionar={setFiltro}
-              />
-            ) : null}
-          </Estado>
-        </CardGrafico>
-        <CardGrafico
-          titulo="Previstas × realizadas"
-          descricao="Orçamento de receita × recebido, meses inteiros do período"
-        >
-          <Estado {...estado}>{a ? <PrevistoRealizado a={a} /> : null}</Estado>
-        </CardGrafico>
-        <CardGrafico
-          titulo="Receitas acumuladas"
-          descricao="Recebido até cada dia, comparado ao período anterior"
-        >
-          <Estado {...estado}>
-            {a ? <Acumulado a={a} natureza="receita" /> : null}
-          </Estado>
-        </CardGrafico>
-      </div>
+    ),
+    "rec-categorias": () => (
+      <CardGrafico
+        titulo="Receitas por categoria"
+        descricao={`${rotuloPeriodo} (sem transferências, resgates e aportes)`}
+      >
+        <Estado {...estado}>
+          {a ? (
+            <DistribuicaoCategorias
+              gastos={a.por_categoria}
+              rotulo={rotulo}
+              ariaLabel="Distribuição das receitas por categoria no período"
+              rotuloLista="Receitas por categoria"
+              onSelecionar={(c) =>
+                setFiltro({
+                  natureza: "receita",
+                  categoria_id: c.id,
+                  titulo: c.nome,
+                })
+              }
+            />
+          ) : null}
+        </Estado>
+      </CardGrafico>
+    ),
+    "rec-fontes": () => (
+      <CardGrafico
+        titulo="Principais fontes de receita"
+        descricao="Quem mais pagou no período, como o banco identifica"
+      >
+        <Estado {...estado}>
+          {a ? (
+            <RankingContrapartes
+              a={a}
+              natureza="receita"
+              onSelecionar={setFiltro}
+            />
+          ) : null}
+        </Estado>
+      </CardGrafico>
+    ),
+    "rec-previstas": () => (
+      <CardGrafico
+        titulo="Previstas × realizadas"
+        descricao="Orçamento de receita × recebido, meses inteiros do período"
+      >
+        <Estado {...estado}>{a ? <PrevistoRealizado a={a} /> : null}</Estado>
+      </CardGrafico>
+    ),
+    "rec-acumulado": () => (
+      <CardGrafico
+        titulo="Receitas acumuladas"
+        descricao="Recebido até cada dia, comparado ao período anterior"
+      >
+        <Estado {...estado}>
+          {a ? <Acumulado a={a} natureza="receita" /> : null}
+        </Estado>
+      </CardGrafico>
+    ),
+  }
+  return (
+    <>
+      {grade(widgets)}
       <TransacoesAnaliseDialog
         filtro={filtro}
         inicio={periodo.inicio}
@@ -891,7 +899,7 @@ export function AbaReceitas({
         visao={visao}
         onFechar={() => setFiltro(null)}
       />
-    </div>
+    </>
   )
 }
 
@@ -901,14 +909,14 @@ export function AbaDespesas({
   rotulo,
   oculto,
   visao,
-}: {
-  periodo: Periodo
-  rotuloPeriodo: string
-  rotulo: Map<string, string>
-  oculto: boolean
-  visao: Visao
-}) {
+  grade,
+}: PropsAba) {
   const analise = useAnalise("despesa", periodo, visao)
+  const tendencia = useDashboardSeries(
+    ultimos6MesesCompletos(),
+    "mensal",
+    visao
+  )
   const a = analise.data
   const dashMes = useDashboard(mesAteHoje())
   const [filtro, setFiltro] = useState<FiltroAnalise | null>(null)
@@ -936,100 +944,108 @@ export function AbaDespesas({
       ),
     }
   }, [a])
-  return (
-    <div className="space-y-4">
-      <Kpis
-        natureza="despesa"
-        analise={analise}
-        oculto={oculto}
+  const widgets: Record<string, () => ReactNode> = {
+    ...kpisAnalise("despesa", analise, tendencia, oculto),
+    "desp-evolucao": () => (
+      <EvolucaoDespesas
+        periodo={periodo}
+        rotuloPeriodo={rotuloPeriodo}
+        rotulo={rotulo}
+        onSelecionar={porCategoria}
         visao={visao}
       />
-      <div className="grid gap-4 @5xl:grid-cols-2">
-        <div className="@5xl:col-span-2">
-          <EvolucaoDespesas
-            periodo={periodo}
-            rotuloPeriodo={rotuloPeriodo}
-            rotulo={rotulo}
-            onSelecionar={porCategoria}
-            visao={visao}
-          />
-        </div>
-        <CardGrafico
-          titulo="Despesas por categoria"
-          descricao={`${rotuloPeriodo} (sem transferências e investimentos; estornos abatem)`}
-        >
-          <Estado {...estado}>
-            {a ? (
-              <DistribuicaoCategorias
-                gastos={a.por_categoria}
-                rotulo={rotulo}
-                onSelecionar={porCategoria}
-              />
-            ) : null}
-          </Estado>
-        </CardGrafico>
-        <CardGrafico
-          titulo="Maiores despesas"
-          descricao="Somadas pela descrição da transação no período"
-        >
-          <Estado {...estado}>
-            {a ? (
-              <RankingContrapartes
-                a={a}
-                natureza="despesa"
-                onSelecionar={setFiltro}
-              />
-            ) : null}
-          </Estado>
-        </CardGrafico>
-        <DespesasOrcamento fim={periodo.fim} rotulo={rotulo} />
-        <CardGrafico
-          titulo="Despesas acumuladas"
-          descricao="Gasto até cada dia, comparado ao período anterior"
-        >
-          <Estado {...estado}>
-            {a ? <Acumulado a={a} natureza="despesa" /> : null}
-          </Estado>
-        </CardGrafico>
-        <CardGrafico
-          titulo="Despesas por dia da semana"
-          descricao={`Média diária · ${rotuloPeriodo}`}
-        >
-          <Estado {...estado}>{a ? <DiaDaSemana a={a} /> : null}</Estado>
-        </CardGrafico>
-        <CardGrafico
-          titulo="Por meio de pagamento"
-          descricao="Como o banco informa cada lançamento"
-        >
-          <Estado {...estado}>
-            {a ? (
-              <DistribuicaoCategorias
-                gastos={meios.gastos}
-                rotulo={meios.rotulo}
-                detalhe={meios.detalhe}
-                ariaLabel="Distribuição das despesas por meio de pagamento"
-                rotuloLista="Despesas por meio de pagamento"
-                onSelecionar={(c) =>
-                  setFiltro({ natureza: "despesa", meio: c.id, titulo: c.nome })
-                }
-              />
-            ) : null}
-          </Estado>
-        </CardGrafico>
-        <div className="@5xl:col-span-2">
-          <CardGrafico
-            titulo="Cartões de crédito"
-            descricao="Visão global das faturas, parcelas e limites"
-            acao={
-              <Button asChild variant="ghost" size="sm">
-                <Link to="/faturas">Ver faturas</Link>
-              </Button>
-            }
-          >
-            <PainelCartoes saidasMes={dashMes.data?.saidas_centavos} />
-          </CardGrafico>
-        </div>
-      </div>
+    ),
+    "desp-categorias": () => (
+      <CardGrafico
+        titulo="Despesas por categoria"
+        descricao={`${rotuloPeriodo} (sem transferências e investimentos; estornos abatem)`}
+      >
+        <Estado {...estado}>
+          {a ? (
+            <DistribuicaoCategorias
+              gastos={a.por_categoria}
+              rotulo={rotulo}
+              onSelecionar={porCategoria}
+            />
+          ) : null}
+        </Estado>
+      </CardGrafico>
+    ),
+    "desp-maiores": () => (
+      <CardGrafico
+        titulo="Maiores despesas"
+        descricao="Somadas pela descrição da transação no período"
+      >
+        <Estado {...estado}>
+          {a ? (
+            <RankingContrapartes
+              a={a}
+              natureza="despesa"
+              onSelecionar={setFiltro}
+            />
+          ) : null}
+        </Estado>
+      </CardGrafico>
+    ),
+    "desp-orcamento-categorias": () => (
+      <DespesasOrcamento fim={periodo.fim} rotulo={rotulo} />
+    ),
+    "desp-acumulado": () => (
+      <CardGrafico
+        titulo="Despesas acumuladas"
+        descricao="Gasto até cada dia, comparado ao período anterior"
+      >
+        <Estado {...estado}>
+          {a ? <Acumulado a={a} natureza="despesa" /> : null}
+        </Estado>
+      </CardGrafico>
+    ),
+    "desp-dia-semana": () => (
+      <CardGrafico
+        titulo="Despesas por dia da semana"
+        descricao={`Média diária · ${rotuloPeriodo}`}
+      >
+        <Estado {...estado}>{a ? <DiaDaSemana a={a} /> : null}</Estado>
+      </CardGrafico>
+    ),
+    "desp-meios": () => (
+      <CardGrafico
+        titulo="Por meio de pagamento"
+        descricao="Como o banco informa cada lançamento"
+      >
+        <Estado {...estado}>
+          {a ? (
+            <DistribuicaoCategorias
+              gastos={meios.gastos}
+              rotulo={meios.rotulo}
+              detalhe={meios.detalhe}
+              ariaLabel="Distribuição das despesas por meio de pagamento"
+              rotuloLista="Despesas por meio de pagamento"
+              onSelecionar={(c) =>
+                setFiltro({ natureza: "despesa", meio: c.id, titulo: c.nome })
+              }
+            />
+          ) : null}
+        </Estado>
+      </CardGrafico>
+    ),
+    "desp-cartoes": () => (
+      <CardGrafico
+        titulo="Cartões de crédito"
+        descricao="Visão global das faturas, parcelas e limites"
+        acao={
+          <Button asChild variant="ghost" size="sm">
+            <Link to="/faturas">Ver faturas</Link>
+          </Button>
+        }
+      >
+        <PainelCartoes saidasMes={dashMes.data?.saidas_centavos} />
+      </CardGrafico>
+    ),
+  }
+  return (
+    <>
+      {grade(widgets)}
       <TransacoesAnaliseDialog
         filtro={filtro}
         inicio={periodo.inicio}
@@ -1037,6 +1053,6 @@ export function AbaDespesas({
         visao={visao}
         onFechar={() => setFiltro(null)}
       />
-    </div>
+    </>
   )
 }

@@ -189,7 +189,7 @@ export function GraficoFluxo({
   return (
     <EChart
       option={option}
-      className="h-[280px]"
+      altura={280}
       ariaLabel="Entradas e saídas por período, com o resultado"
     />
   )
@@ -589,7 +589,7 @@ export function BarrasEmpilhadasCategorias({
   return (
     <EChart
       option={option}
-      className={comLegenda ? "h-[280px]" : "h-[240px]"}
+      altura={comLegenda ? 280 : 240}
       ariaLabel="Despesas por categoria em cada período"
       onClique={({ seriesIndex }) => {
         const f = fatiasPilha[seriesIndex]
@@ -711,7 +711,7 @@ export function GraficoPatrimonio({ pontos }: { pontos: PatrimonioPonto[] }) {
   return (
     <EChart
       option={option}
-      className="h-[280px]"
+      altura={280}
       ariaLabel="Evolução do patrimônio total e líquido, mês a mês"
     />
   )

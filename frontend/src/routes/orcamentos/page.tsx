@@ -2,13 +2,22 @@ import {
   ChevronLeft,
   ChevronRight,
   CircleDashed,
+  ListFilter,
   PiggyBank,
   Settings2,
   Wand2,
   X,
   type LucideIcon,
 } from "lucide-react"
-import { createElement, useEffect, useRef, useState } from "react"
+import {
+  createElement,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ReactNode,
+  type RefObject,
+} from "react"
 import { toast } from "sonner"
 
 import { EmptyState } from "@/components/common/empty-state"
@@ -22,15 +31,6 @@ import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
-import { useIsMobile } from "@/hooks/use-mobile"
 import { useIconeCategoria } from "@/lib/api/categoria-icones"
 import { useMapaCategorias } from "@/lib/api/categorias"
 import {
@@ -312,7 +312,8 @@ function SecaoOrcamento({
 }) {
   const nomes = useMapaCategorias()
   const iconeCategoria = useIconeCategoria()
-  const isMobile = useIsMobile()
+  const grade = useRef<HTMLDivElement>(null)
+  const largo = useLargo(grade, 880)
   if (itens.length === 0 && naoPlanejado === 0)
     return (
       <p className="py-6 text-center text-sm text-muted-foreground">
@@ -378,40 +379,59 @@ function SecaoOrcamento({
         percentualTotal={percentualTotal}
       />
 
-      {isMobile ? (
-        <ListaMobile
+      {/* Largo: categorias à esquerda, transações da escolhida à direita. Estreito: a categoria
+          abre as transações logo abaixo dela (sanfona: abrir outra fecha a anterior). A decisão
+          é pela largura DISPONÍVEL (chat aberto estreita a página), não pela da janela. */}
+      <div
+        ref={grade}
+        className={cn(
+          largo &&
+            "grid grid-cols-[minmax(18rem,26rem)_minmax(0,1fr)] items-start gap-4"
+        )}
+      >
+        <ListaCategorias
           linhas={linhas}
           abertaKey={abertaKey}
           onAlternar={alternar}
+          detalhe={
+            !largo && aberta && alvo ? (
+              <PainelTransacoes
+                ano={ano}
+                mes={mes}
+                alvo={alvo}
+                titulo={`${aberta.nome} · ${rotuloMes}`}
+                embutido
+              />
+            ) : null
+          }
         />
-      ) : (
-        <TabelaLinhas
-          tipo={tipo}
-          linhas={linhas}
-          abertaKey={abertaKey}
-          onAlternar={alternar}
-        />
-      )}
-
-      {aberta && alvo && (
-        <PainelTransacoes
-          ano={ano}
-          mes={mes}
-          alvo={alvo}
-          titulo={`${aberta.nome} · ${rotuloMes}`}
-          onFechar={() => {
-            onAlvo(null)
-          }}
-        />
-      )}
+        {largo ? (
+          <div className="sticky top-4">
+            {aberta && alvo ? (
+              <PainelTransacoes
+                ano={ano}
+                mes={mes}
+                alvo={alvo}
+                titulo={`${aberta.nome} · ${rotuloMes}`}
+                onFechar={() => onAlvo(null)}
+              />
+            ) : (
+              <div className="flex min-h-64 flex-col items-center justify-center gap-2 rounded-2xl border border-dashed p-8 text-center">
+                <ListFilter
+                  className="size-5 text-muted-foreground"
+                  aria-hidden
+                />
+                <p className="text-sm font-medium">Escolha uma categoria</p>
+                <p className="max-w-xs text-sm text-muted-foreground">
+                  As transações dela no mês aparecem aqui.
+                </p>
+              </div>
+            )}
+          </div>
+        ) : null}
+      </div>
     </section>
   )
-}
-
-type PropsLinhas = {
-  linhas: LinhaVisao[]
-  abertaKey: string | null
-  onAlternar: (linha: LinhaVisao) => void
 }
 
 function ResumoSecao({
@@ -477,32 +497,68 @@ function ResumoSecao({
   )
 }
 
-function ListaMobile({ linhas, abertaKey, onAlternar }: PropsLinhas) {
+/** Largura do elemento ≥ `min` (px), acompanhando redimensionamentos. */
+function useLargo(ref: RefObject<HTMLElement | null>, min: number) {
+  const [largo, setLargo] = useState(false)
+  useLayoutEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const ro = new ResizeObserver(([e]) => setLargo(e.contentRect.width >= min))
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [ref, min])
+  return largo
+}
+
+function ListaCategorias({
+  linhas,
+  abertaKey,
+  onAlternar,
+  detalhe,
+}: {
+  linhas: LinhaVisao[]
+  abertaKey: string | null
+  onAlternar: (linha: LinhaVisao) => void
+  /** Transações da categoria aberta, embutidas logo abaixo dela (modo sanfona). */
+  detalhe: ReactNode
+}) {
   return (
     <div className="space-y-0.5 rounded-2xl superficie p-2">
-      {linhas.map((linha) => (
-        <ItemMobile
-          key={linha.key}
-          linha={linha}
-          aberta={linha.key === abertaKey}
-          onAlternar={onAlternar}
-        />
-      ))}
+      {linhas.map((linha) => {
+        const aberta = linha.key === abertaKey
+        return (
+          <ItemCategoria
+            key={linha.key}
+            linha={linha}
+            aberta={aberta}
+            onAlternar={onAlternar}
+          >
+            {aberta ? detalhe : null}
+          </ItemCategoria>
+        )
+      })}
     </div>
   )
 }
 
-function ItemMobile({
+function ItemCategoria({
   linha,
   aberta,
   onAlternar,
+  children,
 }: {
   linha: LinhaVisao
   aberta: boolean
   onAlternar: (linha: LinhaVisao) => void
+  children?: ReactNode
 }) {
   return (
-    <div className={cn("space-y-1.5 p-3", aberta && "bg-muted/60")}>
+    <div
+      className={cn(
+        "space-y-1.5 rounded-xl p-3 transition-colors",
+        aberta ? "bg-muted/60" : "hover:bg-muted/40"
+      )}
+    >
       <button
         type="button"
         onClick={() => {
@@ -532,6 +588,7 @@ function ItemMobile({
           indicatorClassName={linha.cor}
         />
       </div>
+      {children}
     </div>
   )
 }
@@ -560,138 +617,22 @@ function RealizadoDeLimite({ linha }: { linha: LinhaVisao }) {
   )
 }
 
-function TabelaLinhas({
-  tipo,
-  linhas,
-  abertaKey,
-  onAlternar,
-}: PropsLinhas & { tipo: TipoOrcamento }) {
-  const despesa = tipo === "despesa"
-  return (
-    <div className="overflow-x-auto rounded-2xl superficie">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Categoria</TableHead>
-            <TableHead className="text-right">{ROTULOS[tipo].orcado}</TableHead>
-            <TableHead className="text-right">
-              {ROTULOS[tipo].realizado}
-            </TableHead>
-            <TableHead className="text-right">Restante</TableHead>
-            <TableHead className="w-36">%</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {linhas.map((linha) => (
-            <LinhaTabela
-              key={linha.key}
-              despesa={despesa}
-              linha={linha}
-              aberta={linha.key === abertaKey}
-              onAlternar={onAlternar}
-            />
-          ))}
-        </TableBody>
-      </Table>
-    </div>
-  )
-}
-
-function LinhaTabela({
-  despesa,
-  linha,
-  aberta,
-  onAlternar,
-}: {
-  despesa: boolean
-  linha: LinhaVisao
-  aberta: boolean
-  onAlternar: (linha: LinhaVisao) => void
-}) {
-  const restante = linha.limite === null ? null : linha.limite - linha.realizado
-  return (
-    <TableRow
-      onClick={() => {
-        onAlternar(linha)
-      }}
-      data-state={aberta ? "selected" : undefined}
-      className="cursor-pointer"
-    >
-      <TableCell>
-        {/* O botão é o alvo acessível (teclado/leitor de tela); o clique na linha
-            inteira é só conveniência de mouse. */}
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation()
-            onAlternar(linha)
-          }}
-          aria-expanded={aberta}
-          className="flex max-w-full items-center gap-2 rounded-sm text-left outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          {createElement(linha.icone, {
-            className: "size-4 shrink-0 text-muted-foreground",
-            "aria-hidden": true,
-          })}
-          <span className="truncate">{linha.nome}</span>
-        </button>
-      </TableCell>
-      <TableCell className="text-right">
-        {linha.limite === null ? (
-          <SemValor />
-        ) : (
-          <Valor centavos={linha.limite} neutro />
-        )}
-      </TableCell>
-      <TableCell className="text-right">
-        <Valor centavos={linha.realizado} neutro />
-      </TableCell>
-      <TableCell className="text-right">
-        {restante === null ? (
-          <SemValor />
-        ) : (
-          // Estourado sai com "−": a cor do texto é neutra, o sinal carrega o sentido.
-          <Valor centavos={despesa ? restante : Math.max(restante, 0)} />
-        )}
-      </TableCell>
-      <TableCell>
-        <div className="flex items-center gap-2">
-          <Progress
-            value={Math.min(linha.percentual, 100)}
-            indicatorClassName={linha.cor}
-            className="w-16"
-          />
-          <span className="text-xs text-muted-foreground tabular-nums">
-            {linha.percentual}%
-          </span>
-        </div>
-      </TableCell>
-    </TableRow>
-  )
-}
-
-function SemValor() {
-  return (
-    <span className="text-muted-foreground" aria-label="sem orçado">
-      —
-    </span>
-  )
-}
-
-/** Transações da linha aberta, logo abaixo da tabela da seção — mesma tabela/drawer da tela de
- *  Transações (recategorizar aqui já atualiza o consumo). */
 function PainelTransacoes({
   ano,
   mes,
   alvo,
   titulo,
   onFechar,
+  embutido = false,
 }: {
   ano: number
   mes: number
   alvo: AlvoDrilldown
   titulo: string
-  onFechar: () => void
+  /** Sem ele, não há botão de fechar (na sanfona, fecha-se tocando a categoria de novo). */
+  onFechar?: () => void
+  /** Dentro da categoria aberta (sanfona): sem superfície própria nem título. */
+  embutido?: boolean
 }) {
   const transacoes = useTransacoesDoOrcamento(ano, mes, alvo)
   const ref = useRef<HTMLElement>(null)
@@ -704,22 +645,28 @@ function PainelTransacoes({
     <section
       ref={ref}
       aria-label={`Transações de ${titulo}`}
-      className="space-y-3 rounded-lg border p-3 sm:p-4"
+      className={cn(
+        embutido ? "-mx-1 pt-2" : "space-y-3 rounded-2xl superficie p-3 sm:p-4"
+      )}
     >
-      <div className="flex items-center justify-between gap-2">
-        <h3 className="text-sm font-semibold">
-          <span className="text-muted-foreground">Transações · </span>
-          {titulo}
-        </h3>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={onFechar}
-          aria-label="Fechar transações"
-        >
-          <X className="size-4" />
-        </Button>
-      </div>
+      {embutido ? null : (
+        <div className="flex items-center justify-between gap-2">
+          <h3 className="text-sm font-semibold">
+            <span className="text-muted-foreground">Transações · </span>
+            {titulo}
+          </h3>
+          {onFechar ? (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onFechar}
+              aria-label="Fechar transações"
+            >
+              <X className="size-4" />
+            </Button>
+          ) : null}
+        </div>
+      )}
       {transacoes.isError ? (
         <EmptyState title="Não foi possível carregar as transações" />
       ) : transacoes.isLoading ? (
@@ -727,7 +674,12 @@ function PainelTransacoes({
       ) : !transacoes.data?.length ? (
         <EmptyState title="Nenhuma transação nesta categoria no mês" />
       ) : (
-        <TransacoesTabela items={transacoes.data} semMoldura />
+        <TransacoesTabela
+          items={transacoes.data}
+          semMoldura
+          // Categoria única na lista → coluna redundante (o "não planejado" mistura várias).
+          ocultarCategoria={alvo.categoriaId != null}
+        />
       )}
     </section>
   )

@@ -81,7 +81,7 @@ export const navSections: NavSection[] = [
     icon: Wallet,
     items: [
       { title: "Transações", url: "/transacoes", icon: ArrowRightLeft },
-      { title: "Contas", url: "/contas", icon: Landmark },
+      { title: "Contas e cartões", url: "/contas", icon: Landmark },
       { title: "Faturas", url: "/faturas", icon: CreditCard },
     ],
   },
@@ -166,7 +166,7 @@ export const ATALHOS: Atalho[] = [
   },
   {
     id: "contas",
-    title: "Contas",
+    title: "Contas e cartões",
     short: "Contas",
     url: "/contas",
     icon: Landmark,

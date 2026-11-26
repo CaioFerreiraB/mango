@@ -15367,7 +15367,7 @@
                   "$ref": "#/components/schemas/WidgetLayout"
                 },
                 "type": "array",
-                "maxItems": 30
+                "maxItems": 60
               },
               {
                 "type": "null"
@@ -18044,15 +18044,33 @@
           "largura": {
             "type": "integer",
             "enum": [
+              10,
               12,
               15,
               20,
+              24,
               30,
+              36,
               40,
               45,
+              48,
+              50,
               60
             ],
             "title": "Largura"
+          },
+          "altura": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 1600.0,
+                "minimum": 96.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Altura"
           },
           "visivel": {
             "type": "boolean",
@@ -18066,7 +18084,7 @@
           "visivel"
         ],
         "title": "WidgetLayout",
-        "description": "Um widget do dashboard: id do catálogo do frontend, largura em colunas de um grid de 60\n(⅕ ¼ ⅓ ½ ⅔ ¾ inteira) e visibilidade. Id desconhecido é aceito (o frontend ignora) — o\ncatálogo mora no cliente."
+        "description": "Um widget do dashboard (das três abas): id do catálogo do frontend, largura em colunas de\num grid de 60 (frações ⅙ … inteira, onde a borda arrastada encaixa), altura mínima em px\nopcional (ausente = a do conteúdo) e visibilidade. Id desconhecido é aceito (o frontend\nignora) — o catálogo mora no cliente."
       }
     }
   }

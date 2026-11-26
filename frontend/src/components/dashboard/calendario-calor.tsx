@@ -436,7 +436,9 @@ function Dia({
           "shadow-[0_0_0_2px_var(--color-card),0_0_0_3.5px_var(--color-primary)]"
       )}
     >
-      <span className="flex items-start justify-between gap-1">
+      {/* Célula estreita (celular): o ícone de investimento desce para baixo do número em vez de
+          espremer ao lado dele. */}
+      <span className="flex flex-col items-start gap-0.5 @xl:flex-row @xl:justify-between @xl:gap-1">
         <span
           className={cn(
             "text-xs font-semibold tabular-nums",

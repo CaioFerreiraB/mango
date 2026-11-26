@@ -98,7 +98,9 @@ export function EChart({
       // mínima dos ancestrais; sem isso, um grid que precisa encolher (ex.: chat abrindo) não
       // encolhe, o ResizeObserver nunca dispara e o gráfico vaza.
       className={cn("@container w-full", className)}
-      style={{ height: altura, width: largura }}
+      // minHeight = altura: crescendo num contêiner flexível (card mais alto), volta a encolher
+      // até a altura pedida — sem ela, o SVG já renderizado seguraria o tamanho maior.
+      style={{ height: altura, minHeight: altura, width: largura }}
       role="img"
       aria-label={ariaLabel}
     />

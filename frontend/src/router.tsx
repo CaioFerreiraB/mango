@@ -79,7 +79,7 @@ export const router = createBrowserRouter([
           },
           {
             path: "contas",
-            handle: { title: "Contas" },
+            handle: { title: "Contas e cartões" },
             children: [
               { index: true, element: <ContasPage /> },
               {

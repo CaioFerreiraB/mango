@@ -108,7 +108,7 @@ export function SaldoDestaque({
   /** Saldo diário somado das contas (ordem cronológica). */
   pontos?: { data: string; saldo_centavos: number }[]
   oculto: boolean
-  onAlternarOculto: () => void
+  onAlternarOculto?: () => void
 }) {
   const dados = useMemo(
     () =>

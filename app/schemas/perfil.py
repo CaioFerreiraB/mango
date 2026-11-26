@@ -4,7 +4,7 @@ mass-assignment de `senha_hash`/`totp_secret_cifrado`/`usuario_id` (S4)."""
 from datetime import date
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_serializer
 
 from app.schemas import ORMModel
 from app.schemas.setup import _normalizar_email
@@ -13,13 +13,23 @@ Accent = Literal["violeta", "tangerina", "lima", "azul", "rosa", "grafite"]
 
 
 class WidgetLayout(BaseModel):
-    """Um widget do dashboard: id do catálogo do frontend, largura em colunas de um grid de 60
-    (⅕ ¼ ⅓ ½ ⅔ ¾ inteira) e visibilidade. Id desconhecido é aceito (o frontend ignora) — o
-    catálogo mora no cliente."""
+    """Um widget do dashboard (das três abas): id do catálogo do frontend, largura em colunas de
+    um grid de 60 (frações ⅙ … inteira, onde a borda arrastada encaixa), altura mínima em px
+    opcional (ausente = a do conteúdo) e visibilidade. Id desconhecido é aceito (o frontend
+    ignora) — o catálogo mora no cliente."""
 
     id: str = Field(pattern=r"^[a-z][a-z-]{0,31}$")
-    largura: Literal[12, 15, 20, 30, 40, 45, 60]
+    largura: Literal[10, 12, 15, 20, 24, 30, 36, 40, 45, 48, 50, 60]
+    altura: int | None = Field(default=None, ge=96, le=1600)
     visivel: bool
+
+    @model_serializer(mode="wrap")
+    def _sem_altura_nula(self, handler):
+        # Altura ausente não vira `"altura": null` gravado/devolvido: o layout volta como foi salvo.
+        d = handler(self)
+        if d.get("altura") is None:
+            d.pop("altura", None)
+        return d
 
 
 def _ids_unicos(v: list[WidgetLayout] | None) -> list[WidgetLayout] | None:
@@ -75,7 +85,7 @@ class PerfilUpdate(BaseModel):
     # em vez de IntegrityError no commit. O default None só marca "não enviado" (exclude_unset).
     orcamento_alerta_pct: int = Field(default=None, ge=1, le=100)
     # `null` explícito restaura o padrão; teto de 30 itens barra payload inflado.
-    dashboard_layout: list[WidgetLayout] | None = Field(default=None, max_length=30)
+    dashboard_layout: list[WidgetLayout] | None = Field(default=None, max_length=60)
 
     # Até 3 atalhos (o "Início" é fixo); ids do catálogo do frontend, que ignora os desconhecidos.
     atalhos_mobile: list[IdAtalho] | None = Field(default=None, max_length=3)

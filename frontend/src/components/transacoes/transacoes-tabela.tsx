@@ -177,8 +177,10 @@ export function TransacoesTabela({
   const mapaCategorias = useMapaCategorias()
   const iconeCategoria = useIconeCategoria()
   const perfil = usePerfil() // corte da revisão (§4.3) — decide o estado do StatusBadge
-  // Descrição · Valor · Data · Conta · Categoria · Status
-  const { larguras, iniciar } = useLarguras([300, 120, 110, 160, 180, 120])
+  // Descrição · Valor · Data · Conta · Categoria · Status. Descrição nasce sem largura (0 = fica
+  // com o que sobra) para a tabela caber no contêiner — px fixos em todas somavam mais que um
+  // diálogo e abriam rolagem horizontal. Arrastar a alça fixa a largura medida.
+  const { larguras, iniciar } = useLarguras([0, 120, 100, 160, 180, 120])
   // `abrirId` (busca global → `/transacoes?id=`) só semeia: fechar o drawer não reabre.
   const [selecionadaId, setSelecionadaId] = useState<number | null>(
     abrirId ?? null
@@ -209,7 +211,7 @@ export function TransacoesTabela({
           <colgroup>
             {larguras.map((w, i) =>
               ocultarCategoria && i === 4 ? null : (
-                <col key={i} style={{ width: w }} />
+                <col key={i} style={{ width: w || undefined }} />
               )
             )}
           </colgroup>
