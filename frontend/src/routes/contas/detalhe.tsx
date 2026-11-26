@@ -22,7 +22,10 @@ export function ContaDetalhePage() {
   const { data, isLoading, isError } = useConta(id)
   const instituicoes = useInstituicoes()
 
-  if (isError) return <EmptyState title="Conta não encontrada" />
+  // Id inválido na URL (/contas/abc): a consulta fica desligada (useConta só pergunta por id > 0)
+  // e o esqueleto ficaria para sempre.
+  if (isError || !Number.isInteger(id) || id <= 0)
+    return <EmptyState title="Conta não encontrada" />
   if (isLoading || !data) return <Skeleton className="h-64 w-full" />
 
   const porId = new Map((instituicoes.data ?? []).map((i) => [i.id, i]))

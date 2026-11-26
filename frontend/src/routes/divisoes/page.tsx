@@ -39,7 +39,7 @@ import {
   type EscopoDivisao,
   type ModoDivisao,
 } from "@/lib/api/divisoes"
-import { formatDate } from "@/lib/format"
+import { formatDataCurta, formatDate } from "@/lib/format"
 
 /** Badge/tooltip (§4.11-otimização): avisa que os saldos exibidos já vêm simplificados —
  *  evita estranheza ao ver saldo 0 com alguém que tem despesa em aberto (a dívida foi
@@ -136,7 +136,12 @@ function AbaResumo({
 
   return (
     <div className="space-y-4">
-      {pessoasTop.length === 0 && atividades.length === 0 ? (
+      {/* Vazio só quando as duas consultas responderam sem nada: carregando ou com falha, o resumo
+          continua (e mostra o próprio estado). */}
+      {pessoas.isSuccess &&
+      recentes.isSuccess &&
+      pessoasTop.length === 0 &&
+      atividades.length === 0 ? (
         <EmptyState
           cena="mango-juice"
           title="Nenhuma divisão ainda"
@@ -252,7 +257,7 @@ function AbaResumo({
                               {d.pago_por_usuario_id === me.data?.id
                                 ? "Você pagou"
                                 : "Pagou"}{" "}
-                              · {formatDate(d.data)}
+                              · {formatDataCurta(d.data)}
                             </p>
                           </div>
                           <Valor
@@ -375,7 +380,7 @@ function AbaTransacoes({
                     </p>
                   </TableCell>
                   <TableCell className="text-muted-foreground">
-                    {formatDate(d.data)}
+                    {formatDataCurta(d.data)}
                   </TableCell>
                   <TableCell className="text-right">
                     <Valor centavos={d.valor_total_centavos} neutro />

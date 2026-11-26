@@ -15,21 +15,28 @@ import {
 import { CSS } from "@dnd-kit/utilities"
 import { ArrowDown, ArrowUp, EyeOff, LayoutGrid } from "lucide-react"
 import {
+  useEffect,
   useRef,
+  useState,
   type CSSProperties,
   type KeyboardEvent,
+  type TouchEvent,
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
 } from "react"
 
 import { EmptyState } from "@/components/common/empty-state"
 import { Button } from "@/components/ui/button"
+import { useMovimentoReduzido } from "@/hooks/use-movimento-reduzido"
 import {
+  ALTURA_MAX,
+  ALTURA_MIN,
   CATALOGO,
   ROTULO_LARGURA,
   ehCompacto,
   encaixarAltura,
   encaixarLargura,
+  larguraMinima,
   passoLargura,
   type WidgetLayout,
 } from "@/lib/dashboard-layout"
@@ -121,7 +128,8 @@ export function GradeWidgets({
           items={itens.map((w) => w.id)}
           strategy={rectSortingStrategy}
         >
-          <div className="grid grid-cols-2 gap-3 sm:gap-4 @3xl:grid-cols-6 @4xl:grid-cols-60">
+          {/* @4xl: 59 vãos de 16px (944px) passariam do próprio @4xl (896px) — 12px cabem. */}
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 @3xl:grid-cols-6 @4xl:grid-cols-60 @4xl:gap-3">
             {itens.map((w, i) => (
               <Widget
                 key={w.id}
@@ -165,9 +173,27 @@ function Widget({
 }) {
   const titulo = TITULO.get(w.id) ?? w.id
   const ativo = editando && !bloqueado
+  const reduzido = useMovimentoReduzido()
   const { listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: w.id, disabled: !ativo })
   const ref = useRef<HTMLElement | null>(null)
+  // Altura atual do card (para o aria-valuenow da borda inferior na altura automática); medida
+  // só no modo edição, que é quando a borda existe.
+  const [alturaMedida, setAlturaMedida] = useState(ALTURA_MIN)
+  useEffect(() => {
+    const el = ref.current
+    if (!editando || !el) return
+    const ro = new ResizeObserver(([e]) =>
+      setAlturaMedida(
+        Math.min(
+          ALTURA_MAX,
+          Math.max(ALTURA_MIN, Math.round(e.borderBoxSize[0].blockSize))
+        )
+      )
+    )
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [editando])
 
   function redimensionar(
     e: ReactPointerEvent<HTMLElement>,
@@ -192,7 +218,8 @@ function Widget({
       // N colunas de 60 com gap g ocupam N·col + (N−1)·g ⇒ N = (px + g)·60 / (grade + g).
       if (eixo !== "y")
         patch.largura = encaixarLargura(
-          ((inicio.width + ev.clientX - x0 + gap) * 60) / (larguraGrade + gap)
+          ((inicio.width + ev.clientX - x0 + gap) * 60) / (larguraGrade + gap),
+          w.id
         )
       if (eixo !== "x")
         patch.altura = encaixarAltura(inicio.height + ev.clientY - y0)
@@ -208,13 +235,16 @@ function Widget({
     alca.addEventListener("pointercancel", soltar)
   }
 
+  // Toque numa borda redimensiona; não pode também acordar o TouchSensor (toque longo) do card.
+  const pararToque = (e: TouchEvent) => e.stopPropagation()
+
   // Teclado nas bordas (padrão "window splitter"): ←/→ trocam a fração, ↑/↓ a altura em 40px;
   // Delete/Backspace na borda inferior volta à altura do conteúdo.
   function teclaLargura(e: KeyboardEvent) {
     if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return
     e.preventDefault()
     onAlterar({
-      largura: passoLargura(w.largura, e.key === "ArrowLeft" ? -1 : 1),
+      largura: passoLargura(w.largura, e.key === "ArrowLeft" ? -1 : 1, w.id),
     })
   }
   function teclaAltura(e: KeyboardEvent<HTMLElement>) {
@@ -233,7 +263,9 @@ function Widget({
 
   const estilo = {
     transform: CSS.Translate.toString(transform),
-    transition,
+    // Reduzir movimento: os vizinhos pulam para o lugar em vez de deslizar (o card arrastado
+    // continua seguindo o ponteiro, que é o `transform`).
+    transition: reduzido ? undefined : transition,
     "--largura": w.largura,
     ...(w.altura ? { "--altura": `${w.altura}px` } : {}),
   } as CSSProperties
@@ -312,12 +344,13 @@ function Widget({
                 role="separator"
                 aria-orientation="vertical"
                 aria-label={`Largura de ${titulo}`}
-                aria-valuemin={10}
+                aria-valuemin={larguraMinima(w.id)}
                 aria-valuemax={60}
                 aria-valuenow={w.largura}
                 aria-valuetext={ROTULO_LARGURA[w.largura]}
                 tabIndex={0}
                 onPointerDown={(e) => redimensionar(e, "x")}
+                onTouchStart={pararToque}
                 onKeyDown={teclaLargura}
                 className="group/alca absolute inset-y-6 -right-2.5 z-10 flex w-5 cursor-ew-resize touch-none items-center justify-center rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
@@ -327,9 +360,13 @@ function Widget({
                 role="separator"
                 aria-orientation="horizontal"
                 aria-label={`Altura de ${titulo}`}
+                aria-valuemin={ALTURA_MIN}
+                aria-valuemax={ALTURA_MAX}
+                aria-valuenow={w.altura ?? alturaMedida}
                 aria-valuetext={w.altura ? `${w.altura}px` : "automática"}
                 tabIndex={0}
                 onPointerDown={(e) => redimensionar(e, "y")}
+                onTouchStart={pararToque}
                 onDoubleClick={() => onAlterar({ altura: undefined })}
                 onKeyDown={teclaAltura}
                 title="Duplo clique: altura automática"
@@ -340,6 +377,7 @@ function Widget({
               <div
                 aria-hidden
                 onPointerDown={(e) => redimensionar(e, "xy")}
+                onTouchStart={pararToque}
                 onDoubleClick={() => onAlterar({ altura: undefined })}
                 className="absolute -right-2.5 -bottom-2.5 z-10 size-5 cursor-nwse-resize touch-none"
               />

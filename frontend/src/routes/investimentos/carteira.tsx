@@ -174,11 +174,6 @@ export function CarteiraPage() {
   const [chaveAberta, setChaveAberta] = useState<string | null>(null)
 
   const posicoes = useMemo(() => resumo.data?.posicoes ?? [], [resumo.data])
-  // Coluna inteira de "—" é ruído: só aparece se ao menos uma posição tem o dado.
-  const colunas = {
-    instituicao: posicoes.some((p) => p.instituicao),
-    cotacao: posicoes.some((p) => p.cotacao_centavos != null),
-  }
 
   // Instituições/subtypes presentes → opções do "Mais filtros".
   const instituicoes = useMemo(
@@ -218,6 +213,12 @@ export function CarteiraPage() {
     filtroSubtype,
     ordenacao,
   ])
+
+  // Coluna inteira de "—" é ruído: só aparece se ao menos uma posição do filtro atual tem o dado.
+  const colunas = {
+    instituicao: filtradas.some((p) => p.instituicao),
+    cotacao: filtradas.some((p) => p.cotacao_centavos != null),
+  }
 
   const totalPaginas = Math.max(1, Math.ceil(filtradas.length / porPagina))
   const paginaSegura = Math.min(pagina, totalPaginas)

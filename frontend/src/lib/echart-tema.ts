@@ -195,8 +195,19 @@ export function useCores(exprs: string[]): string[] {
 }
 
 /** Troca o alfa de um `rgba(...)` resolvido pelo tema. */
-export const comAlfa = (rgba: string, a: number) =>
-  rgba.replace(/,\s*[\d.]+\)$/, `,${a})`)
+/** Mesma cor com opacidade `a`. Aceita o `rgba(...)` resolvido pelo tema e também `rgb(...)` e
+ *  hex (`#fff`, `#ffffff`) vindos de props — sem isso, o degradê de uma cor hex ficava opaco. */
+export function comAlfa(cor: string, a: number): string {
+  const hex = /^#([\da-f]{3}|[\da-f]{6})$/i.exec(cor.trim())
+  if (hex) {
+    const h =
+      hex[1].length === 3 ? [...hex[1]].map((c) => c + c).join("") : hex[1]
+    const [r, g, b] = [0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16))
+    return `rgba(${r},${g},${b},${a})`
+  }
+  if (/^rgb\(/i.test(cor)) return cor.replace(/^rgb\((.+)\)$/i, `rgba($1,${a})`)
+  return cor.replace(/,\s*[\d.]+\)$/, `,${a})`)
+}
 
 /**
  * Cor fixa por indicador de mercado (a cor segue a entidade em todas as telas): slots da paleta

@@ -78,14 +78,10 @@ export function FaturaDetalhePage() {
                 },
               ]
             : []),
-          ...(transacoes.isLoading
-            ? []
-            : [
-                {
-                  rotulo: "Compras",
-                  valor: String(transacoes.data?.total ?? itens.length),
-                },
-              ]),
+          // Só com a consulta respondida: falha não pode aparecer como "0 compras".
+          ...(transacoes.isSuccess
+            ? [{ rotulo: "Compras", valor: String(transacoes.data.total) }]
+            : []),
         ]}
       />
 

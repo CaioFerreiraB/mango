@@ -383,6 +383,7 @@
     transform: translateY(-1px) scale(0.99);
   }
   @media (prefers-reduced-motion: reduce) {
+    &:hover,
     &:active,
     &:has(button:active) {
       transform: none;

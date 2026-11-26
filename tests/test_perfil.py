@@ -146,7 +146,8 @@ def test_dashboard_layout_round_trip_e_restaurar(
     assert gravado() == layout
 
     # Outro campo no PATCH não mexe no layout (exclude_unset).
-    client.patch("/api/perfil", json={"accent": "lima"})
+    r = client.patch("/api/perfil", json={"accent": "lima"})
+    assert r.status_code == 200 and r.json()["accent"] == "lima", r.text
     assert gravado() == layout
 
     r = client.patch("/api/perfil", json={"dashboard_layout": None})

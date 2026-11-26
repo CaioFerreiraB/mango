@@ -146,6 +146,7 @@ export function TransacoesTabela({
   parteDoUsuario = false,
   semMoldura = false,
   compacta = false,
+  oculto = false,
 }: {
   items: ItemListagem[]
   /** Repassado ao drawer: esconde "Ir para a fatura" quando já estamos numa fatura. */
@@ -160,6 +161,8 @@ export function TransacoesTabela({
   semMoldura?: boolean
   /** Sempre o formato de lista (o do celular), mesmo no desktop — para colunas estreitas. */
   compacta?: boolean
+  /** Modo privacidade da página: valores viram "R$ ••••". */
+  oculto?: boolean
 }) {
   const valorDe = (t: Transacao) => {
     const v = valorEfetivoCentavos(t)
@@ -207,7 +210,18 @@ export function TransacoesTabela({
           !semMoldura && "rounded-2xl superficie"
         )}
       >
-        <Table className="table-fixed">
+        {/* Descrição fica com o que sobra, mas nunca abaixo de 16rem: num contêiner mais estreito
+            a tabela rola dentro dele em vez de esmagar a descrição. */}
+        <Table
+          className="table-fixed"
+          style={{
+            minWidth:
+              larguras.reduce(
+                (soma, w, i) => (ocultarCategoria && i === 4 ? soma : soma + w),
+                0
+              ) + (larguras[0] ? 0 : 256), // Descrição já arrastada: vale a largura dela
+          }}
+        >
           <colgroup>
             {larguras.map((w, i) =>
               ocultarCategoria && i === 4 ? null : (
@@ -283,7 +297,12 @@ export function TransacoesTabela({
                     </TableCell>
                     <TableCell>
                       <div className="truncate">
-                        <Valor centavos={valorLancamento(t)} sinal neutro />
+                        <Valor
+                          centavos={valorLancamento(t)}
+                          sinal
+                          neutro
+                          oculto={oculto}
+                        />
                       </div>
                     </TableCell>
                     <TableCell className="text-muted-foreground">
@@ -398,7 +417,12 @@ export function TransacoesTabela({
                   </TableCell>
                   <TableCell>
                     <div className="truncate">
-                      <Valor centavos={valorDe(t)} sinal neutro />
+                      <Valor
+                        centavos={valorDe(t)}
+                        sinal
+                        neutro
+                        oculto={oculto}
+                      />
                     </div>
                   </TableCell>
                   <TableCell className="text-muted-foreground">
@@ -493,6 +517,7 @@ export function TransacoesTabela({
                     <Valor
                       centavos={valorLancamento(t)}
                       sinal
+                      oculto={oculto}
                       className="block text-xs font-semibold"
                     />
                     <p className="text-[11px] text-muted-foreground">
@@ -553,6 +578,7 @@ export function TransacoesTabela({
                   <Valor
                     centavos={valorDe(t)}
                     sinal
+                    oculto={oculto}
                     className="block text-xs font-semibold"
                   />
                   <p className="text-[11px] text-muted-foreground">

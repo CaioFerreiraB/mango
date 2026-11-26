@@ -69,7 +69,7 @@ def test_valor_guardado_usa_liquido_do_investimento(db: Session, usuario_a: Usua
             item_id=conta.item_id,
             pluggy_investment_id="inv-liq",
             type="FIXED_INCOME",
-            saldo_centavos=50_000,
+            saldo_centavos=49_000,  # ≠ líquido: o teste distingue saldo, bruto e líquido
             amount_centavos=52_000,  # bruto
             taxes_centavos=1_500,  # IR
             taxes2_centavos=500,  # IOF

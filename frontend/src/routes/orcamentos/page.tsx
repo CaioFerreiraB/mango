@@ -17,7 +17,6 @@ import {
   useState,
   type MouseEvent,
   type ReactNode,
-  type RefObject,
 } from "react"
 import { toast } from "sonner"
 
@@ -313,8 +312,7 @@ function SecaoOrcamento({
 }) {
   const nomes = useMapaCategorias()
   const iconeCategoria = useIconeCategoria()
-  const grade = useRef<HTMLDivElement>(null)
-  const largo = useLargo(grade, 880)
+  const [grade, largo] = useLargo(880)
   if (itens.length === 0 && naoPlanejado === 0)
     return (
       <p className="py-6 text-center text-sm text-muted-foreground">
@@ -488,7 +486,9 @@ function ResumoSecao({
           <div
             className={cn(
               "h-full origin-left animate-[barra-cresce_800ms_var(--ease-out)_both] rounded-full motion-reduce:animate-none",
-              excedido
+              // Na despesa, 100% já é o teto: estado de alerta mesmo com restante zero (o texto
+              // "Excedido no mês" continua só para quando passa do orçado).
+              excedido || (despesa && pct >= 100)
                 ? "bg-negative"
                 : pct >= 75 && despesa
                   ? "bg-warning"
@@ -506,16 +506,18 @@ function ResumoSecao({
 }
 
 /** Largura do elemento ≥ `min` (px), acompanhando redimensionamentos. */
-function useLargo(ref: RefObject<HTMLElement | null>, min: number) {
+function useLargo(min: number) {
+  // Callback ref (não useRef): o contêiner só nasce depois do estado "nada neste mês" — com um
+  // ref fixo o observador, instalado no 1º render, nunca chegaria a ele.
+  const [el, setEl] = useState<HTMLElement | null>(null)
   const [largo, setLargo] = useState(false)
   useLayoutEffect(() => {
-    const el = ref.current
     if (!el) return
     const ro = new ResizeObserver(([e]) => setLargo(e.contentRect.width >= min))
     ro.observe(el)
     return () => ro.disconnect()
-  }, [ref, min])
-  return largo
+  }, [el, min])
+  return [setEl, largo] as const
 }
 
 function ListaCategorias({
@@ -726,6 +728,8 @@ function PainelTransacoes({
         <TransacoesTabela
           items={transacoes.data}
           semMoldura
+          // Painel lateral (~650px) e sanfona são estreitos para as colunas da tabela: lista.
+          compacta
           // Categoria única na lista → coluna redundante (o "não planejado" mistura várias).
           ocultarCategoria={alvo.categoriaId != null}
         />

@@ -137,6 +137,24 @@ assert.equal(encaixarAltura(10), 96)
   assert.ok(mesmoLayout(restaurarAba(layoutPadrao(), "geral"), layoutPadrao()))
 }
 
+// Mínimo por widget: o saldo não desce de ⅓ (nem arrastando, nem pelo teclado, nem salvo).
+assert.equal(encaixarLargura(10, "kpi-saldo"), 20)
+assert.equal(passoLargura(20, -1, "kpi-saldo"), 20)
+assert.equal(
+  mesclarLayout([{ id: "kpi-saldo", largura: 10, visivel: true }]).find(
+    (w) => w.id === "kpi-saldo"
+  )?.largura,
+  60
+)
+
+// Mesma configuração com chaves em outra ordem não conta como mudança.
+assert.ok(
+  mesmoLayout(
+    [{ id: "fluxo", largura: 30, altura: 400, visivel: true }],
+    [{ visivel: true, altura: 400, id: "fluxo", largura: 30 }]
+  )
+)
+
 // Mover com bordas.
 assert.deepEqual(mover([1, 2, 3], 0, 1), [2, 1, 3])
 assert.deepEqual(mover([1, 2, 3], 2, 1), [1, 2, 3])

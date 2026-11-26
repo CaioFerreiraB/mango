@@ -58,12 +58,15 @@ type ItemCatalogo = {
   largura: Largura
   /** KPI: no celular fica dois por linha (o resto ocupa a linha toda). */
   compacto?: boolean
+  /** Menor largura em que o conteúdo ainda cabe (padrão: a menor fração). */
+  larguraMin?: Largura
 }
 
 /** Ordem e largura padrão (grid de 60 colunas em telas largas). */
 export const CATALOGO: ItemCatalogo[] = [
   // Geral — herói (saldo com a curva de 30 dias) na linha inteira; os quatro fluxos do mês em ¼.
-  { id: "kpi-saldo", titulo: "Saldo em contas", largura: 60 },
+  // Número-âncora grande e indivisível: abaixo de ⅓ um saldo de 6 dígitos não cabe.
+  { id: "kpi-saldo", titulo: "Saldo em contas", largura: 60, larguraMin: 20 },
   {
     id: "kpi-entradas",
     titulo: "Entradas no mês",
@@ -181,9 +184,15 @@ export const ROTULO_LARGURA: Record<number, string> = {
 export const ALTURA_MIN = 96
 export const ALTURA_MAX = 1600
 
-/** Largura permitida mais próxima de `colunas` (de 60). */
-export function encaixarLargura(colunas: number): Largura {
-  return LARGURAS.reduce((melhor, l) =>
+export const larguraMinima = (id: string): Largura =>
+  POR_ID.get(id)?.larguraMin ?? LARGURAS[0]
+
+/** Largura permitida mais próxima de `colunas` (de 60), respeitando o mínimo do widget `id`. */
+export function encaixarLargura(colunas: number, id?: string): Largura {
+  const permitidas = id
+    ? LARGURAS.filter((l) => l >= larguraMinima(id))
+    : LARGURAS
+  return permitidas.reduce((melhor, l) =>
     Math.abs(l - colunas) < Math.abs(melhor - colunas) ? l : melhor
   )
 }
@@ -194,9 +203,10 @@ export function encaixarAltura(px: number): number {
 }
 
 /** Largura vizinha (teclado: ← encolhe, → alarga), parando nas bordas. */
-export function passoLargura(l: Largura, delta: -1 | 1): Largura {
-  const i = LARGURAS.indexOf(encaixarLargura(l))
-  return LARGURAS[Math.min(LARGURAS.length - 1, Math.max(0, i + delta))]
+export function passoLargura(l: Largura, delta: -1 | 1, id?: string): Largura {
+  const i = LARGURAS.indexOf(encaixarLargura(l, id))
+  const prox = LARGURAS[Math.min(LARGURAS.length - 1, Math.max(0, i + delta))]
+  return id ? Math.max(prox, larguraMinima(id)) : prox
 }
 
 const padraoDe = (w: ItemCatalogo): WidgetLayout => ({
@@ -242,7 +252,10 @@ export function mesclarLayout(
         : undefined
     out.push({
       id: w.id,
-      largura: LARGURAS.includes(w.largura) ? w.largura : cat.largura,
+      largura:
+        LARGURAS.includes(w.largura) && w.largura >= (cat.larguraMin ?? 0)
+          ? w.largura
+          : cat.largura,
       ...(altura ? { altura } : {}),
       visivel: w.visivel,
     })
@@ -274,9 +287,16 @@ export function mover<T>(lista: T[], i: number, delta: number): T[] {
 
 /** Mesma configuração (a ordem entre abas diferentes não importa: cada aba lê só os seus). */
 export function mesmoLayout(a: WidgetLayout[], b: WidgetLayout[]): boolean {
+  // Campos em ordem fixa (a ordem das chaves no objeto não importa) e altura ausente = null.
   const chave = (l: WidgetLayout[]) =>
     (["geral", "receitas", "despesas"] as const)
-      .map((aba) => JSON.stringify(l.filter((w) => abaDe(w.id) === aba)))
+      .map((aba) =>
+        JSON.stringify(
+          l
+            .filter((w) => abaDe(w.id) === aba)
+            .map((w) => [w.id, w.largura, w.altura ?? null, w.visivel])
+        )
+      )
       .join("|")
   return chave(a) === chave(b)
 }

@@ -41,17 +41,18 @@ import { cn } from "@/lib/utils"
 const CHAVE_OCULTO = "mango:dashboard-oculto" // o mesmo modo privacidade do Dashboard
 
 /** Saudação do topo do Início — uma sorteada a cada visita (o jeito descontraído do mango). */
-const SAUDACOES: ((nome: string) => string)[] = [
-  (n) => `Olá, ${n}!`,
-  (n) => `Fala, ${n}!`,
-  (n) => `E aí, ${n}!`,
-  (n) => `Opa, ${n}!`,
-  (n) => `Oi, ${n}!`,
-  (n) => `Salve, ${n}!`,
-  (n) => `Bora, ${n}?`,
-  (n) => `Tudo certo, ${n}?`,
-  (n) => `Bom te ver de novo, ${n}!`,
-  (n) => `Que bom te ver, ${n}!`,
+/** `{nome}` vira o primeiro nome do usuário. */
+const SAUDACOES = [
+  "Olá, {nome}!",
+  "Fala, {nome}!",
+  "E aí, {nome}!",
+  "Opa, {nome}!",
+  "Oi, {nome}!",
+  "Salve, {nome}!",
+  "Bora, {nome}?",
+  "Tudo certo, {nome}?",
+  "Bom te ver de novo, {nome}!",
+  "Que bom te ver, {nome}!",
 ]
 /** Sem nome real (o placeholder "Local" do modo desktop): as mesmas, sem o nome. */
 const SAUDACOES_SEM_NOME = [
@@ -115,8 +116,9 @@ export function InicioPage() {
   const serie = useSaldoContasSerie()
   // ponytail: "Local" é o nome-placeholder do modo desktop — sem nome real, saúda sem nome.
   const nome = me.data?.nome?.trim().split(/\s+/)[0]
-  // Sorteada uma vez por visita ao Início (não muda a cada re-render nem ao revalidar dados).
-  const [sorteio] = useState(() => Math.floor(Math.random() * 1000))
+  // Uma por visita ao Início (não muda a cada re-render nem ao revalidar dados). O relógio basta
+  // para variar a frase — não é sorteio que precise de aleatoriedade de verdade.
+  const [sorteio] = useState(() => Math.floor(Date.now() / 1000))
   const bancos = contas.data?.filter((c) => c.type === "BANK").length
 
   return (
@@ -124,8 +126,11 @@ export function InicioPage() {
       <FaixaMarca
         titulo={
           nome && nome !== "Local"
-            ? SAUDACOES[sorteio % SAUDACOES.length](nome)
-            : SAUDACOES_SEM_NOME[sorteio % SAUDACOES_SEM_NOME.length]
+            ? (
+                SAUDACOES.at(sorteio % SAUDACOES.length) ?? "Olá, {nome}!"
+              ).replace("{nome}", nome)
+            : (SAUDACOES_SEM_NOME.at(sorteio % SAUDACOES_SEM_NOME.length) ??
+              "Olá!")
         }
         saldo={dash.data?.saldo_total_centavos}
         contas={bancos}
@@ -136,7 +141,11 @@ export function InicioPage() {
 
       <div className="space-y-6">
         <Atalhos pendentes={dash.data?.nao_revisadas ?? 0} />
-        <Atencao naoRevisadas={dash.data?.nao_revisadas} />
+        <Atencao
+          naoRevisadas={dash.data?.nao_revisadas}
+          carregando={dash.isLoading}
+          erro={dash.isError}
+        />
       </div>
 
       <section aria-labelledby="resumo-titulo" className="space-y-3">
@@ -178,7 +187,7 @@ export function InicioPage() {
           } as React.CSSProperties
         }
       >
-        <UltimasTransacoes />
+        <UltimasTransacoes oculto={oculto} />
       </div>
     </div>
   )
@@ -410,7 +419,16 @@ function Atalho({
 
 /** O que pede ação agora, em linguagem direta: fila de revisão, contas atrasadas, categorias
  *  estouradas. Sem nada pendente, o mascote comemora. */
-function Atencao({ naoRevisadas }: { naoRevisadas?: number }) {
+function Atencao({
+  naoRevisadas,
+  carregando,
+  erro,
+}: {
+  naoRevisadas?: number
+  /** Estado da consulta do dashboard (de onde vem `naoRevisadas`). */
+  carregando: boolean
+  erro: boolean
+}) {
   const df = useResumoDespesasFixas()
   const [ano, mes] = hojeISO().split("-").map(Number)
   const consumo = useConsumoOrcamentos(ano, mes)
@@ -447,7 +465,19 @@ function Atencao({ naoRevisadas }: { naoRevisadas?: number }) {
       <h2 id="atencao-titulo" className="text-base font-extrabold">
         Precisa da sua atenção
       </h2>
-      {itens.length === 0 ? (
+      {/* "Tudo em dia" só com as três fontes respondidas: carregando ou com falha, não dá para
+          afirmar que não há nada pendente. */}
+      {itens.length === 0 &&
+      (carregando || df.isLoading || consumo.isLoading) ? (
+        <div className="mt-3 space-y-2" aria-hidden>
+          <Skeleton className="h-4 w-2/3" />
+          <Skeleton className="h-4 w-1/2" />
+        </div>
+      ) : itens.length === 0 && (erro || df.isError || consumo.isError) ? (
+        <p className="mt-3 text-sm text-muted-foreground">
+          Não foi possível conferir as pendências agora.
+        </p>
+      ) : itens.length === 0 ? (
         <p className="mt-3 text-sm text-muted-foreground">
           Tudo em dia por aqui. Nada atrasado, nada para revisar.
         </p>
@@ -826,7 +856,7 @@ function SecaoInvestimentos({ oculto }: { oculto: boolean }) {
 
 // --- últimas transações ------------------------------------------------------------------------
 
-function UltimasTransacoes() {
+function UltimasTransacoes({ oculto }: { oculto: boolean }) {
   const ultimas = useTransacoes({
     ocultar_pagamento_fatura: true,
     ocultar_futuras: true,
@@ -849,7 +879,12 @@ function UltimasTransacoes() {
         {ultimas.isLoading ? (
           <Skeleton className="my-2 h-64 w-full rounded-xl" />
         ) : ultimas.data?.items.length ? (
-          <TransacoesTabela items={ultimas.data.items} semMoldura compacta />
+          <TransacoesTabela
+            items={ultimas.data.items}
+            semMoldura
+            compacta
+            oculto={oculto}
+          />
         ) : (
           <p className="py-8 text-center text-sm text-muted-foreground">
             Nenhuma transação ainda. Elas chegam no próximo sync.

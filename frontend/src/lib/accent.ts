@@ -17,9 +17,17 @@ export type Accent = keyof typeof ACCENTS
 
 const STORAGE_KEY = "accent"
 
+// Ids antigos (antes do redesenho dos presets), os mesmos da migration c4f8a2e61d07: quem tinha
+// "verde" guardado no navegador abre já em "lima", sem esperar o /me.
+const LEGADO: Record<string, Accent> = {
+  verde: "lima",
+  manga: "tangerina",
+  teal: "grafite",
+}
+
 export function aplicarAccent(accent: string | null | undefined) {
-  const valido =
-    accent && accent in ACCENTS ? (accent as Accent) : ACCENT_PADRAO
+  const atual = (accent && LEGADO[accent]) || accent
+  const valido = atual && atual in ACCENTS ? (atual as Accent) : ACCENT_PADRAO
   if (valido === ACCENT_PADRAO) {
     delete document.documentElement.dataset.accent // default = sem atributo (index.css)
   } else {
