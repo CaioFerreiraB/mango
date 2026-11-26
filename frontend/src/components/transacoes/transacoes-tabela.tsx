@@ -202,7 +202,7 @@ export function TransacoesTabela({
         className={cn(
           "hidden",
           !compacta && "md:block",
-          !semMoldura && "rounded-lg border"
+          !semMoldura && "rounded-2xl superficie"
         )}
       >
         <Table className="table-fixed">
@@ -449,7 +449,7 @@ export function TransacoesTabela({
           compacta
             ? "space-y-0.5 [&_button]:rounded-xl [&_button]:transition-colors [&_button:hover]:bg-muted"
             : "divide-y md:hidden",
-          !semMoldura && "rounded-lg border"
+          !semMoldura && "rounded-2xl superficie"
         )}
       >
         {items.map((t) => {

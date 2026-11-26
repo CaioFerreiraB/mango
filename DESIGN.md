@@ -36,7 +36,8 @@ Sistema visual da SPA do mango. Os tokens vivem em `frontend/src/index.css` (Tai
   (sem "corpo flutuante"); superfícies **neutras** — o accent **nunca** pinta fundo de card nem de
   página. Cards brancos **sem borda**, só profundidade (`--shadow-card`: contato quase invisível +
   sombra difusa e baixa, como o Wise; no escuro, fio de borda no lugar). Card clicável sobe 3px
-  com `--shadow-card-hover` (`superficie-interativa`). Raio de card `rounded-2xl`; botões em
+  com `--shadow-card-hover` (`superficie-interativa`). Tabela/lista de página fora de `<Card>`
+  usa `superficie rounded-2xl` (mesmo visual); borda fina só em agrupamento dentro de dialog/form. Raio de card `rounded-2xl`; botões em
   pílula. O accent aparece em: ícones e linhas (`text-accent-icone` = cor **exata** do accent),
   texto realçado (`text-accent-ink`, ajustado p/ 4,5:1), botão primário/aba ativa
   (`bg-marca-forte` + `text-primary-foreground`), fundo claro de atalhos redondos
@@ -116,8 +117,11 @@ Toda tela autenticada segue a mesma gramática — é o que faz o app parecer um
    número-âncora (saldo, patrimônio, alocado, total mensal, restante do orçamento, saldo das
    divisões, total da fatura). Card branco como os outros, número grande (800, tabular), linha de
    contexto, gráfico em sangria opcional (`grafico`) e `mascote` opcional **em cena** (abaixo).
-   Olho de privacidade quando a página tem modo privacidade. Sozinho na linha: `sm:max-w-md`;
-   com KPIs: `col-span-2` numa grade de 2/4 colunas. O Início tem o próprio herói (`FaixaMarca`).
+   Olho de privacidade quando a página tem modo privacidade. Ocupa **a largura toda** (como o
+   Início): os números de apoio vão **dentro** dele (`estatisticas`, ex.: orçado · gasto, pago ·
+   em aberto · atrasado), não em KPIs soltos ao lado; barra do mês sob as estatísticas, trilha
+   `bg-muted` e preenchimento por estado (success/warning/negative — nunca o accent). KPIs que
+   sobram (ex.: Visão Geral) vêm numa linha abaixo. O Início tem o próprio herói (`FaixaMarca`).
 5. **KPIs** = `Kpi` (rótulo, valor `text-lg→xl font-semibold tabular-nums` por container query,
    detalhe opcional, visual em sangria opcional), sem ícone decorativo. Grade padrão `GRADE_KPI`
    (auto-fit, mín. 10rem). Nada de card dentro de card (o antigo `StatChip` saiu).

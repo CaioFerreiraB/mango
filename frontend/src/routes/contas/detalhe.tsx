@@ -75,9 +75,9 @@ export function ContaDetalhePage() {
 
       {data.type !== "CREDIT" ? (
         <CardDestaque
-          className="sm:max-w-md"
           titulo="Saldo atual"
           centavos={data.saldo_centavos}
+          mascote="money-v2"
         />
       ) : null}
 

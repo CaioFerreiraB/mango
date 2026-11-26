@@ -12,7 +12,7 @@ import { createElement, useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
 
 import { EmptyState } from "@/components/common/empty-state"
-import { CardDestaque, Kpi } from "@/components/common/kpi"
+import { CardDestaque } from "@/components/common/kpi"
 import { PageHeader } from "@/components/common/page-header"
 import { Valor } from "@/components/common/valor"
 import { ConfigurarOrcamentoPadraoDialog } from "@/components/orcamentos/configurar-orcamento-padrao-dialog"
@@ -432,53 +432,54 @@ function ResumoSecao({
   const excedido = despesa && restanteTotal < 0
   const pct = Math.max(0, percentualTotal)
   return (
-    // Herói = o que resta (a pergunta do mês); orçado e realizado completam a linha como KPIs.
-    <div className="grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-4">
-      <CardDestaque
-        className="col-span-2"
-        // Rótulo muda ao estourar: o valor sai sem "-", então a cor não pode ser o único sinal.
-        titulo={excedido ? "Excedido no mês" : r.restanteTotal}
-        // Nas metas (receita/investimento), passar da meta zera o restante — o excedente não
-        // é "o que falta".
-        centavos={
-          despesa ? Math.abs(restanteTotal) : Math.max(restanteTotal, 0)
-        }
-        mascote={despesa ? (pct >= 100 ? "scared" : "money") : "goal"}
-      >
-        <div className="space-y-1.5">
+    // Herói = o que resta (a pergunta do mês), com orçado e realizado na própria linha do herói.
+    <CardDestaque
+      // Rótulo muda ao estourar: o valor sai sem "-", então a cor não pode ser o único sinal.
+      titulo={excedido ? "Excedido no mês" : r.restanteTotal}
+      // Nas metas (receita/investimento), passar da meta zera o restante — o excedente não
+      // é "o que falta".
+      centavos={despesa ? Math.abs(restanteTotal) : Math.max(restanteTotal, 0)}
+      mascote={despesa ? (pct >= 100 ? "scared" : "money") : "goal"}
+      estatisticas={[
+        {
+          rotulo: r.orcadoTotal,
+          valor: <Valor centavos={totalOrcado} neutro />,
+        },
+        {
+          rotulo: r.realizadoTotal,
+          valor: <Valor centavos={totalRealizado} neutro />,
+        },
+      ]}
+    >
+      <div className="max-w-xl space-y-2">
+        <div
+          role="img"
+          aria-label={`${pct}% ${r.anel}`}
+          className="h-2.5 w-full overflow-hidden rounded-full bg-muted"
+        >
           <div
-            role="img"
-            aria-label={`${pct}% ${r.anel}`}
-            className="h-2 w-full overflow-hidden rounded-full bg-white/15"
-          >
-            <div
-              className={cn(
-                "h-full rounded-full",
-                excedido ? "bg-negative" : "bg-white"
-              )}
-              style={{ width: `${Math.min(pct, 100)}%` }}
-            />
-          </div>
-          <p className="text-xs text-white/80 tabular-nums">
-            {pct}% {r.anel}
-          </p>
+            className={cn(
+              "h-full origin-left animate-[barra-cresce_800ms_var(--ease-out)_both] rounded-full motion-reduce:animate-none",
+              excedido
+                ? "bg-negative"
+                : pct >= 75 && despesa
+                  ? "bg-warning"
+                  : "bg-success"
+            )}
+            style={{ width: `${Math.min(pct, 100)}%` }}
+          />
         </div>
-      </CardDestaque>
-      <Kpi
-        label={r.orcadoTotal}
-        valor={<Valor centavos={totalOrcado} neutro />}
-      />
-      <Kpi
-        label={r.realizadoTotal}
-        valor={<Valor centavos={totalRealizado} neutro />}
-      />
-    </div>
+        <p className="text-sm font-semibold text-muted-foreground tabular-nums">
+          {pct}% {r.anel}
+        </p>
+      </div>
+    </CardDestaque>
   )
 }
 
 function ListaMobile({ linhas, abertaKey, onAlternar }: PropsLinhas) {
   return (
-    <div className="divide-y rounded-lg border">
+    <div className="space-y-0.5 rounded-2xl superficie p-2">
       {linhas.map((linha) => (
         <ItemMobile
           key={linha.key}
@@ -567,7 +568,7 @@ function TabelaLinhas({
 }: PropsLinhas & { tipo: TipoOrcamento }) {
   const despesa = tipo === "despesa"
   return (
-    <div className="overflow-x-auto rounded-lg border">
+    <div className="overflow-x-auto rounded-2xl superficie">
       <Table>
         <TableHeader>
           <TableRow>

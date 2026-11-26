@@ -16,7 +16,7 @@ import { toast } from "sonner"
 
 import { EmptyState } from "@/components/common/empty-state"
 import { CurrencyInput } from "@/components/common/currency-input"
-import { CardDestaque, Kpi } from "@/components/common/kpi"
+import { CardDestaque } from "@/components/common/kpi"
 import { PageHeader } from "@/components/common/page-header"
 import { Valor } from "@/components/common/valor"
 import { BarraMes } from "@/components/despesas-fixas/barra-mes"
@@ -116,10 +116,10 @@ export function DespesasFixasPage() {
       />
 
       {resumo.data?.tem_despesas ? (
-        <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-2">
+        <>
           <CardMes resumo={resumo.data} />
           <CardProximos resumo={resumo.data} onAbrir={setAbertaId} />
-        </div>
+        </>
       ) : null}
 
       {despesas.isError ? (
@@ -224,8 +224,8 @@ function DespesaRow({
   )
 }
 
-/** Mês corrente: herói com pagas × total, a barra do mês e o mascote reagindo ao estado (assustado
- *  com atraso, joinha com tudo pago); abaixo, os valores por estado em KPIs. */
+/** Mês corrente: herói com pagas × total, a barra do mês, os valores por estado na própria linha do
+ *  herói e o mascote reagindo (assustado com atraso, joinha com tudo pago). */
 function CardMes({ resumo }: { resumo: DespesaFixaResumo }) {
   const { pagas, abertas, atrasadas } = resumo
   const total = pagas.qtd + abertas.qtd + atrasadas.qtd
@@ -234,48 +234,46 @@ function CardMes({ resumo }: { resumo: DespesaFixaResumo }) {
     : total && pagas.qtd === total
       ? "thumbs-up"
       : "money"
+  const contas = (n: number) => `${n} ${n === 1 ? "conta" : "contas"}`
   return (
-    <div className="space-y-3 md:space-y-4">
-      <CardDestaque
-        titulo={formatMesAno(`${resumo.mes}-15`).replace(/^./, (c) =>
-          c.toUpperCase()
-        )}
-        valor={
-          <>
-            {pagas.qtd}{" "}
-            <span className="text-lg font-semibold text-white/75">
-              de {total} pagas
-            </span>
-          </>
-        }
-        mascote={cena}
-      >
-        <BarraMes resumo={resumo} sobreEscuro />
-      </CardDestaque>
-      <div className="grid grid-cols-3 gap-3 md:gap-4">
-        <Kpi
-          label="Pago"
-          valor={<Valor centavos={pagas.centavos} neutro />}
-          detalhe={`${pagas.qtd} ${pagas.qtd === 1 ? "conta" : "contas"}`}
-        />
-        <Kpi
-          label="Em aberto"
-          valor={<Valor centavos={abertas.centavos} neutro />}
-          detalhe={`${abertas.qtd} ${abertas.qtd === 1 ? "conta" : "contas"}`}
-        />
-        <Kpi
-          label="Atrasado"
-          valor={
+    <CardDestaque
+      titulo={formatMesAno(`${resumo.mes}-15`).replace(/^./, (c) =>
+        c.toUpperCase()
+      )}
+      valor={
+        <>
+          {pagas.qtd}{" "}
+          <span className="text-lg font-semibold text-muted-foreground">
+            de {total} pagas
+          </span>
+        </>
+      }
+      mascote={cena}
+      estatisticas={[
+        {
+          rotulo: `Pago · ${contas(pagas.qtd)}`,
+          valor: <Valor centavos={pagas.centavos} neutro />,
+        },
+        {
+          rotulo: `Em aberto · ${contas(abertas.qtd)}`,
+          valor: <Valor centavos={abertas.centavos} neutro />,
+        },
+        {
+          rotulo: `Atrasado · ${contas(atrasadas.qtd)}`,
+          valor: (
             <Valor
               centavos={atrasadas.centavos}
               neutro
               className={cn(atrasadas.qtd > 0 && "text-negative-ink")}
             />
-          }
-          detalhe={`${atrasadas.qtd} ${atrasadas.qtd === 1 ? "conta" : "contas"}`}
-        />
+          ),
+        },
+      ]}
+    >
+      <div className="max-w-xl">
+        <BarraMes resumo={resumo} />
       </div>
-    </div>
+    </CardDestaque>
   )
 }
 

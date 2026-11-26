@@ -1,4 +1,5 @@
 import { Landmark } from "lucide-react"
+import { useMemo } from "react"
 import { Link } from "react-router"
 
 import { EmptyState } from "@/components/common/empty-state"
@@ -8,10 +9,13 @@ import { ContaCard } from "@/components/contas/conta-card"
 import { SyncButton } from "@/components/sync-button"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
-import { formatDateTime } from "@/lib/format"
+import { Sparkline } from "@/components/common/graficos-base"
+import { Valor } from "@/components/common/valor"
+import { formatBRL, formatDate, formatDateTime } from "@/lib/format"
 import {
   useContas,
   useContasSaldosDiarios,
+  useSaldoContasSerie,
   type Conta,
   type SaldoDiarioPonto,
 } from "@/lib/api/contas"
@@ -51,6 +55,12 @@ export function ContasPage() {
   const contas = (data ?? []).filter((c) => c.type === "BANK")
   const cartoes = (data ?? []).filter((c) => c.type === "CREDIT")
   const saldoTotal = contas.reduce((s, c) => s + c.saldo_centavos, 0)
+  const faturas = cartoes.reduce((s, c) => s + c.saldo_centavos, 0)
+  const pontos = useSaldoContasSerie()
+  const serie = useMemo(
+    () => pontos.map((p) => ({ rotulo: p.data, valor: p.saldo_centavos })),
+    [pontos]
+  )
   // ISO ordena cronologicamente → o mais recente é o max lexicográfico.
   const ultimaAtualizacao = (data ?? [])
     .map((c) => c.pluggy_atualizado_em)
@@ -91,11 +101,35 @@ export function ContasPage() {
       ) : (
         <>
           <CardDestaque
-            className="sm:max-w-md"
             titulo="Saldo em contas"
             centavos={saldoTotal}
             mascote="money"
             rodape={contas.length === 1 ? "1 conta" : `${contas.length} contas`}
+            estatisticas={
+              cartoes.length
+                ? [
+                    {
+                      rotulo:
+                        cartoes.length === 1
+                          ? "Fatura do cartão"
+                          : `Faturas de ${cartoes.length} cartões`,
+                      valor: <Valor centavos={faturas} absoluto neutro />,
+                    },
+                  ]
+                : undefined
+            }
+            grafico={
+              serie.length >= 2 ? (
+                <Sparkline
+                  dados={serie}
+                  nome="Saldo"
+                  altura={80}
+                  formatarRotulo={formatDate}
+                  formatarValor={formatBRL}
+                  ariaLabel="Saldo somado das contas nos últimos 30 dias"
+                />
+              ) : undefined
+            }
           />
           <Secao titulo="Contas" contas={contas} saldos={saldos} />
           <Secao titulo="Cartões" contas={cartoes} grid={GRID_CARTOES} />

@@ -65,7 +65,7 @@ export function CenaMascote({
         aria-hidden
         className={cn(
           "pointer-events-none absolute right-0 bottom-0 z-[6] size-[10rem] entra",
-          grande && "@xl:size-[13rem] @4xl:size-80"
+          grande ? "@xl:size-[13rem] @4xl:size-80" : "@xl:size-[13rem]"
         )}
         style={
           {
@@ -79,8 +79,10 @@ export function CenaMascote({
           cena={cena}
           className={cn(
             "absolute -right-14 -bottom-[9.75rem] size-[16rem] max-w-none drop-shadow-[0_14px_20px_rgb(16_24_40/0.16)]",
-            grande &&
-              "@xl:-right-10 @xl:-bottom-[9.5rem] @xl:size-[21rem] @4xl:-right-6 @4xl:-bottom-[9.375rem] @4xl:size-[26.875rem]"
+            grande
+              ? "@xl:-right-10 @xl:-bottom-[9.5rem] @xl:size-[21rem] @4xl:-right-6 @4xl:-bottom-[9.375rem] @4xl:size-[26.875rem]"
+              : // Médio (heróis das outras telas, ≥ 14rem de altura): ~184px visíveis.
+                "@xl:-right-8 @xl:-bottom-[7.5rem] @xl:size-[19rem]"
           )}
         />
       </div>

@@ -2,7 +2,7 @@ import { Plus } from "lucide-react"
 import { useState } from "react"
 
 import { EmptyState } from "@/components/common/empty-state"
-import { CardDestaque, Kpi } from "@/components/common/kpi"
+import { CardDestaque } from "@/components/common/kpi"
 import { PageHeader } from "@/components/common/page-header"
 import { Selo } from "@/components/common/selo"
 import { Valor } from "@/components/common/valor"
@@ -90,8 +90,8 @@ function liquido(i: Investimento) {
   )
 }
 
-/** Topo: o herói (total alocado, mascote do módulo) ocupa duas colunas do grid; os KPIs de
- *  metas concluídas e investido sem objetivo completam a linha. */
+/** Topo: o herói (total alocado, mascote do módulo) ocupa a linha toda do grid, com metas
+ *  concluídas, quanto falta e o investido sem objetivo na própria linha do herói. */
 function Resumo({ objetivos }: { objetivos: Objetivo[] }) {
   const investimentos = useInvestimentos()
   const alocado = objetivos.reduce((s, o) => s + o.valor_guardado_centavos, 0)
@@ -110,43 +110,43 @@ function Resumo({ objetivos }: { objetivos: Objetivo[] }) {
     .reduce((s, i) => s + liquido(i), 0)
 
   return (
-    <>
-      <CardDestaque
-        className="sm:col-span-2"
-        titulo="Alocado em objetivos"
-        centavos={alocado}
-        mascote="goal"
-        rodape={`${pct}% das metas alcançadas`}
-      />
-      <Kpi
-        label="Metas concluídas"
-        valor={`${concluidos} de ${objetivos.length}`}
-        detalhe={
-          <>
-            Faltam <Valor centavos={Math.max(alvo - atingido, 0)} neutro /> no
-            total
-          </>
-        }
-      />
-      {investimentos.isLoading ? (
-        <Skeleton className="h-full min-h-24 w-full rounded-xl" />
-      ) : investimentos.isError ? (
-        <p className="flex items-center justify-center rounded-xl border border-dashed p-4 text-sm text-muted-foreground">
-          Não foi possível carregar os investimentos.
-        </p>
-      ) : (
-        <Kpi
-          label="Investido sem objetivo"
-          valor={<Valor centavos={livre} neutro />}
+    <CardDestaque
+      className="col-span-full"
+      titulo="Alocado em objetivos"
+      centavos={alocado}
+      mascote="goal"
+      rodape={`${pct}% das metas alcançadas`}
+      estatisticas={[
+        {
+          rotulo: "Metas concluídas",
+          valor: `${concluidos} de ${objetivos.length}`,
+        },
+        {
+          rotulo: "Falta no total",
+          valor: <Valor centavos={Math.max(alvo - atingido, 0)} neutro />,
+        },
+        {
+          rotulo: "Investido sem objetivo",
           // Não conta posições: compras de um mesmo ativo (caixinhas) inflariam o número.
-          detalhe={
-            totalInvestido
-              ? `${Math.round((livre / totalInvestido) * 100)}% do total investido`
-              : "Nenhum investimento"
-          }
-        />
-      )}
-    </>
+          valor: investimentos.isLoading ? (
+            <Skeleton className="h-6 w-24" />
+          ) : investimentos.isError ? (
+            <span className="text-sm font-medium text-muted-foreground">
+              Indisponível
+            </span>
+          ) : (
+            <>
+              <Valor centavos={livre} neutro />
+              {totalInvestido ? (
+                <span className="ml-1.5 text-sm font-semibold text-muted-foreground">
+                  {Math.round((livre / totalInvestido) * 100)}%
+                </span>
+              ) : null}
+            </>
+          ),
+        },
+      ]}
+    />
   )
 }
 

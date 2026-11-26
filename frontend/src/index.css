@@ -345,6 +345,17 @@
   }
 }
 
+/* Superfície de conteúdo fora do <Card> (tabelas, listas): branca, sem borda, só a sombra de
+   profundidade — no escuro a sombra some e volta o contorno. */
+@utility superficie {
+  border: 1px solid transparent;
+  background-color: var(--card);
+  box-shadow: var(--shadow-card);
+  @variant dark {
+    border-color: color-mix(in oklab, var(--border) 70%, transparent);
+  }
+}
+
 /* Card clicável inteiro: sobe 3px com sombra no hover (só com mouse) e afunda 1% na pressão
    — inclusive quando o clique é num botão filho. Só transform/box-shadow (compositor). */
 @utility superficie-interativa {

@@ -2,7 +2,7 @@ import { Info, Plus, Receipt, Sparkles, Users } from "lucide-react"
 import { useState } from "react"
 
 import { EmptyState } from "@/components/common/empty-state"
-import { CardDestaque, Kpi } from "@/components/common/kpi"
+import { CardDestaque } from "@/components/common/kpi"
 import { PageHeader } from "@/components/common/page-header"
 import { Valor } from "@/components/common/valor"
 import { DivisaoDetalheDialog } from "@/components/divisoes/divisao-detalhe-dialog"
@@ -152,35 +152,36 @@ function AbaResumo({
         </EmptyState>
       ) : (
         <>
-          <div className="grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-4">
-            <CardDestaque
-              className="col-span-2"
-              titulo="Saldo das divisões"
-              valor={
-                <Valor centavos={data.saldo_total_centavos} sinal neutro />
-              }
-              mascote="mango-juice"
-              rodape={
-                data.saldo_total_centavos > 0
-                  ? "Você tem mais a receber"
-                  : data.saldo_total_centavos < 0
-                    ? "Você tem mais a pagar"
-                    : "Tudo acertado"
-              }
-            />
-            <Kpi
-              label="A receber"
-              valor={<Valor centavos={data.saldo_a_receber_centavos} neutro />}
-              detalhe={`de ${data.pessoas_a_receber} ${data.pessoas_a_receber === 1 ? "pessoa" : "pessoas"}`}
-            />
-            <Kpi
-              label="A pagar"
-              valor={
-                <Valor centavos={data.saldo_a_pagar_centavos} absoluto neutro />
-              }
-              detalhe={`para ${data.pessoas_a_pagar} ${data.pessoas_a_pagar === 1 ? "pessoa" : "pessoas"}`}
-            />
-          </div>
+          <CardDestaque
+            titulo="Saldo das divisões"
+            valor={<Valor centavos={data.saldo_total_centavos} sinal neutro />}
+            mascote="mango-juice"
+            rodape={
+              data.saldo_total_centavos > 0
+                ? "Você tem mais a receber"
+                : data.saldo_total_centavos < 0
+                  ? "Você tem mais a pagar"
+                  : "Tudo acertado"
+            }
+            estatisticas={[
+              {
+                rotulo: `A receber · ${data.pessoas_a_receber} ${data.pessoas_a_receber === 1 ? "pessoa" : "pessoas"}`,
+                valor: (
+                  <Valor centavos={data.saldo_a_receber_centavos} neutro />
+                ),
+              },
+              {
+                rotulo: `A pagar · ${data.pessoas_a_pagar} ${data.pessoas_a_pagar === 1 ? "pessoa" : "pessoas"}`,
+                valor: (
+                  <Valor
+                    centavos={data.saldo_a_pagar_centavos}
+                    absoluto
+                    neutro
+                  />
+                ),
+              },
+            ]}
+          />
 
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <Card>
@@ -325,7 +326,7 @@ function AbaTransacoes({
           description="Crie uma nova divisão de conta pra começar a acompanhar."
         />
       ) : isMobile ? (
-        <div className="divide-y rounded-lg border">
+        <div className="divide-y rounded-2xl superficie">
           {(divisoes.data ?? []).map((d) => (
             <LinhaDivisaoMobile
               key={d.id}
@@ -473,7 +474,7 @@ function AbaPessoas() {
           description="Crie uma divisão de conta com outra pessoa, ou peça pro administrador criar um usuário pra ela em Configurações."
         />
       ) : (
-        <div className="divide-y rounded-lg border">
+        <div className="divide-y rounded-2xl superficie">
           {(pessoas.data ?? []).map((p) => (
             <div key={p.usuario_id} className="flex items-center gap-3 p-3">
               <PessoaAvatar nome={p.nome} avatar={p.avatar} />

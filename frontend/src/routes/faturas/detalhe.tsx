@@ -48,17 +48,27 @@ export function FaturaDetalhePage() {
       />
 
       <CardDestaque
-        className="sm:max-w-md"
         titulo="Total da fatura"
         centavos={f.total_amount_centavos}
-        rodape={
-          f.minimum_payment_centavos ? (
-            <>
-              Pagamento mínimo{" "}
-              <Valor centavos={f.minimum_payment_centavos} neutro />
-            </>
-          ) : undefined
-        }
+        mascote={st.aberta ? "money-v2" : "thumbs-up"}
+        estatisticas={[
+          ...(f.minimum_payment_centavos
+            ? [
+                {
+                  rotulo: "Pagamento mínimo",
+                  valor: <Valor centavos={f.minimum_payment_centavos} neutro />,
+                },
+              ]
+            : []),
+          ...(transacoes.isLoading
+            ? []
+            : [
+                {
+                  rotulo: "Compras",
+                  valor: String(transacoes.data?.total ?? itens.length),
+                },
+              ]),
+        ]}
       />
 
       <Alert>

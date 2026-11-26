@@ -280,12 +280,9 @@ function Kpis({
   if (carregando || !resumo) {
     return (
       <div className="space-y-3 @xl:space-y-4">
-        <div className="grid gap-3 @xl:gap-4 @3xl:grid-cols-2">
-          <Skeleton className="h-32 w-full rounded-xl" />
-          <Skeleton className="h-32 w-full rounded-xl" />
-        </div>
-        <div className="grid grid-cols-2 gap-3 @xl:gap-4 @4xl:grid-cols-5">
-          {Array.from({ length: 5 }, (_, i) => (
+        <Skeleton className="h-44 w-full rounded-[1.75rem]" />
+        <div className="grid grid-cols-2 gap-3 @xl:gap-4 @4xl:grid-cols-4">
+          {Array.from({ length: 4 }, (_, i) => (
             <Skeleton key={i} className="h-24 w-full" />
           ))}
         </div>
@@ -299,11 +296,10 @@ function Kpis({
   const impostos = t.valor_centavos - t.liquido_centavos
 
   return (
-    // Uma grade só: o herói (patrimônio bruto, mascote do módulo) ocupa duas colunas e os KPIs
-    // completam as linhas — 2 por linha no celular, 4 a partir de @4xl.
-    <div className="grid grid-cols-2 gap-3 @xl:gap-4 @4xl:grid-cols-4">
+    // Herói na largura toda (patrimônio bruto + líquido e resultado na mesma linha, mascote do
+    // módulo); os KPIs de apoio vêm abaixo — 2 por linha no celular, 4 a partir de @4xl.
+    <div className="space-y-3 @xl:space-y-4">
       <CardDestaque
-        className="col-span-2"
         titulo="Patrimônio total"
         mascote="money"
         centavos={t.valor_centavos}
@@ -329,104 +325,92 @@ function Kpis({
             </>
           ) : undefined
         }
+        estatisticas={[
+          {
+            rotulo:
+              impostos > 0
+                ? "Líquido (após IR e IOF)"
+                : "Líquido (resgate hoje)",
+            valor: (
+              <Valor centavos={t.liquido_centavos} neutro oculto={oculto} />
+            ),
+          },
+          ...(impostos > 0
+            ? [
+                {
+                  rotulo: "Impostos estimados",
+                  valor: <Valor centavos={impostos} neutro oculto={oculto} />,
+                },
+              ]
+            : []),
+        ]}
       />
-      <Kpi
-        label="Patrimônio líquido"
-        valor={
-          <Valor
-            quebraMoeda
-            centavos={t.liquido_centavos}
-            neutro
-            oculto={oculto}
-          />
-        }
-        detalhe={
-          impostos > 0 ? (
-            <>
-              Após IR e IOF (
-              <Valor centavos={-impostos} neutro oculto={oculto} />)
-            </>
-          ) : (
-            "Valor de resgate hoje"
-          )
-        }
-      />
-      <Kpi
-        label="Resultado"
-        valor={
-          t.resultado_centavos != null ? (
+      <div className="grid grid-cols-2 gap-3 @xl:gap-4 @4xl:grid-cols-4">
+        <Kpi
+          label="Valor investido"
+          valor={
+            // null = o banco não informou o custo: "—", nunca um R$ 0,00 que parece dado.
+            t.investido_centavos != null ? (
+              <Valor
+                quebraMoeda
+                centavos={t.investido_centavos}
+                neutro
+                oculto={oculto}
+              />
+            ) : (
+              <span className="text-muted-foreground">—</span>
+            )
+          }
+          detalhe={
+            <span className="text-muted-foreground">Total aportado</span>
+          }
+        />
+        <Kpi
+          label="Rentabilidade (12M)"
+          valor={
+            vg?.rentabilidade_12m_pct != null ? (
+              formatPct(vg.rentabilidade_12m_pct)
+            ) : (
+              <span className="text-muted-foreground">—</span>
+            )
+          }
+          detalhe={
+            vg?.vs_cdi_pp != null ? (
+              <VarPct
+                pct={vg.vs_cdi_pp}
+                sufixo={vg.vs_cdi_pp >= 0 ? "acima do CDI" : "abaixo do CDI"}
+              />
+            ) : (
+              <span className="text-muted-foreground">
+                vs. CDI indisponível
+              </span>
+            )
+          }
+        />
+        <Kpi
+          label="Dividendos (mês)"
+          valor={
             <Valor
               quebraMoeda
-              centavos={t.resultado_centavos}
+              centavos={vg?.dividendos_mes_centavos ?? 0}
               neutro
               oculto={oculto}
             />
-          ) : (
-            <span className="text-muted-foreground">—</span>
-          )
-        }
-        detalhe={<VarPct pct={t.resultado_pct} />}
-      />
-      <Kpi
-        label="Valor investido"
-        valor={
-          // null = o banco não informou o custo: "—", nunca um R$ 0,00 que parece dado.
-          t.investido_centavos != null ? (
-            <Valor
-              quebraMoeda
-              centavos={t.investido_centavos}
-              neutro
-              oculto={oculto}
-            />
-          ) : (
-            <span className="text-muted-foreground">—</span>
-          )
-        }
-        detalhe={<span className="text-muted-foreground">Total aportado</span>}
-      />
-      <Kpi
-        label="Rentabilidade (12M)"
-        valor={
-          vg?.rentabilidade_12m_pct != null ? (
-            formatPct(vg.rentabilidade_12m_pct)
-          ) : (
-            <span className="text-muted-foreground">—</span>
-          )
-        }
-        detalhe={
-          vg?.vs_cdi_pp != null ? (
-            <VarPct
-              pct={vg.vs_cdi_pp}
-              sufixo={vg.vs_cdi_pp >= 0 ? "acima do CDI" : "abaixo do CDI"}
-            />
-          ) : (
-            <span className="text-muted-foreground">vs. CDI indisponível</span>
-          )
-        }
-      />
-      <Kpi
-        label="Dividendos (mês)"
-        valor={
-          <Valor
-            quebraMoeda
-            centavos={vg?.dividendos_mes_centavos ?? 0}
-            neutro
-            oculto={oculto}
-          />
-        }
-        detalhe={
-          <span className="text-muted-foreground">Recebidos neste mês</span>
-        }
-      />
-      <Kpi
-        label="Ativos"
-        valor={<span className="tabular-nums">{t.quantidade_ativos}</span>}
-        detalhe={
-          <span className="text-muted-foreground">
-            Em {nCat} categoria{nCat === 1 ? "" : "s"}
-          </span>
-        }
-      />
+          }
+          detalhe={
+            <span className="text-muted-foreground">Recebidos neste mês</span>
+          }
+        />
+        <Kpi
+          label="Ativos"
+          valor={<span className="tabular-nums">{t.quantidade_ativos}</span>}
+          detalhe={
+            <span className="text-muted-foreground">
+              Em {nCat} categoria{nCat === 1 ? "" : "s"}
+            </span>
+          }
+        />
+      </div>
     </div>
   )
 }

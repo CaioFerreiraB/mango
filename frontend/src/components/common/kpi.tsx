@@ -75,6 +75,7 @@ export function CardDestaque({
   rodape,
   mascote,
   grafico,
+  estatisticas,
   children,
   className,
 }: {
@@ -91,6 +92,8 @@ export function CardDestaque({
   mascote?: Cena
   /** Gráfico que sangra até a borda inferior do card. */
   grafico?: ReactNode
+  /** Números de apoio NA linha do herói (ex.: orçado · gasto) — no lugar de KPIs soltos ao lado. */
+  estatisticas?: { rotulo: string; valor: ReactNode }[]
   /** Conteúdo extra sob o valor (ex.: barra do mês). */
   children?: ReactNode
   className?: string
@@ -99,7 +102,8 @@ export function CardDestaque({
     <Card
       data-destaque
       className={cn(
-        "@container relative isolate min-w-0 gap-0 overflow-hidden py-0",
+        "@container relative isolate min-w-0 gap-0 overflow-hidden rounded-[1.75rem] py-0",
+        mascote && "@xl:min-h-56",
         className
       )}
     >
@@ -111,9 +115,9 @@ export function CardDestaque({
       ) : null}
       <div
         className={cn(
-          "relative z-10 px-5 pt-5 md:px-6 md:pt-6",
-          grafico ? "pb-2" : "pb-5 md:pb-6",
-          mascote && "@xl:pr-56"
+          "relative z-10 px-5 pt-5 md:px-7 md:pt-7",
+          grafico ? "pb-2" : "pb-5 md:pb-7",
+          mascote && "@xl:pr-64"
         )}
       >
         <div className="flex min-h-8 items-start justify-between gap-3">
@@ -128,7 +132,7 @@ export function CardDestaque({
             />
           ) : null}
         </div>
-        <div className="mt-2 text-[2.25rem] leading-none font-extrabold tracking-[-0.035em] whitespace-nowrap tabular-nums @md:text-[2.5rem]">
+        <div className="mt-2 text-[2.25rem] leading-none font-extrabold tracking-[-0.04em] whitespace-nowrap tabular-nums @md:text-[2.75rem] @3xl:text-[3.25rem]">
           {valor ??
             (centavos != null ? (
               <Valor
@@ -145,7 +149,21 @@ export function CardDestaque({
             {rodape}
           </div>
         ) : null}
-        {children ? <div className="mt-4">{children}</div> : null}
+        {estatisticas?.length ? (
+          <dl className="mt-5 flex flex-wrap gap-x-8 gap-y-3">
+            {estatisticas.map((e) => (
+              <div key={e.rotulo} className="min-w-0">
+                <dt className="text-xs font-semibold text-muted-foreground">
+                  {e.rotulo}
+                </dt>
+                <dd className="mt-0.5 text-base font-bold tracking-tight whitespace-nowrap tabular-nums">
+                  {e.valor}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        ) : null}
+        {children ? <div className="mt-5">{children}</div> : null}
       </div>
       {grafico ? <div className="mt-auto">{grafico}</div> : null}
     </Card>

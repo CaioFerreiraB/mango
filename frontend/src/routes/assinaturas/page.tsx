@@ -16,7 +16,7 @@ import { toast } from "sonner"
 
 import { CategoriaSelect } from "@/components/transacoes/categoria-select"
 import { EmptyState } from "@/components/common/empty-state"
-import { CardDestaque, Kpi } from "@/components/common/kpi"
+import { CardDestaque } from "@/components/common/kpi"
 import { PageHeader } from "@/components/common/page-header"
 import { useIconeCategoria } from "@/lib/api/categoria-icones"
 import { Valor } from "@/components/common/valor"
@@ -131,7 +131,7 @@ export function AssinaturasPage() {
 
       {/* Sem nenhuma assinatura o resumo zerado só repetiria o vazio abaixo. */}
       {resumo.data && lista.length > 0 ? (
-        <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-2">
+        <>
           <ResumoMensal
             total={resumo.data.total_mensal_centavos}
             qtdAtivas={valoresAtivas.length}
@@ -151,7 +151,7 @@ export function AssinaturasPage() {
               />
             </CardContent>
           </Card>
-        </div>
+        </>
       ) : null}
 
       {assinaturas.isError ? (
@@ -594,28 +594,26 @@ function ResumoMensal({
 }) {
   const sem = <span className="text-muted-foreground">—</span>
   return (
-    <div className="space-y-3 md:space-y-4">
-      <CardDestaque
-        titulo="Total mensal (estimado)"
-        centavos={total}
-        mascote="subscriptions"
-        rodape={
-          qtdAtivas === 1
-            ? "1 assinatura ativa"
-            : `${qtdAtivas} assinaturas ativas`
-        }
-      />
-      <div className="grid grid-cols-2 gap-3 md:gap-4">
-        <Kpi
-          label="Maior assinatura"
-          valor={maior != null ? <Valor centavos={maior} neutro /> : sem}
-        />
-        <Kpi
-          label="Menor assinatura"
-          valor={menor != null ? <Valor centavos={menor} neutro /> : sem}
-        />
-      </div>
-    </div>
+    <CardDestaque
+      titulo="Total mensal (estimado)"
+      centavos={total}
+      mascote="subscriptions"
+      rodape={
+        qtdAtivas === 1
+          ? "1 assinatura ativa"
+          : `${qtdAtivas} assinaturas ativas`
+      }
+      estatisticas={[
+        {
+          rotulo: "Maior assinatura",
+          valor: maior != null ? <Valor centavos={maior} neutro /> : sem,
+        },
+        {
+          rotulo: "Menor assinatura",
+          valor: menor != null ? <Valor centavos={menor} neutro /> : sem,
+        },
+      ]}
+    />
   )
 }
 
