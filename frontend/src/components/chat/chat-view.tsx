@@ -601,7 +601,7 @@ function Composer({
       className={cn(
         "shrink-0 px-3 pt-1 pb-3",
         variante === "pagina" &&
-          "mx-auto w-full max-w-3xl pb-[max(0.75rem,env(safe-area-inset-bottom))]"
+          "mx-auto w-full max-w-3xl pb-[max(0.75rem,var(--fundo-seguro,env(safe-area-inset-bottom)))]"
       )}
       onSubmit={(e) => {
         e.preventDefault()
@@ -611,8 +611,9 @@ function Composer({
       <label htmlFor={id} className="sr-only">
         Mensagem para o assistente
       </label>
-      {/* Campo preenchido (sem contorno) sobre o card do painel; foco ganha o anel padrão. */}
-      <InputGroup className="rounded-3xl border-transparent bg-muted has-[[data-slot=input-group-control]:focus-visible]:bg-card dark:bg-muted">
+      {/* Campo preenchido, sem contorno nem anel (nem no foco): o foco eleva o campo com a sombra
+          de card — sinal visível sem moldura. */}
+      <InputGroup className="rounded-3xl border-transparent bg-muted transition-[background-color,box-shadow] duration-200 ease-(--ease-out) has-[[data-slot=input-group-control]:focus-visible]:border-transparent has-[[data-slot=input-group-control]:focus-visible]:bg-card has-[[data-slot=input-group-control]:focus-visible]:shadow-(--shadow-card) has-[[data-slot=input-group-control]:focus-visible]:ring-0 dark:bg-muted dark:has-[[data-slot=input-group-control]:focus-visible]:bg-muted">
         <InputGroupTextarea
           id={id}
           ref={ref}
