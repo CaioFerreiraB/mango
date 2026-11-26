@@ -98,7 +98,7 @@ export function TransacaoDetalhe({
       onOpenChange={onOpenChange}
     >
       <DrawerContent
-        className="gap-0 overflow-hidden shadow-xl data-[vaul-drawer-direction=bottom]:max-h-[85svh] data-[vaul-drawer-direction=right]:inset-y-2 data-[vaul-drawer-direction=right]:right-2 data-[vaul-drawer-direction=right]:rounded-l-2xl data-[vaul-drawer-direction=right]:rounded-r-2xl data-[vaul-drawer-direction=right]:border data-[vaul-drawer-direction=right]:sm:max-w-md"
+        className="gap-0 overflow-hidden data-[vaul-drawer-direction=bottom]:max-h-[85svh] data-[vaul-drawer-direction=right]:inset-y-2 data-[vaul-drawer-direction=right]:right-2 data-[vaul-drawer-direction=right]:rounded-[1.75rem] data-[vaul-drawer-direction=right]:sm:max-w-md"
         style={{ paddingBottom: isMobile ? SAFE_AREA_BOTTOM : undefined }}
       >
         {t ? (

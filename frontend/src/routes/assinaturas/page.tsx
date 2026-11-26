@@ -456,7 +456,7 @@ function AssinaturaFormDialog({
             </label>
           ) : null}
         </form>
-        <DialogFooter className="mx-0 mb-0 shrink-0 sm:items-center sm:justify-between">
+        <DialogFooter className="mx-0 mb-0 shrink-0 p-4 sm:items-center sm:justify-between">
           {assinatura ? (
             <AlertDialog>
               <AlertDialogTrigger asChild>

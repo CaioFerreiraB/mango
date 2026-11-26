@@ -207,7 +207,7 @@ export function AtivoDrawer({
       {/* No lateral o painel é uma coluna travada (header fixo + abas rolando por dentro); no
           bottom sheet a rolagem é única — o header sobe junto, senão sobra pouca altura útil. */}
       <DrawerContent
-        className="flex flex-col gap-0 overflow-hidden shadow-xl data-[vaul-drawer-direction=bottom]:h-[90svh] data-[vaul-drawer-direction=bottom]:max-h-[90svh] data-[vaul-drawer-direction=right]:inset-y-2 data-[vaul-drawer-direction=right]:right-2 data-[vaul-drawer-direction=right]:rounded-l-2xl data-[vaul-drawer-direction=right]:rounded-r-2xl data-[vaul-drawer-direction=right]:border data-[vaul-drawer-direction=right]:sm:max-w-xl data-[vaul-drawer-direction=right]:lg:max-w-2xl"
+        className="flex flex-col gap-0 overflow-hidden data-[vaul-drawer-direction=bottom]:h-[90svh] data-[vaul-drawer-direction=bottom]:max-h-[90svh] data-[vaul-drawer-direction=right]:inset-y-2 data-[vaul-drawer-direction=right]:right-2 data-[vaul-drawer-direction=right]:rounded-[1.75rem] data-[vaul-drawer-direction=right]:sm:max-w-xl data-[vaul-drawer-direction=right]:lg:max-w-2xl"
         style={{ paddingBottom: isMobile ? SAFE_AREA_BOTTOM : undefined }}
       >
         {posicao ? (

@@ -242,6 +242,12 @@ via `ilustracao(avatar, cena)` de `frontend/src/lib/illustrations.ts` — nunca 
     `SidebarInset` bastaria um ancestral ganhar `transform`/`filter`/`backdrop-filter` para virar
     o containing block e a barra rolar junto com o conteúdo em vez de ficar presa à viewport.
   - **Ilustração: nunca** — mesma razão da sidebar; é território de navegação.
+- **Sobreposições** (dialog, alert-dialog, popover, dropdown, select, busca ⌘K, sheet, drawer, toast):
+  a mesma superfície dos cards — **sem contorno**, profundidade por `--shadow-pop` (no escuro ele
+  já traz o fio interno). Raios: diálogo `rounded-2xl` com `p-6` e rodapé **sem faixa cinza**;
+  menus/popover/select `rounded-xl`; drawers e painéis laterais `rounded-[1.75rem]` (como o
+  painel do chat). Título de diálogo/gaveta em `font-extrabold`, como o `CardTitle`. Isso mora nas
+  cascas de `components/ui/` — nada de `shadow-xl`/`border`/`rounded-lg` sobrescrito na chamada.
 - **Painéis de detalhe** (transação em `transacao-detalhe.tsx`, ativo em `ativo-drawer.tsx`): um
   único `Drawer` do vaul que troca de eixo — `direction="right"` no desktop (painel flutuante com
   `inset-y-2`) e `direction="bottom"` no mobile (bottom sheet com alça e arraste-para-fechar).
