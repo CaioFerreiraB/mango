@@ -74,7 +74,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { useCategorias, nomeCategoria } from "@/lib/api/categorias"
-import { useContas } from "@/lib/api/contas"
+import { useContas, useSaldoContasSerie } from "@/lib/api/contas"
 import {
   useDashboard,
   useDashboardSeries,
@@ -83,7 +83,6 @@ import {
   type Granularidade,
   type Visao,
 } from "@/lib/api/dashboard"
-import { useMe } from "@/lib/api/auth"
 import { useAtualizarPerfil, usePerfil } from "@/lib/api/perfil"
 import { useTransacoes } from "@/lib/api/transacoes"
 import {
@@ -136,18 +135,18 @@ const PRESETS_RAPIDOS = [
 
 // Classes estáticas (o Tailwind não enxerga classe montada em runtime). O grid segue a largura
 // DISPONÍVEL (container query: janela − sidebar − chat), não a da janela:
-// - ≥ @6xl (72rem): grid de 60, a largura configurada vale (5 cards ⅕ cabem com folga);
-// - @3xl–@6xl: 6 colunas — até ⅓ vira ⅓, ½ fica ½, mais largo ocupa a linha;
+// - ≥ @4xl (56rem): grid de 60, a largura configurada vale (5 cards ⅕ cabem com folga);
+// - @3xl–@4xl: 6 colunas — até ⅓ vira ⅓, ½ fica ½, mais largo ocupa a linha;
 // - abaixo: 2 colunas — cards do mês lado a lado, o resto em largura total (até ½ vira ½ a partir de
 //   @xl).
 const SPAN: Record<Largura, string> = {
-  12: "@xl:col-span-1 @3xl:col-span-2 @6xl:col-span-12",
-  15: "@xl:col-span-1 @3xl:col-span-2 @6xl:col-span-15",
-  20: "@xl:col-span-1 @3xl:col-span-2 @6xl:col-span-20",
-  30: "@xl:col-span-1 @3xl:col-span-3 @6xl:col-span-30",
-  40: "@xl:col-span-2 @3xl:col-span-6 @6xl:col-span-40",
-  45: "@xl:col-span-2 @3xl:col-span-6 @6xl:col-span-45",
-  60: "@xl:col-span-2 @3xl:col-span-6 @6xl:col-span-60",
+  12: "@xl:col-span-1 @3xl:col-span-2 @4xl:col-span-12",
+  15: "@xl:col-span-1 @3xl:col-span-3 @4xl:col-span-15",
+  20: "@xl:col-span-1 @3xl:col-span-2 @4xl:col-span-20",
+  30: "@xl:col-span-1 @3xl:col-span-3 @4xl:col-span-30",
+  40: "@xl:col-span-2 @3xl:col-span-6 @4xl:col-span-40",
+  45: "@xl:col-span-2 @3xl:col-span-6 @4xl:col-span-45",
+  60: "@xl:col-span-2 @3xl:col-span-6 @4xl:col-span-60",
 }
 // Mobile (2 colunas): KPIs dois por linha, mas o saldo — card de destaque — ocupa a linha toda.
 const spanDe = (w: WidgetLayout) =>
@@ -172,30 +171,7 @@ const CHAVE_VISAO = "mango:dashboard-visao"
 const ABAS = ["geral", "receitas", "despesas"] as const
 type Aba = (typeof ABAS)[number]
 
-/** "Bom dia/Boa tarde/Boa noite" pela hora de Brasília (o fuso de todos os cortes do app). */
-function saudacao(): string {
-  const h = Number(
-    new Intl.DateTimeFormat("pt-BR", {
-      hour: "numeric",
-      hourCycle: "h23",
-      timeZone: "America/Sao_Paulo",
-    }).format(new Date())
-  )
-  return h < 5
-    ? "Boa noite"
-    : h < 12
-      ? "Bom dia"
-      : h < 18
-        ? "Boa tarde"
-        : "Boa noite"
-}
-
 export function DashboardPage() {
-  const me = useMe()
-  // ponytail: "Local" é o nome-placeholder do modo desktop — sem nome real, saúda sem nome.
-  const nome = me.data?.nome?.trim().split(/\s+/)[0]
-  const titulo =
-    nome && nome !== "Local" ? `${saudacao()}, ${nome}` : saudacao()
   // Competência × caixa: vale para KPIs, gráficos e abas. Lembrado neste navegador.
   const [visao, setVisao] = useState<Visao>(() => {
     try {
@@ -264,6 +240,7 @@ export function DashboardPage() {
   })
 
   const contas = useContas()
+  const saldoSerie = useSaldoContasSerie()
   // Modo privacidade dos cards: o olho mora no card de saldo (ou no topo, se ele estiver oculto).
   // Lembrado neste navegador — quem esconde os valores não quer vê-los voltar ao recarregar.
   const [oculto, setOculto] = useState(() => {
@@ -389,16 +366,23 @@ export function DashboardPage() {
     d && d.nao_revisadas > 0 ? (
       <Link
         to="/transacoes?pendente=true"
-        className="flex items-center justify-between rounded-lg border border-dashed bg-muted/40 px-4 py-3 text-sm transition-colors hover:bg-muted"
+        className="group flex items-center gap-3 rounded-lg bg-muted/70 px-4 py-3 text-sm transition-colors hover:bg-muted"
       >
-        <span>
+        <span className="size-2 shrink-0 rounded-full bg-warning" aria-hidden />
+        <span className="flex-1">
           <strong>{d.nao_revisadas}</strong>{" "}
           {d.nao_revisadas === 1
             ? "transação aguardando"
             : "transações aguardando"}{" "}
           revisão
         </span>
-        <ArrowRight className="size-4 text-muted-foreground" aria-hidden />
+        <span className="inline-flex items-center gap-1 font-medium text-accent-ink">
+          Revisar
+          <ArrowRight
+            className="size-4 transition-transform duration-200 ease-(--ease-out) group-hover:translate-x-0.5 motion-reduce:transition-none"
+            aria-hidden
+          />
+        </span>
       </Link>
     ) : null
 
@@ -412,6 +396,7 @@ export function DashboardPage() {
         <SaldoDestaque
           centavos={d.saldo_total_centavos}
           contas={contas.data?.filter((c) => c.type === "BANK").length}
+          pontos={saldoSerie}
           oculto={oculto}
           onAlternarOculto={alternarOculto}
         />
@@ -518,8 +503,8 @@ export function DashboardPage() {
   return (
     <Tabs value={aba} onValueChange={trocarAba} className="gap-4">
       <PageHeader
-        titulo={titulo}
-        descricao="Seu resumo financeiro: saldo, entradas, saídas e o que vence."
+        titulo="Dashboard"
+        descricao="Análise do período: fluxo, categorias, calendário e patrimônio — personalizável."
       />
       {/* Abas no topo; o período abaixo vale para as três. Personalizar é só da Geral. */}
       <TabsList variant="line" className="w-full justify-start border-b">
@@ -666,7 +651,7 @@ export function DashboardPage() {
               items={visiveis.map((w) => w.id)}
               strategy={rectSortingStrategy}
             >
-              <div className="grid grid-cols-2 gap-3 sm:gap-4 @3xl:grid-cols-6 @6xl:grid-cols-60">
+              <div className="grid grid-cols-2 gap-3 sm:gap-4 @3xl:grid-cols-6 @4xl:grid-cols-60">
                 {visiveis.map((w, i) => (
                   <Widget
                     key={w.id}
@@ -801,7 +786,7 @@ function Widget({
           <Button
             variant="ghost"
             size="sm"
-            className="hidden gap-1 px-2 @6xl:inline-flex"
+            className="hidden gap-1 px-2 @4xl:inline-flex"
             aria-label={`Largura de ${titulo}: ${ROTULO_LARGURA[w.largura]}. Alterar`}
             onClick={onLargura}
           >

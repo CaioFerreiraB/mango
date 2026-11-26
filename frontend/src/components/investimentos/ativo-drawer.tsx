@@ -473,7 +473,7 @@ function IconeSquare({ tipo }: { tipo: string }) {
   const Icone = ICONE_TIPO[tipo] ?? Landmark
   return (
     <div className="grid size-14 shrink-0 place-items-center rounded-xl bg-primary/10">
-      <Icone className="size-6 text-accent-ink" aria-hidden />
+      <Icone className="size-6 text-accent-icone" aria-hidden />
     </div>
   )
 }

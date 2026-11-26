@@ -15134,11 +15134,11 @@
                 "type": "string",
                 "enum": [
                   "violeta",
-                  "manga",
-                  "verde",
+                  "tangerina",
+                  "lima",
                   "azul",
                   "rosa",
-                  "teal"
+                  "grafite"
                 ]
               },
               {
@@ -15316,11 +15316,11 @@
                 "type": "string",
                 "enum": [
                   "violeta",
-                  "manga",
-                  "verde",
+                  "tangerina",
+                  "lima",
                   "azul",
                   "rosa",
-                  "teal"
+                  "grafite"
                 ]
               },
               {

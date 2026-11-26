@@ -32,7 +32,7 @@ import {
   ATALHOS,
   ATALHOS_PADRAO,
   atalhosEfetivos,
-  inicioItem,
+  inicioBottomItem,
 } from "@/config/nav"
 import { useMe } from "@/lib/api/auth"
 import { useAtualizarPerfil, usePerfil, type Perfil } from "@/lib/api/perfil"
@@ -46,11 +46,11 @@ import { cn } from "@/lib/utils"
 
 const NOMES_ACCENT: Record<Accent, string> = {
   violeta: "Violeta",
-  manga: "Manga",
-  verde: "Verde",
+  tangerina: "Tangerina",
+  lima: "Lima",
   azul: "Azul",
   rosa: "Rosa",
-  teal: "Teal",
+  grafite: "Grafite",
 }
 
 const AVATARES = [1, 2, 3, 4]
@@ -92,7 +92,7 @@ function PreferenciasForm({ perfil }: { perfil: Perfil }) {
     <div className="grid gap-4">
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Cor principal</CardTitle>
+          <CardTitle>Cor principal</CardTitle>
         </CardHeader>
         <CardContent>
           <div
@@ -136,7 +136,7 @@ function PreferenciasForm({ perfil }: { perfil: Perfil }) {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Avatar</CardTitle>
+          <CardTitle>Avatar</CardTitle>
         </CardHeader>
         <CardContent>
           <RadioGroup
@@ -218,7 +218,7 @@ function RevisaoCorteCard({ perfil }: { perfil: Perfil }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">Revisão de transações</CardTitle>
+        <CardTitle>Revisão de transações</CardTitle>
         <CardDescription>
           Transações anteriores a esta data não entram na fila de revisão — elas
           não são marcadas como revisadas, apenas deixam de ser cobradas. Deixe
@@ -307,7 +307,7 @@ function AtalhosCard({ perfil }: { perfil: Perfil }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">Atalhos do celular</CardTitle>
+        <CardTitle>Atalhos do celular</CardTitle>
         <CardDescription>
           A barra inferior do celular tem o Início fixo e mais três atalhos à
           sua escolha. O resto da navegação fica no menu ☰.
@@ -323,8 +323,8 @@ function AtalhosCard({ perfil }: { perfil: Perfil }) {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="inicio">
-                  <inicioItem.icon aria-hidden />
-                  {inicioItem.short}
+                  <inicioBottomItem.icon aria-hidden />
+                  {inicioBottomItem.short}
                 </SelectItem>
               </SelectContent>
             </Select>
@@ -401,7 +401,7 @@ function AlertaOrcamentoCard({ perfil }: { perfil: Perfil }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">Aviso de orçamento</CardTitle>
+        <CardTitle>Aviso de orçamento</CardTitle>
         <CardDescription>
           Envia uma mensagem no Telegram quando o gasto do mês de uma categoria
           atinge este percentual do orçado — uma vez por categoria a cada mês.

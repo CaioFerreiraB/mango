@@ -8,6 +8,7 @@ import { useLocation, useNavigate } from "react-router"
 
 import { AcoesPainel, ChatView } from "@/components/chat/chat-view"
 import { useChat } from "@/components/chat/use-chat"
+import { BOTAO_TOPO_MOBILE } from "@/components/layout/topo"
 import { Button } from "@/components/ui/button"
 import { useMe } from "@/lib/api/auth"
 import { cn } from "@/lib/utils"
@@ -41,6 +42,7 @@ export function ChatToggle() {
       id={ID_BOTAO}
       variant="ghost"
       size="icon-sm"
+      className={BOTAO_TOPO_MOBILE}
       aria-label={expandido ? "Fechar assistente" : "Abrir assistente"}
       aria-expanded={expandido}
       title="Assistente"

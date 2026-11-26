@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field, field_validator
 from app.schemas import ORMModel
 from app.schemas.setup import _normalizar_email
 
-Accent = Literal["violeta", "manga", "verde", "azul", "rosa", "teal"]
+Accent = Literal["violeta", "tangerina", "lima", "azul", "rosa", "grafite"]
 
 
 class WidgetLayout(BaseModel):

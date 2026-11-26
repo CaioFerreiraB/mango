@@ -54,7 +54,7 @@ export function CategoriasPadraoCard({
   return (
     <Card>
       <CardHeader className="space-y-1.5">
-        <CardTitle className="text-base">Categorias do banco</CardTitle>
+        <CardTitle>Categorias do banco</CardTitle>
         <CardDescription>
           Desative as que você não usa e elas somem dos seletores. Transações
           que o banco classificar numa categoria desativada aparecem como

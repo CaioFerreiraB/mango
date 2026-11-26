@@ -99,7 +99,9 @@ const TOKENS = [
   "--card",
   "--popover",
   "--popover-foreground",
-  "--primary",
+  // Série de destaque dos gráficos: o accent, mas legível no tema (no escuro o --primary dos
+  // botões é escuro demais para uma linha de 2px sobre o card).
+  "--grafico-destaque",
   "--positive",
   "--negative",
   "--chart-cat-outras",
@@ -149,17 +151,24 @@ export function useTemaGrafico(): TemaGrafico {
 export function opcoesBase(t: TemaGrafico): EChartsOption {
   return {
     aria: { enabled: true },
-    animationDuration: 250,
+    // Entrada: o gráfico "desenha" (linha cresce, barras sobem) uma vez, com ease-out; atualização
+    // (troca de período) é mais curta para acompanhar o clique. `animation: false` sob reduced
+    // motion fica em cada gráfico (`semMovimento`).
+    animationDuration: 700,
+    animationEasing: "cubicOut",
+    animationDurationUpdate: 300,
+    animationEasingUpdate: "cubicOut",
     textStyle: { fontFamily: t.fonte, color: t.textoSec },
     tooltip: {
       backgroundColor: t.popover,
-      borderColor: t.borda,
-      borderWidth: 1,
-      padding: [8, 10],
+      borderColor: "transparent",
+      borderWidth: 0,
+      padding: [8, 12],
       textStyle: { color: t.popoverTexto, fontFamily: t.fonte, fontSize: 12 },
-      extraCssText:
-        "border-radius:8px;box-shadow:0 4px 16px rgb(0 0 0 / 0.08);",
+      extraCssText: "border-radius:10px;box-shadow:var(--shadow-pop);",
       confine: true,
+      // No body: nenhum elemento do card (mascote, camadas com z-index) cobre o tooltip.
+      appendTo: "body",
     },
   }
 }

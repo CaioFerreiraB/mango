@@ -161,7 +161,7 @@ function ObjetivoCard({
   return (
     // O título é o botão (alvo de teclado/leitor de tela); o ::after dele estica o clique ao card
     // inteiro. Antes era um <div onClick> — inalcançável sem mouse.
-    <Card className="relative transition-[border-color,transform] duration-150 ease-out hover:border-primary/50 active:scale-[0.99] has-[button:focus-visible]:ring-[3px] has-[button:focus-visible]:ring-ring/50 motion-reduce:active:scale-100">
+    <Card className="relative superficie-interativa has-[button:focus-visible]:ring-[3px] has-[button:focus-visible]:ring-ring/50">
       <CardHeader className="pb-2">
         <button
           type="button"

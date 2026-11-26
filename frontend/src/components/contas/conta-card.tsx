@@ -30,7 +30,7 @@ export function ContaCard({
     <Link to={`/contas/${conta.id}`} className="group">
       <Card
         className={cn(
-          "relative h-full overflow-hidden transition-[border-color,transform] duration-150 ease-out hover:border-primary/50 active:scale-[0.99] motion-reduce:active:scale-100",
+          "relative h-full superficie-interativa overflow-hidden",
           isCartao && "min-h-44 gap-3" // cartão: header + rodapé, arte sangrando no meio
         )}
       >

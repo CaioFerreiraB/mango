@@ -16,6 +16,7 @@ import { AceitarConvitePage } from "@/routes/convite/aceitar"
 import { ContaDetalhePage } from "@/routes/contas/detalhe"
 import { ContasPage } from "@/routes/contas/page"
 import { DashboardPage } from "@/routes/dashboard/page"
+import { InicioPage } from "@/routes/inicio/page"
 import { DivisoesPage } from "@/routes/divisoes/page"
 import { FaturaDetalhePage } from "@/routes/faturas/detalhe"
 import { FaturasPage } from "@/routes/faturas/page"
@@ -63,6 +64,11 @@ export const router = createBrowserRouter([
         children: [
           {
             index: true,
+            element: <InicioPage />,
+            handle: { title: "Início" },
+          },
+          {
+            path: "dashboard",
             element: <DashboardPage />,
             handle: { title: "Dashboard" },
           },

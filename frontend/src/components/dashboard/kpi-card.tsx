@@ -1,11 +1,13 @@
 import { ArrowDownRight, ArrowUpRight } from "lucide-react"
-import type { ReactNode } from "react"
+import { useMemo, type ReactNode } from "react"
 
+import { Sparkline } from "@/components/common/graficos-base"
 import { CardDestaque, Kpi } from "@/components/common/kpi"
 import { Valor } from "@/components/common/valor"
 import { AreaTendencia, type CampoSerie } from "@/components/dashboard/graficos"
 import { useIsMobile } from "@/hooks/use-mobile"
 import type { SerieBucket } from "@/lib/api/dashboard"
+import { formatBRL, formatDate } from "@/lib/format"
 
 /**
  * Variação vs. mesmo período do mês anterior. Pílula **neutra** (identidade sóbria): a direção é
@@ -73,7 +75,8 @@ export function KpiCard({
             sinal={sinal}
             oculto={oculto}
             neutro
-            className="font-semibold whitespace-nowrap"
+            animado
+            className="font-bold whitespace-nowrap"
           />
           {delta != null ? <Delta delta={delta} titulo={tituloDelta} /> : null}
         </>
@@ -87,32 +90,66 @@ export function KpiCard({
   )
 }
 
-/** Saldo em contas do dashboard: o herói com o olho que liga o modo privacidade de TODOS os
+/** Saldo em contas do dashboard: o herói (estilo Mercury) com o saldo somado das contas nos
+ *  últimos 30 dias em sangria e a variação no período; o olho liga o modo privacidade de TODOS os
  *  cards do painel (o estado mora na página). */
 export function SaldoDestaque({
   centavos,
   contas,
+  pontos,
   oculto,
   onAlternarOculto,
+  className,
 }: {
+  className?: string
   centavos: number
   /** Quantas contas (BANK) somam o saldo; omitido enquanto carrega. */
   contas?: number
+  /** Saldo diário somado das contas (ordem cronológica). */
+  pontos?: { data: string; saldo_centavos: number }[]
   oculto: boolean
   onAlternarOculto: () => void
 }) {
+  const dados = useMemo(
+    () =>
+      (pontos ?? []).map((p) => ({ rotulo: p.data, valor: p.saldo_centavos })),
+    [pontos]
+  )
+  const variacao =
+    dados.length >= 2 ? dados[dados.length - 1].valor - dados[0].valor : null
   return (
     <CardDestaque
+      className={className}
       titulo="Saldo em contas"
       centavos={centavos}
       oculto={oculto}
       onAlternarOculto={onAlternarOculto}
+      mascote="money"
       rodape={
-        contas != null
-          ? contas === 1
-            ? "1 conta"
-            : `${contas} contas`
-          : undefined
+        <>
+          {variacao != null && variacao !== 0 ? (
+            <>
+              <Valor centavos={variacao} sinal oculto={oculto} />
+              <span>nos últimos 30 dias</span>
+              <span aria-hidden>·</span>
+            </>
+          ) : null}
+          {contas != null ? (
+            <span>{contas === 1 ? "1 conta" : `${contas} contas`}</span>
+          ) : null}
+        </>
+      }
+      grafico={
+        dados.length >= 2 ? (
+          <Sparkline
+            dados={dados}
+            nome="Saldo"
+            altura={96}
+            formatarRotulo={formatDate}
+            formatarValor={oculto ? () => "R$ ••••" : formatBRL}
+            ariaLabel="Saldo somado das contas nos últimos 30 dias"
+          />
+        ) : undefined
       }
     />
   )

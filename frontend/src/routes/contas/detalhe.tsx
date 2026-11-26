@@ -96,7 +96,7 @@ function DetalheBanco({ conta }: { conta: ContaDetalhe }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">Detalhes da conta</CardTitle>
+        <CardTitle>Detalhes da conta</CardTitle>
       </CardHeader>
       <CardContent className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-3">
         <Item

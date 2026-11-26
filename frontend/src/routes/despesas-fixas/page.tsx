@@ -172,7 +172,7 @@ function DespesaRow({
   return (
     <Card
       className={cn(
-        "gap-0 overflow-hidden p-0 transition-[border-color,transform] duration-150 ease-out hover:border-primary/50 has-[button:active]:scale-[0.99] motion-reduce:has-[button:active]:scale-100",
+        "superficie-interativa gap-0 overflow-hidden p-0",
         !despesa.ativa && "opacity-60"
       )}
     >
@@ -289,7 +289,7 @@ function CardProximos({
   return (
     <Card>
       <CardHeader className="pb-0">
-        <CardTitle className="text-base">Próximos vencimentos</CardTitle>
+        <CardTitle>Próximos vencimentos</CardTitle>
       </CardHeader>
       <CardContent>
         {resumo.proximos.length === 0 ? (

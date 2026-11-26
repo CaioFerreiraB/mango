@@ -11,7 +11,9 @@ export const TONS_SELO = {
   },
   info: { badge: "bg-primary/10 text-accent-ink", ponto: "bg-primary" },
   sucesso: { badge: "bg-success/12 text-success-ink", ponto: "bg-success" },
-  aviso: { badge: "bg-warning/15 text-warning-ink", ponto: "bg-warning" },
+  // Aviso é o estado mais frequente (fila de revisão): pílula neutra, só a bolinha em âmbar —
+  // dez linhas "Pendente" não podem gritar. Fundo tinto fica para perigo/sucesso.
+  aviso: { badge: "bg-muted text-foreground", ponto: "bg-warning" },
   perigo: { badge: "bg-negative/12 text-negative-ink", ponto: "bg-negative" },
 } as const
 

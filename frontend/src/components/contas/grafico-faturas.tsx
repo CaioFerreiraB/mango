@@ -73,7 +73,7 @@ export function GraficoFaturas({ contaId }: { contaId: number }) {
     <Card>
       <CardHeader className="flex-row items-start justify-between gap-4">
         <div>
-          <CardTitle className="text-base">Últimas faturas</CardTitle>
+          <CardTitle>Últimas faturas</CardTitle>
           <CardDescription>
             {modo === "categoria"
               ? "Valor por fatura, dividido por categoria"

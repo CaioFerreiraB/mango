@@ -4,7 +4,7 @@ import { NavLink, useLocation } from "react-router"
 import {
   atalhosEfetivos,
   bottomNavItemsDivisaoOnly,
-  inicioItem,
+  inicioBottomItem,
   isBottomNavItemActive,
   type BottomNavItem,
 } from "@/config/nav"
@@ -19,15 +19,16 @@ function Aba({ item, pathname }: { item: BottomNavItem; pathname: string }) {
       <NavLink
         to={item.url}
         aria-current={ativa ? "page" : undefined}
+        title={item.title}
         className={cn(
-          "flex w-full min-w-0 flex-col items-center justify-center gap-1 rounded-3xl transition-colors duration-150 motion-reduce:transition-none",
-          ativa ? "font-medium text-accent-ink" : "text-muted-foreground"
+          "flex w-full min-w-0 flex-col items-center justify-center gap-1 rounded-full transition-[background-color,color,transform] duration-200 ease-(--ease-out) active:scale-95 motion-reduce:transition-none motion-reduce:active:scale-100",
+          ativa
+            ? "bg-marca-forte font-bold text-primary-foreground"
+            : "font-medium text-muted-foreground"
         )}
       >
         <item.icon className="size-6" aria-hidden />
-        <span className="max-w-full truncate text-[11px] leading-none">
-          {item.short}
-        </span>
+        <span className="sr-only">{item.title}</span>
       </NavLink>
     </li>
   )
@@ -50,15 +51,17 @@ export function BottomNav() {
   const abas =
     me.data?.tipo === "divisao"
       ? bottomNavItemsDivisaoOnly
-      : [inicioItem, ...atalhosEfetivos(perfil.data?.atalhos_mobile)]
+      : [inicioBottomItem, ...atalhosEfetivos(perfil.data?.atalhos_mobile)]
 
   return createPortal(
     <nav
       aria-label="Atalhos"
       className="fixed inset-x-4 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] z-40 md:hidden"
     >
-      {/* Sombra bem leve na cor de destaque (o accent do usuário) + 1px neutro para assentar. */}
-      <ul className="mx-auto flex h-(--bottom-nav-h) max-w-md items-stretch rounded-[1.75rem] border border-border/60 bg-background/95 px-1 shadow-[0_10px_30px_-10px_color-mix(in_oklch,var(--primary)_35%,transparent),0_1px_2px_rgb(0_0_0/0.04)] backdrop-blur-md">
+      {/* Só ícones (Nubank), barra flutuante quase opaca — uma transparência levíssima —, com
+          sombra; a aba ativa numa pílula na cor forte do accent. O nome de cada aba fica para
+          leitor de tela e no `title`. */}
+      <ul className="mx-auto flex h-(--bottom-nav-h) max-w-md items-stretch gap-1 rounded-full bg-background/93 p-1.5 shadow-(--shadow-pop) ring-1 ring-foreground/5 backdrop-blur-md">
         {abas.map((item) => (
           <Aba key={item.url} item={item} pathname={pathname} />
         ))}

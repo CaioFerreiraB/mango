@@ -226,7 +226,7 @@ export function FaturasPage() {
                       const numero = contaPorId.get(f.cartao_id)?.numero
                       return (
                         <Link key={f.id} to={`/faturas/${f.id}`}>
-                          <Card className="py-4 transition-[border-color,transform] duration-150 ease-out hover:border-primary/50 active:scale-[0.99] motion-reduce:active:scale-100">
+                          <Card className="superficie-interativa py-4">
                             <CardContent className="flex items-center gap-3">
                               <AvatarBanco
                                 nome={nome}

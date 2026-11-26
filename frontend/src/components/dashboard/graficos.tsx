@@ -238,6 +238,7 @@ export function AreaTendencia({
   return (
     <Sparkline
       dados={dados}
+      altura={48}
       nome={NOME_CAMPO[campo]}
       formatarValor={oculto ? mascarar : formatBRL}
       ariaLabel={`Tendência de ${NOME_CAMPO[campo].toLowerCase()} nos últimos meses`}

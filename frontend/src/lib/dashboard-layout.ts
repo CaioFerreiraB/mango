@@ -23,11 +23,12 @@ export type WidgetId =
 
 /** Ordem e largura padrão (grid de 60 colunas a partir de `lg`). */
 export const CATALOGO: { id: WidgetId; titulo: string; largura: Largura }[] = [
-  { id: "kpi-saldo", titulo: "Saldo em contas", largura: 12 },
-  { id: "kpi-entradas", titulo: "Entradas no mês", largura: 12 },
-  { id: "kpi-saidas", titulo: "Saídas no mês", largura: 12 },
-  { id: "kpi-resultado", titulo: "Resultado no mês", largura: 12 },
-  { id: "kpi-investido", titulo: "Investido no mês", largura: 12 },
+  // Herói (saldo com a curva de 30 dias) na linha inteira; os quatro fluxos do mês em ¼ abaixo.
+  { id: "kpi-saldo", titulo: "Saldo em contas", largura: 60 },
+  { id: "kpi-entradas", titulo: "Entradas no mês", largura: 15 },
+  { id: "kpi-saidas", titulo: "Saídas no mês", largura: 15 },
+  { id: "kpi-resultado", titulo: "Resultado no mês", largura: 15 },
+  { id: "kpi-investido", titulo: "Investido no mês", largura: 15 },
   { id: "despesas-fixas", titulo: "Despesas fixas · visão geral", largura: 30 },
   {
     id: "despesas-fixas-proximos",

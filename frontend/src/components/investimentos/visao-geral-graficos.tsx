@@ -92,7 +92,7 @@ export function ProventosPorMes({
   return (
     <Card className="h-full min-w-0">
       <CardHeader>
-        <CardTitle className="text-base">Proventos por mês</CardTitle>
+        <CardTitle>Proventos por mês</CardTitle>
         <CardDescription>
           Dividendos e rendimentos recebidos nos últimos 12 meses
         </CardDescription>
@@ -174,7 +174,7 @@ export function AportesValorizacao({ oculto }: { oculto: boolean }) {
   return (
     <Card className="h-full min-w-0">
       <CardHeader>
-        <CardTitle className="text-base">Aportes × valorização</CardTitle>
+        <CardTitle>Aportes × valorização</CardTitle>
         <CardDescription>
           Quanto do patrimônio é dinheiro aportado e quanto é rendimento
         </CardDescription>
@@ -325,7 +325,7 @@ export function RentabilidadeMensal() {
     <Card className="h-full min-w-0">
       <CardHeader className="flex-row flex-wrap items-start justify-between gap-x-4 gap-y-3">
         <div className="min-w-0 space-y-1.5">
-          <CardTitle className="text-base">Rentabilidade mês a mês</CardTitle>
+          <CardTitle>Rentabilidade mês a mês</CardTitle>
           <CardDescription>
             Retorno em cada mês completo, com o acumulado do ano e o CDI no
             mesmo período
@@ -455,7 +455,7 @@ export function VencimentosRendaFixa({
   return (
     <Card className="h-full min-w-0">
       <CardHeader>
-        <CardTitle className="text-base">Vencimentos da renda fixa</CardTitle>
+        <CardTitle>Vencimentos da renda fixa</CardTitle>
         <CardDescription>
           O que vence nos próximos meses, para planejar o reinvestimento
         </CardDescription>

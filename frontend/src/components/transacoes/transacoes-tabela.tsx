@@ -40,11 +40,12 @@ import { formatBRL, formatDataCurta } from "@/lib/format"
 import { estadoRevisao } from "@/lib/revisao"
 import { cn } from "@/lib/utils"
 
-/** Avatar de categoria: fundo tingido suave + ícone colorido, por tipo (entrada/saída). */
+/** Avatar de categoria: neutro — o sentido (entrada/saída) já está no sinal e na cor do valor;
+ *  ícone colorido em toda linha virava ruído. Entrada ganha só um toque do azul no ícone. */
 function corTile(type: string) {
   return type === "CREDIT"
-    ? "bg-positive/15 text-positive-ink"
-    : "bg-negative/15 text-negative-ink"
+    ? "bg-muted text-positive-ink"
+    : "bg-muted text-muted-foreground"
 }
 
 /** Marcador de transação dividida: a parte do usuário é o que conta no orçamento. */
@@ -144,6 +145,7 @@ export function TransacoesTabela({
   ocultarCategoria = false,
   parteDoUsuario = false,
   semMoldura = false,
+  compacta = false,
 }: {
   items: ItemListagem[]
   /** Repassado ao drawer: esconde "Ir para a fatura" quando já estamos numa fatura. */
@@ -156,6 +158,8 @@ export function TransacoesTabela({
   parteDoUsuario?: boolean
   /** Sem borda própria: a lista já está dentro de um card (borda dupla = card aninhado). */
   semMoldura?: boolean
+  /** Sempre o formato de lista (o do celular), mesmo no desktop — para colunas estreitas. */
+  compacta?: boolean
 }) {
   const valorDe = (t: Transacao) => {
     const v = valorEfetivoCentavos(t)
@@ -195,7 +199,11 @@ export function TransacoesTabela({
   return (
     <>
       <div
-        className={cn("hidden md:block", !semMoldura && "rounded-lg border")}
+        className={cn(
+          "hidden",
+          !compacta && "md:block",
+          !semMoldura && "rounded-lg border"
+        )}
       >
         <Table className="table-fixed">
           <colgroup>
@@ -242,7 +250,7 @@ export function TransacoesTabela({
                 return (
                   <TableRow
                     key={`d-${t.divisao_id}`}
-                    className="cursor-pointer even:bg-muted/40"
+                    className="cursor-pointer"
                     onClick={() => setDivisaoId(t.divisao_id)}
                   >
                     <TableCell>
@@ -311,7 +319,7 @@ export function TransacoesTabela({
               return (
                 <TableRow
                   key={`t-${t.id}`}
-                  className="cursor-pointer even:bg-muted/40"
+                  className="cursor-pointer"
                   onClick={() => setSelecionadaId(t.id)}
                 >
                   <TableCell>
@@ -436,7 +444,13 @@ export function TransacoesTabela({
       </div>
 
       <ul
-        className={cn("divide-y md:hidden", !semMoldura && "rounded-lg border")}
+        className={cn(
+          // Compacta (Início): sem divisórias — o hover é um "card" arredondado sobre a linha.
+          compacta
+            ? "space-y-0.5 [&_button]:rounded-xl [&_button]:transition-colors [&_button:hover]:bg-muted"
+            : "divide-y md:hidden",
+          !semMoldura && "rounded-lg border"
+        )}
       >
         {items.map((t) => {
           if (ehLancamento(t)) {

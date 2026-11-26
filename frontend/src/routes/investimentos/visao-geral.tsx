@@ -527,7 +527,7 @@ function EvolucaoPatrimonio({ oculto }: { oculto: boolean }) {
     <Card className="h-full">
       <CardHeader className="flex-row flex-wrap items-start justify-between gap-3">
         <div>
-          <CardTitle className="text-base">Evolução do patrimônio</CardTitle>
+          <CardTitle>Evolução do patrimônio</CardTitle>
           <CardDescription>
             {vista === "valor"
               ? "Patrimônio e capital investido"
@@ -689,7 +689,7 @@ function AlocacaoPorTipo({
   return (
     <Card className="h-full">
       <CardHeader>
-        <CardTitle className="text-base">Alocação por tipo</CardTitle>
+        <CardTitle>Alocação por tipo</CardTitle>
       </CardHeader>
       <CardContent>
         {fatias.length === 0 ? (
@@ -784,7 +784,7 @@ function MaioresMovers({
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">{titulo}</CardTitle>
+        <CardTitle>{titulo}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-1">
         {top.length === 0 ? (
@@ -848,7 +848,7 @@ function MaioresPosicoes({
   return (
     <Card>
       <CardHeader className="flex-row items-center justify-between">
-        <CardTitle className="text-base">Maiores posições</CardTitle>
+        <CardTitle>Maiores posições</CardTitle>
         <span className="text-xs text-muted-foreground">Participação</span>
       </CardHeader>
       <CardContent className="space-y-1">
@@ -950,7 +950,7 @@ function InsightsBar({
   return (
     <Card>
       <CardHeader className="flex-row items-center justify-between">
-        <CardTitle className="flex items-center gap-2 text-base">
+        <CardTitle className="flex items-center gap-2">
           <Sparkles className="size-4 text-primary" aria-hidden />
           Insights para você
         </CardTitle>
@@ -972,7 +972,7 @@ function InsightsBar({
           {insights.map((texto, i) => (
             <li key={i} className="flex gap-2.5">
               <CircleCheck
-                className="mt-0.5 size-4 shrink-0 text-accent-ink"
+                className="mt-0.5 size-4 shrink-0 text-accent-icone"
                 aria-hidden
               />
               <p className="text-sm text-pretty">{texto}</p>

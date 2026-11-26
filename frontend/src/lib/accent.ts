@@ -6,11 +6,11 @@ export const ACCENT_PADRAO = "violeta"
 /** nome → hex do primary (light), para swatches na UI. Presets em index.css. */
 export const ACCENTS = {
   violeta: "#7008E7",
-  manga: "#EA580E",
-  verde: "#009965",
+  tangerina: "#FB6A1E",
+  lima: "#84CC16",
   azul: "#165DFC",
   rosa: "#E60076",
-  teal: "#0092B8",
+  grafite: "#1F2937",
 } as const
 
 export type Accent = keyof typeof ACCENTS

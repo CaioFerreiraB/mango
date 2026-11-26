@@ -1,5 +1,5 @@
 import { ChevronRight, PanelLeft } from "lucide-react"
-import { Fragment, useEffect } from "react"
+import { Fragment, useEffect, useLayoutEffect, useRef, useState } from "react"
 import { NavLink, useLocation } from "react-router"
 
 import { NavUser } from "@/components/layout/nav-user"
@@ -33,6 +33,7 @@ import {
 } from "@/components/ui/sidebar"
 import {
   dashboardItem,
+  inicioItem,
   investimentosSection,
   isActivePath,
   navSections,
@@ -77,6 +78,7 @@ function NavSectionItem({
   const temFilhoAtivo = section.items.some((item) =>
     isActivePath(pathname, item.url)
   )
+  const [aberta, setAberta] = useState(temFilhoAtivo)
 
   // Colapsada no desktop não há espaço para os subitens: mostra-os num dropdown.
   if (state === "collapsed" && !isMobile) {
@@ -113,12 +115,17 @@ function NavSectionItem({
   return (
     <Collapsible
       asChild
-      defaultOpen={temFilhoAtivo}
+      open={aberta}
+      onOpenChange={setAberta}
       className="group/collapsible"
     >
       <SidebarMenuItem>
         <CollapsibleTrigger asChild>
-          <SidebarMenuButton tooltip={section.label}>
+          {/* Fechada com a página atual dentro, a seção é quem fica "ativa" (a pílula pousa nela). */}
+          <SidebarMenuButton
+            tooltip={section.label}
+            isActive={temFilhoAtivo && !aberta}
+          >
             <section.icon aria-hidden />
             <span>{section.label}</span>
             <ChevronRight
@@ -149,6 +156,62 @@ function NavSectionItem({
   )
 }
 
+/** Escrita de estilo fora do hook (o lint de imutabilidade não aceita mutar o que veio de ref). */
+function posicionarPilula(pilula: HTMLElement, nav: HTMLElement) {
+  // O ativo mais profundo e visível (subitem dentro da seção aberta > seção recolhida).
+  const ativos = [
+    ...nav.querySelectorAll<HTMLElement>(
+      '[data-sidebar="menu-button"][data-active="true"], [data-sidebar="menu-sub-button"][data-active="true"]'
+    ),
+  ].filter((e) => e.offsetParent !== null && e.offsetHeight > 0)
+  const alvo = ativos.at(-1)
+  if (!alvo) {
+    pilula.style.opacity = "0"
+    return
+  }
+  const n = nav.getBoundingClientRect()
+  const a = alvo.getBoundingClientRect()
+  pilula.style.opacity = "1"
+  pilula.style.width = `${a.width}px`
+  pilula.style.height = `${a.height}px`
+  pilula.style.transform = `translate(${a.left - n.left}px, ${a.top - n.top}px)`
+}
+function marcarPronta(pilula: HTMLElement) {
+  pilula.dataset.pronto = ""
+}
+
+/** Mantém a pílula sobre o item ativo: re-mede na troca de rota/estado, quando uma seção abre ou
+ *  fecha (o ResizeObserver acompanha a animação de altura) e quando `data-active` muda. */
+function usePilulaAtiva(
+  navRef: React.RefObject<HTMLDivElement | null>,
+  pilulaRef: React.RefObject<HTMLSpanElement | null>,
+  chave: string
+) {
+  useLayoutEffect(() => {
+    const nav = navRef.current
+    const pilula = pilulaRef.current
+    if (!nav || !pilula) return
+    const medir = () => posicionarPilula(pilula, nav)
+    medir()
+    // Liga a transição só depois do 1º posicionamento (sem deslizar do topo ao montar).
+    const raf = requestAnimationFrame(() => marcarPronta(pilula))
+    const ro = new ResizeObserver(medir)
+    ro.observe(nav)
+    const mo = new MutationObserver(medir)
+    mo.observe(nav, {
+      attributes: true,
+      subtree: true,
+      childList: true,
+      attributeFilter: ["data-active", "data-state"],
+    })
+    return () => {
+      cancelAnimationFrame(raf)
+      ro.disconnect()
+      mo.disconnect()
+    }
+  }, [navRef, pilulaRef, chave])
+}
+
 /** Recolhe/expande a barra (atalho Ctrl+B). Recolhida, mostra só o ícone com a dica. */
 function BotaoRecolher() {
   const { state, toggleSidebar } = useSidebar()
@@ -174,7 +237,10 @@ export function AppSidebar() {
   // somem, e a única seção vira "Compartilhado" (Configurações continua pros dois tipos).
   const somenteDivisao = me.data?.tipo === "divisao"
   const secoes = somenteDivisao ? navSectionsDivisaoOnly : navSections
-  const { isMobile, setOpenMobile } = useSidebar()
+  const { isMobile, setOpenMobile, state } = useSidebar()
+  const navRef = useRef<HTMLDivElement>(null)
+  const pilulaRef = useRef<HTMLSpanElement>(null)
+  usePilulaAtiva(navRef, pilulaRef, `${pathname}|${state}`)
   // Mobile (gaveta): ir para outra rota — por qualquer link do menu — fecha a gaveta.
   useEffect(() => setOpenMobile(false), [pathname, setOpenMobile])
 
@@ -208,10 +274,20 @@ export function AppSidebar() {
         }
       >
         <SidebarGroup>
-          <SidebarGroupContent>
-            <SidebarMenu>
+          <SidebarGroupContent ref={navRef} className="relative">
+            {/* Pílula do item ativo: uma só, que DESLIZA até o item clicado (em vez de o fundo
+                piscar de um item para o outro). Os itens ativos ficam com fundo transparente. */}
+            <span
+              ref={pilulaRef}
+              aria-hidden
+              className="pointer-events-none absolute top-0 left-0 rounded-full bg-sidebar-accent opacity-0 data-pronto:transition-[transform,width,height,opacity] data-pronto:duration-300 data-pronto:ease-(--ease-out) motion-reduce:transition-none"
+            />
+            <SidebarMenu className="relative [&_[data-active=true]]:bg-transparent">
               {!somenteDivisao && (
-                <NavItemButton item={dashboardItem} pathname={pathname} />
+                <>
+                  <NavItemButton item={inicioItem} pathname={pathname} />
+                  <NavItemButton item={dashboardItem} pathname={pathname} />
+                </>
               )}
 
               {/* Investimentos (seção) fica logo após Planejamento, antes de Compartilhado. */}

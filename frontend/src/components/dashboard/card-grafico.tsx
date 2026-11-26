@@ -29,7 +29,7 @@ export function CardGrafico({
     <Card className="min-w-0">
       <CardHeader className="flex-row flex-wrap items-start justify-between gap-x-4 gap-y-2">
         <div className="min-w-0">
-          <CardTitle className="text-base">{titulo}</CardTitle>
+          <CardTitle>{titulo}</CardTitle>
           {descricao ? <CardDescription>{descricao}</CardDescription> : null}
         </div>
         {acao}

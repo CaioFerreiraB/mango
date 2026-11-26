@@ -7,9 +7,12 @@ import { cn } from "@/lib/utils"
 export function Mascote({
   cena,
   className,
+  style,
 }: {
   cena: Cena
   className?: string
+  /** Variáveis da coreografia (`--atraso` etc.). */
+  style?: React.CSSProperties
 }) {
   const me = useMe()
   return (
@@ -22,6 +25,7 @@ export function Mascote({
       width={512}
       height={512}
       draggable={false}
+      style={style}
       className={cn(
         "pointer-events-none object-contain select-none",
         className

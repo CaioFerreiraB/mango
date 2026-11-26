@@ -140,7 +140,7 @@ export function AssinaturasPage() {
           />
           <Card>
             <CardHeader className="pb-0">
-              <CardTitle className="text-base">Por categoria</CardTitle>
+              <CardTitle>Por categoria</CardTitle>
             </CardHeader>
             <CardContent>
               <GraficoPorCategoria
@@ -231,7 +231,7 @@ function AssinaturaRow({
     <>
       <Card
         className={cn(
-          "gap-0 overflow-hidden p-0 transition-[border-color,transform] duration-150 ease-out hover:border-primary/50 has-[button:active]:scale-[0.99] motion-reduce:has-[button:active]:scale-100",
+          "superficie-interativa gap-0 overflow-hidden p-0",
           !assinatura.ativa && "opacity-60"
         )}
       >
