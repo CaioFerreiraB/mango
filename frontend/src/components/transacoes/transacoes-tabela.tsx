@@ -52,14 +52,18 @@ function corTile(type: string) {
 function MarcadorDivisao({
   transacao,
   className,
+  oculto = false,
 }: {
   transacao: Transacao
   className: string
+  /** Modo privacidade: o rótulo diz que é dividida, sem os valores. */
+  oculto?: boolean
 }) {
   if (!transacao.divisao) return null
   const d = transacao.divisao
-  const texto =
-    Math.abs(valorEfetivoCentavos(transacao)) === d.valor_total_centavos
+  const texto = oculto
+    ? "Dividida"
+    : Math.abs(valorEfetivoCentavos(transacao)) === d.valor_total_centavos
       ? `Dividida: sua parte ${formatBRL(d.minha_parte_centavos)} de ${formatBRL(d.valor_total_centavos)}`
       : `Dividida: no orçamento ${formatBRL(d.minha_parte_centavos)} (transação menos ${formatBRL(d.outros_centavos)} da parte dos outros)`
   return (
@@ -70,9 +74,11 @@ function MarcadorDivisao({
 }
 
 /** Linha secundária de um lançamento de divisão: quem pagou e o que conta para o usuário. */
-function subtituloLancamento(l: DivisaoLancamento): string {
+function subtituloLancamento(l: DivisaoLancamento, oculto = false): string {
   if (l.pendente) return "Você pagou · vincule a transação"
-  const parte = `sua parte de ${formatBRL(l.valor_total_centavos)}`
+  const parte = oculto
+    ? "sua parte"
+    : `sua parte de ${formatBRL(l.valor_total_centavos)}`
   return l.pago_por_mim
     ? `Você pagou fora do banco · ${parte}`
     : `Pago por ${l.pago_por_nome} · ${parte}`
@@ -290,7 +296,7 @@ export function TransacoesTabela({
                             />
                           </button>
                           <p className="truncate text-xs text-muted-foreground">
-                            {subtituloLancamento(t)}
+                            {subtituloLancamento(t, oculto)}
                           </p>
                         </div>
                       </div>
@@ -392,6 +398,7 @@ export function TransacoesTabela({
                             />
                           ) : null}
                           <MarcadorDivisao
+                            oculto={oculto}
                             transacao={t}
                             className="size-3.5 shrink-0 text-muted-foreground"
                           />
@@ -506,7 +513,7 @@ export function TransacoesTabela({
                       />
                     </p>
                     <p className="truncate text-[11px] text-muted-foreground">
-                      {subtituloLancamento(t)}
+                      {subtituloLancamento(t, oculto)}
                     </p>
                     <BadgeLancamento
                       lancamento={t}
@@ -556,6 +563,7 @@ export function TransacoesTabela({
                       />
                     ) : null}
                     <MarcadorDivisao
+                      oculto={oculto}
                       transacao={t}
                       className="size-3 shrink-0 text-muted-foreground"
                     />
