@@ -15,10 +15,12 @@ import { Link } from "react-router"
 
 import { Sparkline } from "@/components/common/graficos-base"
 import { BotaoOcultar } from "@/components/common/kpi"
+import { EmptyState } from "@/components/common/empty-state"
 import { CenaMascote } from "@/components/common/mascote-cena"
 import { Selo } from "@/components/common/selo"
 import { Valor } from "@/components/common/valor"
 import { TransacoesTabela } from "@/components/transacoes/transacoes-tabela"
+import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useMe } from "@/lib/api/auth"
 import { useContas, useSaldoContasSerie } from "@/lib/api/contas"
@@ -120,6 +122,22 @@ export function InicioPage() {
   // para variar a frase — não é sorteio que precise de aleatoriedade de verdade.
   const [sorteio] = useState(() => Math.floor(Date.now() / 1000))
   const bancos = contas.data?.filter((c) => c.type === "BANK").length
+
+  // Nenhuma conta conectada: um hub de zeros não diz nada — ensina o próximo passo (como o
+  // Dashboard faz).
+  if (contas.isSuccess && contas.data.length === 0)
+    return (
+      <EmptyState
+        icon={Landmark}
+        cena="money"
+        title="Conecte o Open Finance para começar"
+        description="Assim que você conectar uma conta pelo Pluggy, o Início mostra seu saldo, o que precisa de atenção e o resumo do mês."
+      >
+        <Button asChild>
+          <Link to="/configuracoes">Conectar conta</Link>
+        </Button>
+      </EmptyState>
+    )
 
   return (
     <div className="space-y-8">
@@ -265,7 +283,15 @@ function FaixaMarca({
         </p>
         <div className="mt-4 flex flex-wrap items-center gap-2 text-sm">
           {variacao != null && variacao !== 0 ? (
-            <span className="inline-flex items-center gap-1 rounded-full bg-[color-mix(in_oklab,var(--primary)_10%,transparent)] px-3 py-1 font-bold whitespace-nowrap text-accent-ink">
+            // Alta realçada no accent; queda em texto neutro (o "−" carrega o sentido, DESIGN.md).
+            <span
+              className={cn(
+                "inline-flex items-center gap-1 rounded-full px-3 py-1 font-bold whitespace-nowrap",
+                variacao > 0
+                  ? "bg-[color-mix(in_oklab,var(--primary)_10%,transparent)] text-accent-ink"
+                  : "bg-muted text-foreground"
+              )}
+            >
               <Valor
                 centavos={variacao}
                 sinal
@@ -278,7 +304,16 @@ function FaixaMarca({
               </span>
             </span>
           ) : null}
-          {contas != null ? (
+          {contas === 0 ? (
+            // Só cartões conectados: em vez de "0 contas", o caminho para conectar uma.
+            <Link
+              to="/configuracoes"
+              className="inline-flex items-center gap-0.5 rounded-full px-2 py-1 font-bold text-foreground/80 transition-colors hover:bg-muted hover:text-foreground"
+            >
+              Conectar conta
+              <ChevronRight className="size-4" aria-hidden />
+            </Link>
+          ) : contas != null ? (
             <Link
               to="/contas"
               className="group/contas inline-flex items-center gap-0.5 rounded-full px-2 py-1 font-bold text-foreground/80 transition-colors hover:bg-muted hover:text-foreground"
@@ -672,7 +707,9 @@ function SecaoOrcamento({ oculto }: { oculto: boolean }) {
   const gasto =
     itens.reduce((s, i) => s + i.realizado_centavos, 0) +
     (data?.nao_planejado_despesa_centavos ?? 0)
-  const pct = limite ? Math.round((gasto / limite) * 100) : 0
+  // Estado pela razão exata; o arredondamento é só do texto (99,6% não pode virar "estourado").
+  const razao = limite ? gasto / limite : 0
+  const pct = Math.round(razao * 100)
   const restante = limite - gasto
   return (
     <Secao
@@ -695,11 +732,11 @@ function SecaoOrcamento({ oculto }: { oculto: boolean }) {
             />
           </Numero>
           <Barra
-            pct={pct}
+            pct={razao * 100}
             tom={
-              pct >= 100
+              razao >= 1
                 ? "bg-negative"
-                : pct >= 75
+                : razao >= 0.75
                   ? "bg-warning"
                   : "bg-success"
             }
@@ -878,6 +915,18 @@ function UltimasTransacoes({ oculto }: { oculto: boolean }) {
       <div className="rounded-2xl border border-transparent bg-card p-2 shadow-(--shadow-card) md:p-3 dark:border-border/70">
         {ultimas.isLoading ? (
           <Skeleton className="my-2 h-64 w-full rounded-xl" />
+        ) : ultimas.isError ? (
+          // Falha não é "nenhuma transação": diz o que houve e deixa tentar de novo.
+          <div className="flex flex-col items-center gap-3 py-8 text-center text-sm text-muted-foreground">
+            Não foi possível carregar as transações.
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => ultimas.refetch()}
+            >
+              Tentar de novo
+            </Button>
+          </div>
         ) : ultimas.data?.items.length ? (
           <TransacoesTabela
             items={ultimas.data.items}

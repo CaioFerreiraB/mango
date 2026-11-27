@@ -156,7 +156,15 @@ export function CardDestaque({
             />
           ) : null}
         </div>
-        <div className="mt-2 text-[2.25rem] leading-none font-extrabold tracking-[-0.04em] whitespace-nowrap tabular-nums @md:text-[2.75rem] @3xl:text-[3.25rem]">
+        {/* Número indivisível: o tamanho é o menor entre o degrau da faixa e o que cabe na largura
+            útil do card — (100cqi − padding − reserva do mascote) ÷ 9em, folga para
+            "R$ 1.234.567,89". A reserva só existe a partir de @xl, quando o mascote aparece. */}
+        <div
+          className={cn(
+            "mt-2 text-[min(2.25rem,calc((100cqi-var(--reserva))/9))] leading-none font-extrabold tracking-[-0.04em] whitespace-nowrap tabular-nums [--reserva:3.5rem] @md:text-[min(2.75rem,calc((100cqi-var(--reserva))/9))] @3xl:text-[min(3.25rem,calc((100cqi-var(--reserva))/9))]",
+            (mascote || arte) && "@xl:[--reserva:19.5rem]"
+          )}
+        >
           {valor ??
             (centavos != null ? (
               <Valor

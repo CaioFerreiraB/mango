@@ -166,7 +166,9 @@ function AbaResumo({
                 ? "Você tem mais a receber"
                 : data.saldo_total_centavos < 0
                   ? "Você tem mais a pagar"
-                  : "Tudo acertado"
+                  : data.pessoas_a_receber || data.pessoas_a_pagar
+                    ? "O que você recebe e paga se equilibra"
+                    : "Tudo acertado"
             }
             estatisticas={[
               {

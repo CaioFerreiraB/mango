@@ -1,5 +1,5 @@
 import { ChevronRight, PanelLeft } from "lucide-react"
-import { Fragment, useEffect, useLayoutEffect, useRef, useState } from "react"
+import { Fragment, useEffect, useLayoutEffect, useState } from "react"
 import { NavLink, useLocation } from "react-router"
 
 import { NavUser } from "@/components/layout/nav-user"
@@ -183,13 +183,11 @@ function marcarPronta(pilula: HTMLElement) {
 /** Mantém a pílula sobre o item ativo: re-mede na troca de rota/estado, quando uma seção abre ou
  *  fecha (o ResizeObserver acompanha a animação de altura) e quando `data-active` muda. */
 function usePilulaAtiva(
-  navRef: React.RefObject<HTMLDivElement | null>,
-  pilulaRef: React.RefObject<HTMLSpanElement | null>,
+  nav: HTMLDivElement | null,
+  pilula: HTMLSpanElement | null,
   chave: string
 ) {
   useLayoutEffect(() => {
-    const nav = navRef.current
-    const pilula = pilulaRef.current
     if (!nav || !pilula) return
     const medir = () => posicionarPilula(pilula, nav)
     medir()
@@ -209,7 +207,7 @@ function usePilulaAtiva(
       ro.disconnect()
       mo.disconnect()
     }
-  }, [navRef, pilulaRef, chave])
+  }, [nav, pilula, chave])
 }
 
 /** Recolhe/expande a barra (atalho Ctrl+B). Recolhida, mostra só o ícone com a dica. */
@@ -238,9 +236,11 @@ export function AppSidebar() {
   const somenteDivisao = me.data?.tipo === "divisao"
   const secoes = somenteDivisao ? navSectionsDivisaoOnly : navSections
   const { isMobile, setOpenMobile, state } = useSidebar()
-  const navRef = useRef<HTMLDivElement>(null)
-  const pilulaRef = useRef<HTMLSpanElement>(null)
-  usePilulaAtiva(navRef, pilulaRef, `${pathname}|${state}`)
+  // Callback refs em estado (não useRef): no celular a sidebar vive numa gaveta que só monta ao
+  // abrir — o efeito precisa rodar quando o <nav> aparece, não só no 1º render.
+  const [nav, setNav] = useState<HTMLDivElement | null>(null)
+  const [pilula, setPilula] = useState<HTMLSpanElement | null>(null)
+  usePilulaAtiva(nav, pilula, `${pathname}|${state}`)
   // Mobile (gaveta): ir para outra rota — por qualquer link do menu — fecha a gaveta.
   useEffect(() => setOpenMobile(false), [pathname, setOpenMobile])
 
@@ -274,11 +274,11 @@ export function AppSidebar() {
         }
       >
         <SidebarGroup>
-          <SidebarGroupContent ref={navRef} className="relative">
+          <SidebarGroupContent ref={setNav} className="relative">
             {/* Pílula do item ativo: uma só, que DESLIZA até o item clicado (em vez de o fundo
                 piscar de um item para o outro). Os itens ativos ficam com fundo transparente. */}
             <span
-              ref={pilulaRef}
+              ref={setPilula}
               aria-hidden
               className="pointer-events-none absolute top-0 left-0 rounded-full bg-sidebar-accent opacity-0 data-pronto:transition-[transform,width,height,opacity] data-pronto:duration-300 data-pronto:ease-(--ease-out) motion-reduce:transition-none"
             />

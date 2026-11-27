@@ -18,10 +18,11 @@ export function PageHeader({
   return (
     // Grade: título | ações na 1ª linha; a descrição desce para a largura toda no celular (não
     // fica espremida ao lado dos botões) e volta para baixo do título a partir de `sm`.
-    // `min-content` no título: a palavra mais longa nunca passa por baixo das ações — com pouco
-    // espaço (chat encaixado) são os botões que quebram em mais linhas.
-    <header className="grid grid-cols-[minmax(min-content,1fr)_auto] items-start gap-x-4 gap-y-1">
-      <h1 className="col-start-1 row-start-1 self-center text-[1.625rem] leading-tight font-extrabold tracking-[-0.03em] text-balance md:text-[1.875rem]">
+    // Título com piso de 16rem: cabe qualquer palavra comum inteira ("Configurações") e, com pouco
+    // espaço (chat encaixado), são os botões que quebram em mais linhas. Um token longo sem espaço
+    // (nome de conta, por exemplo) quebra dentro da palavra em vez de empurrar as ações para fora.
+    <header className="grid grid-cols-[minmax(min(16rem,100%),1fr)_auto] items-start gap-x-4 gap-y-1">
+      <h1 className="col-start-1 row-start-1 min-w-0 self-center text-[1.625rem] leading-tight font-extrabold tracking-[-0.03em] text-balance [overflow-wrap:anywhere] md:text-[1.875rem]">
         {titulo}
       </h1>
       {acoes ? (
