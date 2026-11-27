@@ -100,37 +100,56 @@ export function ContasPage() {
         </EmptyState>
       ) : (
         <>
-          <CardDestaque
-            titulo="Saldo em contas"
-            centavos={saldoTotal}
-            mascote="money"
-            rodape={contas.length === 1 ? "1 conta" : `${contas.length} contas`}
-            estatisticas={
-              cartoes.length
-                ? [
-                    {
-                      rotulo:
-                        cartoes.length === 1
-                          ? "Fatura do cartão"
-                          : `Faturas de ${cartoes.length} cartões`,
-                      valor: <Valor centavos={faturas} absoluto neutro />,
-                    },
-                  ]
-                : undefined
-            }
-            grafico={
-              serie.length >= 2 ? (
-                <Sparkline
-                  dados={serie}
-                  nome="Saldo"
-                  altura={80}
-                  formatarRotulo={formatDate}
-                  formatarValor={formatBRL}
-                  ariaLabel="Saldo somado das contas nos últimos 30 dias"
-                />
-              ) : undefined
-            }
-          />
+          {contas.length ? (
+            <CardDestaque
+              titulo="Saldo em contas"
+              centavos={saldoTotal}
+              mascote="money"
+              rodape={
+                contas.length === 1 ? "1 conta" : `${contas.length} contas`
+              }
+              estatisticas={
+                cartoes.length
+                  ? [
+                      {
+                        rotulo:
+                          cartoes.length === 1
+                            ? "Fatura do cartão"
+                            : `Faturas de ${cartoes.length} cartões`,
+                        valor: <Valor centavos={faturas} absoluto neutro />,
+                      },
+                    ]
+                  : undefined
+              }
+              grafico={
+                serie.length >= 2 ? (
+                  <Sparkline
+                    dados={serie}
+                    nome="Saldo"
+                    altura={80}
+                    formatarRotulo={formatDate}
+                    formatarValor={formatBRL}
+                    ariaLabel="Saldo somado das contas nos últimos 30 dias"
+                  />
+                ) : undefined
+              }
+            />
+          ) : (
+            // Só cartões conectados: "Saldo em contas R$ 0,00 · 0 contas" seria um número falso —
+            // o número-âncora passa a ser o que se deve nas faturas.
+            <CardDestaque
+              titulo={
+                cartoes.length === 1
+                  ? "Fatura do cartão"
+                  : "Faturas dos cartões"
+              }
+              centavos={Math.abs(faturas)}
+              mascote="money"
+              rodape={
+                cartoes.length === 1 ? "1 cartão" : `${cartoes.length} cartões`
+              }
+            />
+          )}
           <Secao titulo="Contas" contas={contas} saldos={saldos} />
           <Secao titulo="Cartões" contas={cartoes} grid={GRID_CARTOES} />
         </>

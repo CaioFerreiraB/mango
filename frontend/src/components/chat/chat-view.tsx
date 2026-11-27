@@ -569,7 +569,11 @@ function CartaoProposta({ proposta }: { proposta: Proposta }) {
 
 // Rascunho fora do componente: o Composer remonta ao trocar painel ↔ página ou ao cruzar o corte
 // do mobile (o /chat vira portal), e a mensagem ainda não enviada não pode sumir nessas trocas.
-let rascunho = ""
+// Guardado com o dono: depois de sair e entrar com outro usuário, o texto do anterior não aparece.
+const rascunho: { dono: number | null; texto: string } = {
+  dono: null,
+  texto: "",
+}
 
 function Composer({
   ocupado,
@@ -584,9 +588,13 @@ function Composer({
   onParar: () => void
   variante: Variante
 }) {
-  const [texto, setTextoLocal] = useState(() => rascunho)
+  const dono = useMe().data?.id ?? null
+  const [texto, setTextoLocal] = useState(() =>
+    rascunho.dono === dono ? rascunho.texto : ""
+  )
   const setTexto = (t: string) => {
-    rascunho = t
+    rascunho.dono = dono
+    rascunho.texto = t
     setTextoLocal(t)
   }
   const ref = useRef<HTMLTextAreaElement>(null)

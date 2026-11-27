@@ -32,8 +32,8 @@ function useTween(
     if (!ativo || de === centavos || !no || no.nodeType !== Node.TEXT_NODE)
       return
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return
-    const formatar = fmt.current
-    let escrito = formatar(de)
+    // `fmt.current` a cada quadro: se `sinal` (o formatador) mudar no meio, o texto já acompanha.
+    let escrito = fmt.current(de)
     escrever(no, escrito)
     const t0 = performance.now()
     const duracao = 480
@@ -41,7 +41,7 @@ function useTween(
     const passo = (t: number) => {
       const p = Math.min((t - t0) / duracao, 1)
       const e = 1 - (1 - p) ** 4 // ease-out quart
-      escrito = formatar(Math.round(de + (centavos - de) * e))
+      escrito = fmt.current(Math.round(de + (centavos - de) * e))
       escrever(no, escrito)
       if (p < 1) raf = requestAnimationFrame(passo)
     }
@@ -50,7 +50,7 @@ function useTween(
       cancelAnimationFrame(raf)
       // Só devolve o valor final se o texto ainda é o que a animação escreveu: se o React já o
       // trocou (ex.: "R$ ••••" ao ocultar), reescrever aqui vazaria o número escondido.
-      if (no.textContent === escrito) escrever(no, formatar(centavos))
+      if (no.textContent === escrito) escrever(no, fmt.current(centavos))
     }
   }, [centavos, ativo, ref])
 }

@@ -42,9 +42,10 @@ function useAreaVisivel(ativo: boolean): CSSProperties | undefined {
   } as CSSProperties
 }
 
-// Mesmo corte do `md:` (e do `useIsMobile`), mas lido já no 1º render: decidir o portal depois
-// remontaria a conversa (e o foco do campo) logo após abrir.
-const MOBILE = "(max-width: 767px)"
+// Exatamente o oposto do `md:` do Tailwind 4 (`min-width: 48rem`), em rem — com outra fonte
+// padrão no navegador os px mudariam e portal e classes discordariam. Lido já no 1º render:
+// decidir o portal depois remontaria a conversa (e o foco do campo) logo após abrir.
+const MOBILE = "not all and (min-width: 48rem)"
 const assinarMobile = (aviso: () => void) => {
   const mql = window.matchMedia(MOBILE)
   mql.addEventListener("change", aviso)

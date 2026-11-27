@@ -31,6 +31,7 @@ import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { useMovimentoReduzido } from "@/hooks/use-movimento-reduzido"
 import { useIconeCategoria } from "@/lib/api/categoria-icones"
 import { useMapaCategorias } from "@/lib/api/categorias"
 import {
@@ -457,6 +458,9 @@ function ResumoSecao({
   const r = ROTULOS[tipo]
   const excedido = despesa && restanteTotal < 0
   const pct = Math.max(0, percentualTotal)
+  // Estado pela razão exata (99,6% arredonda para 100 no texto, mas ainda não estourou).
+  const razao =
+    totalOrcado > 0 ? totalRealizado / totalOrcado : totalRealizado > 0 ? 1 : 0
   return (
     // Herói = o que resta (a pergunta do mês), com orçado e realizado na própria linha do herói.
     <CardDestaque
@@ -488,9 +492,9 @@ function ResumoSecao({
               "h-full origin-left animate-[barra-cresce_800ms_var(--ease-out)_both] rounded-full motion-reduce:animate-none",
               // Na despesa, 100% já é o teto: estado de alerta mesmo com restante zero (o texto
               // "Excedido no mês" continua só para quando passa do orçado).
-              excedido || (despesa && pct >= 100)
+              excedido || (despesa && razao >= 1)
                 ? "bg-negative"
-                : pct >= 75 && despesa
+                : razao >= 0.75 && despesa
                   ? "bg-warning"
                   : "bg-success"
             )}
@@ -565,6 +569,10 @@ function ItemCategoria({
   // Conteúdo continua montado enquanto fecha (a altura anima até 0) e sai no fim da transição.
   const [montado, setMontado] = useState(aberta)
   if (aberta && !montado) setMontado(true)
+  // Com movimento reduzido não há transição — e sem `transitionend` o conteúdo fechado ficaria
+  // montado (e consultando) para sempre: desmonta na hora.
+  const reduzido = useMovimentoReduzido()
+  if (!aberta && montado && reduzido) setMontado(false)
 
   function alternar(e: MouseEvent<HTMLButtonElement>) {
     // A linha tocada fica parada na tela: se outra categoria ACIMA fecha, a página subiria junto —
