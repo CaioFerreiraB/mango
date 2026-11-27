@@ -4,6 +4,7 @@ import type { CSSProperties, ReactNode } from "react"
 import { CenaMascote, Relevo } from "@/components/common/mascote-cena"
 import { Valor } from "@/components/common/valor"
 import { Card } from "@/components/ui/card"
+import { formatBRL } from "@/lib/format"
 import type { Cena } from "@/lib/illustrations"
 import { cn } from "@/lib/utils"
 
@@ -157,11 +158,20 @@ export function CardDestaque({
           ) : null}
         </div>
         {/* Número indivisível: o tamanho é o menor entre o degrau da faixa e o que cabe na largura
-            útil do card — (100cqi − padding − reserva do mascote) ÷ 9em, folga para
-            "R$ 1.234.567,89". A reserva só existe a partir de @xl, quando o mascote aparece. */}
+            útil do card — (100cqi − padding − reserva do mascote) ÷ a largura do texto em em
+            (~0,6em por caractere, mínimo 9em = "R$ 1.234.567,89"). A reserva só existe a partir
+            de @xl, quando o mascote aparece. */}
         <div
+          style={
+            {
+              "--ems":
+                centavos != null && valor == null
+                  ? Math.max(9, formatBRL(centavos).length * 0.6)
+                  : 9,
+            } as CSSProperties
+          }
           className={cn(
-            "mt-2 text-[min(2.25rem,calc((100cqi-var(--reserva))/9))] leading-none font-extrabold tracking-[-0.04em] whitespace-nowrap tabular-nums [--reserva:3.5rem] @md:text-[min(2.75rem,calc((100cqi-var(--reserva))/9))] @3xl:text-[min(3.25rem,calc((100cqi-var(--reserva))/9))]",
+            "mt-2 text-[min(2.25rem,calc((100cqi-var(--reserva))/var(--ems)))] leading-none font-extrabold tracking-[-0.04em] whitespace-nowrap tabular-nums [--reserva:3.5rem] @md:text-[min(2.75rem,calc((100cqi-var(--reserva))/var(--ems)))] @3xl:text-[min(3.25rem,calc((100cqi-var(--reserva))/var(--ems)))]",
             (mascote || arte) && "@xl:[--reserva:19.5rem]"
           )}
         >
