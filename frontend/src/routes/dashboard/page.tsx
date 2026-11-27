@@ -314,6 +314,7 @@ export function DashboardPage() {
     return (
       <EmptyState
         icon={Landmark}
+        tituloComo="h1"
         title="Conecte o Open Finance para começar"
         description="Assim que você conectar uma conta pelo Pluggy, o painel mostra entradas, saídas e resumos do período."
       >

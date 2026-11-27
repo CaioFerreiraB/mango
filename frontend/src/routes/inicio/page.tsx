@@ -123,13 +123,28 @@ export function InicioPage() {
   const [sorteio] = useState(() => Math.floor(Date.now() / 1000))
   const bancos = contas.data?.filter((c) => c.type === "BANK").length
 
+  // Antes de saber se há contas, nada de KPIs zerados: o esqueleto do herói e das seções.
+  if (contas.isPending)
+    return (
+      <div className="space-y-8" aria-busy="true">
+        <Skeleton className="h-80 w-full rounded-[1.75rem]" />
+        <Skeleton className="h-24 w-full rounded-2xl" />
+        <div className="grid gap-4 md:grid-cols-3">
+          <Skeleton className="h-40 rounded-2xl" />
+          <Skeleton className="h-40 rounded-2xl" />
+          <Skeleton className="h-40 rounded-2xl" />
+        </div>
+      </div>
+    )
+
   // Nenhuma conta conectada: um hub de zeros não diz nada — ensina o próximo passo (como o
-  // Dashboard faz).
+  // Dashboard faz). Falha na consulta segue para o hub, que mostra o estado de cada seção.
   if (contas.isSuccess && contas.data.length === 0)
     return (
       <EmptyState
         icon={Landmark}
         cena="money"
+        tituloComo="h1"
         title="Conecte o Open Finance para começar"
         description="Assim que você conectar uma conta pelo Pluggy, o Início mostra seu saldo, o que precisa de atenção e o resumo do mês."
       >
