@@ -36,9 +36,27 @@
   --color-negative-ink: var(--negative-ink);
   --color-positive-foreground: var(--positive-foreground);
   --color-negative-foreground: var(--negative-foreground);
+  /* Estados (status/progresso): sucesso (pago, revisado) e aviso (pendente, perto do limite).
+     Mesma divisão fill × ink dos financeiros: preenchimento para ponto/barra, `*-ink` para texto. */
+  --color-success: var(--success);
+  --color-success-ink: var(--success-ink);
+  --color-warning: var(--warning);
+  --color-warning-ink: var(--warning-ink);
   /* Accent legível para texto de dado (números realçados): tom do accent com lightness
        normalizada p/ contraste AA em ambos os temas — ver bloco @supports abaixo. */
   --color-accent-ink: var(--accent-ink);
+  /* Ícones e linhas: a cor EXATA do accent (o ink, ajustado p/ 4,5:1, fica só para texto). */
+  --color-accent-icone: var(--accent-icone);
+  /* Par Wise do accent: tom vivo (fundo do botão primário, atalhos, destaques) + tinta escura do
+     mesmo matiz (texto/ícone sobre o vivo); `marca-suave` = seleção/realce leve. */
+  --color-marca-viva: var(--marca-viva);
+  --color-marca-tinta: var(--marca-tinta);
+  --color-marca-suave: var(--marca-suave);
+  /* Cor FORTE do accent (faixa de marca, botão primário; texto branco AA em qualquer preset) e o
+     amarelo-manga fixo do logo — a faísca de identidade que não muda com o accent. */
+  --color-marca-forte: var(--marca-forte);
+  --color-manga: var(--manga);
+  --color-manga-tinta: var(--manga-tinta);
   --color-destaque-a: var(--destaque-a);
   --color-destaque-b: var(--destaque-b);
   --color-accent-foreground: var(--accent-foreground);
@@ -67,32 +85,40 @@
 :root {
   /* Altura útil da bottom bar do mobile (fora a safe area) — ver `layout/bottom-nav.tsx`. */
   --bottom-nav-h: 4rem;
+  /* Superfícies NEUTRAS (DESIGN.md §Superfícies): página e cards brancos, cards com contorno fino;
+     o accent nunca pinta fundo de card nem da página — aparece em ícones, linhas, gráficos,
+     seleção, ações e no relevo atrás do mascote. */
   --background: oklch(1 0 0);
-  /* Tinta slate, não preto: o quase-preto anterior (L 0.148) pesava em todo texto. */
-  --foreground: oklch(0.3 0.016 255);
+  --foreground: oklch(0.2 0.01 265);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.3 0.016 255);
+  --card-foreground: oklch(0.2 0.01 265);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.3 0.016 255);
+  --popover-foreground: oklch(0.2 0.01 265);
   --primary: oklch(0.491 0.27 292.581);
   --primary-foreground: oklch(0.969 0.016 293.756);
-  --secondary: oklch(0.967 0.001 286.375);
-  --secondary-foreground: oklch(0.32 0.016 255);
-  --muted: oklch(0.963 0.002 197.1);
-  --muted-foreground: oklch(0.54 0.018 250);
-  --accent: oklch(0.963 0.002 197.1);
+  --secondary: oklch(0.962 0.003 265);
+  --secondary-foreground: oklch(0.2 0.01 265);
+  --muted: oklch(0.962 0.003 265);
+  --muted-foreground: oklch(0.52 0.015 265);
+  --accent: oklch(0.962 0.003 265);
   --accent-foreground: oklch(0.32 0.016 255);
   --destructive: oklch(0.577 0.245 27.325);
   /* Cores da marca para valores financeiros (iguais nos dois temas; o .dark não redefine). */
   --positive: #4268f1;
-  --negative: #f36846;
-  /* Texto sobre o preenchimento cheio: branco no azul (4.69:1), tinta escura no laranja (5.5:1). */
+  /* Saída = framboesa só no PREENCHIMENTO (barras, calendário, pontos, gráficos); o número de
+     saída fica na cor do texto, com o "−" carregando o sentido (estilo Wise). */
+  --negative: #f0506e;
+  /* Texto sobre o preenchimento cheio: branco no azul (4.69:1), tinta escura na framboesa (5.4:1). */
   --positive-foreground: #ffffff;
   --negative-foreground: oklch(0.218 0.008 223.9);
-  /* Número em texto (12–14px precisa de AA 4.5:1): o laranja da marca dá 3.05:1 no branco → L 0.56
-     (5.07:1 no branco, 4.55:1 sobre --muted); o azul dá 4.2:1 sobre --muted → L 0.55. */
+  /* Número em texto (12–14px precisa de AA 4.5:1): o azul dá 4.2:1 sobre --muted → L 0.55. Saída
+     em texto é neutra (ver --negative). */
   --positive-ink: oklch(0.55 0.21 267.454);
-  --negative-ink: oklch(0.56 0.18 34.962);
+  --negative-ink: var(--foreground);
+  --success: oklch(0.66 0.14 165);
+  --success-ink: oklch(0.5 0.11 165); /* 5.2:1 no branco */
+  --warning: oklch(0.78 0.16 70);
+  --warning-ink: oklch(0.53 0.13 60); /* 5.0:1 no branco */
   --accent-ink: oklch(
     0.48 0.16 292.581
   ); /* fallback estático (violeta); accent real no @supports */
@@ -100,9 +126,39 @@
      qualquer preset e tema. Fallback estático (violeta); accent real no @supports. */
   --destaque-a: oklch(0.44 0.17 292.581);
   --destaque-b: oklch(0.29 0.11 292.581);
-  --border: oklch(0.925 0.005 214.3);
-  --input: oklch(0.925 0.005 214.3);
+  --border: oklch(0.925 0.004 265);
+  --input: oklch(0.89 0.006 265);
+  --marca-viva: oklch(0.84 0.13 292);
+  --marca-tinta: oklch(0.3 0.12 292);
+  --marca-suave: oklch(0.94 0.035 292);
+  --marca-forte: oklch(0.47 0.24 292);
+  --manga: oklch(0.85 0.16 82);
+  --manga-tinta: oklch(0.3 0.07 60);
   --ring: oklch(0.723 0.014 214.4);
+  /* Elevação: o card não tem borda — a sombra (curta + difusa, tinta fria) é o que o separa do
+     canvas. Hover sobe um degrau; popover/dialog usam a mais alta. */
+  /* Superfícies são chapadas (Wise): sem sombra. Só o que flutua por cima (popover, dialog,
+     barra inferior) tem elevação. */
+  /* Profundidade (Wise): sem borda — um contato quase invisível + sombra difusa e baixa; o hover sobe um degrau. */
+  --shadow-card:
+    0 0 0 1px oklch(0.2 0.02 265 / 0.025), 0 1px 3px oklch(0.2 0.02 265 / 0.06),
+    0 12px 32px -12px oklch(0.2 0.02 265 / 0.16);
+  --shadow-card-hover:
+    0 2px 4px oklch(0.2 0.02 265 / 0.05),
+    0 20px 40px -14px oklch(0.2 0.02 265 / 0.26);
+  --shadow-pop:
+    0 4px 12px -2px oklch(0.25 0.02 260 / 0.1),
+    0 24px 48px -12px oklch(0.25 0.02 260 / 0.22);
+  /* Painel do assistente: elevação que cabe INTEIRA na folga de 1rem do contêiner (que recorta
+     por causa da animação de largura) — alcance ≤ 14px para baixo e 6px para os lados. */
+  --shadow-painel:
+    0 0 0 1px oklch(0.2 0.02 265 / 0.04),
+    0 2px 6px -1px oklch(0.2 0.02 265 / 0.08),
+    0 8px 24px -6px oklch(0.2 0.02 265 / 0.18);
+  /* Curvas de motion (emil-design-eng): ease-out forte p/ entradas e respostas, drawer estilo iOS. */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
   --chart-1: oklch(0.811 0.111 293.571);
   --chart-2: oklch(0.606 0.25 292.717);
   --chart-3: oklch(0.541 0.281 293.009);
@@ -119,41 +175,54 @@
   --chart-cat-7: #6250d6;
   --chart-cat-8: #e34948;
   --chart-cat-outras: oklch(0.78 0.012 255);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.987 0.002 197.1);
-  --sidebar-foreground: oklch(0.42 0.02 255);
-  --sidebar-icon: oklch(0.55 0.02 255); /* um degrau abaixo do texto */
+  --grafico-destaque: var(--primary);
+  --accent-icone: var(--primary);
+  --radius: 0.8rem;
+  --sidebar: oklch(1 0 0);
+  --sidebar-foreground: oklch(0.33 0.012 265);
+  --sidebar-icon: oklch(0.5 0.015 265); /* um degrau abaixo do texto */
   --sidebar-primary: oklch(0.541 0.281 293.009);
   --sidebar-primary-foreground: oklch(0.969 0.016 293.756);
-  --sidebar-accent: oklch(0.963 0.002 197.1);
-  --sidebar-accent-foreground: oklch(0.3 0.016 255);
+  --sidebar-accent: oklch(0.962 0.003 265);
+  --sidebar-accent-foreground: oklch(0.2 0.01 265);
   --sidebar-border: oklch(0.925 0.005 214.3);
   --sidebar-ring: oklch(0.723 0.014 214.4);
 }
 
 .dark {
-  --background: oklch(0.148 0.004 228.8);
-  --foreground: oklch(0.93 0.008 250);
-  --card: oklch(0.218 0.008 223.9);
-  --card-foreground: oklch(0.93 0.008 250);
-  --popover: oklch(0.218 0.008 223.9);
+  --background: oklch(0.16 0.004 265);
+  --foreground: oklch(0.94 0.004 265);
+  --card: oklch(0.19 0.005 265);
+  --card-foreground: oklch(0.94 0.004 265);
+  --popover: oklch(0.22 0.006 265);
   --popover-foreground: oklch(0.93 0.008 250);
   --primary: oklch(0.432 0.232 292.759);
   --primary-foreground: oklch(0.969 0.016 293.756);
   --secondary: oklch(0.274 0.006 286.033);
   --secondary-foreground: oklch(0.93 0.008 250);
-  --muted: oklch(0.275 0.011 216.9);
-  --muted-foreground: oklch(0.723 0.014 214.4);
-  --accent: oklch(0.275 0.011 216.9);
+  --muted: oklch(0.245 0.006 265);
+  --muted-foreground: oklch(0.72 0.01 265);
+  --accent: oklch(0.245 0.006 265);
   --accent-foreground: oklch(0.93 0.008 250);
   --destructive: oklch(0.704 0.191 22.216);
-  /* Texto no escuro: o azul da marca dá 3.7:1 no card → L 0.68 (5.9:1); o laranja já passa (5.7:1). */
+  --shadow-card: 0 0 #0000;
+  --shadow-card-hover: 0 16px 34px -14px oklch(0 0 0 / 0.65);
+  --marca-viva: oklch(0.8 0.13 292);
+  --marca-tinta: oklch(0.22 0.09 292);
+  --marca-suave: oklch(0.3 0.06 292);
+  --marca-forte: oklch(0.42 0.2 292);
+  --shadow-pop:
+    inset 0 0 0 1px oklch(1 0 0 / 0.08), 0 24px 48px -12px oklch(0 0 0 / 0.6);
+  --shadow-painel: 0 8px 24px -6px oklch(0 0 0 / 0.6);
+  /* Texto no escuro: o azul da marca dá 3.7:1 no card → L 0.68 (5.9:1). */
   --positive-ink: oklch(0.68 0.15 267.454);
-  --negative-ink: #f36846;
+  --negative-ink: var(--foreground);
+  --success-ink: oklch(0.76 0.13 165);
+  --warning-ink: oklch(0.82 0.13 75);
   --accent-ink: oklch(
     0.8 0.16 292.759
   ); /* fallback estático (violeta); accent real no @supports */
-  --border: oklch(1 0 0 / 10%);
+  --border: oklch(1 0 0 / 9%);
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.56 0.021 213.5);
   --chart-1: oklch(0.811 0.111 293.571);
@@ -172,7 +241,7 @@
   --chart-cat-7: #9085e9;
   --chart-cat-8: #e66767;
   --chart-cat-outras: oklch(0.48 0.012 255);
-  --sidebar: oklch(0.218 0.008 223.9);
+  --sidebar: oklch(0.15 0.008 292);
   --sidebar-foreground: oklch(0.8 0.012 255);
   --sidebar-icon: oklch(0.66 0.015 255);
   --sidebar-primary: oklch(0.606 0.25 292.717);
@@ -183,7 +252,9 @@
   --sidebar-ring: oklch(0.56 0.021 213.5);
 }
 
-/* Accent do usuário (DESIGN.md §Color): o preset define SÓ o par --primary (light/dark);
+/* Accent do usuário (DESIGN.md §Color): o preset define o par --primary (light/dark) e, quando
+   a cor é VIVA (lima, tangerina) ou clara (grafite no escuro), o --primary-foreground escuro que
+   vai por cima — no lugar de escurecer a cor para caber texto branco (era o "ferrugem").
    todos os demais tons — sidebar, pill ativo, charts — derivam dele por relative color
    syntax. Nunca duplicar tokens derivados num preset. Sem `data-accent` no <html>, vale o
    violeta default acima; os blocos :root/.dark acima são também o fallback estático para
@@ -191,10 +262,18 @@
 @supports (color: oklch(from red l c h)) {
   :root {
     --primary-foreground: oklch(from var(--primary) 0.969 0.016 h);
-    --sidebar: oklch(
-      from var(--primary) 0.972 0.009 h
-    ); /* #F6F5FB no violeta */
-    --sidebar-accent: oklch(from var(--primary) 0.94 0.03 h);
+    --marca-viva: oklch(from var(--primary) 0.84 0.13 h);
+    --marca-tinta: oklch(from var(--primary) 0.3 0.11 h);
+    --marca-suave: oklch(from var(--primary) 0.94 0.035 h);
+    /* Forte = a própria cor do preset (botão, aba ativa); o texto por cima é o
+       --primary-foreground do preset (branco ou tinta escura). */
+    --marca-forte: var(--primary);
+    /* Linha/área de gráfico em fundo branco: cores vivas descem um pouco de luz para ler. */
+    /* Gráfico = a cor exata do accent (mesma regra dos ícones). */
+    --grafico-destaque: var(--primary);
+    --sidebar: var(--background);
+    /* Item ativo da navegação = pílula neutra; o accent fica no ícone. */
+    --sidebar-accent: var(--muted);
     --sidebar-primary: var(--primary);
     --sidebar-border: oklch(from var(--primary) 0.925 0.01 h);
     --chart-1: oklch(from var(--primary) 0.81 calc(c * 0.41) h);
@@ -203,27 +282,32 @@
     --chart-4: oklch(from var(--primary) 0.49 c h);
     --chart-5: oklch(from var(--primary) 0.43 calc(c * 0.86) h);
     --chart-6: oklch(from var(--primary) 0.37 calc(c * 0.75) h);
-    --accent-ink: oklch(from var(--primary) 0.48 0.16 h);
+    --accent-ink: oklch(from var(--primary) 0.48 min(c, 0.16) h);
+    --accent-icone: var(--primary);
     --destaque-a: oklch(from var(--primary) 0.44 calc(c * 0.75) h);
     --destaque-b: oklch(from var(--primary) 0.29 calc(c * 0.5) h);
   }
   .dark {
-    --sidebar: oklch(from var(--primary) 0.218 0.008 h);
-    --sidebar-accent: oklch(from var(--primary) 0.275 0.011 h);
+    /* No escuro, só clareia o que é escuro demais p/ o fundo (vivas ficam como são). */
+    --grafico-destaque: oklch(from var(--primary) max(l, 0.72) c h);
+    --accent-icone: oklch(from var(--primary) max(l, 0.72) c h);
+    --marca-viva: oklch(from var(--primary) 0.8 0.13 h);
+    --marca-tinta: oklch(from var(--primary) 0.22 0.09 h);
+    --marca-suave: oklch(from var(--primary) 0.3 0.06 h);
+    --marca-forte: var(--primary);
+    --sidebar: var(--background);
+    --sidebar-accent: var(--muted);
     --sidebar-border: oklch(1 0 0 / 10%);
-    --accent-ink: oklch(from var(--primary) 0.8 0.16 h);
+    --accent-ink: oklch(from var(--primary) 0.8 min(c, 0.16) h);
   }
-  html[data-accent="manga"] {
-    --primary: oklch(0.646 0.194 40.967);
+  /* Tangerina e lima: vivas nos dois temas, com tinta escura por cima (6:1 e 6,9:1). */
+  html[data-accent="tangerina"] {
+    --primary: oklch(0.696 0.194 43.12);
+    --primary-foreground: oklch(0.221 0.056 53.62);
   }
-  html[data-accent="manga"].dark {
-    --primary: oklch(0.587 0.167 40.967);
-  }
-  html[data-accent="verde"] {
-    --primary: oklch(0.603 0.135 160.475);
-  }
-  html[data-accent="verde"].dark {
-    --primary: oklch(0.544 0.116 160.475);
+  html[data-accent="lima"] {
+    --primary: oklch(0.768 0.204 130.85);
+    --primary-foreground: oklch(0.294 0.077 127.95);
   }
   html[data-accent="azul"] {
     --primary: oklch(0.547 0.245 262.942);
@@ -237,11 +321,13 @@
   html[data-accent="rosa"].dark {
     --primary: oklch(0.539 0.208 1.37);
   }
-  html[data-accent="teal"] {
-    --primary: oklch(0.614 0.116 224.635);
+  /* Grafite: escuro com texto branco no claro; no escuro vira cinza-claro com tinta escura. */
+  html[data-accent="grafite"] {
+    --primary: oklch(0.278 0.03 256.85);
   }
-  html[data-accent="teal"].dark {
-    --primary: oklch(0.555 0.1 224.635);
+  html[data-accent="grafite"].dark {
+    --primary: oklch(0.887 0.011 256.7);
+    --primary-foreground: oklch(0.21 0.032 264.66);
   }
 }
 
@@ -265,6 +351,110 @@
   &::-webkit-scrollbar-thumb {
     background-color: var(--border);
     border-radius: 9999px;
+  }
+}
+
+/* Superfície de conteúdo fora do <Card> (tabelas, listas): branca, sem borda, só a sombra de
+   profundidade — no escuro a sombra some e volta o contorno. */
+@utility superficie {
+  border: 1px solid transparent;
+  background-color: var(--card);
+  box-shadow: var(--shadow-card);
+  @variant dark {
+    border-color: color-mix(in oklab, var(--border) 70%, transparent);
+  }
+}
+
+/* Card clicável inteiro: sobe 3px com sombra no hover (só com mouse) e afunda 1% na pressão
+   — inclusive quando o clique é num botão filho. Só transform/box-shadow (compositor). */
+@utility superficie-interativa {
+  cursor: pointer;
+  transition:
+    box-shadow 260ms var(--ease-out),
+    transform 260ms var(--ease-out);
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      transform: translateY(-3px);
+      box-shadow: var(--shadow-card-hover);
+    }
+  }
+  &:active,
+  &:has(button:active) {
+    transform: translateY(-1px) scale(0.99);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    &:hover,
+    &:active,
+    &:has(button:active) {
+      transform: none;
+    }
+  }
+}
+
+/* Entrada de página: o conteúdo da rota chega com um fade + 6px de subida (uma vez por troca de
+   rota, nunca em ação repetida). Reduced motion: só o fade, mais curto. */
+@keyframes entrada-pagina {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+    filter: blur(3px);
+  }
+}
+@keyframes entrada-fade {
+  from {
+    opacity: 0;
+  }
+}
+/* Ícone do atalho balança no hover (uma vez, ~0,5 s). */
+@keyframes balanca {
+  30% {
+    transform: rotate(-12deg) translateY(-2px);
+  }
+  60% {
+    transform: rotate(8deg);
+  }
+}
+/* Relevo atrás do mascote deriva devagar (decoração; para com reduced motion). */
+@keyframes deriva {
+  50% {
+    transform: translate(-10px, 5px) rotate(1.2deg);
+  }
+}
+/* Barra simples (div com largura) nasce vazia e cresce até o valor. */
+@keyframes barra-cresce {
+  from {
+    transform: scaleX(0);
+  }
+}
+/* Barra de progresso nasce vazia e cresce até o valor (o "to" é o transform inline do Radix). */
+@keyframes progresso-entra {
+  from {
+    transform: translateX(-100%);
+  }
+}
+/* Coreografia (choreograph): cada peça declara --atraso/--dist/--escala/--blur/--dur; o
+   keyframe é um só. `both` segura o estado inicial durante o atraso (sem piscar). */
+@keyframes entra {
+  from {
+    opacity: 0;
+    transform: translateY(var(--dist, 8px)) scale(var(--escala, 1));
+    filter: blur(var(--blur, 0px));
+  }
+}
+@utility entra {
+  animation: entra var(--dur, 340ms) var(--ease-out) var(--atraso, 0ms) both;
+  @media (prefers-reduced-motion: reduce) {
+    animation: entrada-fade 150ms ease both;
+  }
+}
+/* Relevo atrás do mascote (`mascote-cena.tsx`): some em direção ao texto. */
+.relevo-cena {
+  mask-image: radial-gradient(circle at 80% 100%, #000 25%, transparent 78%);
+}
+@utility animar-entrada {
+  animation: entrada-pagina 360ms var(--ease-out) both;
+  @media (prefers-reduced-motion: reduce) {
+    animation: entrada-fade 150ms ease both;
   }
 }
 

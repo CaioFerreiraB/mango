@@ -55,7 +55,7 @@ function McpLocal({ url }: { url: string }) {
     <div className="space-y-4">
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Acesso por agentes (MCP)</CardTitle>
+          <CardTitle>Acesso por agentes (MCP)</CardTitle>
           <CardDescription>
             No modo local o MCP não usa token: ele aceita só conexões desta
             máquina, como o resto do app. Aponte o agente para o endereço
@@ -91,7 +91,7 @@ function McpSelfHosted({ url }: { url: string }) {
     <div className="space-y-4">
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Acesso por agentes (MCP)</CardTitle>
+          <CardTitle>Acesso por agentes (MCP)</CardTitle>
           <CardDescription>
             Deixa agentes de IA — Claude Code, Codex, Open WebUI, bots de
             Telegram/WhatsApp — consultarem e, se você permitir, alterarem seus
@@ -409,7 +409,7 @@ function Snippets({
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">Conectar um agente</CardTitle>
+        <CardTitle>Conectar um agente</CardTitle>
         <CardDescription>
           Copie a configuração do seu cliente — o botão já inclui o token.
           Clientes que só falam stdio usam a opção JSON (via mcp-remote).

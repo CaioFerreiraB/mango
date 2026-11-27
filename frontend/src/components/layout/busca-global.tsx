@@ -9,6 +9,8 @@ import { useEffect, useState } from "react"
 import { useNavigate } from "react-router"
 
 import { Valor } from "@/components/common/valor"
+import { BOTAO_TOPO_MOBILE } from "@/components/layout/topo"
+import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import {
   Command,
@@ -21,6 +23,7 @@ import {
 } from "@/components/ui/command"
 import {
   dashboardItem,
+  inicioItem,
   investimentosSection,
   navSections,
   navSectionsDivisaoOnly,
@@ -89,11 +92,11 @@ export function BuscaGlobal() {
       <Button
         variant="outline"
         onClick={() => setAberta(true)}
-        className="hidden h-9 w-full max-w-sm justify-start gap-2 bg-muted/40 font-normal text-muted-foreground shadow-none md:flex"
+        className="hidden h-9 w-full max-w-xs justify-start gap-2 border-border bg-card font-normal text-muted-foreground hover:bg-muted md:flex"
       >
         <Search aria-hidden />
-        <span className="truncate">Buscar transações, contas, páginas…</span>
-        <kbd className="ml-auto rounded border bg-background px-1.5 font-sans text-[0.7rem]">
+        <span className="truncate">Buscar…</span>
+        <kbd className="ml-auto rounded bg-muted px-1.5 font-sans text-[0.7rem] text-muted-foreground">
           Ctrl K
         </kbd>
       </Button>
@@ -101,7 +104,7 @@ export function BuscaGlobal() {
         variant="ghost"
         size="icon"
         onClick={() => setAberta(true)}
-        className="md:hidden"
+        className={cn("md:hidden", BOTAO_TOPO_MOBILE)}
         aria-label="Buscar"
       >
         <Search aria-hidden />
@@ -157,6 +160,7 @@ function Resultados({ fechar }: { fechar: () => void }) {
   const paginas: NavItem[] = somenteDivisao
     ? [...navSectionsDivisaoOnly.flatMap((s) => s.items), settingsItem]
     : [
+        inicioItem,
         dashboardItem,
         ...navSections.flatMap((s) => s.items),
         ...investimentosSection.items,

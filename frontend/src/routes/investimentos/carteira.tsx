@@ -14,12 +14,14 @@ import { Link } from "react-router"
 
 import { AvatarBanco } from "@/components/contas/avatar-banco"
 import { EmptyState } from "@/components/common/empty-state"
+import { GRADE_KPI, Kpi } from "@/components/common/kpi"
+import { PageHeader } from "@/components/common/page-header"
 import { Valor } from "@/components/common/valor"
 import { AtivoDrawer } from "@/components/investimentos/ativo-drawer"
 import { SyncButton } from "@/components/sync-button"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
+import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import {
   Popover,
@@ -212,6 +214,12 @@ export function CarteiraPage() {
     ordenacao,
   ])
 
+  // Coluna inteira de "—" é ruído: só aparece se ao menos uma posição do filtro atual tem o dado.
+  const colunas = {
+    instituicao: filtradas.some((p) => p.instituicao),
+    cotacao: filtradas.some((p) => p.cotacao_centavos != null),
+  }
+
   const totalPaginas = Math.max(1, Math.ceil(filtradas.length / porPagina))
   const paginaSegura = Math.min(pagina, totalPaginas)
   const visiveis = filtradas.slice(
@@ -280,71 +288,54 @@ export function CarteiraPage() {
       <Cabecalho />
 
       {/* Resumo (KPIs) — sem "valor disponível para investir" (não existe no modelo). */}
-      {/* auto-fit: 2 colunas quando cabem, 1 quando não (320px) — valor nunca é cortado. */}
-      <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,9.5rem),1fr))] gap-3 lg:grid-cols-5">
+      <div className={GRADE_KPI}>
         <Kpi
-          className="col-span-full lg:col-span-1"
           label="Valor da carteira"
-          hint={`Líquido ${formatBRL(totais.liquido_centavos)}`}
-        >
-          <Valor
-            quebraMoeda
-            centavos={totais.valor_centavos}
-            neutro
-            className="text-xl font-bold sm:text-2xl"
-          />
-        </Kpi>
-        <Kpi label="Valor investido">
-          {/* null = o banco não informou o custo: "—", nunca um R$ 0,00 que parece dado. */}
-          {totais.investido_centavos != null ? (
-            <Valor
-              quebraMoeda
-              centavos={totais.investido_centavos}
-              neutro
-              className="text-lg font-bold sm:text-2xl"
-            />
-          ) : (
-            <SemDado />
-          )}
-        </Kpi>
+          valor={<Valor centavos={totais.valor_centavos} neutro />}
+          detalhe={`Líquido ${formatBRL(totais.liquido_centavos)}`}
+        />
+        <Kpi
+          label="Valor investido"
+          // null = o banco não informou o custo: "—", nunca um R$ 0,00 que parece dado.
+          valor={
+            totais.investido_centavos != null ? (
+              <Valor centavos={totais.investido_centavos} neutro />
+            ) : (
+              <SemDado />
+            )
+          }
+        />
         <Kpi
           label="Resultado"
-          hint={
+          valor={
+            totais.resultado_centavos != null ? (
+              <Valor centavos={totais.resultado_centavos} sinal />
+            ) : (
+              <SemDado />
+            )
+          }
+          detalhe={
             totais.resultado_pct != null
               ? pctTexto(totais.resultado_pct)
               : undefined
           }
-        >
-          {totais.resultado_centavos != null ? (
-            <Valor
-              quebraMoeda
-              centavos={totais.resultado_centavos}
-              sinal
-              className="text-lg font-bold sm:text-2xl"
-            />
-          ) : (
-            <SemDado />
-          )}
-        </Kpi>
+        />
         <Kpi
           label="Rentabilidade (12M)"
-          hint={
+          valor={
+            visao.data?.rentabilidade_12m_pct != null ? (
+              pctTexto(visao.data.rentabilidade_12m_pct)
+            ) : (
+              <SemDado />
+            )
+          }
+          detalhe={
             visao.data?.vs_cdi_pp != null
               ? `${pctTexto(visao.data.vs_cdi_pp)} p.p. vs CDI`
               : undefined
           }
-        >
-          <span className="text-xl font-bold tabular-nums sm:text-2xl">
-            {visao.data?.rentabilidade_12m_pct != null
-              ? pctTexto(visao.data.rentabilidade_12m_pct)
-              : "—"}
-          </span>
-        </Kpi>
-        <Kpi label="Nº de ativos">
-          <span className="text-xl font-bold tabular-nums sm:text-2xl">
-            {totais.quantidade_ativos}
-          </span>
-        </Kpi>
+        />
+        <Kpi label="Ativos" valor={totais.quantidade_ativos} />
       </div>
 
       {/* Barra: busca + "Mais filtros". */}
@@ -489,9 +480,15 @@ export function CarteiraPage() {
                 <Th col="tipo" ordenacao={ordenacao} onSort={ordenarPor}>
                   Tipo
                 </Th>
-                <Th col="instituicao" ordenacao={ordenacao} onSort={ordenarPor}>
-                  Instituição
-                </Th>
+                {colunas.instituicao ? (
+                  <Th
+                    col="instituicao"
+                    ordenacao={ordenacao}
+                    onSort={ordenarPor}
+                  >
+                    Instituição
+                  </Th>
+                ) : null}
                 <Th
                   col="quantidade"
                   ordenacao={ordenacao}
@@ -508,14 +505,16 @@ export function CarteiraPage() {
                 >
                   Preço médio
                 </Th>
-                <Th
-                  col="cotacao"
-                  ordenacao={ordenacao}
-                  onSort={ordenarPor}
-                  numerico
-                >
-                  Cotação
-                </Th>
+                {colunas.cotacao ? (
+                  <Th
+                    col="cotacao"
+                    ordenacao={ordenacao}
+                    onSort={ordenarPor}
+                    numerico
+                  >
+                    Cotação
+                  </Th>
+                ) : null}
                 <Th
                   col="investido"
                   ordenacao={ordenacao}
@@ -554,7 +553,9 @@ export function CarteiraPage() {
               {visiveis.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={10}
+                    colSpan={
+                      8 + Number(colunas.instituicao) + Number(colunas.cotacao)
+                    }
                     className="py-10 text-center text-muted-foreground"
                   >
                     Nenhum ativo com esses filtros.
@@ -565,6 +566,7 @@ export function CarteiraPage() {
                   <PosicaoLinha
                     key={p.chave}
                     posicao={p}
+                    colunas={colunas}
                     onAbrir={() => setChaveAberta(p.chave)}
                   />
                 ))
@@ -634,47 +636,19 @@ export function CarteiraPage() {
 
 function Cabecalho() {
   return (
-    <header className="flex flex-wrap items-center justify-between gap-3">
-      <div>
-        <h1 className="text-xl font-semibold">Carteira</h1>
-        <p className="text-sm text-muted-foreground">
-          Veja todos os seus investimentos em um só lugar.
-        </p>
-      </div>
-      <SyncButton />
-    </header>
+    <PageHeader
+      titulo="Carteira"
+      descricao="Todos os seus investimentos em um só lugar."
+      acoes={<SyncButton />}
+    />
   )
 }
 
 function SemDado() {
   return (
-    <span className="text-xl font-bold text-muted-foreground sm:text-2xl">
+    <span className="text-muted-foreground">
       —<span className="sr-only">não informado pelo banco</span>
     </span>
-  )
-}
-
-function Kpi({
-  label,
-  hint,
-  className,
-  children,
-}: {
-  label: string
-  hint?: string
-  className?: string
-  children: React.ReactNode
-}) {
-  return (
-    <Card className={cn("min-w-0 py-4 sm:py-6", className)}>
-      <CardContent className="space-y-1 px-3 sm:px-6">
-        <p className="text-sm leading-tight text-muted-foreground sm:truncate">
-          {label}
-        </p>
-        <div className="text-foreground [&_*]:text-foreground">{children}</div>
-        {hint ? <p className="text-xs text-muted-foreground">{hint}</p> : null}
-      </CardContent>
-    </Card>
   )
 }
 
@@ -728,7 +702,16 @@ function Th({
   const ativo = ordenacao.col === col
   const Icone = ativo && ordenacao.dir === "asc" ? ChevronUp : ChevronDown
   return (
-    <TableHead className={numerico ? "text-right" : undefined}>
+    <TableHead
+      className={numerico ? "text-right" : undefined}
+      aria-sort={
+        ativo
+          ? ordenacao.dir === "asc"
+            ? "ascending"
+            : "descending"
+          : undefined
+      }
+    >
       <button
         type="button"
         onClick={() => onSort(col)}
@@ -755,10 +738,7 @@ function AvisoIncompleto({ valor }: { valor?: string }) {
       title="Cálculo parcial — compras anteriores a 12 meses não vêm do banco. Complete os aportes na posição."
     >
       {valor ?? <span aria-hidden>—</span>}
-      <AlertTriangle
-        className="size-3.5 text-amber-600 dark:text-amber-500"
-        aria-hidden
-      />
+      <AlertTriangle className="size-3.5 text-warning-ink" aria-hidden />
       <span className="sr-only">cálculo parcial, histórico incompleto</span>
     </span>
   )
@@ -822,9 +802,11 @@ function PosicaoItemMobile({
 
 function PosicaoLinha({
   posicao: p,
+  colunas,
   onAbrir,
 }: {
   posicao: CarteiraPosicao
+  colunas: { instituicao: boolean; cotacao: boolean }
   onAbrir: () => void
 }) {
   const Icone = ICONE_TIPO[p.subtype ?? p.type] ?? Coins
@@ -862,19 +844,21 @@ function PosicaoLinha({
       <TableCell>
         <Badge variant="secondary">{rotuloClasse(p.type, p.subtype)}</Badge>
       </TableCell>
-      <TableCell>
-        {p.instituicao ? (
-          <div className="flex items-center gap-2">
-            <AvatarBanco
-              nome={p.instituicao}
-              logoUrl={p.instituicao_logo_url}
-            />
-            <span className="truncate text-sm">{p.instituicao}</span>
-          </div>
-        ) : (
-          <span className="text-muted-foreground">—</span>
-        )}
-      </TableCell>
+      {colunas.instituicao ? (
+        <TableCell>
+          {p.instituicao ? (
+            <div className="flex items-center gap-2">
+              <AvatarBanco
+                nome={p.instituicao}
+                logoUrl={p.instituicao_logo_url}
+              />
+              <span className="truncate text-sm">{p.instituicao}</span>
+            </div>
+          ) : (
+            <span className="text-muted-foreground">—</span>
+          )}
+        </TableCell>
+      ) : null}
       <TableCell className="text-right tabular-nums">
         {p.quantidade != null ? fmtQtd.format(p.quantidade) : "—"}
       </TableCell>
@@ -893,9 +877,11 @@ function PosicaoLinha({
           "—"
         )}
       </TableCell>
-      <TableCell className="text-right tabular-nums">
-        {p.cotacao_centavos != null ? formatBRL(p.cotacao_centavos) : "—"}
-      </TableCell>
+      {colunas.cotacao ? (
+        <TableCell className="text-right tabular-nums">
+          {p.cotacao_centavos != null ? formatBRL(p.cotacao_centavos) : "—"}
+        </TableCell>
+      ) : null}
       <TableCell className="text-right">
         {p.historico_incompleto ? (
           <AvisoIncompleto

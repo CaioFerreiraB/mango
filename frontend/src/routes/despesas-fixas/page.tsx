@@ -1,6 +1,5 @@
 import {
   CalendarCheck,
-  CalendarClock,
   Check,
   ChevronRight,
   CircleAlert,
@@ -17,7 +16,8 @@ import { toast } from "sonner"
 
 import { EmptyState } from "@/components/common/empty-state"
 import { CurrencyInput } from "@/components/common/currency-input"
-import { StatChip } from "@/components/common/stat-chip"
+import { CardDestaque } from "@/components/common/kpi"
+import { PageHeader } from "@/components/common/page-header"
 import { Valor } from "@/components/common/valor"
 import { BarraMes } from "@/components/despesas-fixas/barra-mes"
 import { SituacaoBadge } from "@/components/despesas-fixas/situacao-badge"
@@ -65,7 +65,6 @@ import {
 import { Skeleton } from "@/components/ui/skeleton"
 import { Switch } from "@/components/ui/switch"
 import { useIsMobile } from "@/hooks/use-mobile"
-import { useMe } from "@/lib/api/auth"
 import {
   FREQUENCIAS,
   rotuloFrequencia,
@@ -87,7 +86,6 @@ import {
   valorEfetivoCentavos,
 } from "@/lib/api/transacoes"
 import { formatDataISO, formatDate, formatMesAno, hojeISO } from "@/lib/format"
-import { ilustracao } from "@/lib/illustrations"
 import { cn } from "@/lib/utils"
 
 /** Sem isto o fim do bottom sheet fica sob a barra de gestos. */
@@ -102,28 +100,26 @@ export function DespesasFixasPage() {
 
   return (
     <div className="space-y-6">
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold">Despesas fixas</h1>
-          <p className="text-sm text-muted-foreground">
-            Contas que se repetem. Marque cada vencimento como pago, ou vincule
-            a transação que o pagou.
-          </p>
-        </div>
-        <DespesaFormDialog
-          trigger={
-            <Button>
-              <Plus className="size-4" /> Nova despesa fixa
-            </Button>
-          }
-        />
-      </header>
+      <PageHeader
+        titulo="Despesas fixas"
+        descricao="Contas que se repetem. Marque cada vencimento como pago, ou vincule a transação que o pagou."
+        acoes={
+          <DespesaFormDialog
+            trigger={
+              <Button>
+                <Plus className="size-4" aria-hidden />
+                <span className="max-sm:sr-only">Nova despesa fixa</span>
+              </Button>
+            }
+          />
+        }
+      />
 
       {resumo.data?.tem_despesas ? (
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <>
           <CardMes resumo={resumo.data} />
           <CardProximos resumo={resumo.data} onAbrir={setAbertaId} />
-        </div>
+        </>
       ) : null}
 
       {despesas.isError ? (
@@ -136,7 +132,7 @@ export function DespesasFixasPage() {
         </div>
       ) : lista.length === 0 ? (
         <EmptyState
-          icon={CalendarCheck}
+          cena="hang-loose"
           title="Nenhuma despesa fixa"
           description="Cadastre aluguel, condomínio, luz ou parcelas para acompanhar, mês a mês, o que já foi pago e o que está atrasado."
         >
@@ -176,14 +172,14 @@ function DespesaRow({
   return (
     <Card
       className={cn(
-        "gap-0 overflow-hidden p-0",
+        "superficie-interativa gap-0 overflow-hidden p-0",
         !despesa.ativa && "opacity-60"
       )}
     >
       <button
         type="button"
         onClick={onAbrir}
-        className="flex w-full items-center gap-3 px-4 py-4 text-left transition-colors hover:bg-muted/50"
+        className="flex w-full items-center gap-3 px-4 py-4 text-left"
       >
         <span
           aria-hidden
@@ -228,10 +224,9 @@ function DespesaRow({
   )
 }
 
-/** Mês corrente: pagas × total com barra, valores por estado e o mascote reagindo ao estado
- *  (assustado com atraso, joinha com tudo pago). Dados por cima da ilustração (DESIGN.md). */
+/** Mês corrente: herói com pagas × total, a barra do mês, os valores por estado na própria linha do
+ *  herói e o mascote reagindo (assustado com atraso, joinha com tudo pago). */
 function CardMes({ resumo }: { resumo: DespesaFixaResumo }) {
-  const me = useMe()
   const { pagas, abertas, atrasadas } = resumo
   const total = pagas.qtd + abertas.qtd + atrasadas.qtd
   const cena = atrasadas.qtd
@@ -239,72 +234,46 @@ function CardMes({ resumo }: { resumo: DespesaFixaResumo }) {
     : total && pagas.qtd === total
       ? "thumbs-up"
       : "money"
+  const contas = (n: number) => `${n} ${n === 1 ? "conta" : "contas"}`
   return (
-    <Card className="relative gap-0 overflow-hidden py-0">
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 bg-gradient-to-br from-primary/15 via-primary/5 to-transparent"
-      />
-      <CardContent className="relative flex flex-col gap-4 p-4 sm:p-5">
-        <div className="relative z-10 space-y-2">
-          <p className="text-sm font-medium text-muted-foreground first-letter:uppercase">
-            {formatMesAno(`${resumo.mes}-15`)}
-          </p>
-          <p className="text-4xl font-bold tabular-nums md:text-5xl">
-            {pagas.qtd}{" "}
-            <span className="text-xl font-semibold text-muted-foreground md:text-2xl">
-              de {total} pagas
-            </span>
-          </p>
-          <BarraMes resumo={resumo} />
-        </div>
-        <div className="flex h-56 items-end justify-center">
-          <img
-            src={ilustracao(me.data?.avatar, cena)}
-            alt=""
-            className="pointer-events-none h-full max-w-full object-contain"
-          />
-        </div>
-        <div className="grid grid-cols-3 gap-2 sm:gap-2.5">
-          <StatChip
-            icon={Check}
-            valor={
-              <Valor
-                centavos={pagas.centavos}
-                neutro
-                className="text-sm font-bold sm:text-lg"
-              />
-            }
-            rotulo={`${pagas.qtd} ${pagas.qtd === 1 ? "paga" : "pagas"}`}
-          />
-          <StatChip
-            icon={CalendarClock}
-            valor={
-              <Valor
-                centavos={abertas.centavos}
-                neutro
-                className="text-sm font-bold sm:text-lg"
-              />
-            }
-            rotulo={`${abertas.qtd} em aberto`}
-          />
-          <StatChip
-            icon={CircleAlert}
-            valor={
-              <Valor
-                centavos={atrasadas.centavos}
-                neutro
-                className={cn(
-                  "text-sm font-bold sm:text-lg",
-                  atrasadas.qtd > 0 && "text-negative-ink"
-                )}
-              />
-            }
-            rotulo={`${atrasadas.qtd} ${atrasadas.qtd === 1 ? "atrasada" : "atrasadas"}`}
-          />
-        </div>
-      </CardContent>
-    </Card>
+    <CardDestaque
+      titulo={formatMesAno(`${resumo.mes}-15`).replace(/^./, (c) =>
+        c.toUpperCase()
+      )}
+      valor={
+        <>
+          {pagas.qtd}{" "}
+          <span className="text-lg font-semibold text-muted-foreground">
+            de {total} pagas
+          </span>
+        </>
+      }
+      mascote={cena}
+      estatisticas={[
+        {
+          rotulo: `Pago · ${contas(pagas.qtd)}`,
+          valor: <Valor centavos={pagas.centavos} neutro />,
+        },
+        {
+          rotulo: `Em aberto · ${contas(abertas.qtd)}`,
+          valor: <Valor centavos={abertas.centavos} neutro />,
+        },
+        {
+          rotulo: `Atrasado · ${contas(atrasadas.qtd)}`,
+          valor: (
+            <Valor
+              centavos={atrasadas.centavos}
+              neutro
+              className={cn(atrasadas.qtd > 0 && "text-negative-ink")}
+            />
+          ),
+        },
+      ]}
+    >
+      <div className="max-w-xl">
+        <BarraMes resumo={resumo} />
+      </div>
+    </CardDestaque>
   )
 }
 
@@ -318,7 +287,7 @@ function CardProximos({
   return (
     <Card>
       <CardHeader className="pb-0">
-        <CardTitle className="text-base">Próximos vencimentos</CardTitle>
+        <CardTitle>Próximos vencimentos</CardTitle>
       </CardHeader>
       <CardContent>
         {resumo.proximos.length === 0 ? (
@@ -388,7 +357,7 @@ function DespesaDetalhe({
         onOpenChange={onOpenChange}
       >
         <DrawerContent
-          className="gap-0 overflow-hidden shadow-xl data-[vaul-drawer-direction=bottom]:max-h-[85svh] data-[vaul-drawer-direction=right]:inset-y-2 data-[vaul-drawer-direction=right]:right-2 data-[vaul-drawer-direction=right]:rounded-l-2xl data-[vaul-drawer-direction=right]:rounded-r-2xl data-[vaul-drawer-direction=right]:border data-[vaul-drawer-direction=right]:sm:max-w-md"
+          className="gap-0 overflow-hidden data-[vaul-drawer-direction=bottom]:h-[85svh] data-[vaul-drawer-direction=bottom]:max-h-[85svh] data-[vaul-drawer-direction=right]:inset-y-2 data-[vaul-drawer-direction=right]:right-2 data-[vaul-drawer-direction=right]:rounded-[1.75rem] data-[vaul-drawer-direction=right]:sm:max-w-md"
           style={{ paddingBottom: isMobile ? SAFE_AREA_BOTTOM : undefined }}
         >
           {d ? (
@@ -907,7 +876,7 @@ function DespesaFormDialog({
             </label>
           ) : null}
         </form>
-        <DialogFooter className="mx-0 mb-0 shrink-0 sm:items-center sm:justify-between">
+        <DialogFooter className="mx-0 mb-0 shrink-0 p-4 sm:items-center sm:justify-between">
           {despesa ? (
             <AlertDialog>
               <AlertDialogTrigger asChild>

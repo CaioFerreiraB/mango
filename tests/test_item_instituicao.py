@@ -108,7 +108,19 @@ def test_listar_connectores_catalogo_curado(
     assert {"Nubank", "Itaú", "C6 Bank", "Bradesco"} <= nomes
     assert all(c["logo_url"] for c in itens)
     nubank = next(c for c in itens if c["nome"] == "Nubank")
-    assert nubank["logo_url"] == "https://cdn.pluggy.ai/assets/connector-icons/212.svg"
+    # Mesma origem: a CSP (img-src 'self') bloquearia CDN externo.
+    assert nubank["logo_url"] == "/logos/bancos/212.svg"
+
+
+def test_logos_do_catalogo_existem_e_sao_locais() -> None:
+    from pathlib import Path
+
+    from app.pluggy.catalogo import CATALOGO_BR
+
+    public = Path(__file__).resolve().parent.parent / "frontend" / "public"
+    for _, nome, url in CATALOGO_BR:
+        assert url.startswith("/logos/bancos/"), nome
+        assert (public / url.lstrip("/")).is_file(), f"logo ausente: {nome} ({url})"
 
 
 def test_listar_connectores_filtra_por_nome(

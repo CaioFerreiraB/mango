@@ -36,29 +36,34 @@ import {
   type ItemListagem,
   type Transacao,
 } from "@/lib/api/transacoes"
-import { formatBRL, formatDate } from "@/lib/format"
+import { formatBRL, formatDataCurta } from "@/lib/format"
 import { estadoRevisao } from "@/lib/revisao"
 import { cn } from "@/lib/utils"
 
-/** Avatar de categoria: fundo tingido suave + ícone colorido, por tipo (entrada/saída). */
+/** Avatar de categoria: neutro — o sentido (entrada/saída) já está no sinal e na cor do valor;
+ *  ícone colorido em toda linha virava ruído. Entrada ganha só um toque do azul no ícone. */
 function corTile(type: string) {
   return type === "CREDIT"
-    ? "bg-positive/15 text-positive-ink"
-    : "bg-negative/15 text-negative-ink"
+    ? "bg-muted text-positive-ink"
+    : "bg-muted text-muted-foreground"
 }
 
 /** Marcador de transação dividida: a parte do usuário é o que conta no orçamento. */
 function MarcadorDivisao({
   transacao,
   className,
+  oculto = false,
 }: {
   transacao: Transacao
   className: string
+  /** Modo privacidade: o rótulo diz que é dividida, sem os valores. */
+  oculto?: boolean
 }) {
   if (!transacao.divisao) return null
   const d = transacao.divisao
-  const texto =
-    Math.abs(valorEfetivoCentavos(transacao)) === d.valor_total_centavos
+  const texto = oculto
+    ? "Dividida"
+    : Math.abs(valorEfetivoCentavos(transacao)) === d.valor_total_centavos
       ? `Dividida: sua parte ${formatBRL(d.minha_parte_centavos)} de ${formatBRL(d.valor_total_centavos)}`
       : `Dividida: no orçamento ${formatBRL(d.minha_parte_centavos)} (transação menos ${formatBRL(d.outros_centavos)} da parte dos outros)`
   return (
@@ -69,9 +74,11 @@ function MarcadorDivisao({
 }
 
 /** Linha secundária de um lançamento de divisão: quem pagou e o que conta para o usuário. */
-function subtituloLancamento(l: DivisaoLancamento): string {
+function subtituloLancamento(l: DivisaoLancamento, oculto = false): string {
   if (l.pendente) return "Você pagou · vincule a transação"
-  const parte = `sua parte de ${formatBRL(l.valor_total_centavos)}`
+  const parte = oculto
+    ? "sua parte"
+    : `sua parte de ${formatBRL(l.valor_total_centavos)}`
   return l.pago_por_mim
     ? `Você pagou fora do banco · ${parte}`
     : `Pago por ${l.pago_por_nome} · ${parte}`
@@ -144,6 +151,8 @@ export function TransacoesTabela({
   ocultarCategoria = false,
   parteDoUsuario = false,
   semMoldura = false,
+  compacta = false,
+  oculto = false,
 }: {
   items: ItemListagem[]
   /** Repassado ao drawer: esconde "Ir para a fatura" quando já estamos numa fatura. */
@@ -156,6 +165,10 @@ export function TransacoesTabela({
   parteDoUsuario?: boolean
   /** Sem borda própria: a lista já está dentro de um card (borda dupla = card aninhado). */
   semMoldura?: boolean
+  /** Sempre o formato de lista (o do celular), mesmo no desktop — para colunas estreitas. */
+  compacta?: boolean
+  /** Modo privacidade da página: valores viram "R$ ••••". */
+  oculto?: boolean
 }) {
   const valorDe = (t: Transacao) => {
     const v = valorEfetivoCentavos(t)
@@ -173,8 +186,10 @@ export function TransacoesTabela({
   const mapaCategorias = useMapaCategorias()
   const iconeCategoria = useIconeCategoria()
   const perfil = usePerfil() // corte da revisão (§4.3) — decide o estado do StatusBadge
-  // Descrição · Valor · Data · Conta · Categoria · Status
-  const { larguras, iniciar } = useLarguras([300, 120, 110, 160, 180, 120])
+  // Descrição · Valor · Data · Conta · Categoria · Status. Descrição nasce sem largura (0 = fica
+  // com o que sobra) para a tabela caber no contêiner — px fixos em todas somavam mais que um
+  // diálogo e abriam rolagem horizontal. Arrastar a alça fixa a largura medida.
+  const { larguras, iniciar } = useLarguras([0, 120, 100, 160, 180, 120])
   // `abrirId` (busca global → `/transacoes?id=`) só semeia: fechar o drawer não reabre.
   const [selecionadaId, setSelecionadaId] = useState<number | null>(
     abrirId ?? null
@@ -195,13 +210,28 @@ export function TransacoesTabela({
   return (
     <>
       <div
-        className={cn("hidden md:block", !semMoldura && "rounded-lg border")}
+        className={cn(
+          "hidden",
+          !compacta && "md:block",
+          !semMoldura && "rounded-2xl superficie"
+        )}
       >
-        <Table className="table-fixed">
+        {/* Descrição fica com o que sobra, mas nunca abaixo de 16rem: num contêiner mais estreito
+            a tabela rola dentro dele em vez de esmagar a descrição. */}
+        <Table
+          className="table-fixed"
+          style={{
+            minWidth:
+              larguras.reduce(
+                (soma, w, i) => (ocultarCategoria && i === 4 ? soma : soma + w),
+                0
+              ) + (larguras[0] ? 0 : 256), // Descrição já arrastada: vale a largura dela
+          }}
+        >
           <colgroup>
             {larguras.map((w, i) =>
               ocultarCategoria && i === 4 ? null : (
-                <col key={i} style={{ width: w }} />
+                <col key={i} style={{ width: w || undefined }} />
               )
             )}
           </colgroup>
@@ -242,7 +272,7 @@ export function TransacoesTabela({
                 return (
                   <TableRow
                     key={`d-${t.divisao_id}`}
-                    className="cursor-pointer even:bg-muted/40"
+                    className="cursor-pointer"
                     onClick={() => setDivisaoId(t.divisao_id)}
                   >
                     <TableCell>
@@ -266,18 +296,23 @@ export function TransacoesTabela({
                             />
                           </button>
                           <p className="truncate text-xs text-muted-foreground">
-                            {subtituloLancamento(t)}
+                            {subtituloLancamento(t, oculto)}
                           </p>
                         </div>
                       </div>
                     </TableCell>
                     <TableCell>
                       <div className="truncate">
-                        <Valor centavos={valorLancamento(t)} sinal neutro />
+                        <Valor
+                          centavos={valorLancamento(t)}
+                          sinal
+                          neutro
+                          oculto={oculto}
+                        />
                       </div>
                     </TableCell>
                     <TableCell className="text-muted-foreground">
-                      <div className="truncate">{formatDate(t.data)}</div>
+                      <div className="truncate">{formatDataCurta(t.data)}</div>
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       —
@@ -311,7 +346,7 @@ export function TransacoesTabela({
               return (
                 <TableRow
                   key={`t-${t.id}`}
-                  className="cursor-pointer even:bg-muted/40"
+                  className="cursor-pointer"
                   onClick={() => setSelecionadaId(t.id)}
                 >
                   <TableCell>
@@ -363,6 +398,7 @@ export function TransacoesTabela({
                             />
                           ) : null}
                           <MarcadorDivisao
+                            oculto={oculto}
                             transacao={t}
                             className="size-3.5 shrink-0 text-muted-foreground"
                           />
@@ -388,11 +424,16 @@ export function TransacoesTabela({
                   </TableCell>
                   <TableCell>
                     <div className="truncate">
-                      <Valor centavos={valorDe(t)} sinal neutro />
+                      <Valor
+                        centavos={valorDe(t)}
+                        sinal
+                        neutro
+                        oculto={oculto}
+                      />
                     </div>
                   </TableCell>
                   <TableCell className="text-muted-foreground">
-                    <div className="truncate">{formatDate(t.date)}</div>
+                    <div className="truncate">{formatDataCurta(t.date)}</div>
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
                     <div
@@ -410,7 +451,9 @@ export function TransacoesTabela({
                           className="max-w-full font-normal"
                         >
                           <IconeCat className="size-3.5 shrink-0" aria-hidden />
-                          <span className="min-w-0 truncate">{catNome}</span>
+                          <span className="min-w-0 truncate" title={catNome}>
+                            {catNome}
+                          </span>
                         </Badge>
                       ) : (
                         <span className="text-muted-foreground">—</span>
@@ -434,7 +477,13 @@ export function TransacoesTabela({
       </div>
 
       <ul
-        className={cn("divide-y md:hidden", !semMoldura && "rounded-lg border")}
+        className={cn(
+          // Compacta (Início): sem divisórias — o hover é um "card" arredondado sobre a linha.
+          compacta
+            ? "space-y-0.5 [&_button]:rounded-xl [&_button]:transition-colors [&_button:hover]:bg-muted"
+            : "divide-y md:hidden",
+          !semMoldura && "rounded-2xl superficie"
+        )}
       >
         {items.map((t) => {
           if (ehLancamento(t)) {
@@ -464,7 +513,7 @@ export function TransacoesTabela({
                       />
                     </p>
                     <p className="truncate text-[11px] text-muted-foreground">
-                      {subtituloLancamento(t)}
+                      {subtituloLancamento(t, oculto)}
                     </p>
                     <BadgeLancamento
                       lancamento={t}
@@ -475,10 +524,11 @@ export function TransacoesTabela({
                     <Valor
                       centavos={valorLancamento(t)}
                       sinal
+                      oculto={oculto}
                       className="block text-xs font-semibold"
                     />
                     <p className="text-[11px] text-muted-foreground">
-                      {formatDate(t.data)}
+                      {formatDataCurta(t.data)}
                     </p>
                   </div>
                 </button>
@@ -513,6 +563,7 @@ export function TransacoesTabela({
                       />
                     ) : null}
                     <MarcadorDivisao
+                      oculto={oculto}
                       transacao={t}
                       className="size-3 shrink-0 text-muted-foreground"
                     />
@@ -535,10 +586,11 @@ export function TransacoesTabela({
                   <Valor
                     centavos={valorDe(t)}
                     sinal
+                    oculto={oculto}
                     className="block text-xs font-semibold"
                   />
                   <p className="text-[11px] text-muted-foreground">
-                    {formatDate(t.date)}
+                    {formatDataCurta(t.date)}
                   </p>
                 </div>
               </button>

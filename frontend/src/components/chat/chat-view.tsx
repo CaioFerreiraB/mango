@@ -129,7 +129,7 @@ export function ChatView({
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <header className="flex h-14 shrink-0 items-center gap-1 border-b px-2">
+      <header className="flex h-16 shrink-0 items-center gap-1 px-3">
         {voltar ? (
           <Button
             variant="ghost"
@@ -140,9 +140,19 @@ export function ChatView({
             <ArrowLeftIcon />
           </Button>
         ) : null}
-        <h2 className="min-w-0 flex-1 truncate px-1.5 text-sm font-medium">
-          {conversaId !== null ? (conversa.data?.titulo ?? "…") : "Assistente"}
-        </h2>
+        <AvatarAssistente />
+        <div className="min-w-0 flex-1 px-2">
+          <h2 className="truncate text-sm leading-tight font-extrabold">
+            {conversaId !== null
+              ? (conversa.data?.titulo ?? "…")
+              : "Assistente"}
+          </h2>
+          <p className="truncate text-xs text-muted-foreground">
+            {conversaId !== null
+              ? "Assistente do mango"
+              : "Suas finanças, em conversa"}
+          </p>
+        </div>
         {pronto ? (
           <>
             <Historico
@@ -219,6 +229,23 @@ export function ChatView({
         </>
       )}
     </div>
+  )
+}
+
+/** Rosto do assistente: o mascote (busto) num círculo com o tom claro do accent, como os atalhos. */
+function AvatarAssistente() {
+  const me = useMe()
+  return (
+    <span
+      aria-hidden
+      className="relative size-10 shrink-0 overflow-hidden rounded-full bg-[color-mix(in_oklab,var(--primary)_13%,var(--background))]"
+    >
+      <img
+        src={ilustracao(me.data?.avatar, "default")}
+        alt=""
+        className="absolute top-0.5 left-1/2 size-[5.5rem] max-w-none -translate-x-1/2 object-contain object-top"
+      />
+    </span>
   )
 }
 
@@ -540,6 +567,10 @@ function CartaoProposta({ proposta }: { proposta: Proposta }) {
   )
 }
 
+// Rascunho fora do componente: o Composer remonta ao trocar painel ↔ página ou ao cruzar o corte
+// do mobile (o /chat vira portal), e a mensagem ainda não enviada não pode sumir nessas trocas.
+let rascunho = ""
+
 function Composer({
   ocupado,
   respondendo,
@@ -553,7 +584,11 @@ function Composer({
   onParar: () => void
   variante: Variante
 }) {
-  const [texto, setTexto] = useState("")
+  const [texto, setTextoLocal] = useState(() => rascunho)
+  const setTexto = (t: string) => {
+    rascunho = t
+    setTextoLocal(t)
+  }
   const ref = useRef<HTMLTextAreaElement>(null)
   const id = useId()
 
@@ -574,7 +609,7 @@ function Composer({
       className={cn(
         "shrink-0 px-3 pt-1 pb-3",
         variante === "pagina" &&
-          "mx-auto w-full max-w-3xl pb-[max(0.75rem,env(safe-area-inset-bottom))]"
+          "mx-auto w-full max-w-3xl pb-[max(0.75rem,var(--fundo-seguro,env(safe-area-inset-bottom)))]"
       )}
       onSubmit={(e) => {
         e.preventDefault()
@@ -584,7 +619,9 @@ function Composer({
       <label htmlFor={id} className="sr-only">
         Mensagem para o assistente
       </label>
-      <InputGroup className="rounded-2xl bg-background">
+      {/* Campo preenchido, sem contorno nem anel (nem no foco): o foco eleva o campo com a sombra
+          de card — sinal visível sem moldura. */}
+      <InputGroup className="rounded-3xl border-transparent bg-muted transition-[background-color,box-shadow] duration-200 ease-(--ease-out) has-[[data-slot=input-group-control]:focus-visible]:border-transparent has-[[data-slot=input-group-control]:focus-visible]:bg-card has-[[data-slot=input-group-control]:focus-visible]:shadow-(--shadow-card) has-[[data-slot=input-group-control]:focus-visible]:ring-0 dark:bg-muted dark:has-[[data-slot=input-group-control]:focus-visible]:bg-muted">
         <InputGroupTextarea
           id={id}
           ref={ref}

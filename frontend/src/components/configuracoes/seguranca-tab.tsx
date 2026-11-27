@@ -50,9 +50,7 @@ function SegurancaContent({ perfil }: { perfil: Perfil }) {
     <div className="space-y-4">
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">
-            Verificação em duas etapas (2FA)
-          </CardTitle>
+          <CardTitle>Verificação em duas etapas (2FA)</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           {!perfil.totp_configurado ? (

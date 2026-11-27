@@ -1,15 +1,8 @@
-import { useEffect, useRef, useSyncExternalStore } from "react"
+import { useEffect, useRef } from "react"
 
+import { useMovimentoReduzido } from "@/hooks/use-movimento-reduzido"
 import { echarts, type EChartsOption } from "@/lib/echart-tema"
 import { cn } from "@/lib/utils"
-
-const MQ_MOVIMENTO = "(prefers-reduced-motion: reduce)"
-const assinarMovimento = (avisar: () => void) => {
-  const mq = window.matchMedia?.(MQ_MOVIMENTO)
-  mq?.addEventListener("change", avisar)
-  return () => mq?.removeEventListener("change", avisar)
-}
-const movimentoReduzido = () => !!window.matchMedia?.(MQ_MOVIMENTO).matches
 
 /**
  * Wrapper único do ECharts: init (SVG), `setOption` sem merge a cada `option` nova, resize
@@ -75,7 +68,7 @@ export function EChart({
 
   // Preferência de movimento reduzido observada ao vivo (mudar com o gráfico aberto desliga a
   // animação já no próximo setOption) — vale para todo gráfico, sem cada um assinar.
-  const reduzido = useSyncExternalStore(assinarMovimento, movimentoReduzido)
+  const reduzido = useMovimentoReduzido()
   useEffect(() => {
     chartRef.current?.setOption(
       {
@@ -98,7 +91,9 @@ export function EChart({
       // mínima dos ancestrais; sem isso, um grid que precisa encolher (ex.: chat abrindo) não
       // encolhe, o ResizeObserver nunca dispara e o gráfico vaza.
       className={cn("@container w-full", className)}
-      style={{ height: altura, width: largura }}
+      // minHeight = altura: crescendo num contêiner flexível (card mais alto), volta a encolher
+      // até a altura pedida — sem ela, o SVG já renderizado seguraria o tamanho maior.
+      style={{ height: altura, minHeight: altura, width: largura }}
       role="img"
       aria-label={ariaLabel}
     />

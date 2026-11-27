@@ -13,9 +13,9 @@ export function BarraMes({ resumo }: { resumo: DespesaFixaResumo }) {
       aria-label={`${pagas.qtd} pagas, ${abertas.qtd} em aberto, ${atrasadas.qtd} atrasadas`}
       className="flex h-2.5 w-full overflow-hidden rounded-full bg-muted"
     >
-      <span className="bg-[#0ca678]" style={{ width: pct(pagas.qtd) }} />
+      <span className="bg-success" style={{ width: pct(pagas.qtd) }} />
       <span
-        className="bg-muted-foreground"
+        className="bg-muted-foreground/45"
         style={{ width: pct(abertas.qtd) }}
       />
       <span className="bg-negative" style={{ width: pct(atrasadas.qtd) }} />

@@ -2,35 +2,35 @@ import {
   ChevronLeft,
   ChevronRight,
   CircleDashed,
+  ListFilter,
   PiggyBank,
   Settings2,
   Wand2,
   X,
   type LucideIcon,
 } from "lucide-react"
-import { createElement, useEffect, useRef, useState } from "react"
+import {
+  createElement,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type MouseEvent,
+  type ReactNode,
+} from "react"
 import { toast } from "sonner"
 
-import { AnelProgresso } from "@/components/common/anel-progresso"
 import { EmptyState } from "@/components/common/empty-state"
+import { CardDestaque } from "@/components/common/kpi"
+import { PageHeader } from "@/components/common/page-header"
 import { Valor } from "@/components/common/valor"
 import { ConfigurarOrcamentoPadraoDialog } from "@/components/orcamentos/configurar-orcamento-padrao-dialog"
 import { EditarMesDialog } from "@/components/orcamentos/editar-mes-dialog"
 import { TransacoesTabela } from "@/components/transacoes/transacoes-tabela"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
-import { useIsMobile } from "@/hooks/use-mobile"
 import { useIconeCategoria } from "@/lib/api/categoria-icones"
 import { useMapaCategorias } from "@/lib/api/categorias"
 import {
@@ -44,14 +44,15 @@ import {
 import { formatMesAno, hojeISO } from "@/lib/format"
 import { cn } from "@/lib/utils"
 
-// Escala de "calor" do consumo — a cor nunca é o único sinal (o % e a barra também informam).
-// Só se aplica à despesa: receita não tem conceito de "estourar".
+// Três degraus de consumo, nos tokens de estado do app: sucesso até 75%, aviso a partir daí,
+// negativo (framboesa) ao estourar. A cor nunca é o único sinal (o % e a barra
+// também informam). Só se aplica à despesa: receita não tem conceito de "estourar".
+// Não usa o accent: com o preset rosa ele quase repete a framboesa de "estourou".
 function corAlerta(alerta: number | null): string {
-  if (alerta === null) return "bg-primary"
-  if (alerta >= 100) return "bg-red-600"
-  if (alerta >= 90) return "bg-orange-600"
-  if (alerta >= 75) return "bg-orange-500"
-  return "bg-yellow-500"
+  if (alerta === null) return "bg-success"
+  if (alerta >= 100) return "bg-negative"
+  if (alerta >= 75) return "bg-warning"
+  return "bg-success"
 }
 
 /** Rótulos por aba: despesa tem teto (limite/gasto); receita e investimento são metas a atingir. */
@@ -131,49 +132,51 @@ export function OrcamentosPage() {
 
   return (
     <div className="space-y-6">
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold">Orçamento</h1>
-          <p className="text-sm text-muted-foreground">
-            Limite mensal por categoria, com alertas em 50%, 75%, 90% e 100%.
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center gap-1 rounded-md border p-0.5">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => mudarMes(-1)}
-              aria-label="Mês anterior"
-            >
-              <ChevronLeft className="size-4" />
-            </Button>
-            <span className="min-w-36 text-center text-sm font-medium first-letter:uppercase">
-              {rotuloMes}
-            </span>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => mudarMes(1)}
-              disabled={noMesAtual}
-              aria-label="Próximo mês"
-            >
-              <ChevronRight className="size-4" />
-            </Button>
-          </div>
-          <EditarMesDialog
-            itens={itens}
-            ano={ano}
-            mes={mes}
-            disabled={itens.length === 0}
-          />
-          {/* No mobile o botão reaparece embaixo da lista de categorias — aqui não cabe junto
-              do seletor de mês sem quebrar a linha de forma feia. */}
-          <div className="hidden sm:block">
-            <ConfigurarOrcamentoPadraoDialog />
-          </div>
-        </div>
-      </header>
+      <PageHeader
+        titulo="Orçamento"
+        descricao="Limite mensal por categoria, com alertas em 50%, 75%, 90% e 100%."
+        acoes={
+          <>
+            <EditarMesDialog
+              itens={itens}
+              ano={ano}
+              mes={mes}
+              disabled={itens.length === 0}
+            />
+            {/* No mobile o botão reaparece embaixo da lista de categorias. */}
+            <div className="hidden sm:block">
+              <ConfigurarOrcamentoPadraoDialog />
+            </div>
+          </>
+        }
+      />
+
+      {/* Controle da página: o mês vale para as três abas. */}
+      <div className="flex w-fit items-center gap-1 rounded-md border p-0.5">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => mudarMes(-1)}
+          aria-label="Mês anterior"
+        >
+          <ChevronLeft className="size-4" />
+        </Button>
+        <span
+          className="min-w-36 text-center text-sm font-medium first-letter:uppercase"
+          aria-live="polite"
+        >
+          {rotuloMes}
+        </span>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => mudarMes(1)}
+          disabled={noMesAtual}
+          aria-label="Próximo mês"
+        >
+          <ChevronRight className="size-4" />
+        </Button>
+      </div>
 
       {consumo.isError ? (
         <EmptyState title="Não foi possível carregar os orçamentos" />
@@ -219,7 +222,7 @@ export function OrcamentosPage() {
               mostra ao menos o "Não planejado". Investimentos (aportes − resgates) ficam
               fora de Despesas e Receitas. */}
           <Tabs defaultValue="despesa">
-            <TabsList>
+            <TabsList variant="line" className="w-full justify-start border-b">
               {TIPOS.map((t) => (
                 <TabsTrigger key={t} value={t}>
                   {ROTULOS[t].aba}
@@ -309,7 +312,7 @@ function SecaoOrcamento({
 }) {
   const nomes = useMapaCategorias()
   const iconeCategoria = useIconeCategoria()
-  const isMobile = useIsMobile()
+  const [grade, largo] = useLargo(880)
   if (itens.length === 0 && naoPlanejado === 0)
     return (
       <p className="py-6 text-center text-sm text-muted-foreground">
@@ -375,40 +378,66 @@ function SecaoOrcamento({
         percentualTotal={percentualTotal}
       />
 
-      {isMobile ? (
-        <ListaMobile
+      {/* Largo: categorias à esquerda, transações da escolhida à direita. Estreito: a categoria
+          abre as transações logo abaixo dela (sanfona: abrir outra fecha a anterior). A decisão
+          é pela largura DISPONÍVEL (chat aberto estreita a página), não pela da janela. */}
+      <div
+        ref={grade}
+        className={cn(
+          largo &&
+            "grid grid-cols-[minmax(18rem,26rem)_minmax(0,1fr)] items-start gap-4"
+        )}
+      >
+        <ListaCategorias
           linhas={linhas}
           abertaKey={abertaKey}
           onAlternar={alternar}
+          detalhe={
+            largo
+              ? undefined
+              : (linha) => (
+                  <PainelTransacoes
+                    ano={ano}
+                    mes={mes}
+                    alvo={{ tipo, categoriaId: linha.categoriaId }}
+                    titulo={`${linha.nome} · ${rotuloMes}`}
+                    embutido
+                  />
+                )
+          }
         />
-      ) : (
-        <TabelaLinhas
-          tipo={tipo}
-          linhas={linhas}
-          abertaKey={abertaKey}
-          onAlternar={alternar}
-        />
-      )}
-
-      {aberta && alvo && (
-        <PainelTransacoes
-          ano={ano}
-          mes={mes}
-          alvo={alvo}
-          titulo={`${aberta.nome} · ${rotuloMes}`}
-          onFechar={() => {
-            onAlvo(null)
-          }}
-        />
-      )}
+        {largo ? (
+          // key = categoria: trocar de categoria remonta o painel e toca a entrada (fade + leve
+          // subida) — a troca de conteúdo lê como transição, não como pulo.
+          <div
+            key={abertaKey ?? "vazio"}
+            className="sticky top-4 animate-[entrada-pagina_260ms_var(--ease-out)_both] motion-reduce:animate-[entrada-fade_150ms_ease_both]"
+          >
+            {aberta && alvo ? (
+              <PainelTransacoes
+                ano={ano}
+                mes={mes}
+                alvo={alvo}
+                titulo={`${aberta.nome} · ${rotuloMes}`}
+                onFechar={() => onAlvo(null)}
+              />
+            ) : (
+              <div className="flex min-h-64 flex-col items-center justify-center gap-2 rounded-2xl border border-dashed p-8 text-center">
+                <ListFilter
+                  className="size-5 text-muted-foreground"
+                  aria-hidden
+                />
+                <p className="text-sm font-medium">Escolha uma categoria</p>
+                <p className="max-w-xs text-sm text-muted-foreground">
+                  As transações dela no mês aparecem aqui.
+                </p>
+              </div>
+            )}
+          </div>
+        ) : null}
+      </div>
     </section>
   )
-}
-
-type PropsLinhas = {
-  linhas: LinhaVisao[]
-  abertaKey: string | null
-  onAlternar: (linha: LinhaVisao) => void
 }
 
 function ResumoSecao({
@@ -426,77 +455,144 @@ function ResumoSecao({
 }) {
   const despesa = tipo === "despesa"
   const r = ROTULOS[tipo]
+  const excedido = despesa && restanteTotal < 0
+  const pct = Math.max(0, percentualTotal)
   return (
-    <Card>
-      <CardContent className="flex flex-wrap items-center justify-between gap-6 py-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:gap-8">
-          <div>
-            <p className="text-sm text-muted-foreground">{r.orcadoTotal}</p>
-            <p className="text-lg font-semibold">
-              <Valor centavos={totalOrcado} neutro />
-            </p>
-          </div>
-          <div>
-            <p className="text-sm text-muted-foreground">{r.realizadoTotal}</p>
-            <p className="text-lg font-semibold">
-              <Valor centavos={totalRealizado} neutro />
-            </p>
-          </div>
-          <div>
-            {/* O valor sai sem "-" (ver abaixo); sem trocar o rótulo, "Restante R$ 2.313" em
-                vermelho dependia só da cor para dizer que estourou. */}
-            <p className="text-sm text-muted-foreground">
-              {despesa && restanteTotal < 0 ? "Excedido" : r.restanteTotal}
-            </p>
-            <p className="text-lg font-semibold">
-              {/* Nunca mostra "-": despesa mantém a cor do sinal real (vermelho se estourou),
-                  só sem o sinal de menos no texto. Nas metas (receita/investimento), passar
-                  da meta zera o restante — o excedente não é "o que falta". */}
-              <Valor
-                centavos={despesa ? restanteTotal : Math.max(restanteTotal, 0)}
-                absoluto={despesa}
-              />
-            </p>
-          </div>
+    // Herói = o que resta (a pergunta do mês), com orçado e realizado na própria linha do herói.
+    <CardDestaque
+      // Rótulo muda ao estourar: o valor sai sem "-", então a cor não pode ser o único sinal.
+      titulo={excedido ? "Excedido no mês" : r.restanteTotal}
+      // Nas metas (receita/investimento), passar da meta zera o restante — o excedente não
+      // é "o que falta".
+      centavos={despesa ? Math.abs(restanteTotal) : Math.max(restanteTotal, 0)}
+      mascote={despesa ? (pct >= 100 ? "scared" : "money") : "goal"}
+      estatisticas={[
+        {
+          rotulo: r.orcadoTotal,
+          valor: <Valor centavos={totalOrcado} neutro />,
+        },
+        {
+          rotulo: r.realizadoTotal,
+          valor: <Valor centavos={totalRealizado} neutro />,
+        },
+      ]}
+    >
+      <div className="max-w-xl space-y-2">
+        <div
+          role="img"
+          aria-label={`${pct}% ${r.anel}`}
+          className="h-2.5 w-full overflow-hidden rounded-full bg-muted"
+        >
+          <div
+            className={cn(
+              "h-full origin-left animate-[barra-cresce_800ms_var(--ease-out)_both] rounded-full motion-reduce:animate-none",
+              // Na despesa, 100% já é o teto: estado de alerta mesmo com restante zero (o texto
+              // "Excedido no mês" continua só para quando passa do orçado).
+              excedido || (despesa && pct >= 100)
+                ? "bg-negative"
+                : pct >= 75 && despesa
+                  ? "bg-warning"
+                  : "bg-success"
+            )}
+            style={{ width: `${Math.min(pct, 100)}%` }}
+          />
         </div>
-        <AnelProgresso pct={percentualTotal} tamanho={96} rotulo={r.anel} />
-      </CardContent>
-    </Card>
+        <p className="text-sm font-semibold text-muted-foreground tabular-nums">
+          {pct}% {r.anel}
+        </p>
+      </div>
+    </CardDestaque>
   )
 }
 
-function ListaMobile({ linhas, abertaKey, onAlternar }: PropsLinhas) {
+/** Largura do elemento ≥ `min` (px), acompanhando redimensionamentos. */
+function useLargo(min: number) {
+  // Callback ref (não useRef): o contêiner só nasce depois do estado "nada neste mês" — com um
+  // ref fixo o observador, instalado no 1º render, nunca chegaria a ele.
+  const [el, setEl] = useState<HTMLElement | null>(null)
+  const [largo, setLargo] = useState(false)
+  useLayoutEffect(() => {
+    if (!el) return
+    const ro = new ResizeObserver(([e]) => setLargo(e.contentRect.width >= min))
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [el, min])
+  return [setEl, largo] as const
+}
+
+function ListaCategorias({
+  linhas,
+  abertaKey,
+  onAlternar,
+  detalhe,
+}: {
+  linhas: LinhaVisao[]
+  abertaKey: string | null
+  onAlternar: (linha: LinhaVisao) => void
+  /** Transações de uma categoria, embutidas logo abaixo dela (modo sanfona); sem ela, nada abre
+   *  na lista (o painel mora ao lado). */
+  detalhe?: (linha: LinhaVisao) => ReactNode
+}) {
   return (
-    <div className="divide-y rounded-lg border">
-      {linhas.map((linha) => (
-        <ItemMobile
-          key={linha.key}
-          linha={linha}
-          aberta={linha.key === abertaKey}
-          onAlternar={onAlternar}
-        />
-      ))}
+    <div className="space-y-0.5 rounded-2xl superficie p-2">
+      {linhas.map((linha) => {
+        const aberta = linha.key === abertaKey
+        return (
+          <ItemCategoria
+            key={linha.key}
+            linha={linha}
+            aberta={aberta}
+            onAlternar={onAlternar}
+            detalhe={detalhe}
+          />
+        )
+      })}
     </div>
   )
 }
 
-function ItemMobile({
+function ItemCategoria({
   linha,
   aberta,
   onAlternar,
+  detalhe,
 }: {
   linha: LinhaVisao
   aberta: boolean
   onAlternar: (linha: LinhaVisao) => void
+  detalhe?: (linha: LinhaVisao) => ReactNode
 }) {
+  // Conteúdo continua montado enquanto fecha (a altura anima até 0) e sai no fim da transição.
+  const [montado, setMontado] = useState(aberta)
+  if (aberta && !montado) setMontado(true)
+
+  function alternar(e: MouseEvent<HTMLButtonElement>) {
+    // A linha tocada fica parada na tela: se outra categoria ACIMA fecha, a página subiria junto —
+    // compensamos a rolagem a cada quadro enquanto as alturas animam.
+    const el = e.currentTarget
+    const y0 = el.getBoundingClientRect().top
+    const fim = performance.now() + 400
+    const fixar = () => {
+      const d = el.getBoundingClientRect().top - y0
+      if (Math.abs(d) > 0.5) window.scrollBy(0, d)
+      if (performance.now() < fim) requestAnimationFrame(fixar)
+    }
+    onAlternar(linha)
+    requestAnimationFrame(fixar)
+  }
+
   return (
-    <div className={cn("space-y-1.5 p-3", aberta && "bg-muted/60")}>
+    <div
+      className={cn(
+        "space-y-1.5 rounded-xl p-3 transition-colors",
+        aberta ? "bg-muted/60" : "hover:bg-muted/40"
+      )}
+    >
       <button
         type="button"
-        onClick={() => {
-          onAlternar(linha)
-        }}
-        aria-expanded={aberta}
+        onClick={alternar}
+        aria-expanded={detalhe ? aberta : undefined}
+        aria-pressed={detalhe ? undefined : aberta}
         className="flex w-full items-center gap-3 rounded-sm text-left outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         {createElement(linha.icone, {
@@ -520,6 +616,29 @@ function ItemMobile({
           indicatorClassName={linha.cor}
         />
       </div>
+      {detalhe ? (
+        // Sanfona: grid 0fr → 1fr anima a altura até a do conteúdo (sem medir em JS); o conteúdo
+        // acompanha com opacidade. mt-0: fechada, não deixa o espaçamento do space-y sobrando.
+        <div
+          className={cn(
+            "mt-0! grid transition-[grid-template-rows] duration-300 ease-(--ease-out) motion-reduce:transition-none",
+            aberta ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+          )}
+          onTransitionEnd={(e) => {
+            if (e.target === e.currentTarget && !aberta) setMontado(false)
+          }}
+        >
+          <div
+            className={cn(
+              "min-h-0 overflow-hidden transition-opacity duration-300 ease-(--ease-out) motion-reduce:transition-none",
+              aberta ? "opacity-100" : "opacity-0"
+            )}
+            inert={!aberta || undefined}
+          >
+            {montado ? detalhe(linha) : null}
+          </div>
+        </div>
+      ) : null}
     </div>
   )
 }
@@ -548,168 +667,57 @@ function RealizadoDeLimite({ linha }: { linha: LinhaVisao }) {
   )
 }
 
-function TabelaLinhas({
-  tipo,
-  linhas,
-  abertaKey,
-  onAlternar,
-}: PropsLinhas & { tipo: TipoOrcamento }) {
-  const despesa = tipo === "despesa"
-  return (
-    <div className="overflow-x-auto rounded-lg border">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Categoria</TableHead>
-            <TableHead className="text-right">{ROTULOS[tipo].orcado}</TableHead>
-            <TableHead className="text-right">
-              {ROTULOS[tipo].realizado}
-            </TableHead>
-            <TableHead className="text-right">Restante</TableHead>
-            <TableHead className="w-36">%</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {linhas.map((linha) => (
-            <LinhaTabela
-              key={linha.key}
-              despesa={despesa}
-              linha={linha}
-              aberta={linha.key === abertaKey}
-              onAlternar={onAlternar}
-            />
-          ))}
-        </TableBody>
-      </Table>
-    </div>
-  )
-}
-
-function LinhaTabela({
-  despesa,
-  linha,
-  aberta,
-  onAlternar,
-}: {
-  despesa: boolean
-  linha: LinhaVisao
-  aberta: boolean
-  onAlternar: (linha: LinhaVisao) => void
-}) {
-  const restante = linha.limite === null ? null : linha.limite - linha.realizado
-  return (
-    <TableRow
-      onClick={() => {
-        onAlternar(linha)
-      }}
-      data-state={aberta ? "selected" : undefined}
-      className="cursor-pointer"
-    >
-      <TableCell>
-        {/* O botão é o alvo acessível (teclado/leitor de tela); o clique na linha
-            inteira é só conveniência de mouse. */}
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation()
-            onAlternar(linha)
-          }}
-          aria-expanded={aberta}
-          className="flex max-w-full items-center gap-2 rounded-sm text-left outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          {createElement(linha.icone, {
-            className: "size-4 shrink-0 text-muted-foreground",
-            "aria-hidden": true,
-          })}
-          <span className="truncate">{linha.nome}</span>
-        </button>
-      </TableCell>
-      <TableCell className="text-right">
-        {linha.limite === null ? (
-          <SemValor />
-        ) : (
-          <Valor centavos={linha.limite} neutro />
-        )}
-      </TableCell>
-      <TableCell className="text-right">
-        <Valor centavos={linha.realizado} neutro />
-      </TableCell>
-      <TableCell className="text-right">
-        {restante === null ? (
-          <SemValor />
-        ) : (
-          <Valor
-            centavos={despesa ? restante : Math.max(restante, 0)}
-            absoluto={despesa}
-          />
-        )}
-      </TableCell>
-      <TableCell>
-        <div className="flex items-center gap-2">
-          <Progress
-            value={Math.min(linha.percentual, 100)}
-            indicatorClassName={linha.cor}
-            className="w-16"
-          />
-          <span className="text-xs text-muted-foreground tabular-nums">
-            {linha.percentual}%
-          </span>
-        </div>
-      </TableCell>
-    </TableRow>
-  )
-}
-
-function SemValor() {
-  return (
-    <span className="text-muted-foreground" aria-label="sem orçado">
-      —
-    </span>
-  )
-}
-
-/** Transações da linha aberta, logo abaixo da tabela da seção — mesma tabela/drawer da tela de
- *  Transações (recategorizar aqui já atualiza o consumo). */
 function PainelTransacoes({
   ano,
   mes,
   alvo,
   titulo,
   onFechar,
+  embutido = false,
 }: {
   ano: number
   mes: number
   alvo: AlvoDrilldown
   titulo: string
-  onFechar: () => void
+  /** Sem ele, não há botão de fechar (na sanfona, fecha-se tocando a categoria de novo). */
+  onFechar?: () => void
+  /** Dentro da categoria aberta (sanfona): sem superfície própria nem título. */
+  embutido?: boolean
 }) {
   const transacoes = useTransacoesDoOrcamento(ano, mes, alvo)
   const ref = useRef<HTMLElement>(null)
   // Traz o painel pra vista ao abrir/trocar de linha — numa tabela longa ele nasceria fora da tela.
+  // Na sanfona não: a página fica parada e só a categoria expande.
   useEffect(() => {
-    ref.current?.scrollIntoView({ block: "nearest" })
-  }, [alvo.tipo, alvo.categoriaId])
+    if (!embutido) ref.current?.scrollIntoView({ block: "nearest" })
+  }, [alvo.tipo, alvo.categoriaId, embutido])
 
   return (
     <section
       ref={ref}
       aria-label={`Transações de ${titulo}`}
-      className="space-y-3 rounded-lg border p-3 sm:p-4"
+      className={cn(
+        embutido ? "-mx-1 pt-2" : "space-y-3 rounded-2xl superficie p-3 sm:p-4"
+      )}
     >
-      <div className="flex items-center justify-between gap-2">
-        <h3 className="text-sm font-semibold">
-          <span className="text-muted-foreground">Transações · </span>
-          {titulo}
-        </h3>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={onFechar}
-          aria-label="Fechar transações"
-        >
-          <X className="size-4" />
-        </Button>
-      </div>
+      {embutido ? null : (
+        <div className="flex items-center justify-between gap-2">
+          <h3 className="text-sm font-semibold">
+            <span className="text-muted-foreground">Transações · </span>
+            {titulo}
+          </h3>
+          {onFechar ? (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onFechar}
+              aria-label="Fechar transações"
+            >
+              <X className="size-4" />
+            </Button>
+          ) : null}
+        </div>
+      )}
       {transacoes.isError ? (
         <EmptyState title="Não foi possível carregar as transações" />
       ) : transacoes.isLoading ? (
@@ -717,7 +725,14 @@ function PainelTransacoes({
       ) : !transacoes.data?.length ? (
         <EmptyState title="Nenhuma transação nesta categoria no mês" />
       ) : (
-        <TransacoesTabela items={transacoes.data} semMoldura />
+        <TransacoesTabela
+          items={transacoes.data}
+          semMoldura
+          // Painel lateral (~650px) e sanfona são estreitos para as colunas da tabela: lista.
+          compacta
+          // Categoria única na lista → coluna redundante (o "não planejado" mistura várias).
+          ocultarCategoria={alvo.categoriaId != null}
+        />
       )}
     </section>
   )

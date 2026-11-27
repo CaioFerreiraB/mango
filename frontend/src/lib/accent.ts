@@ -6,20 +6,28 @@ export const ACCENT_PADRAO = "violeta"
 /** nome → hex do primary (light), para swatches na UI. Presets em index.css. */
 export const ACCENTS = {
   violeta: "#7008E7",
-  manga: "#EA580E",
-  verde: "#009965",
+  tangerina: "#FB6A1E",
+  lima: "#84CC16",
   azul: "#165DFC",
   rosa: "#E60076",
-  teal: "#0092B8",
+  grafite: "#1F2937",
 } as const
 
 export type Accent = keyof typeof ACCENTS
 
 const STORAGE_KEY = "accent"
 
+// Ids antigos (antes do redesenho dos presets), os mesmos da migration c4f8a2e61d07: quem tinha
+// "verde" guardado no navegador abre já em "lima", sem esperar o /me.
+const LEGADO: Record<string, Accent> = {
+  verde: "lima",
+  manga: "tangerina",
+  teal: "grafite",
+}
+
 export function aplicarAccent(accent: string | null | undefined) {
-  const valido =
-    accent && accent in ACCENTS ? (accent as Accent) : ACCENT_PADRAO
+  const atual = (accent && LEGADO[accent]) || accent
+  const valido = atual && atual in ACCENTS ? (atual as Accent) : ACCENT_PADRAO
   if (valido === ACCENT_PADRAO) {
     delete document.documentElement.dataset.accent // default = sem atributo (index.css)
   } else {

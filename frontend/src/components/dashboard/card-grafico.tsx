@@ -29,12 +29,16 @@ export function CardGrafico({
     <Card className="min-w-0">
       <CardHeader className="flex-row flex-wrap items-start justify-between gap-x-4 gap-y-2">
         <div className="min-w-0">
-          <CardTitle className="text-base">{titulo}</CardTitle>
+          <CardTitle>{titulo}</CardTitle>
           {descricao ? <CardDescription>{descricao}</CardDescription> : null}
         </div>
         {acao}
       </CardHeader>
-      <CardContent className="@container">{children}</CardContent>
+      {/* Coluna flexível: com altura personalizada (card mais alto que o conteúdo), o gráfico
+          filho direto cresce para ocupar o espaço em vez de deixar um vão embaixo. */}
+      <CardContent className="@container flex flex-1 flex-col [&>[role=img]]:flex-auto">
+        {children}
+      </CardContent>
     </Card>
   )
 }

@@ -29,7 +29,10 @@ class ObjetivoVinculo(BaseModel):
     tipo: Literal["conta", "investimento"]
     id: int
     nome: str | None
+    # Valor que conta para o objetivo: saldo da conta ou valor LÍQUIDO do investimento.
     saldo_centavos: int
+    # Só investimento: valor bruto (antes de IR/IOF), informativo.
+    bruto_centavos: int | None = None
 
 
 class ObjetivoRead(ORMModel):
@@ -41,7 +44,7 @@ class ObjetivoRead(ORMModel):
     valor_alvo_centavos: int
     criado_em: datetime
     atualizado_em: datetime
-    # Calculados: soma dos saldos vinculados e razão guardado/alvo (teto 1.0).
+    # Calculados: soma vinculada (contas: saldo; investimentos: líquido) e guardado/alvo (teto 1.0).
     valor_guardado_centavos: int = 0
     progresso: float = 0.0
 

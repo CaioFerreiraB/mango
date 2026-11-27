@@ -1,6 +1,8 @@
 """Objetivos (§4.8, decisão #4): valor guardado e progresso calculados em runtime.
 
-Valor guardado = soma dos saldos de contas + investimentos vinculados pela FK `objetivo_id`.
+Valor guardado = soma dos saldos das contas + valor LÍQUIDO (bruto − IR − IOF, a mesma regra do
+patrimônio líquido da carteira) dos investimentos vinculados pela FK `objetivo_id`. O bruto vai só
+como informação no vínculo.
 A regra 1:1-max (#4) já é garantida pela FK escalar em conta/investimento; aqui só somamos.
 Tudo escopado por `usuario_id` (§5.2).
 """
@@ -15,8 +17,7 @@ from app.models.conta import Conta
 from app.models.investimento import Investimento
 from app.models.objetivo import Objetivo
 from app.schemas.objetivo import ObjetivoDetalheRead, ObjetivoRead, ObjetivoVinculo
-
-_VINCULAVEIS = (Conta, Investimento)
+from app.services.investimento import valor_bruto, valor_liquido
 
 
 def _progresso(guardado: int, alvo: int) -> float:
@@ -24,18 +25,25 @@ def _progresso(guardado: int, alvo: int) -> float:
 
 
 def valores_guardados(db: Session, usuario_id: int) -> dict[int, int]:
-    """{objetivo_id: soma de saldos vinculados} para todos os objetivos do usuário."""
+    """{objetivo_id: contas (saldo) + investimentos (líquido) vinculados} do usuário."""
     guardado: dict[int, int] = {}
-    for tabela in _VINCULAVEIS:
-        rows = db.execute(
-            select(tabela.objetivo_id, func.coalesce(func.sum(tabela.saldo_centavos), 0))
-            .where(tabela.usuario_id == usuario_id, tabela.objetivo_id.is_not(None))
-            .group_by(tabela.objetivo_id)
-        ).all()
-        for objetivo_id, total in rows:
-            # int(): no Postgres SUM(BIGINT) volta NUMERIC → Decimal, que a API serializava como
-            # string ("500000") porque o atributo é atribuído sem validação em `_enriquecer`.
-            guardado[objetivo_id] = guardado.get(objetivo_id, 0) + int(total)
+    rows = db.execute(
+        select(Conta.objetivo_id, func.coalesce(func.sum(Conta.saldo_centavos), 0))
+        .where(Conta.usuario_id == usuario_id, Conta.objetivo_id.is_not(None))
+        .group_by(Conta.objetivo_id)
+    ).all()
+    for objetivo_id, total in rows:
+        # int(): no Postgres SUM(BIGINT) volta NUMERIC → Decimal, que a API serializava como
+        # string ("500000") porque o atributo é atribuído sem validação em `_enriquecer`.
+        guardado[objetivo_id] = int(total)
+    # Investimentos somados em Python: o líquido é regra do serviço de carteira (fonte única).
+    invs = db.scalars(
+        select(Investimento).where(
+            Investimento.usuario_id == usuario_id, Investimento.objetivo_id.is_not(None)
+        )
+    ).all()
+    for inv in invs:
+        guardado[inv.objetivo_id] = guardado.get(inv.objetivo_id, 0) + valor_liquido(inv)
     return guardado
 
 
@@ -83,10 +91,12 @@ def _vinculos(db: Session, usuario_id: int, objetivo_id: int) -> list[ObjetivoVi
                 tipo="investimento",
                 id=inv.id,
                 nome=nome_ativo or inv.nome,
-                saldo_centavos=inv.saldo_centavos,
+                saldo_centavos=valor_liquido(inv),
+                bruto_centavos=valor_bruto(inv),
             )
         else:
-            v.saldo_centavos += inv.saldo_centavos
+            v.saldo_centavos += valor_liquido(inv)
+            v.bruto_centavos = (v.bruto_centavos or 0) + valor_bruto(inv)
     return vinculos + list(grupos.values())
 
 

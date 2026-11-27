@@ -157,6 +157,14 @@ function LinhaVinculo({
         ? "cartão"
         : "conta"
       : "investimento"
+  // Investimento conta pelo líquido (após IR/IOF); o bruto aparece só como informação.
+  const bruto =
+    vinculo.bruto_centavos != null &&
+    vinculo.bruto_centavos !== vinculo.saldo_centavos ? (
+      <span className="block text-xs text-muted-foreground">
+        bruto <Valor centavos={vinculo.bruto_centavos} neutro />
+      </span>
+    ) : null
   const icone =
     vinculo.tipo === "conta" ? (
       <AvatarBanco nome={nome} logoUrl={logoUrl} />
@@ -176,11 +184,14 @@ function LinhaVinculo({
         </div>
         <div className="flex shrink-0 flex-col items-end gap-1">
           <div className="flex items-center gap-1">
-            <Valor
-              centavos={vinculo.saldo_centavos}
-              neutro
-              className="text-sm"
-            />
+            <span className="text-right">
+              <Valor
+                centavos={vinculo.saldo_centavos}
+                neutro
+                className="text-sm"
+              />
+              {bruto}
+            </span>
             <Button
               variant="ghost"
               size="icon-sm"
@@ -212,6 +223,7 @@ function LinhaVinculo({
       </div>
       <div className="w-28 shrink-0 text-right text-sm">
         <Valor centavos={vinculo.saldo_centavos} neutro />
+        {bruto}
       </div>
       <div className="flex w-24 shrink-0 items-center gap-2">
         <span className="w-10 shrink-0 text-right text-xs text-muted-foreground tabular-nums">
@@ -397,6 +409,16 @@ function ObjetivoDetalheConteudo({
 }) {
   const pct = Math.round(data.progresso * 100)
   const total = data.valor_guardado_centavos
+  const totalBruto = data.vinculos.reduce(
+    (s, v) => s + (v.bruto_centavos ?? v.saldo_centavos),
+    0
+  )
+  const brutoTotal =
+    totalBruto !== total ? (
+      <span className="block text-xs font-normal text-muted-foreground">
+        bruto <Valor centavos={totalBruto} neutro />
+      </span>
+    ) : null
 
   return (
     <>
@@ -644,17 +666,35 @@ function ObjetivoDetalheConteudo({
               </ul>
               {isMobile ? (
                 <div className="flex items-center justify-between border-t pt-2 font-medium">
-                  <span className="text-sm">Total vinculado</span>
+                  <span className="text-sm">
+                    Total vinculado
+                    {brutoTotal ? (
+                      <span className="block text-xs font-normal text-muted-foreground">
+                        investimentos pelo líquido
+                      </span>
+                    ) : null}
+                  </span>
                   <div className="flex items-center gap-2 text-sm">
-                    <Valor centavos={total} neutro />
+                    <span className="text-right">
+                      <Valor centavos={total} neutro />
+                      {brutoTotal}
+                    </span>
                     <span className="text-xs text-muted-foreground">100%</span>
                   </div>
                 </div>
               ) : (
                 <div className="flex min-w-fit items-center gap-3 border-t pt-2 font-medium">
-                  <span className="flex-1 text-sm">Total vinculado</span>
+                  <span className="flex-1 text-sm">
+                    Total vinculado
+                    {brutoTotal ? (
+                      <span className="block text-xs font-normal text-muted-foreground">
+                        investimentos pelo valor líquido (após IR/IOF)
+                      </span>
+                    ) : null}
+                  </span>
                   <div className="w-28 shrink-0 text-right text-sm">
                     <Valor centavos={total} neutro />
+                    {brutoTotal}
                   </div>
                   <div className="flex w-24 shrink-0 items-center">
                     <span className="w-10 shrink-0 text-right text-xs tabular-nums">

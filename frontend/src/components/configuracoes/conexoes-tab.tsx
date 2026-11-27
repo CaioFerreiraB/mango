@@ -86,7 +86,7 @@ function SyncAutomaticoCard() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">Sincronização automática</CardTitle>
+        <CardTitle>Sincronização automática</CardTitle>
         <CardDescription>
           Importa diariamente os dados disponíveis no Pluggy para manter suas
           contas atualizadas.
@@ -216,7 +216,7 @@ function BrapiTokenCard() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">Token da brapi.dev</CardTitle>
+        <CardTitle>Token da brapi.dev</CardTitle>
         <CardDescription>
           Opcional. Habilita a evolução do valor da cota, o comparativo com o
           IBOV e a reconstrução do histórico de preço. O token é guardado
@@ -305,7 +305,7 @@ function FormCredencial() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">Credencial do Pluggy</CardTitle>
+        <CardTitle>Credencial do Pluggy</CardTitle>
         <CardDescription>
           Crie um app no Pluggy e informe o clientId e o clientSecret. O segredo
           é guardado cifrado e nunca é exibido de volta.
@@ -377,7 +377,7 @@ function CredencialConfigurada({ credencialId }: { credencialId: number }) {
     <Card>
       <CardHeader className="flex-row flex-wrap items-center justify-between gap-2">
         <div>
-          <CardTitle className="text-base">Credencial do Pluggy</CardTitle>
+          <CardTitle>Credencial do Pluggy</CardTitle>
           <CardDescription>
             Configurada. O segredo fica cifrado no servidor.
           </CardDescription>
@@ -507,7 +507,7 @@ function ListaItens({ credencialId }: { credencialId: number }) {
     <Card>
       <CardHeader className="flex-row items-center justify-between">
         <div>
-          <CardTitle className="text-base">Conexões</CardTitle>
+          <CardTitle>Conexões</CardTitle>
           <CardDescription>
             Contas conectadas pelo Meu Pluggy (itemId).
           </CardDescription>

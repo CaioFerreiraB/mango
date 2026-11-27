@@ -58,6 +58,34 @@ def test_valor_guardado_soma_conta_e_investimento(db: Session, usuario_a: Usuari
     assert {v.tipo for v in detalhe.vinculos} == {"conta", "investimento"}
 
 
+def test_valor_guardado_usa_liquido_do_investimento(db: Session, usuario_a: Usuario) -> None:
+    objetivo = ObjetivoRepository(db, usuario_a.id).create(
+        titulo="Viagem", valor_alvo_centavos=100_000
+    )
+    conta = criar_conta(db, usuario_a.id, "acc-liq", saldo_centavos=10_000)
+    db.add(
+        Investimento(
+            usuario_id=usuario_a.id,
+            item_id=conta.item_id,
+            pluggy_investment_id="inv-liq",
+            type="FIXED_INCOME",
+            saldo_centavos=49_000,  # ≠ líquido: o teste distingue saldo, bruto e líquido
+            amount_centavos=52_000,  # bruto
+            taxes_centavos=1_500,  # IR
+            taxes2_centavos=500,  # IOF
+            objetivo_id=objetivo.id,
+        )
+    )
+    db.commit()
+
+    esperado = 50_000  # 52k bruto − 1,5k IR − 0,5k IOF (não o balance nem o bruto)
+    (vinculo,) = objetivo_service.obter(db, usuario_a.id, objetivo.id).vinculos
+    assert (vinculo.saldo_centavos, vinculo.bruto_centavos) == (esperado, 52_000)
+    assert objetivo_service.obter(db, usuario_a.id, objetivo.id).valor_guardado_centavos == esperado
+    (lista,) = objetivo_service.listar(db, usuario_a.id)  # listagem e detalhe somam igual
+    assert lista.valor_guardado_centavos == esperado
+
+
 def test_progresso_limita_em_um(db: Session, usuario_a: Usuario) -> None:
     objetivo = ObjetivoRepository(db, usuario_a.id).create(
         titulo="Pequeno", valor_alvo_centavos=10_000
@@ -140,10 +168,10 @@ def test_vincula_ativo_inteiro_e_lista_uma_linha(
         resposta = client.patch("/api/investimentos/posicao/objetivo", json=corpo)
         assert resposta.status_code == 204, resposta.text
         detalhe = client.get(f"/api/objetivos/{objetivo.id}").json()
-        assert detalhe["valor_guardado_centavos"] == 100_000  # conta 40k + 3 compras (60k)
+        assert detalhe["valor_guardado_centavos"] == 106_000  # conta 40k + 3 compras (66k líquido)
         invs = [v for v in detalhe["vinculos"] if v["tipo"] == "investimento"]
         # Investimento completo: 3 compras do ativo = uma linha (nome do ativo, saldo somado).
-        assert [(v["nome"], v["saldo_centavos"]) for v in invs] == [("CDB Reserva", 60_000)]
+        assert [(v["nome"], v["saldo_centavos"]) for v in invs] == [("CDB Reserva", 66_000)]
         assert invs[0]["id"] == posicoes[2].id  # representante = compra de maior saldo
     assert _ativo(db, posicoes).objetivo_id == objetivo.id
     assert _objetivos(db, posicoes) == [objetivo.id] * 3
@@ -172,7 +200,9 @@ def test_compra_nova_do_sync_herda_objetivo_do_ativo(db, usuario_a, posicoes_obj
     db.refresh(nova)
     assert nova.ativo_id == posicoes[0].ativo_id
     assert nova.objetivo_id == objetivo.id
-    assert objetivo_service.obter(db, usuario_a.id, objetivo.id).valor_guardado_centavos == 105_000
+    assert (
+        objetivo_service.obter(db, usuario_a.id, objetivo.id).valor_guardado_centavos == 111_000
+    )  # 106k + 5k (sem amount: líquido = balance)
 
 
 def test_mover_compra_segue_o_objetivo_do_ativo_de_destino(
@@ -198,7 +228,7 @@ def test_mover_compra_segue_o_objetivo_do_ativo_de_destino(
     assert resposta.json()["objetivo_id"] == objetivo.id
     assert _objetivos(db, posicoes) == [objetivo.id, objetivo.id, None]
     detalhe = client.get(f"/api/objetivos/{objetivo.id}").json()
-    assert detalhe["valor_guardado_centavos"] == 70_000  # conta 40k + 10k + 20k
+    assert detalhe["valor_guardado_centavos"] == 73_000  # conta 40k + 11k + 22k (líquido)
     assert [v["nome"] for v in detalhe["vinculos"] if v["tipo"] == "investimento"] == [
         "Caixinha do terreno"
     ]
