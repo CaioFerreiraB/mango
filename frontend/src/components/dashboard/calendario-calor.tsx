@@ -79,7 +79,7 @@ const dataLonga = (iso: string) => {
   return `${DIAS_SEMANA_LONGO[d.getDay()]}, ${d.toLocaleDateString("pt-BR", { day: "numeric", month: "long" })}`
 }
 
-/** Calendário de calor do mês do fim do período: cada dia colorido numa escala contínua do laranja
+/** Calendário de calor do mês do fim do período: cada dia colorido numa escala contínua da framboesa
  *  de despesa (mais negativo) ao azul padrão (mais positivo); clicar num dia mostra o detalhe. */
 export function CalendarioCalor({ fim, visao }: { fim: string; visao: Visao }) {
   const hoje = hojeISO()
@@ -436,7 +436,9 @@ function Dia({
           "shadow-[0_0_0_2px_var(--color-card),0_0_0_3.5px_var(--color-primary)]"
       )}
     >
-      <span className="flex items-start justify-between gap-1">
+      {/* Célula estreita (celular): o ícone de investimento desce para baixo do número em vez de
+          espremer ao lado dele. */}
+      <span className="flex flex-col items-start gap-0.5 @xl:flex-row @xl:justify-between @xl:gap-1">
         <span
           className={cn(
             "text-xs font-semibold tabular-nums",
@@ -485,7 +487,7 @@ function Linha({
 }
 
 /** Escala contínua: o extremo negativo à esquerda, zero na superfície, o positivo à direita. Só
- *  desenha os braços que o mês tem (só despesas → só o laranja). */
+ *  desenha os braços que o mês tem (só despesas → só a framboesa). */
 function Legenda({
   maxPos,
   maxNeg,

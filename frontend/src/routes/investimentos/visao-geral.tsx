@@ -4,17 +4,12 @@ import {
   ArrowRight,
   ArrowUpRight,
   CircleCheck,
-  CircleDollarSign,
-  Coins,
-  Layers,
   MoreHorizontal,
-  Percent,
   Sparkles,
   TrendingUp,
   X,
 } from "lucide-react"
-import type { LucideIcon } from "lucide-react"
-import { useState, type ReactNode } from "react"
+import { useState } from "react"
 import { Link } from "react-router"
 
 import { EmptyState } from "@/components/common/empty-state"
@@ -22,7 +17,8 @@ import { corIndicador } from "@/lib/echart-tema"
 import { GraficoLinhas, Rosca } from "@/components/common/graficos-base"
 import { Valor } from "@/components/common/valor"
 import { eixoBRL } from "@/components/dashboard/chart-helpers"
-import { CardDestaque } from "@/components/dashboard/kpi-card"
+import { CardDestaque, Kpi } from "@/components/common/kpi"
+import { PageHeader } from "@/components/common/page-header"
 import {
   AportesValorizacao,
   ProventosPorMes,
@@ -216,79 +212,30 @@ function Cabecalho({
   aberto: boolean
 }) {
   return (
-    <header className="flex flex-wrap items-start justify-between gap-3">
-      <div>
-        <h1 className="text-xl font-semibold">Visão Geral</h1>
-        <p className="text-sm text-muted-foreground">
-          Acompanhe o resumo da sua carteira de investimentos.
-        </p>
-      </div>
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="text-right text-xs text-muted-foreground">
-          <p>Atualizado em {formatDateTime(atualizadoEm)}</p>
-          <p className="inline-flex items-center gap-1.5">
+    <PageHeader
+      titulo="Visão Geral"
+      descricao={
+        <span className="inline-flex flex-wrap items-center gap-x-2">
+          <span>Resumo da sua carteira de investimentos.</span>
+          <span className="inline-flex items-center gap-1.5 text-xs">
             <span
               className={cn(
                 "size-1.5 rounded-full",
-                aberto ? "bg-positive" : "bg-muted-foreground"
+                aberto ? "bg-success" : "bg-muted-foreground"
               )}
               aria-hidden
             />
-            Mercado {aberto ? "aberto" : "fechado"}
-          </p>
-        </div>
-        <SyncButton />
-      </div>
-    </header>
+            Mercado {aberto ? "aberto" : "fechado"} · atualizado em{" "}
+            {formatDateTime(atualizadoEm)}
+          </span>
+        </span>
+      }
+      acoes={<SyncButton />}
+    />
   )
 }
 
 // --- KPIs --------------------------------------------------------------------------------------
-
-function KpiCard({
-  icon: Icon,
-  label,
-  valor,
-  detalhe,
-  acao,
-}: {
-  icon: LucideIcon
-  label: string
-  valor: ReactNode
-  detalhe?: ReactNode
-  acao?: ReactNode
-}) {
-  return (
-    // Mobile: card compacto — sem o chip de ícone e sem truncar (valor cortado é número
-    // ambíguo); a grade (auto-fit) cai para 1 coluna quando 2 não cabem. A partir de @xl volta
-    // ao card completo. min-w-0: item de grid não cresce além da coluna.
-    <Card className="min-w-0 py-4 @xl:py-6">
-      <CardContent className="space-y-2 px-3 @xl:space-y-2.5 @xl:px-6">
-        <div className="flex min-h-8 items-center gap-2">
-          <span
-            aria-hidden
-            className="hidden size-8 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary @xl:grid"
-          >
-            <Icon className="size-4" />
-          </span>
-          {/* Rótulo quebra em vez de cortar: com 5 cards por linha "Rentabilidade (12M)" não cabe. */}
-          <p className="min-w-0 flex-1 text-sm leading-tight text-muted-foreground">
-            {label}
-          </p>
-          {acao}
-        </div>
-        <div>
-          <div className="text-base font-bold tracking-tight tabular-nums @xl:truncate @xl:text-xl">
-            {valor}
-          </div>
-          {detalhe ? (
-            <div className="mt-1 text-xs @xl:truncate">{detalhe}</div>
-          ) : null}
-        </div>
-      </CardContent>
-    </Card>
-  )
-}
 
 /** Variação percentual: seta (direção, a11y) + valor absoluto; cor semântica da casa. */
 function VarPct({
@@ -333,12 +280,9 @@ function Kpis({
   if (carregando || !resumo) {
     return (
       <div className="space-y-3 @xl:space-y-4">
-        <div className="grid gap-3 @xl:gap-4 @3xl:grid-cols-2">
-          <Skeleton className="h-32 w-full rounded-xl" />
-          <Skeleton className="h-32 w-full rounded-xl" />
-        </div>
-        <div className="grid grid-cols-2 gap-3 @xl:gap-4 @4xl:grid-cols-5">
-          {Array.from({ length: 5 }, (_, i) => (
+        <Skeleton className="h-44 w-full rounded-[1.75rem]" />
+        <div className="grid grid-cols-2 gap-3 @xl:gap-4 @4xl:grid-cols-4">
+          {Array.from({ length: 4 }, (_, i) => (
             <Skeleton key={i} className="h-24 w-full" />
           ))}
         </div>
@@ -352,63 +296,57 @@ function Kpis({
   const impostos = t.valor_centavos - t.liquido_centavos
 
   return (
+    // Herói na largura toda (patrimônio bruto + líquido e resultado na mesma linha, mascote do
+    // módulo); os KPIs de apoio vêm abaixo — 2 por linha no celular, 4 a partir de @4xl.
     <div className="space-y-3 @xl:space-y-4">
-      {/* Os dois patrimônios em destaque: no celular um por linha (linha inteira), lado a lado
-          a partir de @3xl. Bruto no destaque escuro; líquido na variante clara. */}
-      <div className="grid gap-3 @xl:gap-4 @3xl:grid-cols-2">
-        <CardDestaque
-          titulo="Patrimônio total"
-          centavos={t.valor_centavos}
-          oculto={oculto}
-          onAlternarOculto={onToggleOculto}
-          rodape={
-            t.resultado_centavos != null ? (
-              <>
-                <Seta className="size-3.5" aria-hidden />
-                <Valor
-                  centavos={t.resultado_centavos}
-                  sinal
-                  neutro
-                  oculto={oculto}
-                  className="text-xs text-inherit"
-                />
-                {t.resultado_pct != null ? (
-                  <span>({formatPct(t.resultado_pct)})</span>
-                ) : null}
-                <span className="sr-only">
-                  {sobe ? "de resultado" : "de prejuízo"}
-                </span>
-              </>
-            ) : undefined
-          }
-        />
-        <CardDestaque
-          suave
-          titulo="Patrimônio líquido"
-          centavos={t.liquido_centavos}
-          oculto={oculto}
-          rodape={
-            impostos > 0 ? (
-              <>
-                Após IR e IOF:
-                <Valor
-                  centavos={-impostos}
-                  sinal
-                  neutro
-                  oculto={oculto}
-                  className="text-xs text-inherit"
-                />
-              </>
-            ) : (
-              "Valor de resgate hoje"
-            )
-          }
-        />
-      </div>
-
-      <div className="grid grid-cols-2 gap-3 @xl:gap-4 @4xl:grid-cols-5">
-        <KpiCard
-          icon={Coins}
+      <CardDestaque
+        titulo="Patrimônio total"
+        mascote="money"
+        centavos={t.valor_centavos}
+        oculto={oculto}
+        onAlternarOculto={onToggleOculto}
+        rodape={
+          t.resultado_centavos != null ? (
+            <>
+              <Seta className="size-3.5" aria-hidden />
+              <Valor
+                centavos={t.resultado_centavos}
+                sinal
+                neutro
+                oculto={oculto}
+                className="text-xs text-inherit"
+              />
+              {t.resultado_pct != null ? (
+                <span>({formatPct(t.resultado_pct)})</span>
+              ) : null}
+              <span className="sr-only">
+                {sobe ? "de resultado" : "de prejuízo"}
+              </span>
+            </>
+          ) : undefined
+        }
+        estatisticas={[
+          {
+            rotulo:
+              impostos > 0
+                ? "Líquido (após IR e IOF)"
+                : "Líquido (resgate hoje)",
+            valor: (
+              <Valor centavos={t.liquido_centavos} neutro oculto={oculto} />
+            ),
+          },
+          ...(impostos > 0
+            ? [
+                {
+                  rotulo: "Impostos estimados",
+                  valor: <Valor centavos={impostos} neutro oculto={oculto} />,
+                },
+              ]
+            : []),
+        ]}
+      />
+      <div className="grid grid-cols-2 gap-3 @xl:gap-4 @4xl:grid-cols-4">
+        <Kpi
           label="Valor investido"
           valor={
             // null = o banco não informou o custo: "—", nunca um R$ 0,00 que parece dado.
@@ -427,25 +365,7 @@ function Kpis({
             <span className="text-muted-foreground">Total aportado</span>
           }
         />
-        <KpiCard
-          icon={TrendingUp}
-          label="Resultado"
-          valor={
-            t.resultado_centavos != null ? (
-              <Valor
-                quebraMoeda
-                centavos={t.resultado_centavos}
-                neutro
-                oculto={oculto}
-              />
-            ) : (
-              <span className="text-muted-foreground">—</span>
-            )
-          }
-          detalhe={<VarPct pct={t.resultado_pct} />}
-        />
-        <KpiCard
-          icon={Percent}
+        <Kpi
           label="Rentabilidade (12M)"
           valor={
             vg?.rentabilidade_12m_pct != null ? (
@@ -467,8 +387,7 @@ function Kpis({
             )
           }
         />
-        <KpiCard
-          icon={CircleDollarSign}
+        <Kpi
           label="Dividendos (mês)"
           valor={
             <Valor
@@ -482,8 +401,7 @@ function Kpis({
             <span className="text-muted-foreground">Recebidos neste mês</span>
           }
         />
-        <KpiCard
-          icon={Layers}
+        <Kpi
           label="Ativos"
           valor={<span className="tabular-nums">{t.quantidade_ativos}</span>}
           detalhe={
@@ -593,7 +511,7 @@ function EvolucaoPatrimonio({ oculto }: { oculto: boolean }) {
     <Card className="h-full">
       <CardHeader className="flex-row flex-wrap items-start justify-between gap-3">
         <div>
-          <CardTitle className="text-base">Evolução do patrimônio</CardTitle>
+          <CardTitle>Evolução do patrimônio</CardTitle>
           <CardDescription>
             {vista === "valor"
               ? "Patrimônio e capital investido"
@@ -755,7 +673,7 @@ function AlocacaoPorTipo({
   return (
     <Card className="h-full">
       <CardHeader>
-        <CardTitle className="text-base">Alocação por tipo</CardTitle>
+        <CardTitle>Alocação por tipo</CardTitle>
       </CardHeader>
       <CardContent>
         {fatias.length === 0 ? (
@@ -850,7 +768,7 @@ function MaioresMovers({
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">{titulo}</CardTitle>
+        <CardTitle>{titulo}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-1">
         {top.length === 0 ? (
@@ -914,7 +832,7 @@ function MaioresPosicoes({
   return (
     <Card>
       <CardHeader className="flex-row items-center justify-between">
-        <CardTitle className="text-base">Maiores posições</CardTitle>
+        <CardTitle>Maiores posições</CardTitle>
         <span className="text-xs text-muted-foreground">Participação</span>
       </CardHeader>
       <CardContent className="space-y-1">
@@ -1016,7 +934,7 @@ function InsightsBar({
   return (
     <Card>
       <CardHeader className="flex-row items-center justify-between">
-        <CardTitle className="flex items-center gap-2 text-base">
+        <CardTitle className="flex items-center gap-2">
           <Sparkles className="size-4 text-primary" aria-hidden />
           Insights para você
         </CardTitle>
@@ -1032,19 +950,19 @@ function InsightsBar({
           <X className="size-4" />
         </Button>
       </CardHeader>
-      <CardContent className="grid gap-3 @xl:grid-cols-2 @4xl:grid-cols-4">
-        {insights.map((texto, i) => (
-          <div
-            key={i}
-            className="flex gap-2.5 rounded-lg border bg-muted/30 p-3"
-          >
-            <CircleCheck
-              className="mt-0.5 size-4 shrink-0 text-positive-ink"
-              aria-hidden
-            />
-            <p className="text-sm">{texto}</p>
-          </div>
-        ))}
+      {/* Lista simples (sem card dentro de card): ícone + frase, em colunas quando cabe. */}
+      <CardContent>
+        <ul className="grid gap-x-6 gap-y-3 @xl:grid-cols-2 @4xl:grid-cols-4">
+          {insights.map((texto, i) => (
+            <li key={i} className="flex gap-2.5">
+              <CircleCheck
+                className="mt-0.5 size-4 shrink-0 text-accent-icone"
+                aria-hidden
+              />
+              <p className="text-sm text-pretty">{texto}</p>
+            </li>
+          ))}
+        </ul>
       </CardContent>
     </Card>
   )

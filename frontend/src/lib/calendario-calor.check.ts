@@ -26,13 +26,13 @@ const temas = [
     card: "rgb(255,255,255)",
     ink: "rgb(49,56,66)",
     pos: "rgb(66,104,241)",
-    neg: "rgb(243,104,70)",
+    neg: "rgb(240,80,110)",
   },
   {
     card: "rgb(25,30,32)",
     ink: "rgb(230,233,238)",
     pos: "rgb(66,104,241)",
-    neg: "rgb(243,104,70)",
+    neg: "rgb(240,80,110)",
   },
 ]
 for (const t of temas)

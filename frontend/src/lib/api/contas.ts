@@ -1,3 +1,4 @@
+import { useMemo } from "react"
 import { useQuery } from "@tanstack/react-query"
 
 import { api } from "@/lib/api/client"
@@ -67,5 +68,29 @@ export function useConta(contaId: number) {
       if (error || !data) throw new Error("falha ao carregar a conta")
       return data
     },
+    // Id ainda desconhecido (ex.: fatura carregando) → não pergunta pela conta 0.
+    enabled: contaId > 0,
   })
+}
+
+/** Saldo somado das contas correntes/poupança (BANK) por dia, em ordem cronológica — a curva do
+ *  herói de saldo (Início e Dashboard). */
+export function useSaldoContasSerie(dias = 30) {
+  const contas = useContas()
+  const saldos = useContasSaldosDiarios(dias)
+  return useMemo(() => {
+    const bancos = new Set(
+      (contas.data ?? []).filter((c) => c.type === "BANK").map((c) => c.id)
+    )
+    const porDia = new Map<string, number>()
+    for (const [id, pontos] of saldos.data ?? []) {
+      if (!bancos.has(id)) continue
+      for (const p of pontos)
+        porDia.set(p.data, (porDia.get(p.data) ?? 0) + p.saldo_centavos)
+    }
+    // Data ISO ordena cronologicamente.
+    return [...porDia]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([data, saldo_centavos]) => ({ data, saldo_centavos }))
+  }, [contas.data, saldos.data])
 }

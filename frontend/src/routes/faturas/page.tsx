@@ -4,6 +4,8 @@ import { Link, useSearchParams } from "react-router"
 
 import { AvatarBanco } from "@/components/contas/avatar-banco"
 import { EmptyState } from "@/components/common/empty-state"
+import { PageHeader } from "@/components/common/page-header"
+import { Selo } from "@/components/common/selo"
 import { Valor } from "@/components/common/valor"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
@@ -137,8 +139,11 @@ export function FaturasPage() {
   }
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-xl font-semibold">Faturas</h1>
+    <div className="space-y-6">
+      <PageHeader
+        titulo="Faturas"
+        descricao="Faturas dos cartões por mês de vencimento. As compras contam no mês em que ocorreram."
+      />
 
       {isError ? (
         <EmptyState title="Não foi possível carregar as faturas" />
@@ -152,7 +157,7 @@ export function FaturasPage() {
         />
       ) : (
         <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
             <Select
               value={mesKey ?? TODAS}
               onValueChange={(v) => setMesKey(v === TODAS ? null : v)}
@@ -211,18 +216,18 @@ export function FaturasPage() {
             <div className="flex flex-col gap-5">
               {grupos.map((g) => (
                 <section key={g.key} className="flex flex-col gap-2">
-                  <h2 className="text-sm font-semibold text-muted-foreground first-letter:uppercase">
+                  <h2 className="text-sm font-medium text-muted-foreground first-letter:uppercase">
                     {g.label}
                   </h2>
-                  <div className="flex flex-col gap-3">
+                  <div className="flex flex-col gap-2">
                     {g.itens.map((f) => {
                       const st = statusFatura(f.due_date)
                       const nome = banco(f.cartao_id)
                       const numero = contaPorId.get(f.cartao_id)?.numero
                       return (
                         <Link key={f.id} to={`/faturas/${f.id}`}>
-                          <Card className="transition-colors hover:border-primary/50">
-                            <CardContent className="flex items-start gap-3 py-4">
+                          <Card className="superficie-interativa py-4">
+                            <CardContent className="flex items-center gap-3">
                               <AvatarBanco
                                 nome={nome}
                                 logoUrl={instConta(f.cartao_id)?.logo_url}
@@ -234,17 +239,13 @@ export function FaturasPage() {
                                   <p className="font-medium [overflow-wrap:anywhere] break-words">
                                     <NomeCartao nome={nome} numero={numero} />
                                   </p>
-                                  <p className="mt-1 text-sm text-muted-foreground">
-                                    Vencimento {formatDate(f.due_date)}
-                                  </p>
-                                  <div className="mt-1 flex flex-wrap items-center gap-2">
-                                    <Badge
-                                      variant={
-                                        st.aberta ? "default" : "secondary"
-                                      }
+                                  <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+                                    <span>Vence {formatDate(f.due_date)}</span>
+                                    <Selo
+                                      tom={st.aberta ? "neutro" : "apagado"}
                                     >
                                       {st.rotulo}
-                                    </Badge>
+                                    </Selo>
                                     {f.allows_installments ? (
                                       <Badge variant="outline">
                                         Permite parcelar
@@ -256,7 +257,7 @@ export function FaturasPage() {
                                   <Valor
                                     centavos={f.total_amount_centavos}
                                     neutro
-                                    className="text-base font-bold"
+                                    className="text-base font-semibold"
                                   />
                                   {f.minimum_payment_centavos ? (
                                     <p className="text-xs text-muted-foreground">

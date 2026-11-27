@@ -3,6 +3,7 @@ import { useState } from "react"
 import { useSearchParams } from "react-router"
 
 import { EmptyState } from "@/components/common/empty-state"
+import { PageHeader } from "@/components/common/page-header"
 import { CategoriaSelect } from "@/components/transacoes/categoria-select"
 import { TransacoesTabela } from "@/components/transacoes/transacoes-tabela"
 import { SyncButton } from "@/components/sync-button"
@@ -37,7 +38,8 @@ import { useAssinaturas } from "@/lib/api/assinaturas"
 import { useContas } from "@/lib/api/contas"
 import { useTransacoes } from "@/lib/api/transacoes"
 
-const LIMIT = 25
+const TAMANHOS = [25, 50, 100, 200] // teto do backend: 200
+const CHAVE_TAMANHO = "mango:transacoes-por-pagina"
 const TODAS = "__todas__"
 const QUALQUER = "__qualquer__"
 const SEM = "__sem__"
@@ -90,6 +92,24 @@ export function TransacoesPage() {
   // Divididas = transações vinculadas a uma divisão + parcelas de divisão sem transação sua.
   const [divisao, setDivisao] = useState<"todas" | "divididas" | "nao">("todas")
   const [page, setPage] = useState(0)
+  // Lembrado neste navegador (como a visão do dashboard).
+  const [porPagina, setPorPagina] = useState(() => {
+    try {
+      const v = Number(localStorage.getItem(CHAVE_TAMANHO))
+      return TAMANHOS.includes(v) ? v : 25
+    } catch {
+      return 25
+    }
+  })
+  const trocarPorPagina = (v: number) => {
+    setPorPagina(v)
+    setPage(0)
+    try {
+      localStorage.setItem(CHAVE_TAMANHO, String(v))
+    } catch {
+      // armazenamento bloqueado (aba privada): vale só nesta visita
+    }
+  }
   // A busca global navega para `/transacoes?busca=` com a tela já aberta (instância mantida): o
   // termo novo da URL substitui o campo e volta à 1ª página.
   const buscaUrl = params.get("busca") ?? ""
@@ -134,8 +154,8 @@ export function TransacoesPage() {
     tem_assinatura: temAssinatura,
     tem_divisao:
       divisao === "divididas" ? true : divisao === "nao" ? false : undefined,
-    limit: LIMIT,
-    offset: page * LIMIT,
+    limit: porPagina,
+    offset: page * porPagina,
   })
 
   // Conta DESVIOS do padrão, não filtros ligados: os dois "ocultar" nascem ligados, então o badge
@@ -149,15 +169,16 @@ export function TransacoesPage() {
     (ocultarFuturas ? 0 : 1)
 
   const total = listagem.data?.total ?? 0
-  const paginas = Math.max(1, Math.ceil(total / LIMIT))
+  const paginas = Math.max(1, Math.ceil(total / porPagina))
   const paginaAtual = page + 1
 
   return (
-    <div className="space-y-4">
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-xl font-semibold">Transações</h1>
-        <SyncButton />
-      </header>
+    <div className="space-y-6">
+      <PageHeader
+        titulo="Transações"
+        descricao="Tudo o que o Open Finance importou. Revise, categorize e marque transferências."
+        acoes={<SyncButton />}
+      />
 
       <div className="space-y-2">
         <div className="flex items-center gap-3">
@@ -346,74 +367,121 @@ export function TransacoesPage() {
         </EmptyState>
       ) : (
         <>
+          {/* Em cima: total, tamanho da página e as páginas; embaixo, as páginas de novo (quem
+              chegou ao fim da lista não precisa voltar ao topo). */}
+          <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-muted-foreground">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+              <span>
+                {total} transaç{total === 1 ? "ão" : "ões"}
+              </span>
+              <Select
+                value={String(porPagina)}
+                onValueChange={(v) => trocarPorPagina(Number(v))}
+              >
+                <SelectTrigger
+                  size="sm"
+                  className="w-auto"
+                  aria-label="Transações por página"
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {TAMANHOS.map((n) => (
+                    <SelectItem key={n} value={String(n)}>
+                      {n} por página
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <BarraPaginas
+              paginaAtual={paginaAtual}
+              paginas={paginas}
+              onPagina={(p) => setPage(p - 1)}
+            />
+          </div>
           <TransacoesTabela
             items={listagem.data!.items}
             abrirId={Number(params.get("id")) || null}
           />
-
-          <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-muted-foreground">
-            <span>
-              {total} transaç{total === 1 ? "ão" : "ões"}
-            </span>
-            {paginas > 1 ? (
-              <Pagination className="mx-0 w-auto">
-                <PaginationContent>
-                  <PaginationItem>
-                    <PaginationPrevious
-                      href="#"
-                      text="Anterior"
-                      aria-disabled={page === 0}
-                      className={
-                        page === 0 ? "pointer-events-none opacity-50" : ""
-                      }
-                      onClick={(e) => {
-                        e.preventDefault()
-                        if (page > 0) setPage(page - 1)
-                      }}
-                    />
-                  </PaginationItem>
-                  {janelaPaginas(paginaAtual, paginas).map((p, i) =>
-                    p === "gap" ? (
-                      <PaginationItem key={`gap-${i}`}>
-                        <PaginationEllipsis />
-                      </PaginationItem>
-                    ) : (
-                      <PaginationItem key={p}>
-                        <PaginationLink
-                          href="#"
-                          isActive={p === paginaAtual}
-                          onClick={(e) => {
-                            e.preventDefault()
-                            setPage(p - 1)
-                          }}
-                        >
-                          {p}
-                        </PaginationLink>
-                      </PaginationItem>
-                    )
-                  )}
-                  <PaginationItem>
-                    <PaginationNext
-                      href="#"
-                      text="Próxima"
-                      aria-disabled={paginaAtual >= paginas}
-                      className={
-                        paginaAtual >= paginas
-                          ? "pointer-events-none opacity-50"
-                          : ""
-                      }
-                      onClick={(e) => {
-                        e.preventDefault()
-                        if (paginaAtual < paginas) setPage(page + 1)
-                      }}
-                    />
-                  </PaginationItem>
-                </PaginationContent>
-              </Pagination>
-            ) : null}
+          <div className="flex justify-end">
+            <BarraPaginas
+              paginaAtual={paginaAtual}
+              paginas={paginas}
+              onPagina={(p) => {
+                setPage(p - 1)
+                // Trocar de página pelo rodapé volta ao começo da lista nova.
+                window.scrollTo({ top: 0 })
+              }}
+            />
           </div>
         </>
       )}
     </div>
+  )
+}
+
+/** Anterior · 1 … atual±1 … última · Próxima. Some com uma página só. */
+function BarraPaginas({
+  paginaAtual,
+  paginas,
+  onPagina,
+}: {
+  paginaAtual: number
+  paginas: number
+  onPagina: (pagina: number) => void
+}) {
+  if (paginas <= 1) return null
+  return (
+    <Pagination className="mx-0 w-auto">
+      <PaginationContent>
+        <PaginationItem>
+          <PaginationPrevious
+            href="#"
+            text="Anterior"
+            aria-disabled={paginaAtual <= 1}
+            className={paginaAtual <= 1 ? "pointer-events-none opacity-50" : ""}
+            onClick={(e) => {
+              e.preventDefault()
+              if (paginaAtual > 1) onPagina(paginaAtual - 1)
+            }}
+          />
+        </PaginationItem>
+        {janelaPaginas(paginaAtual, paginas).map((p, i) =>
+          p === "gap" ? (
+            <PaginationItem key={`gap-${i}`}>
+              <PaginationEllipsis />
+            </PaginationItem>
+          ) : (
+            <PaginationItem key={p}>
+              <PaginationLink
+                href="#"
+                isActive={p === paginaAtual}
+                onClick={(e) => {
+                  e.preventDefault()
+                  onPagina(p)
+                }}
+              >
+                {p}
+              </PaginationLink>
+            </PaginationItem>
+          )
+        )}
+        <PaginationItem>
+          <PaginationNext
+            href="#"
+            text="Próxima"
+            aria-disabled={paginaAtual >= paginas}
+            className={
+              paginaAtual >= paginas ? "pointer-events-none opacity-50" : ""
+            }
+            onClick={(e) => {
+              e.preventDefault()
+              if (paginaAtual < paginas) onPagina(paginaAtual + 1)
+            }}
+          />
+        </PaginationItem>
+      </PaginationContent>
+    </Pagination>
   )
 }

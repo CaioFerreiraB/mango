@@ -1,12 +1,22 @@
 /**
- * Layout personalizável do dashboard: catálogo de widgets (fonte única dos ids e dos padrões) e
- * o merge com o que o usuário salvou no perfil (`dashboard_layout`).
+ * Layout personalizável do dashboard: catálogo de widgets das três abas (fonte única dos ids e dos
+ * padrões) e o merge com o que o usuário salvou no perfil (`dashboard_layout`). As abas dividem a
+ * mesma lista salva — cada uma lê os seus ids (prefixo `rec-`/`desp-`; o resto é da Geral) e a
+ * ordem relativa entre eles.
  */
 
-/** Colunas de um grid de 60 (divisível por 5, 4 e 3): ⅕ ¼ ⅓ ½ ⅔ ¾ inteira. */
-export type Largura = 12 | 15 | 20 | 30 | 40 | 45 | 60
+/** Colunas de um grid de 60 (divisível por 6, 5, 4 e 3). */
+export type Largura = number
 
-export type WidgetLayout = { id: string; largura: Largura; visivel: boolean }
+/** `altura` em px (mínima do card, só em telas largas); ausente = altura do conteúdo. */
+export type WidgetLayout = {
+  id: string
+  largura: Largura
+  altura?: number
+  visivel: boolean
+}
+
+export type Aba = "geral" | "receitas" | "despesas"
 
 export type WidgetId =
   | "kpi-saldo"
@@ -20,14 +30,62 @@ export type WidgetId =
   | "fluxo"
   | "calendario"
   | "patrimonio"
+  | "rec-total"
+  | "rec-anterior"
+  | "rec-media"
+  | "rec-previsto"
+  | "rec-evolucao"
+  | "rec-categorias"
+  | "rec-fontes"
+  | "rec-previstas"
+  | "rec-acumulado"
+  | "desp-total"
+  | "desp-anterior"
+  | "desp-media"
+  | "desp-orcamento"
+  | "desp-evolucao"
+  | "desp-categorias"
+  | "desp-maiores"
+  | "desp-orcamento-categorias"
+  | "desp-acumulado"
+  | "desp-dia-semana"
+  | "desp-meios"
+  | "desp-cartoes"
 
-/** Ordem e largura padrão (grid de 60 colunas a partir de `lg`). */
-export const CATALOGO: { id: WidgetId; titulo: string; largura: Largura }[] = [
-  { id: "kpi-saldo", titulo: "Saldo em contas", largura: 12 },
-  { id: "kpi-entradas", titulo: "Entradas no mês", largura: 12 },
-  { id: "kpi-saidas", titulo: "Saídas no mês", largura: 12 },
-  { id: "kpi-resultado", titulo: "Resultado no mês", largura: 12 },
-  { id: "kpi-investido", titulo: "Investido no mês", largura: 12 },
+type ItemCatalogo = {
+  id: WidgetId
+  titulo: string
+  largura: Largura
+  /** KPI: no celular fica dois por linha (o resto ocupa a linha toda). */
+  compacto?: boolean
+  /** Menor largura em que o conteúdo ainda cabe (padrão: a menor fração). */
+  larguraMin?: Largura
+}
+
+/** Ordem e largura padrão (grid de 60 colunas em telas largas). */
+export const CATALOGO: ItemCatalogo[] = [
+  // Geral — herói (saldo com a curva de 30 dias) na linha inteira; os quatro fluxos do mês em ¼.
+  // Número-âncora grande e indivisível: abaixo de ⅓ um saldo de 6 dígitos não cabe.
+  { id: "kpi-saldo", titulo: "Saldo em contas", largura: 60, larguraMin: 20 },
+  {
+    id: "kpi-entradas",
+    titulo: "Entradas no mês",
+    largura: 15,
+    compacto: true,
+  },
+  { id: "kpi-saidas", titulo: "Saídas no mês", largura: 15, compacto: true },
+  {
+    id: "kpi-resultado",
+    titulo: "Resultado no mês",
+    largura: 15,
+    compacto: true,
+  },
+  {
+    id: "kpi-investido",
+    titulo: "Investido no mês",
+    largura: 15,
+    compacto: true,
+  },
   { id: "despesas-fixas", titulo: "Despesas fixas · visão geral", largura: 30 },
   {
     id: "despesas-fixas-proximos",
@@ -38,45 +96,167 @@ export const CATALOGO: { id: WidgetId; titulo: string; largura: Largura }[] = [
   { id: "fluxo", titulo: "Entradas e saídas", largura: 60 },
   { id: "calendario", titulo: "Calendário do mês", largura: 60 },
   { id: "patrimonio", titulo: "Evolução patrimonial", largura: 60 },
+  // Receitas
+  {
+    id: "rec-total",
+    titulo: "Recebido no período",
+    largura: 15,
+    compacto: true,
+  },
+  {
+    id: "rec-anterior",
+    titulo: "Período anterior",
+    largura: 15,
+    compacto: true,
+  },
+  {
+    id: "rec-media",
+    titulo: "Média por recebimento",
+    largura: 15,
+    compacto: true,
+  },
+  {
+    id: "rec-previsto",
+    titulo: "Previsto (orçamento)",
+    largura: 15,
+    compacto: true,
+  },
+  { id: "rec-evolucao", titulo: "Evolução das receitas", largura: 60 },
+  { id: "rec-categorias", titulo: "Receitas por categoria", largura: 30 },
+  { id: "rec-fontes", titulo: "Principais fontes de receita", largura: 30 },
+  { id: "rec-previstas", titulo: "Previstas × realizadas", largura: 30 },
+  { id: "rec-acumulado", titulo: "Receitas acumuladas", largura: 30 },
+  // Despesas
+  { id: "desp-total", titulo: "Gasto no período", largura: 15, compacto: true },
+  {
+    id: "desp-anterior",
+    titulo: "Período anterior",
+    largura: 15,
+    compacto: true,
+  },
+  { id: "desp-media", titulo: "Média diária", largura: 15, compacto: true },
+  { id: "desp-orcamento", titulo: "Orçamento", largura: 15, compacto: true },
+  { id: "desp-evolucao", titulo: "Evolução das despesas", largura: 60 },
+  { id: "desp-categorias", titulo: "Despesas por categoria", largura: 30 },
+  { id: "desp-maiores", titulo: "Maiores despesas", largura: 30 },
+  {
+    id: "desp-orcamento-categorias",
+    titulo: "Orçamento por categoria",
+    largura: 30,
+  },
+  { id: "desp-acumulado", titulo: "Despesas acumuladas", largura: 30 },
+  { id: "desp-dia-semana", titulo: "Despesas por dia da semana", largura: 30 },
+  { id: "desp-meios", titulo: "Por meio de pagamento", largura: 30 },
+  { id: "desp-cartoes", titulo: "Cartões de crédito", largura: 60 },
 ]
-// Categorias de despesa e cartões moram na aba Despesas: ids antigos ("categorias", "faturas")
-// num layout salvo caem no merge como desconhecidos.
+// Ids antigos ("categorias", "faturas") num layout salvo caem no merge como desconhecidos.
 
-export const LARGURAS: Largura[] = [12, 15, 20, 30, 40, 45, 60]
+const POR_ID = new Map(CATALOGO.map((w) => [w.id as string, w]))
 
-export const ROTULO_LARGURA: Record<Largura, string> = {
+export function abaDe(id: string): Aba {
+  if (id.startsWith("rec-")) return "receitas"
+  if (id.startsWith("desp-")) return "despesas"
+  return "geral"
+}
+
+export const ehCompacto = (id: string) => Boolean(POR_ID.get(id)?.compacto)
+
+/** Larguras em que a borda arrastada encaixa: frações "redondas" de 60. */
+export const LARGURAS: Largura[] = [
+  10, 12, 15, 20, 24, 30, 36, 40, 45, 48, 50, 60,
+]
+
+export const ROTULO_LARGURA: Record<number, string> = {
+  10: "⅙",
   12: "⅕",
   15: "¼",
   20: "⅓",
+  24: "⅖",
   30: "½",
+  36: "⅗",
   40: "⅔",
   45: "¾",
+  48: "⅘",
+  50: "⅚",
   60: "inteira",
 }
 
+export const ALTURA_MIN = 96
+export const ALTURA_MAX = 1600
+
+export const larguraMinima = (id: string): Largura =>
+  POR_ID.get(id)?.larguraMin ?? LARGURAS[0]
+
+/** Largura permitida mais próxima de `colunas` (de 60), respeitando o mínimo do widget `id`. */
+export function encaixarLargura(colunas: number, id?: string): Largura {
+  const permitidas = id
+    ? LARGURAS.filter((l) => l >= larguraMinima(id))
+    : LARGURAS
+  return permitidas.reduce((melhor, l) =>
+    Math.abs(l - colunas) < Math.abs(melhor - colunas) ? l : melhor
+  )
+}
+
+/** Altura em passos de 8px, dentro dos limites. */
+export function encaixarAltura(px: number): number {
+  return Math.min(ALTURA_MAX, Math.max(ALTURA_MIN, Math.round(px / 8) * 8))
+}
+
+/** Largura vizinha (teclado: ← encolhe, → alarga), parando nas bordas. */
+export function passoLargura(l: Largura, delta: -1 | 1, id?: string): Largura {
+  const i = LARGURAS.indexOf(encaixarLargura(l, id))
+  const prox = LARGURAS[Math.min(LARGURAS.length - 1, Math.max(0, i + delta))]
+  return id ? Math.max(prox, larguraMinima(id)) : prox
+}
+
+const padraoDe = (w: ItemCatalogo): WidgetLayout => ({
+  id: w.id,
+  largura: w.largura,
+  visivel: true,
+})
+
 export function layoutPadrao(): WidgetLayout[] {
-  return CATALOGO.map((w) => ({ id: w.id, largura: w.largura, visivel: true }))
+  return CATALOGO.map(padraoDe)
+}
+
+/** Volta só a aba `aba` ao padrão; as outras ficam como estão. */
+export function restaurarAba(layout: WidgetLayout[], aba: Aba): WidgetLayout[] {
+  return [
+    ...layout.filter((w) => abaDe(w.id) !== aba),
+    ...layoutPadrao().filter((w) => abaDe(w.id) === aba),
+  ]
 }
 
 /**
  * Layout efetivo: o salvo, na ordem salva, sem ids que o catálogo não conhece mais (widget
  * removido numa versão nova) nem repetidos; widget do catálogo ausente do salvo (widget novo)
  * entra visível, com a largura padrão, logo depois do vizinho anterior no catálogo (ou no início,
- * se nenhum anterior estiver no salvo). Sem salvo → padrão.
+ * se nenhum anterior estiver no salvo). Largura fora das permitidas vira a padrão; altura fora
+ * dos limites some (volta à do conteúdo). Sem salvo → padrão.
  */
 export function mesclarLayout(
   salvo: WidgetLayout[] | null | undefined
 ): WidgetLayout[] {
   if (!salvo) return layoutPadrao()
-  const conhecidos = new Set<string>(CATALOGO.map((w) => w.id))
   const vistos = new Set<string>()
   const out: WidgetLayout[] = []
   for (const w of salvo) {
-    if (!conhecidos.has(w.id) || vistos.has(w.id)) continue
+    const cat = POR_ID.get(w.id)
+    if (!cat || vistos.has(w.id)) continue
     vistos.add(w.id)
+    const altura =
+      typeof w.altura === "number" &&
+      w.altura >= ALTURA_MIN &&
+      w.altura <= ALTURA_MAX
+        ? w.altura
+        : undefined
     out.push({
       id: w.id,
-      largura: LARGURAS.includes(w.largura) ? w.largura : 60,
+      largura:
+        LARGURAS.includes(w.largura) && w.largura >= (cat.larguraMin ?? 0)
+          ? w.largura
+          : cat.largura,
+      ...(altura ? { altura } : {}),
       visivel: w.visivel,
     })
   }
@@ -90,14 +270,9 @@ export function mesclarLayout(
         break
       }
     }
-    out.splice(pos, 0, { id: w.id, largura: w.largura, visivel: true })
+    out.splice(pos, 0, padraoDe(w))
   })
   return out
-}
-
-/** Próxima largura do ciclo ⅕ → ¼ → ⅓ → ½ → ⅔ → ¾ → inteira → ⅕. */
-export function proximaLargura(l: Largura): Largura {
-  return LARGURAS[(LARGURAS.indexOf(l) + 1) % LARGURAS.length]
 }
 
 /** Move o item `i` em `delta` posições (limitado às bordas). */
@@ -110,6 +285,18 @@ export function mover<T>(lista: T[], i: number, delta: number): T[] {
   return copia
 }
 
+/** Mesma configuração (a ordem entre abas diferentes não importa: cada aba lê só os seus). */
 export function mesmoLayout(a: WidgetLayout[], b: WidgetLayout[]): boolean {
-  return JSON.stringify(a) === JSON.stringify(b)
+  // Campos em ordem fixa (a ordem das chaves no objeto não importa) e altura ausente = null.
+  const chave = (l: WidgetLayout[]) =>
+    (["geral", "receitas", "despesas"] as const)
+      .map((aba) =>
+        JSON.stringify(
+          l
+            .filter((w) => abaDe(w.id) === aba)
+            .map((w) => [w.id, w.largura, w.altura ?? null, w.visivel])
+        )
+      )
+      .join("|")
+  return chave(a) === chave(b)
 }

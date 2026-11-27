@@ -543,6 +543,7 @@ export function Sparkline({
   formatarValor,
   altura = 64,
   ariaLabel,
+  cor,
 }: {
   dados: { rotulo: string; valor: number }[]
   nome: string
@@ -550,16 +551,26 @@ export function Sparkline({
   formatarValor: (v: number) => string
   altura?: number
   ariaLabel: string
+  /** Cor da linha/área (ex.: branco sobre a faixa de marca); padrão = destaque do tema. */
+  cor?: string
 }) {
   const t = useTemaGrafico()
   const option = useMemo<EChartsOption>(() => {
+    const c = cor ?? t.primary
     const rotulos = dados.map((d) => d.rotulo)
     return {
       ...opcoesBase(t),
       animation: !semMovimento(),
       grid: { left: 0, right: 0, top: 4, bottom: 0 },
       xAxis: { ...eixoX(t, rotulos, undefined, true), show: false },
-      yAxis: { type: "value", show: false, scale: true },
+      // Folga embaixo (60% da amplitude): a curva fica no terço de cima, como tendência — sem
+      // os "vales" até o chão que faziam a variação parecer dramática.
+      yAxis: {
+        type: "value",
+        show: false,
+        min: (v: { min: number; max: number }) => v.min - (v.max - v.min) * 0.6,
+        max: (v: { min: number; max: number }) => v.max + (v.max - v.min) * 0.1,
+      },
       tooltip: tooltipEixo(t, rotulos, formatarRotulo, formatarValor, "line"),
       series: [
         {
@@ -569,8 +580,8 @@ export function Sparkline({
           smooth: 0.4,
           smoothMonotone: "x",
           showSymbol: false,
-          lineStyle: { color: t.primary, width: 2 },
-          itemStyle: { color: t.primary },
+          lineStyle: { color: c, width: 1.75 },
+          itemStyle: { color: c },
           areaStyle: {
             color: {
               type: "linear",
@@ -579,15 +590,15 @@ export function Sparkline({
               x2: 0,
               y2: 1,
               colorStops: [
-                { offset: 0, color: comAlfa(t.primary, 0.3) },
-                { offset: 1, color: comAlfa(t.primary, 0) },
+                { offset: 0, color: comAlfa(c, cor ? 0.28 : 0.16) },
+                { offset: 1, color: comAlfa(c, 0) },
               ],
             },
           },
         },
       ],
     }
-  }, [dados, nome, formatarRotulo, formatarValor, t])
+  }, [dados, nome, formatarRotulo, formatarValor, t, cor])
   return (
     <EChart
       option={option}

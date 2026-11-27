@@ -58,7 +58,7 @@ function PerfilForm({ perfil }: { perfil: Perfil }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">Dados do cadastro</CardTitle>
+        <CardTitle>Dados do cadastro</CardTitle>
       </CardHeader>
       <CardContent>
         <form className="grid gap-4 sm:grid-cols-2" onSubmit={salvar}>

@@ -1,3 +1,4 @@
+import { cn } from "@/lib/utils"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
 // Palavras genéricas que não ajudam a formar as iniciais do banco.
@@ -27,12 +28,14 @@ function corDeFundo(nome: string): string {
 export function AvatarBanco({
   nome,
   logoUrl,
+  className,
 }: {
   nome: string
   logoUrl?: string | null
+  className?: string
 }) {
   return (
-    <Avatar aria-hidden className="size-9">
+    <Avatar aria-hidden className={cn("size-9", className)}>
       {logoUrl ? (
         <AvatarImage src={logoUrl} alt="" className="object-contain" />
       ) : null}

@@ -25,14 +25,14 @@ def test_preferencias_padrao_nulas(client_factory, usuario_a: Usuario) -> None:
 def test_atualiza_preferencias(client_factory, usuario_a: Usuario, db: Session) -> None:
     client = client_factory(usuario_a)
 
-    patch = client.patch("/api/perfil", json={"accent": "manga", "avatar": 2})
+    patch = client.patch("/api/perfil", json={"accent": "tangerina", "avatar": 2})
     assert patch.status_code == 200, patch.text
-    assert patch.json()["accent"] == "manga" and patch.json()["avatar"] == 2
+    assert patch.json()["accent"] == "tangerina" and patch.json()["avatar"] == 2
 
     # Persistência real (o /me do harness devolve o objeto injetado, não relê do banco).
     db.expire_all()
     fresh = db.get(Usuario, usuario_a.id)
-    assert fresh is not None and fresh.accent == "manga" and fresh.avatar == 2
+    assert fresh is not None and fresh.accent == "tangerina" and fresh.avatar == 2
 
 
 def test_preferencias_invalidas_rejeitadas(client_factory, usuario_a: Usuario) -> None:
@@ -138,6 +138,7 @@ def test_dashboard_layout_round_trip_e_restaurar(
     layout = [
         {"id": "fluxo", "largura": 60, "visivel": True},
         {"id": "kpi-saldo", "largura": 12, "visivel": False},
+        {"id": "rec-fontes", "largura": 36, "altura": 320, "visivel": True},
     ]
     r = client.patch("/api/perfil", json={"dashboard_layout": layout})
     assert r.status_code == 200, r.text
@@ -145,7 +146,8 @@ def test_dashboard_layout_round_trip_e_restaurar(
     assert gravado() == layout
 
     # Outro campo no PATCH não mexe no layout (exclude_unset).
-    client.patch("/api/perfil", json={"accent": "verde"})
+    r = client.patch("/api/perfil", json={"accent": "lima"})
+    assert r.status_code == 200 and r.json()["accent"] == "lima", r.text
     assert gravado() == layout
 
     r = client.patch("/api/perfil", json={"dashboard_layout": None})
@@ -160,7 +162,8 @@ def test_dashboard_layout_valida_fronteira(client_factory, usuario_a: Usuario) -
         [w, w],  # id repetido
         [{**w, "largura": 6}],  # largura fora do enum (grid antigo de 12)
         [{**w, "id": "<script>"}],  # id fora do padrão
-        [{**w, "id": f"w-{chr(97 + i % 26)}{'a' * (i // 26)}"} for i in range(31)],  # > 30
+        [{**w, "altura": 50}],  # altura abaixo do mínimo
+        [{**w, "id": f"w-{chr(97 + i % 26)}{'a' * (i // 26)}"} for i in range(61)],  # > 60
     ]
     for layout in invalidos:
         r = client.patch("/api/perfil", json={"dashboard_layout": layout})

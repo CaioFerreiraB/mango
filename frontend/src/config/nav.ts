@@ -6,6 +6,7 @@ import {
   CreditCard,
   Gauge,
   Handshake,
+  House,
   Landmark,
   LayoutDashboard,
   MessageSquareText,
@@ -44,10 +45,16 @@ export type NavSection = {
   items: NavItem[]
 }
 
-/** Item único no topo, fora das seções colapsáveis. */
+/** Itens únicos no topo, fora das seções colapsáveis: o Início (hub) e o Dashboard (análises). */
+export const inicioItem: NavItem = {
+  title: "Início",
+  url: "/",
+  icon: House,
+}
+
 export const dashboardItem: NavItem = {
   title: "Dashboard",
-  url: "/",
+  url: "/dashboard",
   icon: LayoutDashboard,
 }
 
@@ -74,7 +81,7 @@ export const navSections: NavSection[] = [
     icon: Wallet,
     items: [
       { title: "Transações", url: "/transacoes", icon: ArrowRightLeft },
-      { title: "Contas", url: "/contas", icon: Landmark },
+      { title: "Contas e cartões", url: "/contas", icon: Landmark },
       { title: "Faturas", url: "/faturas", icon: CreditCard },
     ],
   },
@@ -138,9 +145,8 @@ export type BottomNavItem = NavItem & {
 }
 
 /** 1ª aba da barra inferior, fixa (as outras 3 o usuário escolhe). */
-export const inicioItem: BottomNavItem = {
-  ...dashboardItem,
-  title: "Início",
+export const inicioBottomItem: BottomNavItem = {
+  ...inicioItem,
   short: "Início",
 }
 
@@ -160,7 +166,7 @@ export const ATALHOS: Atalho[] = [
   },
   {
     id: "contas",
-    title: "Contas",
+    title: "Contas e cartões",
     short: "Contas",
     url: "/contas",
     icon: Landmark,
@@ -215,6 +221,7 @@ export const ATALHOS: Atalho[] = [
     url: "/divisoes",
     icon: Users,
   },
+  { ...dashboardItem, id: "dashboard", short: "Dashboard" },
   {
     id: "chat",
     title: "Assistente",

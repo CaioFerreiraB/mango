@@ -31,7 +31,7 @@ export function SistemaTab() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">Divisão de contas</CardTitle>
+        <CardTitle>Divisão de contas</CardTitle>
       </CardHeader>
       <CardContent>
         <label className="flex items-start justify-between gap-4">

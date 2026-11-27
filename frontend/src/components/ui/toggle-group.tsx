@@ -42,6 +42,9 @@ function ToggleGroup({
       style={{ "--gap": spacing } as React.CSSProperties}
       className={cn(
         "group/toggle-group flex w-fit flex-row items-center gap-[--spacing(var(--gap))] rounded-lg data-[size=sm]:rounded-[min(var(--radius-md),10px)] data-vertical:flex-col data-vertical:items-stretch",
+        // outline = segmented control: trilho cinza + pílula branca elevada no item ativo (mesma
+        // linguagem do item ativo da sidebar), em vez de botões com borda colados.
+        "data-[variant=outline]:gap-0.5 data-[variant=outline]:bg-foreground/[0.05] data-[variant=outline]:p-0.5",
         className
       )}
       {...props}
@@ -77,6 +80,7 @@ function ToggleGroupItem({
           variant: context.variant || variant,
           size: context.size || size,
         }),
+        "group-data-[variant=outline]/toggle-group:rounded-md! group-data-[variant=outline]/toggle-group:border-0 group-data-[variant=outline]/toggle-group:text-muted-foreground group-data-[variant=outline]/toggle-group:transition-[color,background-color,box-shadow] group-data-[variant=outline]/toggle-group:duration-150 group-data-[variant=outline]/toggle-group:hover:bg-transparent group-data-[variant=outline]/toggle-group:hover:text-foreground group-data-[variant=outline]/toggle-group:data-[state=on]:bg-card group-data-[variant=outline]/toggle-group:data-[state=on]:text-foreground group-data-[variant=outline]/toggle-group:data-[state=on]:shadow-[0_1px_2px_rgb(16_24_40/0.12)]",
         className
       )}
       {...props}

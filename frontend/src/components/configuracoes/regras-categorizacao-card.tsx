@@ -119,7 +119,7 @@ export function RegrasCategorizacaoCard() {
     <Card>
       <CardHeader className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-1.5">
-          <CardTitle className="text-base">Regras automáticas</CardTitle>
+          <CardTitle>Regras automáticas</CardTitle>
           <CardDescription>
             Ensine uma vez e vale para o histórico e para o que chegar depois. A
             regra perde para um ajuste que você tenha feito numa transação

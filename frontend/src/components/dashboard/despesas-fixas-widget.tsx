@@ -87,7 +87,7 @@ export function DespesasFixasMesWidget() {
             <BarraMes resumo={r} />
             <dl className="space-y-1.5 text-sm">
               <Contagem
-                ponto="bg-[#0ca678]"
+                ponto="bg-success"
                 rotulo={r.pagas.qtd === 1 ? "paga" : "pagas"}
                 {...r.pagas}
               />

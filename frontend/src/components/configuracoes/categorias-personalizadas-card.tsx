@@ -54,7 +54,7 @@ export function CategoriasPersonalizadasCard({
     <Card>
       <CardHeader className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-1.5">
-          <CardTitle className="text-base">Minhas categorias</CardTitle>
+          <CardTitle>Minhas categorias</CardTitle>
           <CardDescription>
             Categorias que você criou. Elas não são atribuídas automaticamente —
             use uma regra abaixo, ou escolha na transação.
